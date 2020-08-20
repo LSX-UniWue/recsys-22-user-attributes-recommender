@@ -1,4 +1,4 @@
-from seq_framework.transformer_config import TransformerConfig
+from config.transformers.transformer_config import TransformerConfig
 
 
 class SasConfig(TransformerConfig):

@@ -3,7 +3,7 @@ import math
 import torch
 from torch import nn as nn
 
-from seq_framework.util.tensor_utils import generate_position_ids
+from utils.tensor_utils import generate_position_ids
 
 
 class MatrixFactorizationLayer(nn.Linear):
@@ -16,7 +16,7 @@ class MatrixFactorizationLayer(nn.Linear):
 
 class TransformerEmbedding(nn.Module):
     """
-    this transformer embedding combines the item embedding and positional embedding (incl. norm) to a single module
+    this transformer embedding combines the item embedding and positional embedding (incl. norm) into a single module
     """
 
     def __init__(self,

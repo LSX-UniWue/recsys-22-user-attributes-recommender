@@ -1,4 +1,4 @@
-from seq_framework.sasrec.sas_rec_config import SasConfig
+from config.sasrec.sas_rec_config import SasConfig
 
 # FIXME: find number of heads
 MOVIELENS1M_SAS_CONFIG = SasConfig(5, 200, 50, 2, 1, 0.2)
