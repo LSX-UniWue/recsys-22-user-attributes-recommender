@@ -14,7 +14,7 @@ RUN mkdir -p /home/ls6/${USER}
 RUN chown -R ${USER} /home/ls6/${USER}
 
 
-COPY ../../requirements.txt /tmp/requirements.txt
+COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt
 USER ${UID}
 
