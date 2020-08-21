@@ -30,6 +30,7 @@ class GRUSeqItemRecommender(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         prediction = self.forward(batch["session"], batch["session_lengths"], batch_idx)
+        # TODO: discuss: maybe the target should be generated here and not in the dataset; see bert4rec
         loss = nn.CrossEntropyLoss()(prediction, batch["target"])
 
         return {

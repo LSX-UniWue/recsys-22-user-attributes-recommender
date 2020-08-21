@@ -1,6 +1,8 @@
+import torch
+import pytorch_lightning as pl
+
 from typing import Tuple
 
-import torch
 from torch import nn
 
 from config.bert4rec.bert4rec_config import BERT4RecConfig
@@ -10,7 +12,7 @@ from utils.itemization_utils import PreTrainedItemizer
 CROSS_ENTROPY_IGNORE_INDEX = -100
 
 
-class BERT4RecModel(nn.Module):
+class BERT4RecModel(pl.LightningModule):
     """
     implementation of the paper "BERT4Rec: Sequential Recommendation with Bidirectional Encoder Representations from Transformer"
     see https://doi.org/10.1145%2f3357384.3357895 for more details.
@@ -19,15 +21,17 @@ class BERT4RecModel(nn.Module):
     def __init__(self, config: BERT4RecConfig):
         super().__init__()
 
-        self.d_model = config.d_model
-        self.embedding = TransformerEmbedding(config.item_voc_size, config.max_seq_length, self.d_model)
+        self.config = config
 
-        encoder_layers = nn.TransformerEncoderLayer(self.d_model, config.num_transformer_heads, self.d_model,
+        d_model = config.d_model
+        self.embedding = TransformerEmbedding(config.item_voc_size, config.max_seq_length, d_model)
+
+        encoder_layers = nn.TransformerEncoderLayer(d_model, config.num_transformer_heads, d_model,
                                                     config.transformer_dropout, activation='gelu')
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, config.num_transformer_layers)
 
         # for decoding the sequence into the item space again
-        self.linear = nn.Linear(self.d_model, self.d_model)
+        self.linear = nn.Linear(d_model, d_model)
         self.gelu = nn.GELU()
         self.mfl = MatrixFactorizationLayer(self.embedding.get_item_embedding_weight())
         self.softmax = nn.Softmax(dim=2)
@@ -60,6 +64,24 @@ class BERT4RecModel(nn.Module):
         scores = self.mfl(scores)
         scores = self.softmax(scores)
         return scores
+
+    # TODO: discuss: here the bert4rec model needs the itemizer
+    def training_step(self, batch, batch_idx, itemizer):
+        input_seq = batch['sequence']
+
+        # random mask some items
+        input_seq, target = _mask_items(input_seq, itemizer, 0.8)
+        # calc the padding mask
+        padding_mask = _get_padding_mask(input_seq, itemizer)
+
+        # call the model
+        prediction_scores = self(input_seq, padding_mask=padding_mask)
+        loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)
+        masked_lm_loss = loss_func(prediction_scores.view(-1, self.config.item_voc_size), target.view(-1))
+
+        return {
+            'loss': masked_lm_loss
+        }
 
 
 def _mask_items(inputs: torch.Tensor,
