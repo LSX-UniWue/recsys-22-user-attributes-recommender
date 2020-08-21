@@ -5,7 +5,8 @@ import pytorch_lightning as pl
 
 from losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
 from models.bert4rec.bert4rec_model import get_padding_mask
-from models.layers.util_layers import MatrixFactorizationLayer, TransformerEmbedding
+from models.layers.util_layers import MatrixFactorizationLayer
+from models.layers.transformer_layers import TransformerEmbedding
 from configs.sasrec.sas_rec_config import SASRecConfig
 from utils.tensor_utils import generate_square_subsequent_mask
 
@@ -23,11 +24,12 @@ class SASRecModel(pl.LightningModule):
         self.config = config
 
         d_model = config.d_model
+        dropout = config.transformer_dropout
 
-        self.embedding = TransformerEmbedding(config.item_voc_size, config.max_seq_length, d_model)
+        self.embedding = TransformerEmbedding(config.item_voc_size, config.max_seq_length, d_model, dropout)
 
         encoder_layers = nn.TransformerEncoderLayer(d_model, config.num_transformer_heads, d_model,
-                                                    config.transformer_dropout)
+                                                    dropout)
         # TODO: check add norm?
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, config.num_transformer_layers)
 

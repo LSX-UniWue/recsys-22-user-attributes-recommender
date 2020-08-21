@@ -6,7 +6,8 @@ from typing import Tuple
 from torch import nn
 
 from configs.bert4rec.bert4rec_config import BERT4RecConfig
-from models.layers.util_layers import TransformerEmbedding, MatrixFactorizationLayer
+from models.layers.util_layers import MatrixFactorizationLayer
+from models.layers.transformer_layers import TransformerEmbedding
 from utils.itemization_utils import PreTrainedItemizer
 
 CROSS_ENTROPY_IGNORE_INDEX = -100
@@ -24,10 +25,11 @@ class BERT4RecModel(pl.LightningModule):
         self.config = config
 
         d_model = config.d_model
-        self.embedding = TransformerEmbedding(config.item_voc_size, config.max_seq_length, d_model)
+        dropout = config.transformer_dropout
+        self.embedding = TransformerEmbedding(config.item_voc_size, config.max_seq_length, d_model, dropout)
 
         encoder_layers = nn.TransformerEncoderLayer(d_model, config.num_transformer_heads, d_model,
-                                                    config.transformer_dropout, activation='gelu')
+                                                    dropout, activation='gelu')
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, config.num_transformer_layers)
 
         # for decoding the sequence into the item space again
