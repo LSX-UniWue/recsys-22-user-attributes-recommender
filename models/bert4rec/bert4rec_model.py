@@ -5,7 +5,7 @@ from typing import Tuple
 
 from torch import nn
 
-from config.bert4rec.bert4rec_config import BERT4RecConfig
+from configs.bert4rec.bert4rec_config import BERT4RecConfig
 from models.layers.util_layers import TransformerEmbedding, MatrixFactorizationLayer
 from utils.itemization_utils import PreTrainedItemizer
 
@@ -72,7 +72,7 @@ class BERT4RecModel(pl.LightningModule):
         # random mask some items
         input_seq, target = _mask_items(input_seq, itemizer, 0.8)
         # calc the padding mask
-        padding_mask = _get_padding_mask(input_seq, itemizer)
+        padding_mask = get_padding_mask(input_seq, itemizer, transposed=True)
 
         # call the model
         prediction_scores = self(input_seq, padding_mask=padding_mask)
@@ -120,9 +120,20 @@ def _mask_items(inputs: torch.Tensor,
     return inputs, target
 
 
-def _get_padding_mask(tensor: torch.Tensor,
-                      itemizer: PreTrainedItemizer) -> torch.Tensor:
+def get_padding_mask(tensor: torch.Tensor,
+                     itemizer: PreTrainedItemizer,
+                     transposed: bool = True) -> torch.Tensor:
+    """
+    generates the padding mask based on the itemizer (by default batch first)
+    :param tensor:
+    :param itemizer:
+    :param transposed:
+    :return:
+    """
     # the masking should be true where the paddding token is set
     padding_mask = tensor.eq(itemizer.pad_token_id)
-    # here the transformer required a batch first tensor, so we transform it here
-    return padding_mask.transpose(0, 1)
+
+    if transposed:
+        return padding_mask.transpose(0, 1)
+
+    return padding_mask

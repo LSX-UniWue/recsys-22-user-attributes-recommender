@@ -43,6 +43,9 @@ class TransformerEmbedding(nn.Module):
         """
         return self.item_embedding.weight
 
+    def get_item_embedding(self, input_sequence: torch.Tensor):
+        return self.item_embedding(input_sequence)
+
     def forward(self,
                 input_sequence: torch.Tensor,
                 position_ids: torch.Tensor = None):
