@@ -1,3 +1,5 @@
+from argparse import ArgumentParser
+
 import torch
 import torch.nn as nn
 
@@ -19,8 +21,15 @@ class SASRecModel(pl.LightningModule):
     see https://github.com/kang205/SASRec for Tensorflow implementation
     """
 
-    def __init__(self, config: SASRecConfig):
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        return SASRecConfig.add_model_specific_args(parent_parser)
+
+    def __init__(self, **kwargs):
         super().__init__()
+
+        config = SASRecConfig.from_args(**kwargs)
+
         self.config = config
 
         d_model = config.d_model
@@ -38,8 +47,8 @@ class SASRecModel(pl.LightningModule):
 
 class SASRecTrainModel(SASRecModel):
 
-    def __init__(self, config: SASRecConfig):
-        super().__init__(config)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def forward(self,
                 input_sequence: torch.Tensor,
@@ -98,6 +107,10 @@ class SASRecTrainModel(SASRecModel):
         return {
             'loss': loss
         }
+
+    def configure_optimizers(self):
+        # TODO configure learning rate
+        return torch.optim.Adam(self.parameters(), lr=1e15, betas=(0.9, 0.98))
 
 
 class SASRecTestModel(SASRecModel):
