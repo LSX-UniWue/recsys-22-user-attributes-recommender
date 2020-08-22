@@ -39,6 +39,10 @@ class SASRecModel(pl.LightningModule):
         return parser
 
     def __init__(self, **kwargs):
+        """
+        inits the SASRec model
+        :param kwargs: all arguments added by add_model_specific_args
+        """
         super().__init__()
 
         self.learning_rate = kwargs.get(SASRecModel.SASREC_LEARNING_RATE)
@@ -134,9 +138,7 @@ class SASRecModel(pl.LightningModule):
 
         scores = self.forward(input_seq, items)
 
-        return {
-
-        }
+        return pl.EvalResult()
 
     def configure_optimizers(self):
         # TODO configure learning rate
