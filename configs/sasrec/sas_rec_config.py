@@ -10,12 +10,12 @@ class SASRecConfig(TransformerConfig):
     configuration for a SASRecModel
     """
 
-    @staticmethod
-    def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
+    @classmethod
+    def add_model_specific_args(cls, parent_parser: ArgumentParser) -> ArgumentParser:
         return TransformerConfig.add_model_specific_args(parent_parser)
 
-    @staticmethod
-    def from_args(**kwargs):
+    @classmethod
+    def from_args(cls, **kwargs):
         config_file = kwargs.get('config_file', None)
         if config_file is not None:
             return SASRecConfig.from_file(config_file)
@@ -25,7 +25,7 @@ class SASRecConfig(TransformerConfig):
         num_layers = get_config_from_args(kwargs, TransformerConfig.TRANSFORMER_CONFIG_NUM_LAYERS, 4)
         dropout = get_config_from_args(kwargs, TransformerConfig.TRANSFORMER_CONFIG_DROPOUT, 0.5)
         max_seq_length = get_config_from_args(kwargs, ModelConfig.MODEL_CONFIG_MAX_SEQ_LENGTH, 64)
-        item_voc_size = get_config_from_args(kwargs, ModelConfig.MODEL_CONFIG_ITEM_VOC_SIZE, 64)
+        item_voc_size = get_config_from_args(kwargs, ModelConfig.MODEL_CONFIG_ITEM_VOC_SIZE, 32)
         return SASRecConfig(max_seq_length=max_seq_length,
                             item_voc_size=item_voc_size,
                             d_model=hidden_size,
@@ -33,6 +33,6 @@ class SASRecConfig(TransformerConfig):
                             num_transformer_layers=num_layers,
                             transformer_dropout=dropout)
 
-    @staticmethod
-    def from_file(config_file: str):
+    @classmethod
+    def from_file(cls, config_file: str):
         raise NotImplemented("file loading not implemented")

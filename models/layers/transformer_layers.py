@@ -30,7 +30,7 @@ class TransformerEmbedding(nn.Module):
         initrange = 0.1
         self.item_embedding.weight.data.uniform_(- initrange, initrange)
 
-    def get_item_embedding_weight(self):
+    def get_item_embedding_weight(self) -> torch.Tensor:
         """
         :return: the weight matrix of the item embedding
         some methods reuse the matrix to reduce the parameter size

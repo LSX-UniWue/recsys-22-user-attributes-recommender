@@ -13,16 +13,16 @@ class TransformerConfig(ModelConfig):
     TRANSFORMER_CONFIG_NUM_HEADS = 'transformer_num_heads'
     TRANSFORMER_CONFIG_HIDDEN_SIZE = 'transformer_hidden_size'
 
-    @staticmethod
-    def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
+    @classmethod
+    def add_model_specific_args(cls, parent_parser: ArgumentParser) -> ArgumentParser:
         parser = ModelConfig.add_model_specific_args(parent_parser)
-        parser.add_argument('--{}'.format(TransformerConfig.TRANSFORMER_CONFIG_HIDDEN_SIZE), type=int, default=None,
+        parser.add_argument('--{}'.format(cls.TRANSFORMER_CONFIG_HIDDEN_SIZE), type=int, default=None,
                             help='the hidden size of the transformer')
-        parser.add_argument('--{}'.format(TransformerConfig.TRANSFORMER_CONFIG_NUM_HEADS), type=int, default=None,
+        parser.add_argument('--{}'.format(cls.TRANSFORMER_CONFIG_NUM_HEADS), type=int, default=None,
                             help='the number of heads for the transformer encoder')
-        parser.add_argument('--{}'.format(TransformerConfig.TRANSFORMER_CONFIG_NUM_LAYERS), type=int, default=None,
+        parser.add_argument('--{}'.format(cls.TRANSFORMER_CONFIG_NUM_LAYERS), type=int, default=None,
                             help='the number of transformer layers')
-        parser.add_argument('--{}'.format(TransformerConfig.TRANSFORMER_CONFIG_DROPOUT), type=float, default=None,
+        parser.add_argument('--{}'.format(cls.TRANSFORMER_CONFIG_DROPOUT), type=float, default=None,
                             help='the dropout to use through the whole transformer model')
         return parser
 
