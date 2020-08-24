@@ -8,7 +8,6 @@ import pytorch_lightning as pl
 
 from losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
 from models.bert4rec.bert4rec_model import get_padding_mask
-from models.layers.util_layers import MatrixFactorizationLayer
 from models.layers.transformer_layers import TransformerEmbedding
 from configs.sasrec.sas_rec_config import SASRecConfig
 from utils.tensor_utils import generate_square_subsequent_mask
@@ -64,8 +63,6 @@ class SASRecModel(pl.LightningModule):
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, config.num_transformer_layers)
 
         self.input_sequence_mask = None
-        self.mfl = MatrixFactorizationLayer(_weight=self.embedding.get_item_embedding_weight())
-        self.softmax = nn.Softmax(dim=2)# TODO: check dim
 
     def forward(self,
                 input_sequence: torch.Tensor,
@@ -109,12 +106,21 @@ class SASRecModel(pl.LightningModule):
 
             return pos_output, neg_output
 
-        # in test and validation we use the embedding matrix (MF layer) to build softmax for all items
+        # TODO: check, strange reshaping
+        # original code
+        # seq_emb = tf.reshape(self.seq, [tf.shape(self.input_seq)[0] * args.maxlen, args.hidden_units])
+        # self.test_item = tf.placeholder(tf.int32, shape=(101))
+        # test_item_emb = tf.nn.embedding_lookup(item_emb_table, self.test_item)
+        # self.test_logits = tf.matmul(seq_emb, tf.transpose(test_item_emb))
+        # self.test_logits = tf.reshape(self.test_logits, [tf.shape(self.input_seq)[0], args.maxlen, 101])
+        # self.test_logits = self.test_logits[:, -1, :]
         item_embeddings = self.embedding.get_item_embedding(pos_items)
-        output = item_embeddings * transformer_output[0] # use the last step
+        item_embeddings = item_embeddings.permute(1, 2, 0)
+        transformer_output = transformer_output.transpose(0, 1)
+        output = torch.matmul(transformer_output, item_embeddings)
 
-        output = self.mfl(output)
-        return self.softmax(output)
+        output = output[:, -1, :]
+        return output.transpose(0, 1)
 
     def training_step(self, batch, batch_idx, itemizer):
         input_seq = batch['sequence']
@@ -127,7 +133,10 @@ class SASRecModel(pl.LightningModule):
 
         loss_func = SASRecBinaryCrossEntropyLoss()
         loss = loss_func(pos_logits, neg_logits, mask=padding_mask.transpose(0, 1))
-        # TODO: add regularization losses
+        # the original code
+        # (https://github.com/kang205/SASRec/blob/641c378fcfac265ea8d1e5fe51d4d53eb892d1b4/model.py#L92)
+        # adds regularization losses, but they are empty, as far as I can see (dzo)
+        # TODO: check
 
         return pl.TrainResult(loss)
 
@@ -135,7 +144,6 @@ class SASRecModel(pl.LightningModule):
         input_seq = batch['sequence']
         # the first entry in each tensor
         items = batch['items']
-
         scores = self.forward(input_seq, items)
 
         return pl.EvalResult()
