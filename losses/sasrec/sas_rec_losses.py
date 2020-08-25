@@ -1,7 +1,7 @@
 import torch
+from pytorch_lightning.metrics.functional.reduction import reduce
 from torch import nn
 
-IGNORE_INDEX = -100
 DEFAULT_REDUCTION = 'mean'
 
 
@@ -45,6 +45,5 @@ def sas_binary_cross_entropy(pos_input: torch.Tensor,
     neg = _log_sigmoid(neg_input, reverse=True) * mask
 
     sum = torch.sum(-pos - neg) / torch.sum(mask)
-    if reduction == 'mean':
-        return torch.mean(sum)
-    return sum
+
+    return reduce(sum, reduction)
