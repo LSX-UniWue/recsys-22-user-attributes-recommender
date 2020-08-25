@@ -15,14 +15,14 @@ class TransformerEmbedding(nn.Module):
                  item_voc_size: int,
                  max_seq_len: int,
                  embedding_size: int,
-                 dropout_probability: float):
+                 dropout: float):
         super().__init__()
 
         self.embedding_size = embedding_size
         self.item_embedding = nn.Embedding(item_voc_size, self.embedding_size)
         self.position_embedding = nn.Embedding(max_seq_len, self.embedding_size)
         self.embedding_norm = nn.LayerNorm(self.embedding_size)
-        self.dropout = nn.Dropout(p=dropout_probability)
+        self.dropout = nn.Dropout(p=dropout)
         # now init the item embedding
         self.init_weights()
 

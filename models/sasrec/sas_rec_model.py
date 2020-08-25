@@ -18,7 +18,7 @@ class SASRecModel(pl.LightningModule):
     Implementation of the "Self-Attentive Sequential Recommendation" paper.
     see https://doi.org/10.1109%2fICDM.2018.00035 for more details
 
-    see https://github.com/kang205/SASRec for Tensorflow implementation
+    see https://github.com/kang205/SASRec for the original Tensorflow implementation
     """
 
     SASREC_LEARNING_RATE = 'learning_rate'
@@ -48,19 +48,24 @@ class SASRecModel(pl.LightningModule):
         self.beta1 = kwargs.get(SASRecModel.SASREC_ADAM_BETA_1)
         self.beta2 = kwargs.get(SASRecModel.SASREC_ADAM_BETA_2)
 
-        config = SASRecConfig.from_args(**kwargs)
+        self.config = SASRecConfig.from_args(**kwargs)
 
-        self.config = config
+        hidden_size = self.config.d_model
+        dropout = self.config.transformer_dropout
 
-        hidden_size = config.d_model
-        dropout = config.transformer_dropout
+        self.embedding = TransformerEmbedding(item_voc_size=self.config.item_voc_size,
+                                              max_seq_len=self.config.max_seq_length,
+                                              embedding_size=hidden_size,
+                                              dropout=dropout)
 
-        self.embedding = TransformerEmbedding(config.item_voc_size, config.max_seq_length, hidden_size, dropout)
-
-        encoder_layers = nn.TransformerEncoderLayer(hidden_size, config.num_transformer_heads, hidden_size,
-                                                    dropout)
-        # TODO: check add norm?
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, config.num_transformer_layers)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_size,
+                                                   nhead=self.config.num_transformer_heads,
+                                                   dim_feedforward=hidden_size,
+                                                   dropout=dropout)
+        encoder_norm = nn.LayerNorm(hidden_size)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layer,
+                                                         num_layers=self.config.num_transformer_layers,
+                                                         norm=encoder_norm)
 
         self.input_sequence_mask = None
 
@@ -71,14 +76,17 @@ class SASRecModel(pl.LightningModule):
                 position_ids: Optional[torch.Tensor] = None,
                 padding_mask: Optional[torch.Tensor] = None):
         """
-        forword pass to generate the scores for the next items in the sequence
+        Forward pass to generate the logits for the positive (next) items and the negative (randomly sampled items,
+        that are not in the current sequence) items.
+        If no negative items are provided,
 
         :param input_sequence: the sequence [S x B]
-        :param pos_items: TODO
-        :param neg_items: TODO
+        :param pos_items: ids of the positive items (the next items in the sequence)
+        :param neg_items: random sampled negative items that are not in the session of the user
         :param position_ids: the optional position ids [S x B] if not the position ids are generated
         :param padding_mask: the optional padding mask [B x S] if the sequence is padded
-        :return: TODO
+        :return: the logits of the pos_items and the logits of the negative_items.
+
 
         Where S is the (max) sequence length of the batch, B the batch size, and I the vocabulary size of the items.
         """
@@ -106,6 +114,7 @@ class SASRecModel(pl.LightningModule):
 
             return pos_output, neg_output
 
+        # inference step
         # TODO: check, strange reshaping
         # original code
         # seq_emb = tf.reshape(self.seq, [tf.shape(self.input_seq)[0] * args.maxlen, args.hidden_units])
@@ -119,6 +128,7 @@ class SASRecModel(pl.LightningModule):
         transformer_output = transformer_output.transpose(0, 1)
         output = torch.matmul(transformer_output, item_embeddings)
 
+        # here we return the logits of the last step of the sequence
         output = output[:, -1, :]
         return output.transpose(0, 1)
 

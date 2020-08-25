@@ -16,7 +16,7 @@ class SASRecConfig(TransformerConfig):
 
     @classmethod
     def from_args(cls, **kwargs):
-        config_file = kwargs.get('config_file', None)
+        config_file = kwargs.get(ModelConfig.MODEL_CONFIG_CONFIG_FILE, None)
         if config_file is not None:
             return SASRecConfig.from_file(config_file)
 
