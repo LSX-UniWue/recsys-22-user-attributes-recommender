@@ -1,3 +1,4 @@
+import copy
 import dataclasses
 import json
 from argparse import ArgumentParser
@@ -56,6 +57,7 @@ class ModelConfig(object):
         dict_obj = json.loads(text)
         return cls(**dict_obj)
 
+    # properties
     item_voc_size: int = dataclasses.field(metadata={
         DATA_CLASS_METADATA_KEY_HELP: 'the item vocab size',
         DATA_CLASS_METADATA_KEY_DEFAULT_VALUE: 32
@@ -64,3 +66,17 @@ class ModelConfig(object):
         DATA_CLASS_METADATA_KEY_HELP: 'the max sequence length',
         DATA_CLASS_METADATA_KEY_DEFAULT_VALUE: 16
     })
+
+    def to_dict(self):
+        """ Serializes the config to a python dict. """
+        output = copy.deepcopy(self.__dict__)
+        return output
+
+    def to_json_string(self):
+        """ Serializes the config to a JSON string. """
+        return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
+
+    def to_json_file(self, json_file_path):
+        """ Save the config to a json file. """
+        with open(json_file_path, "w", encoding='utf-8') as writer:
+            writer.write(self.to_json_string())
