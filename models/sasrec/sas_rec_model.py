@@ -48,7 +48,7 @@ class SASRecModel(pl.LightningModule):
         self.beta1 = kwargs.get(SASRecModel.SASREC_ADAM_BETA_1)
         self.beta2 = kwargs.get(SASRecModel.SASREC_ADAM_BETA_2)
 
-        self.config = SASRecConfig.from_args(**kwargs)
+        self.config = SASRecConfig.from_args(kwargs)
 
         hidden_size = self.config.transformer_hidden_size
         dropout = self.config.transformer_dropout
