@@ -159,5 +159,4 @@ class SASRecModel(pl.LightningModule):
         return pl.EvalResult()
 
     def configure_optimizers(self):
-        # TODO configure learning rate
         return torch.optim.Adam(self.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2))
