@@ -50,7 +50,7 @@ class SASRecModel(pl.LightningModule):
 
         self.config = SASRecConfig.from_args(**kwargs)
 
-        hidden_size = self.config.d_model
+        hidden_size = self.config.transformer_hidden_size
         dropout = self.config.transformer_dropout
 
         self.embedding = TransformerEmbedding(item_voc_size=self.config.item_voc_size,
