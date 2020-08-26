@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from configs.transformers.transformer_config import TransformerConfig
+from configs.models.transformers import TransformerConfig
 
 
 @dataclass

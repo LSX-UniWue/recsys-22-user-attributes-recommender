@@ -9,7 +9,7 @@ import pytorch_lightning as pl
 from losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
 from models.bert4rec.bert4rec_model import get_padding_mask
 from models.layers.transformer_layers import TransformerEmbedding
-from configs.sasrec.sas_rec_config import SASRecConfig
+from configs.models.sasrec.sas_rec_config import SASRecConfig
 from utils.tensor_utils import generate_square_subsequent_mask
 
 

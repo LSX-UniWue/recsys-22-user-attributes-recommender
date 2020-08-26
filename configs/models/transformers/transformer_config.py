@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from configs.config import ModelConfig
+from configs.models.model_config import ModelConfig
 
 
 @dataclass
