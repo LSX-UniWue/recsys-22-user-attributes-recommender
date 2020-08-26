@@ -24,7 +24,7 @@ class BERT4RecModel(pl.LightningModule):
 
         self.config = config
 
-        d_model = config.d_model
+        d_model = config.transformer_hidden_size
         dropout = config.transformer_dropout
         self.embedding = TransformerEmbedding(config.item_voc_size, config.max_seq_length, d_model, dropout)
 
