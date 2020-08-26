@@ -5,7 +5,7 @@ from typing import Tuple
 
 from torch import nn
 
-from configs.models.bert4rec import BERT4RecConfig
+from configs.models.bert4rec.bert4rec_config import BERT4RecConfig
 from models.layers.util_layers import MatrixFactorizationLayer
 from models.layers.transformer_layers import TransformerEmbedding
 from utils.itemization_utils import PreTrainedItemizer
