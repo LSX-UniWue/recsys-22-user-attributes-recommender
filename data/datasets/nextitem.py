@@ -8,36 +8,43 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME, INT_BYTE_SIZE, TARGET_ENTRY_NAME
 from data.datasets.seqitem import SequentialItemSessionDataset
 
 
-class NextItemPredSessionIndex:
-    def __init__(self, dataset: SequentialItemSessionDataset, index_path: Path, min_session_length: int = 2, save_index: bool = True):
+class NextItemPredSessionIndexBuilder:
 
-        if not index_path.exists() and save_index:
+    def __init__(self, min_session_length: int = 2):
+        self._min_session_length = min_session_length
+
+    def build(self, dataset: SequentialItemSessionDataset, index_path: Path):
+        if not index_path.exists():
             index_path.parent.mkdir(parents=True, exist_ok=True)
-            self._create(dataset, index_path, min_session_length)
 
-        self._index_file_handle = index_path.open("rb")
-
-        self._min_session_length = self._read_min_session_length()
-        self._length = self._read_length()
-
-    def _create(self, dataset: SequentialItemSessionDataset, index_path: Path, min_session_length: int):
         current_idx = 0
         with index_path.open("wb") as index_file:
             for session_idx in tqdm(range(len(dataset)), desc="Creating Index."):
                 sessions = dataset[session_idx][ITEM_SEQ_ENTRY_NAME]
-                if len(sessions) > min_session_length:
+                if len(sessions) > self._min_session_length:
                     for target_pos in range(1, len(sessions)):
                         self._write_entry(index_file, session_idx, target_pos)
                         current_idx += 1
             # write length at the end
             index_file.write(current_idx.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
             # write minimum length
-            index_file.write(min_session_length.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
+            index_file.write(self._min_session_length.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
 
     @staticmethod
     def _write_entry(index_file, session_idx: int, target_pos: int):
         index_file.write(session_idx.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
         index_file.write(target_pos.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
+
+
+class NextItemPredSessionIndex:
+    def __init__(self, index_path: Path):
+        if not index_path.exists():
+            raise Exception(f"could not find file with index at: {index_path}")
+
+        self._index_file_handle = index_path.open("rb")
+
+        self._min_session_length = self._read_min_session_length()
+        self._length = self._read_length()
 
     def _read_length(self):
         self._index_file_handle.seek(-2*INT_BYTE_SIZE, io.SEEK_END)

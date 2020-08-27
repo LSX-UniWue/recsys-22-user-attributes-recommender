@@ -35,7 +35,6 @@ def main_next_item_prediction_session_dataset():
     index_file_path = base / "small.idx"
     next_item_index_file_path = base / "small_nip.idx"
     delimiter = "\t"
-    min_session_length = 2
 
     reader = CsvSessionDatasetReader(data_file_path, Index(index_file_path))
 
@@ -49,14 +48,15 @@ def main_next_item_prediction_session_dataset():
         )
     )
 
-    seq_item_index = NextItemPredSessionIndex(dataset, next_item_index_file_path, min_session_length)
+    seq_item_index = NextItemPredSessionIndex(next_item_index_file_path)
     seq_item_dataset = NextItemPredSessionDataset(dataset, seq_item_index)
 
     print(seq_item_dataset[10])
 
 
 if __name__ == "__main__":
-    main_next_item_prediction_session_dataset()
+    main_sequential_item_session_dataset()
+    #main_next_item_prediction_session_dataset()
 
 # def next_item_pred_iterable_dataset_initfn(worker_id):
 #     worker_info = torch.utils.data.get_worker_info()
