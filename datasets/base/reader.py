@@ -1,8 +1,7 @@
 from pathlib import Path
-from typing import Tuple, List, Dict
+from typing import Tuple
 import sys
 import io
-import csv
 
 
 class Index(object):

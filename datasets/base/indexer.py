@@ -1,7 +1,7 @@
 import csv
 from io import StringIO
 from pathlib import Path
-from typing import List, Tuple, Text, BinaryIO, Dict, Any
+from typing import List, Text, BinaryIO, Dict
 import sys
 from argparse import ArgumentParser
 from dataclasses import dataclass
