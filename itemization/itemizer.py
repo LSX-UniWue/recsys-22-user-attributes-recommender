@@ -5,7 +5,7 @@ from typing import Any, List
 SPECIAL_TOKENS_ATTRIBUTES = ["bos_token", "eos_token", "unk_token", "sep_token",
                              "pad_token", "cls_token", "mask_token"]
 
-
+#TODO (AD) we could also make this a callable object?
 class PreTrainedItemizer(object):
 
     def __init__(self, max_len=None, **kwargs):

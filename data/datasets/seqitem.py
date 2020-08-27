@@ -5,6 +5,7 @@ from torch.utils.data import Dataset
 
 from data.base.reader import CsvSessionDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME
+from itemization.itemizer import PreTrainedItemizer
 
 
 class SessionParser(object):
@@ -22,7 +23,6 @@ class SequentialItemSessionParser(object):
     def parse(self, raw_session: Text) -> Dict[Text, List[Any]]:
         reader = csv.reader(io.StringIO(raw_session), delimiter=self._delimiter)
         items = [self._get_item(entry) for entry in reader]
-
         return {
             ITEM_SEQ_ENTRY_NAME: items
         }
@@ -33,12 +33,23 @@ class SequentialItemSessionParser(object):
 
 
 class SequentialItemSessionDataset(Dataset):
-    def __init__(self, reader: CsvSessionDatasetReader, parser: SessionParser):
+    def __init__(self, reader: CsvSessionDatasetReader, parser: SessionParser, itemizer: PreTrainedItemizer = None):
         self._reader = reader
         self._parser = parser
+        self._itemizer = itemizer
 
     def __len__(self):
         return len(self._reader)
 
     def __getitem__(self, idx):
-        return self._parser.parse(self._reader.get_session(idx))
+        items = self._parser.parse(self._reader.get_session(idx))[ITEM_SEQ_ENTRY_NAME]
+
+        if self._itemizer:
+            itemized_items = self._itemizer.convert_items_to_ids(items)
+        else:
+            itemized_items = items
+
+        return {
+            ITEM_SEQ_ENTRY_NAME: itemized_items
+        }
+
