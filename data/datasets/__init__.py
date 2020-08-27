@@ -1,0 +1,3 @@
+INT_BYTE_SIZE = 8
+ITEM_SEQ_ENTRY_NAME = "items"
+TARGET_ENTRY_NAME = "target"
