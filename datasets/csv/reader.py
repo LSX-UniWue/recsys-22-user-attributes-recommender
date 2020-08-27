@@ -4,7 +4,7 @@ import sys
 import io
 import csv
 
-from datasets.reader.parser import SessionParser
+from datasets.csv.parser import SessionParser
 
 
 class Index(object):

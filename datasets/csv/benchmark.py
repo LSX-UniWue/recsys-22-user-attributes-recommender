@@ -4,8 +4,8 @@ from argparse import ArgumentParser
 import random
 import time
 
-from datasets.reader.parser import ItemIdSessionParser
-from datasets.reader.reader import Index, CsvSessionDatasetReader
+from datasets.csv.parser import ItemIdSessionParser
+from datasets.csv.reader import Index, CsvSessionDatasetReader
 
 
 def run(data_path: Path, index_path: Path, limit: int):
