@@ -1,10 +1,8 @@
 from pathlib import Path
-from typing import Tuple, Callable, Any, List, Dict
+from typing import Tuple, List, Dict
 import sys
 import io
 import csv
-
-from datasets.csv.parser import SessionParser
 
 
 class Index(object):
@@ -51,11 +49,9 @@ class Index(object):
 
 
 class CsvSessionDatasetReader(object):
-    def __init__(self, data_file_path: Path, delimiter: str, index: Index, session_parser: SessionParser):
+    def __init__(self, data_file_path: Path, index: Index):
         self._data_file_path = data_file_path
-        self._header = self._create_indexed_header(self._read_header(data_file_path, delimiter))
 
-        self._session_parser = session_parser
         self._index = index
 
         self._data_file_handle = data_file_path.open(mode="rb")
@@ -75,22 +71,13 @@ class CsvSessionDatasetReader(object):
             raise Exception(f"{idx} is not a valid index in [0, {self._num_sessions}]")
 
         start, end = self._index.get(idx)
-        session_raw = self._read_part(start, end)
+        session_raw = self._read_session(start, end)
 
-        return self._session_parser.parse(self._header, io.StringIO(session_raw))
+        return session_raw
 
-    def _read_part(self, start: int, end: int) -> str:
+    def _read_session(self, start: int, end: int) -> str:
         self._data_file_handle.seek(start)
         return self._data_file_handle.read(end - start).decode(encoding="utf-8")
 
-    @staticmethod
-    def _read_header(data_file_path: Path, delimiter: str) -> List[str]:
-        with data_file_path.open("r") as file:
-            reader = csv.reader(file, delimiter=delimiter)
-            return next(reader)
-
-    @staticmethod
-    def _create_indexed_header(header: List[str]) -> Dict[str, int]:
-        return {name: idx for idx, name in enumerate(header)}
 
 

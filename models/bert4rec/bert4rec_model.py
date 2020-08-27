@@ -8,7 +8,7 @@ from torch import nn
 from configs.models.bert4rec.bert4rec_config import BERT4RecConfig
 from models.layers.util_layers import MatrixFactorizationLayer
 from models.layers.transformer_layers import TransformerEmbedding
-from utils.itemization_utils import PreTrainedItemizer
+from itemization.itemizer import PreTrainedItemizer
 
 CROSS_ENTROPY_IGNORE_INDEX = -100
 

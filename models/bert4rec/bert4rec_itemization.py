@@ -1,4 +1,4 @@
-from utils.itemization_utils import PreTrainedItemizer, load_vocab
+from itemization.itemizer import PreTrainedItemizer, load_vocab
 
 
 class BERTItemizer(PreTrainedItemizer):
