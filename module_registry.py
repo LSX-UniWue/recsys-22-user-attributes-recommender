@@ -39,8 +39,11 @@ class ModuleBuilder(object):
         return self.module_cls(training_config, model_config)
 
 
-def build_module_builder(module_cls, model_config_cls, training_config_cls) -> ModuleBuilder:
-    return ModuleBuilder(module_cls, model_config_cls, training_config_cls)
+def build_module_builder(module_cls: Type[pl.LightningModule],
+                         training_config_cls: Type[TrainingConfig],
+                         model_config_cls: Type[ModelConfig]
+                         ) -> ModuleBuilder:
+    return ModuleBuilder(module_cls, training_config_cls, model_config_cls)
 
 
 class ModuleRegistry(object):
@@ -49,12 +52,25 @@ class ModuleRegistry(object):
 
     @classmethod
     def register_module(cls,
-                        module_id: str,
-                        training_config_cls,
-                        model_config_cls
+                        module_id: str
                         ):
 
         def wrap(module_cls):
+            # infer training and model config classes
+            training_config_cls = None
+            model_config_cls = None
+            import inspect
+            init_signature = inspect.signature(module_cls.__init__)
+            for key, value in init_signature.parameters.items():
+                if 'train' in key:
+                    training_config_cls = value.annotation
+                if 'model' in key:
+                    model_config_cls = value.annotation
+
+            if training_config_cls is None or model_config_cls is None:
+                raise KeyError("TODO")
+                # FIXME: add correct error and error message
+
             cls.mapping[module_id] = build_module_builder(module_cls, training_config_cls, model_config_cls)
             return module_cls
 

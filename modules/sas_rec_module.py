@@ -10,7 +10,7 @@ from models.sasrec.sas_rec_model import SASRecModel
 from module_registry import module_registry
 
 
-@module_registry.register_module('sasrec', SASRecTrainingConfig, SASRecConfig)
+@module_registry.register_module('sasrec')
 class SASRecModule(pl.LightningModule):
     """
     Implementation of the "Self-Attentive Sequential Recommendation" paper.
@@ -31,9 +31,6 @@ class SASRecModule(pl.LightningModule):
         super().__init__()
 
         self.training_config = training_config
-        self.learning_rate = self.training_config.learning_rate
-        self.beta1 = self.training_config.beta_1
-        self.beta2 = self.training_config.beta_2
 
         self.model_config = model_config
         self.model = SASRecModel(self.model_config)
@@ -65,4 +62,6 @@ class SASRecModule(pl.LightningModule):
         return pl.EvalResult()
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2))
+        return torch.optim.Adam(self.parameters(),
+                                lr=self.training_config.learning_rate,
+                                betas=(self.training_config.beta1, self.training_config.beta2))
