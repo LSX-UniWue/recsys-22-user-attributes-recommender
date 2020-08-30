@@ -21,8 +21,6 @@ class BaseConfig(object):
     DATA_CLASS_METADATA_KEY_HELP = 'help'
     DATA_CLASS_METADATA_KEY_DEFAULT_VALUE = 'default_value'
 
-    MODEL_CONFIG_CONFIG_FILE = 'config_file'
-
     @classmethod
     def add_model_specific_args(cls, parent_parser: ArgumentParser) -> ArgumentParser:
         """
@@ -53,7 +51,7 @@ class BaseConfig(object):
         :param kwargs: all properties that should be overriden
         :return:
         """
-        config_file = config_dict.get(BaseConfig.MODEL_CONFIG_CONFIG_FILE, None)
+        config_file = config_dict.get(cls.MODEL_CONFIG_CONFIG_FILE, None)
         if config_file is not None:
             config = cls.from_json_file(Path(config_file))
             properties_to_override = cls._get_config_dict_from_arguments(config_dict, use_default_value=False)

@@ -13,6 +13,8 @@ class ModelConfig(BaseConfig):
     every subclass must also be annotated with dataclass
     """
 
+    MODEL_CONFIG_CONFIG_FILE = 'model_config_file'
+
     # properties
     item_voc_size: int = dataclasses.field(metadata={
         BaseConfig.DATA_CLASS_METADATA_KEY_HELP: 'the item vocab size',

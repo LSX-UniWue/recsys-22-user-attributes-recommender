@@ -1,19 +1,14 @@
-from argparse import ArgumentParser
 from typing import Optional
 
 import torch
 import torch.nn as nn
 
-import pytorch_lightning as pl
-
-from losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
-from models.bert4rec.bert4rec_model import get_padding_mask
 from models.layers.transformer_layers import TransformerEmbedding
 from configs.models.sasrec.sas_rec_config import SASRecConfig
 from utils.tensor_utils import generate_square_subsequent_mask
 
 
-class SASRecModel(pl.LightningModule):
+class SASRecModel(nn.Module):
     """
     Implementation of the "Self-Attentive Sequential Recommendation" paper.
     see https://doi.org/10.1109%2fICDM.2018.00035 for more details
@@ -21,34 +16,15 @@ class SASRecModel(pl.LightningModule):
     see https://github.com/kang205/SASRec for the original Tensorflow implementation
     """
 
-    SASREC_LEARNING_RATE = 'learning_rate'
-    SASREC_ADAM_BETA_1 = 'beta_1'
-    SASREC_ADAM_BETA_2 = 'beta_2'
-
-    @classmethod
-    def add_model_specific_args(cls, parent_parser: ArgumentParser) -> ArgumentParser:
-        # delegate this to the config class
-        parser = SASRecConfig.add_model_specific_args(parent_parser)
-        parser.add_argument('--{}'.format(cls.SASREC_LEARNING_RATE), default=0.001, type=float,
-                            help='the learning rate of the Adam optimizer')
-        parser.add_argument('--{}'.format(cls.SASREC_ADAM_BETA_1), default=0.9, type=float,
-                            help='the beta 1 of the Adam optimizer')
-        parser.add_argument('--{}'.format(cls.SASREC_ADAM_BETA_2), default=0.98, type=float,
-                            help='the beta 2 of the Adam optimizer')
-        return parser
-
-    def __init__(self, **kwargs):
+    def __init__(self,
+                 config: SASRecConfig
+                 ):
         """
         inits the SASRec model
-        :param kwargs: all arguments added by add_model_specific_args
+        :param config: all model configurations
         """
         super().__init__()
-
-        self.learning_rate = kwargs.get(SASRecModel.SASREC_LEARNING_RATE)
-        self.beta1 = kwargs.get(SASRecModel.SASREC_ADAM_BETA_1)
-        self.beta2 = kwargs.get(SASRecModel.SASREC_ADAM_BETA_2)
-
-        self.config = SASRecConfig.from_args(kwargs)
+        self.config = config
 
         hidden_size = self.config.transformer_hidden_size
         dropout = self.config.transformer_dropout
@@ -131,32 +107,3 @@ class SASRecModel(pl.LightningModule):
         # here we return the logits of the last step of the sequence
         output = output[:, -1, :]
         return output.transpose(0, 1)
-
-    def training_step(self, batch, batch_idx, itemizer):
-        input_seq = batch['sequence']
-        pos = batch['positive_samples']
-        neg = batch['negative_samples']
-
-        padding_mask = get_padding_mask(input_seq, itemizer)
-
-        pos_logits, neg_logits = self.forward(input_seq, pos, neg_items=neg, padding_mask=padding_mask)
-
-        loss_func = SASRecBinaryCrossEntropyLoss()
-        loss = loss_func(pos_logits, neg_logits, mask=padding_mask.transpose(0, 1))
-        # the original code
-        # (https://github.com/kang205/SASRec/blob/641c378fcfac265ea8d1e5fe51d4d53eb892d1b4/model.py#L92)
-        # adds regularization losses, but they are empty, as far as I can see (dzo)
-        # TODO: check
-
-        return pl.TrainResult(loss)
-
-    def validation_step(self, batch, batch_idx):
-        input_seq = batch['sequence']
-        # the first entry in each tensor
-        items = batch['items']
-        scores = self.forward(input_seq, items)
-
-        return pl.EvalResult()
-
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.learning_rate, betas=(self.beta1, self.beta2))
