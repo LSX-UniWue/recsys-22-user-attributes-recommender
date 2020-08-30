@@ -12,19 +12,13 @@ from module_registry import module_registry
 
 @module_registry.register_module('sasrec')
 class SASRecModule(pl.LightningModule):
-    """
-    Implementation of the "Self-Attentive Sequential Recommendation" paper.
-    see https://doi.org/10.1109%2fICDM.2018.00035 for more details
-
-    see https://github.com/kang205/SASRec for the original Tensorflow implementation
-    """
 
     def __init__(self,
                  training_config: SASRecTrainingConfig,
                  model_config: SASRecConfig
                  ):
         """
-        inits the SASRec model
+        inits the SASRec module
         :param training_config: all training configurations
         :param model_config: all model configurations
         """
