@@ -14,3 +14,17 @@ def build_module(module_id: str):
     dict_args = vars(args)
 
     return builder.build_module(dict_args)
+
+
+def main() -> None:
+    parser = ArgumentParser()
+    parser.add_argument('module_id')
+
+    args = parser.parse_args()
+    module = args.module_id
+
+    module = build_module(module)
+
+
+if __name__ == '__main__':
+    main()
