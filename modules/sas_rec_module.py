@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 
 from configs.training.sasrec.sas_rec_config import SASRecTrainingConfig
 from losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
-from models.bert4rec.bert4rec_model import get_padding_mask
+from modules.bert4rec_module import get_padding_mask
 from configs.models.sasrec.sas_rec_config import SASRecConfig
 from models.sasrec.sas_rec_model import SASRecModel
 from module_registry import module_registry
