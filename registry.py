@@ -46,9 +46,9 @@ def build_module_builder(module_cls: Type[pl.LightningModule],
     return ModuleBuilder(module_cls, training_config_cls, model_config_cls)
 
 
-class ModuleRegistry(object):
+class Registry(object):
 
-    mapping = {}
+    module_mapping = {}
 
     @classmethod
     def register_module(cls,
@@ -71,7 +71,7 @@ class ModuleRegistry(object):
                 raise KeyError("TODO")
                 # FIXME: add correct error and error message
 
-            cls.mapping[module_id] = build_module_builder(module_cls, training_config_cls, model_config_cls)
+            cls.module_mapping[module_id] = build_module_builder(module_cls, training_config_cls, model_config_cls)
             return module_cls
 
         return wrap
@@ -79,7 +79,7 @@ class ModuleRegistry(object):
     @classmethod
     def get_module_builder(cls,
                            module_id: str):
-        return cls.mapping[module_id]
+        return cls.module_mapping[module_id]
 
 
-module_registry = ModuleRegistry()
+registry = Registry()

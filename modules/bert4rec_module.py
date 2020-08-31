@@ -9,12 +9,12 @@ from configs.models.bert4rec.bert4rec_config import BERT4RecConfig
 from configs.training.bert4rec.bert4rec_config import BERT4RecTrainingConfig
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
-from module_registry import module_registry
+from registry import registry
 
 CROSS_ENTROPY_IGNORE_INDEX = -100
 
 
-@module_registry.register_module('bert4rec')
+@registry.register_module('bert4rec')
 class BERT4RecModule(pl.LightningModule):
 
     def __init__(self,

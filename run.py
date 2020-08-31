@@ -1,10 +1,10 @@
 from argparse import ArgumentParser
 
-from module_registry import module_registry
+from registry import registry
 
 
 def build_module(module_id: str):
-    builder = module_registry.get_module_builder(module_id)
+    builder = registry.get_module_builder(module_id)
 
     # build argument parser and let the model be build from it
     parser = ArgumentParser()
