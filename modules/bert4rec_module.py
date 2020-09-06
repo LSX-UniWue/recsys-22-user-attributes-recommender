@@ -7,7 +7,7 @@ from torch import nn
 
 from configs.models.bert4rec.bert4rec_config import BERT4RecConfig
 from configs.training.bert4rec.bert4rec_config import BERT4RecTrainingConfig
-from itemization.itemizer import PreTrainedItemizer
+from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
 from module_registry import module_registry
 
@@ -47,7 +47,7 @@ class BERT4RecModule(pl.LightningModule):
 
 
 def _mask_items(inputs: torch.Tensor,
-                itemizer: PreTrainedItemizer,
+                itemizer: Tokenizer,
                 mask_probability: float) -> Tuple[torch.Tensor, torch.Tensor]:
     """ Prepare masked items inputs/target for masked modeling. """
 
@@ -71,7 +71,7 @@ def _mask_items(inputs: torch.Tensor,
 
     # 80% of the time, we replace masked input items with mask item ([MASK])
     indices_replaced = torch.bernoulli(torch.full(target.shape, 0.8)).bool() & masked_indices
-    inputs[indices_replaced] = itemizer.convert_items_to_ids(itemizer.mask_token)
+    inputs[indices_replaced] = itemizer.convert_tokens_to_ids(itemizer.mask_token)
 
     # 10% of the time, we replace masked input items with random items
     indices_random = torch.bernoulli(torch.full(target.shape, 0.5)).bool() & masked_indices & ~indices_replaced
@@ -83,7 +83,7 @@ def _mask_items(inputs: torch.Tensor,
 
 
 def get_padding_mask(tensor: torch.Tensor,
-                     itemizer: PreTrainedItemizer,
+                     itemizer: Tokenizer,
                      transposed: bool = True) -> torch.Tensor:
     """
     generates the padding mask based on the itemizer (by default batch first)
