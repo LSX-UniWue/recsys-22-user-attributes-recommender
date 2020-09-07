@@ -15,6 +15,10 @@ class ModelConfig(BaseConfig):
 
     MODEL_CONFIG_CONFIG_FILE = 'model_config_file'
 
+    @classmethod
+    def get_config_file_key(cls) -> str:
+        return cls.MODEL_CONFIG_CONFIG_FILE
+
     # properties
     item_voc_size: int = dataclasses.field(metadata={
         BaseConfig.DATA_CLASS_METADATA_KEY_HELP: 'the item vocab size',

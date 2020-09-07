@@ -8,6 +8,10 @@ class TrainingConfig(BaseConfig):
 
     MODEL_CONFIG_CONFIG_FILE = 'training_config_file'
 
+    @classmethod
+    def get_config_file_key(cls) -> str:
+        return cls.MODEL_CONFIG_CONFIG_FILE
+
     batch_size: int = field(
         metadata={
             BaseConfig.DATA_CLASS_METADATA_KEY_HELP: 'the batch size to train the model',

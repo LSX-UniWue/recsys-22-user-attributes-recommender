@@ -1,6 +1,7 @@
 import dataclasses
 import json
 import logging
+from abc import abstractmethod
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Dict, Any
@@ -22,6 +23,11 @@ class BaseConfig(object):
     DATA_CLASS_METADATA_KEY_DEFAULT_VALUE = 'default_value'
 
     @classmethod
+    @abstractmethod
+    def get_config_file_key(cls) -> str:
+        pass
+
+    @classmethod
     def add_model_specific_args(cls, parent_parser: ArgumentParser) -> ArgumentParser:
         """
         adds model specific args
@@ -29,7 +35,7 @@ class BaseConfig(object):
         :return:
         """
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument('--{}'.format(cls.MODEL_CONFIG_CONFIG_FILE), type=str, default=None,
+        parser.add_argument('--{}'.format(cls.get_config_file_key()), type=str, default=None,
                             help='path to a config file')
 
         for field in dataclasses.fields(cls):
