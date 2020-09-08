@@ -2,8 +2,8 @@
 from pathlib import Path
 
 from data.base.reader import CsvSessionDatasetReader, Index
-from data.datasets.nextitem import NextItemPredSessionIndex, NextItemPredSessionDataset
-from data.datasets.seqitem import SequentialItemSessionDataset, SequentialItemSessionParser
+from data.datasets.nextitem import NextItemSessionIndex, NextItemSessionDataset
+from data.datasets.session import ItemSessionDataset, ItemSessionParser
 from data.utils import create_indexed_header, read_csv_header
 
 
@@ -16,9 +16,9 @@ def main_sequential_item_session_dataset():
 
     reader = CsvSessionDatasetReader(data_file_path, Index(index_file_path))
 
-    dataset = SequentialItemSessionDataset(
+    dataset = ItemSessionDataset(
         reader,
-        SequentialItemSessionParser(
+        ItemSessionParser(
             create_indexed_header(
                 read_csv_header(data_file_path, delimiter=delimiter)
             ),
@@ -38,9 +38,9 @@ def main_next_item_prediction_session_dataset():
 
     reader = CsvSessionDatasetReader(data_file_path, Index(index_file_path))
 
-    dataset = SequentialItemSessionDataset(
+    dataset = ItemSessionDataset(
         reader,
-        SequentialItemSessionParser(
+        ItemSessionParser(
             create_indexed_header(
                 read_csv_header(data_file_path, delimiter=delimiter)
             ),
@@ -48,8 +48,8 @@ def main_next_item_prediction_session_dataset():
         )
     )
 
-    seq_item_index = NextItemPredSessionIndex(next_item_index_file_path)
-    seq_item_dataset = NextItemPredSessionDataset(dataset, seq_item_index)
+    seq_item_index = NextItemSessionIndex(next_item_index_file_path)
+    seq_item_dataset = NextItemSessionDataset(dataset, seq_item_index)
 
     print(seq_item_dataset[10])
 

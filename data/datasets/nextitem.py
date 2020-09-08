@@ -5,15 +5,15 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, INT_BYTE_SIZE, TARGET_ENTRY_NAME
-from data.datasets.seqitem import SequentialItemSessionDataset
+from data.datasets.session import ItemSessionDataset
 
 
-class NextItemPredSessionIndexBuilder:
+class NextItemSessionIndexBuilder:
 
     def __init__(self, min_session_length: int = 2):
         self._min_session_length = min_session_length
 
-    def build(self, dataset: SequentialItemSessionDataset, index_path: Path):
+    def build(self, dataset: ItemSessionDataset, index_path: Path):
         if not index_path.exists():
             index_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -36,7 +36,7 @@ class NextItemPredSessionIndexBuilder:
         index_file.write(target_pos.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
 
 
-class NextItemPredSessionIndex:
+class NextItemSessionIndex:
     def __init__(self, index_path: Path):
         if not index_path.exists():
             raise Exception(f"could not find file with index at: {index_path}")
@@ -65,9 +65,9 @@ class NextItemPredSessionIndex:
         return session_idx, target_pos
 
 
-class NextItemPredSessionDataset(Dataset):
-    def __init__(self, dataset: SequentialItemSessionDataset, index: NextItemPredSessionIndex):
-        super(NextItemPredSessionDataset, self).__init__()
+class NextItemSessionDataset(Dataset):
+    def __init__(self, dataset: ItemSessionDataset, index: NextItemSessionIndex):
+        super(NextItemSessionDataset, self).__init__()
         self._dataset = dataset
         self._index = index
 

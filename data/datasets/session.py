@@ -13,7 +13,7 @@ class SessionParser(object):
         raise NotImplementedError()
 
 
-class SequentialItemSessionParser(object):
+class ItemSessionParser(object):
 
     def __init__(self, indexed_headers: Dict[Text, int], item_header_name: Text, delimiter: Text = "\t"):
         self._indexed_headers = indexed_headers
@@ -32,11 +32,11 @@ class SequentialItemSessionParser(object):
         return int(entry[item_column_idx])
 
 
-class SequentialItemSessionDataset(Dataset):
-    def __init__(self, reader: CsvSessionDatasetReader, parser: SessionParser, itemizer: Tokenizer = None):
+class ItemSessionDataset(Dataset):
+    def __init__(self, reader: CsvSessionDatasetReader, parser: SessionParser, tokenizer: Tokenizer = None):
         self._reader = reader
         self._parser = parser
-        self._itemizer = itemizer
+        self._tokenizer = tokenizer
 
     def __len__(self):
         return len(self._reader)
@@ -44,11 +44,11 @@ class SequentialItemSessionDataset(Dataset):
     def __getitem__(self, idx):
         items = self._parser.parse(self._reader.get_session(idx))[ITEM_SEQ_ENTRY_NAME]
 
-        if self._itemizer:
-            itemized_items = self._itemizer.convert_tokens_to_ids(items)
+        if self._tokenizer:
+            tokenized_items = self._tokenizer.convert_tokens_to_ids(items)
         else:
-            itemized_items = items
+            tokenized_items = items
 
         return {
-            ITEM_SEQ_ENTRY_NAME: itemized_items
+            ITEM_SEQ_ENTRY_NAME: tokenized_items
         }
