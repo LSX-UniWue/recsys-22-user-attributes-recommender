@@ -27,6 +27,7 @@ class OptimizerConfig(object):
     )
 
 
+#TODO discuss: I think Adam should inherit from the OptimizerConfig base class (we need an LR here)
 @dataclass
 class AdamOptimizerConfig(object):
 

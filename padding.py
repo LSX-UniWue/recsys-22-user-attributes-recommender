@@ -17,7 +17,7 @@ def _padded_session_collate(max_length, batch):
             session.extend([0] * (max_length - length))
 
         sample["session"] = torch.as_tensor(session)
-        sample["session_lengths"] = length
+        sample["session_length"] = length
         return sample
 
     updated_batch = [pad_session(sample) for sample in batch]

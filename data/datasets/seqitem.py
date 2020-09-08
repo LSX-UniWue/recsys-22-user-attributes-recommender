@@ -1,5 +1,5 @@
 import io
-from typing import Dict, List, Any, Text
+from typing import Dict, List, Any, Text, Type
 import csv
 from torch.utils.data import Dataset
 
@@ -52,4 +52,3 @@ class SequentialItemSessionDataset(Dataset):
         return {
             ITEM_SEQ_ENTRY_NAME: itemized_items
         }
-
