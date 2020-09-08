@@ -8,7 +8,7 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME, INT_BYTE_SIZE, TARGET_ENTRY_NAME
 from data.datasets.session import ItemSessionDataset
 
 
-class NextItemSessionIndexBuilder:
+class NextItemIndexBuilder:
 
     def __init__(self, min_session_length: int = 2):
         self._min_session_length = min_session_length
@@ -36,7 +36,7 @@ class NextItemSessionIndexBuilder:
         index_file.write(target_pos.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
 
 
-class NextItemSessionIndex:
+class NextItemIndex:
     def __init__(self, index_path: Path):
         if not index_path.exists():
             raise Exception(f"could not find file with index at: {index_path}")
@@ -65,9 +65,9 @@ class NextItemSessionIndex:
         return session_idx, target_pos
 
 
-class NextItemSessionDataset(Dataset):
-    def __init__(self, dataset: ItemSessionDataset, index: NextItemSessionIndex):
-        super(NextItemSessionDataset, self).__init__()
+class NextItemDataset(Dataset):
+    def __init__(self, dataset: ItemSessionDataset, index: NextItemIndex):
+        super(NextItemDataset, self).__init__()
         self._dataset = dataset
         self._index = index
 
@@ -82,3 +82,5 @@ class NextItemSessionDataset(Dataset):
             ITEM_SEQ_ENTRY_NAME: session[:target_pos],
             TARGET_ENTRY_NAME: session[target_pos]
         }
+
+
