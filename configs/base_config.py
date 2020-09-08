@@ -57,6 +57,7 @@ class BaseConfig(object):
         :param kwargs: all properties that should be overriden
         :return:
         """
+        #FIXME (AD): this breaks the inheritance structure, since MODEL_CONFIG_CONFIG_FILE is defined in child class ModelConfig!
         config_file = config_dict.get(cls.MODEL_CONFIG_CONFIG_FILE, None)
         if config_file is not None:
             config = cls.from_json_file(Path(config_file))

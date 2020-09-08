@@ -58,4 +58,4 @@ class SASRecModule(pl.LightningModule):
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(),
                                 lr=self.training_config.learning_rate,
-                                betas=(self.training_config.beta1, self.training_config.beta2))
+                                betas=(self.training_config.beta_1, self.training_config.beta_2))
