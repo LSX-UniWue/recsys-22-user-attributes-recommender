@@ -1,4 +1,5 @@
 import io
+import math
 from pathlib import Path
 import sys
 
@@ -8,6 +9,7 @@ from tqdm import tqdm
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, INT_BYTE_SIZE, TARGET_ENTRY_NAME
 from data.datasets.session import ItemSessionDataset
+from data.mp import MultiProcessDataLoaderSupport
 
 
 class NextItemIndexBuilder:
@@ -38,13 +40,16 @@ class NextItemIndexBuilder:
         index_file.write(target_pos.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
 
 
-class NextItemIndex:
+class NextItemIndex(MultiProcessDataLoaderSupport):
     def __init__(self, index_path: Path):
         if not index_path.exists():
             raise Exception(f"could not find file with index at: {index_path}")
+        self._index_path = index_path
 
-        self._index_file_handle = index_path.open("rb")
+        self._init()
 
+    def _init(self):
+        self._index_file_handle = self._index_path.open("rb")
         self._min_session_length = self._read_min_session_length()
         self._length = self._read_length()
 
@@ -66,8 +71,11 @@ class NextItemIndex:
 
         return session_idx, target_pos
 
+    def _mp_init(self, id: int, num_worker: int, seed: int):
+        self._init()
 
-class NextItemDataset(Dataset):
+
+class NextItemDataset(Dataset, MultiProcessDataLoaderSupport):
     def __init__(self, dataset: ItemSessionDataset, index: NextItemIndex):
         super(NextItemDataset, self).__init__()
         self._dataset = dataset
@@ -85,19 +93,24 @@ class NextItemDataset(Dataset):
             TARGET_ENTRY_NAME: session[target_pos]
         }
 
+    def _mp_init(self, id: int, num_worker: int, seed: int):
+        pass
 
-class NextItemIterableDataset(IterableDataset):
-    def __init__(self, dataset: ItemSessionDataset, index: NextItemIndex, seed: int = None ):
+
+class NextItemIterableDataset(IterableDataset, MultiProcessDataLoaderSupport):
+    def __init__(self, dataset: ItemSessionDataset, index: NextItemIndex, seed: int = None):
         self._dataset = dataset
         self._index = index
         self._seed = seed
 
+        self._start = 0
+        self._stop = len(self._index)
+
     def __iter__(self):
-        num_samples = len(self._index)
         rng = default_rng(self._seed)
 
         while True:
-            sample_idx = rng.integers(low=0, high=num_samples)
+            sample_idx = rng.integers(low=self._start, high=self._stop)
             session_idx, target_idx = self._index[sample_idx]
 
             session = self._dataset[session_idx][ITEM_SEQ_ENTRY_NAME]
@@ -107,3 +120,16 @@ class NextItemIterableDataset(IterableDataset):
                 TARGET_ENTRY_NAME: session[target_idx]
             }
 
+    def _mp_init(self, id: int, num_worker: int, seed: int):
+        # use evenly sized shards for each worker
+        num_samples = len(self._index)
+        worker_share = int(math.ceil(num_samples / float(num_worker)))
+
+        start = id * worker_share
+        if id < num_worker - 1:
+            end = min(start + worker_share - 1, num_samples)
+        else:
+            end = num_samples
+
+        self._start = start
+        self._end = end

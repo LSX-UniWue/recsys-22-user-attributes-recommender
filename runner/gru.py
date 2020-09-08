@@ -6,8 +6,9 @@ from pathlib import Path
 from configs.models.gru.gru_config import GRUConfig
 from configs.training.gru.gru_config import GRUTrainingConfig
 from data.base.reader import CsvSessionDatasetReader, Index
-from data.datasets.nextitem import NextItemIndex, NextItemDataset, NextItemIterableDataset
+from data.datasets.nextitem import NextItemIndex, NextItemIterableDataset
 from data.datasets.session import ItemSessionDataset, ItemSessionParser
+from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
 from modules.gru_module import GRUModule
 from padding import padded_session_collate
@@ -43,7 +44,9 @@ def main():
     training_loader = DataLoader(
         seq_item_dataset,
         batch_size=batch_size,
-        collate_fn=padded_session_collate(max_seq_length)
+        collate_fn=padded_session_collate(max_seq_length),
+        num_workers=4,
+        worker_init_fn=mp_worker_init_fn
      )
 
     training_config = GRUTrainingConfig(batch_size=batch_size)

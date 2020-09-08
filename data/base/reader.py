@@ -3,13 +3,19 @@ from typing import Tuple
 import sys
 import io
 
+from data.mp import MultiProcessDataLoaderSupport
 
-class Index(object):
+
+class Index(MultiProcessDataLoaderSupport):
 
     INT_BYTE_SIZE = 8
 
     def __init__(self, index_file_path: Path):
-        self._index_file_handle = index_file_path.open("rb")
+        self._index_file_path = index_file_path
+        self._init()
+
+    def _init(self):
+        self._index_file_handle = self._index_file_path.open("rb")
         self._num_sessions = self._read_num_sessions()
 
     def _read_num_sessions(self) -> int:
@@ -46,14 +52,19 @@ class Index(object):
 
         return start, end
 
+    def _mp_init(self, id: int, num_worker: int, seed: int):
+        self._init()
 
-class CsvSessionDatasetReader(object):
+
+class CsvSessionDatasetReader(MultiProcessDataLoaderSupport):
     def __init__(self, data_file_path: Path, index: Index):
         self._data_file_path = data_file_path
-
         self._index = index
 
-        self._data_file_handle = data_file_path.open(mode="rb")
+        self._init()
+
+    def _init(self):
+        self._data_file_handle = self._data_file_path.open(mode="rb")
         self._num_sessions = self._index.num_sessions()
 
     def __len__(self):
@@ -77,6 +88,10 @@ class CsvSessionDatasetReader(object):
     def _read_session(self, start: int, end: int) -> str:
         self._data_file_handle.seek(start)
         return self._data_file_handle.read(end - start).decode(encoding="utf-8")
+
+    def _mp_init(self, id: int, num_worker: int, seed: int):
+        self._init()
+
 
 
 
