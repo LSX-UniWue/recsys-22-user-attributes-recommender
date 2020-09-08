@@ -6,7 +6,7 @@ from pathlib import Path
 from configs.models.gru.gru_config import GRUConfig
 from configs.training.gru.gru_config import GRUTrainingConfig
 from data.base.reader import CsvSessionDatasetReader, Index
-from data.datasets.nextitem import NextItemIndex, NextItemDataset
+from data.datasets.nextitem import NextItemIndex, NextItemDataset, NextItemIterableDataset
 from data.datasets.session import ItemSessionDataset, ItemSessionParser
 from data.utils import create_indexed_header, read_csv_header
 from modules.gru_module import GRUModule
@@ -38,13 +38,12 @@ def main():
     )
 
     seq_item_index = NextItemIndex(next_item_index_file_path)
-    seq_item_dataset = NextItemDataset(dataset, seq_item_index)
+    seq_item_dataset = NextItemIterableDataset(dataset, seq_item_index, seed=93938293)
 
     training_loader = DataLoader(
         seq_item_dataset,
         batch_size=batch_size,
-        collate_fn=padded_session_collate(max_seq_length),
-        shuffle=True
+        collate_fn=padded_session_collate(max_seq_length)
      )
 
     training_config = GRUTrainingConfig(batch_size=batch_size)

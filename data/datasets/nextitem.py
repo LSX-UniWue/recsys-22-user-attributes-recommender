@@ -1,7 +1,9 @@
 import io
 from pathlib import Path
 import sys
-from torch.utils.data import Dataset
+
+from numpy.random._generator import default_rng
+from torch.utils.data import Dataset, IterableDataset
 from tqdm import tqdm
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, INT_BYTE_SIZE, TARGET_ENTRY_NAME
@@ -83,4 +85,25 @@ class NextItemDataset(Dataset):
             TARGET_ENTRY_NAME: session[target_pos]
         }
 
+
+class NextItemIterableDataset(IterableDataset):
+    def __init__(self, dataset: ItemSessionDataset, index: NextItemIndex, seed: int = None ):
+        self._dataset = dataset
+        self._index = index
+        self._seed = seed
+
+    def __iter__(self):
+        num_samples = len(self._index)
+        rng = default_rng(self._seed)
+
+        while True:
+            sample_idx = rng.integers(low=0, high=num_samples)
+            session_idx, target_idx = self._index[sample_idx]
+
+            session = self._dataset[session_idx][ITEM_SEQ_ENTRY_NAME]
+
+            yield {
+                ITEM_SEQ_ENTRY_NAME: session[:target_idx],
+                TARGET_ENTRY_NAME: session[target_idx]
+            }
 
