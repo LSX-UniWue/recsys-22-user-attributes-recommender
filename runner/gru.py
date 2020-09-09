@@ -5,7 +5,7 @@ from pathlib import Path
 
 from configs.models.gru.gru_config import GRUConfig
 from configs.training.gru.gru_config import GRUTrainingConfig
-from data.base.reader import CsvSessionDatasetReader, Index
+from data.base.reader import CsvSessionDatasetReader, CsvSessionDatasetIndex
 from data.datasets.nextitem import NextItemIndex, NextItemIterableDataset
 from data.datasets.session import ItemSessionDataset, ItemSessionParser
 from data.mp import mp_worker_init_fn
@@ -26,7 +26,7 @@ def main():
     next_item_index_file_path = base / "small_nip.idx"
     delimiter = "\t"
 
-    reader = CsvSessionDatasetReader(data_file_path, Index(index_file_path))
+    reader = CsvSessionDatasetReader(data_file_path, CsvSessionDatasetIndex(index_file_path))
 
     dataset = ItemSessionDataset(
         reader,

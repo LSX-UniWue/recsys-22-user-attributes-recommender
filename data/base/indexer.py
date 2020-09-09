@@ -120,17 +120,3 @@ class CsvSessionIndexer:
 
 
 
-if __name__ == "__main__":
-    parser = ArgumentParser(prog="create_index")
-    parser.add_argument("input", help="file with sessions")
-    parser.add_argument("output", help="index file")
-    parser.add_argument("--session_key", nargs="+", help="the names of the columns that comprise the session key")
-
-    args = parser.parse_args()
-    input_path = Path(args.input)
-    output_path = Path(args.output)
-
-    session_key = args.session_key
-
-    index = CsvSessionIndexer(delimiter="\t")
-    index.create(input_path, output_path, session_key)

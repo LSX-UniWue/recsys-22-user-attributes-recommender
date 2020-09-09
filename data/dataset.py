@@ -1,7 +1,7 @@
 
 from pathlib import Path
 
-from data.base.reader import CsvSessionDatasetReader, Index
+from data.base.reader import CsvSessionDatasetReader, CsvSessionDatasetIndex
 from data.datasets.nextitem import NextItemIndex, NextItemDataset
 from data.datasets.session import ItemSessionDataset, ItemSessionParser
 from data.utils import create_indexed_header, read_csv_header
@@ -14,7 +14,7 @@ def main_sequential_item_session_dataset():
 
     delimiter = "\t"
 
-    reader = CsvSessionDatasetReader(data_file_path, Index(index_file_path))
+    reader = CsvSessionDatasetReader(data_file_path, CsvSessionDatasetIndex(index_file_path))
 
     dataset = ItemSessionDataset(
         reader,
@@ -36,7 +36,7 @@ def main_next_item_prediction_session_dataset():
     next_item_index_file_path = base / "small_nip.idx"
     delimiter = "\t"
 
-    reader = CsvSessionDatasetReader(data_file_path, Index(index_file_path))
+    reader = CsvSessionDatasetReader(data_file_path, CsvSessionDatasetIndex(index_file_path))
 
     dataset = ItemSessionDataset(
         reader,

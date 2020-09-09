@@ -6,7 +6,7 @@ import io
 from data.mp import MultiProcessDataLoaderSupport
 
 
-class Index(MultiProcessDataLoaderSupport):
+class CsvSessionDatasetIndex(MultiProcessDataLoaderSupport):
 
     INT_BYTE_SIZE = 8
 
@@ -57,7 +57,7 @@ class Index(MultiProcessDataLoaderSupport):
 
 
 class CsvSessionDatasetReader(MultiProcessDataLoaderSupport):
-    def __init__(self, data_file_path: Path, index: Index):
+    def __init__(self, data_file_path: Path, index: CsvSessionDatasetIndex):
         self._data_file_path = data_file_path
         self._index = index
 
