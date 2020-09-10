@@ -36,7 +36,7 @@ def main():
     max_seq_length = 2047
     num_items = 1032
     batch_size = 256
-    val_check_interval = 20
+    val_check_interval = 1
     delimiter = "\t"
     max_epochs = 10
 
@@ -80,7 +80,7 @@ def main():
     # trainer = pl.Trainer(gpus=None, max_epochs=10, check_val_every_n_epoch=1)
     # trainer.fit(model, train_dataloader=training_loader, val_dataloaders=validation_loader)
 
-    trainer = pl.Trainer(gpus=None, max_epochs=max_epochs, val_check_interval=val_check_interval, limit_val_batches=20)
+    trainer = pl.Trainer(gpus=None, max_epochs=max_epochs, val_check_interval=val_check_interval, limit_val_batches=50)
     trainer.fit(module, train_dataloader=training_loader, val_dataloaders=valid_loader)
 
 

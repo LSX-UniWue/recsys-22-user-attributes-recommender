@@ -1,11 +1,14 @@
+from typing import Union, List, Dict
+
 import torch
 
 import pytorch_lightning as pl
 import torch.nn as nn
-from pytorch_lightning.metrics.functional import precision, recall
+from torch import Tensor
 
 from configs.models.gru.gru_config import GRUConfig
 from configs.training.gru.gru_config import GRUTrainingConfig
+from metrics.ranking_metrics import RecallAtMetric
 from models.gru.gru_model import GRUSeqItemRecommenderModel
 
 
@@ -31,14 +34,24 @@ class GRUModule(pl.LightningModule):
             "loss": loss
         }
 
+    # FIXME need to include loss value in validation result otherwise no checkpoints will be saved
     def validation_step(self, batch, batch_idx):
         result = pl.EvalResult()
-        prediction = self.forward(batch["session"], batch["session_length"], batch_idx)
-        p = precision(prediction, batch["target"])
-        r = recall(prediction, batch["target"])
 
-        result.log("precision", p, prog_bar=True)
-        result.log("recall", r, prog_bar=True)
+        prediction = self.forward(batch["session"], batch["session_length"], batch_idx)
+
+        recall_at_metric = RecallAtMetric(k=5)
+        tp, tpfn, recall_at_k = recall_at_metric(prediction, batch["target"])
+
+        result.tp = tp
+        result.tpfn = tpfn
+
+        return result
+
+    def validation_epoch_end(self, outputs: Union[List[Dict[str, Tensor]], List[List[Dict[str, Tensor]]]]) -> Dict[
+        str, Dict[str, Tensor]]:
+        result = pl.EvalResult()
+        result.log("recall_at_k", outputs["tp"].sum() / outputs["tpfn"].sum(), prog_bar=True)
 
         return result
 
