@@ -1,3 +1,5 @@
+from typing import List
+
 import torch
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
@@ -5,7 +7,7 @@ from pathlib import Path
 
 from configs.models.gru.gru_config import GRUConfig
 from configs.training.gru.gru_config import GRUTrainingConfig
-from data.base.reader import CsvSessionDatasetReader, CsvSessionDatasetIndex
+from data.base.reader import CsvDatasetReader, CsvDatasetIndex
 from data.datasets.nextitem import NextItemIndex, NextItemIterableDataset
 from data.datasets.session import ItemSessionDataset, ItemSessionParser
 from data.mp import mp_worker_init_fn
@@ -14,42 +16,58 @@ from modules.gru_module import GRUModule
 from padding import padded_session_collate
 
 
+def create_dataset(data_file_path: Path, index_file_path: Path, nip_index_file_path: Path, delimiter):
+    reader_index = CsvDatasetIndex(index_file_path)
+    reader = CsvDatasetReader(data_file_path, reader_index)
+    parser = ItemSessionParser(
+        create_indexed_header(
+            read_csv_header(data_file_path, delimiter=delimiter)
+        ),
+        "item_id", delimiter=delimiter
+    )
+    session_dataset = ItemSessionDataset(reader, parser)
+    nip_index = NextItemIndex(nip_index_file_path)
+    dataset = NextItemIterableDataset(session_dataset, nip_index)
+
+    return dataset
+
 def main():
     torch.set_num_threads(4)
     max_seq_length = 2047
     num_items = 1032
     batch_size = 256
-
-    base = Path("/home/dallmann/uni/research/dota/datasets/small")
-    data_file_path = base / "small.csv"
-    index_file_path = base / "small.idx"
-    next_item_index_file_path = base / "small_nip.idx"
+    val_check_interval = 20
     delimiter = "\t"
+    max_epochs = 10
 
-    reader = CsvSessionDatasetReader(data_file_path, CsvSessionDatasetIndex(index_file_path))
+    base = Path("/home/dallmann/uni/research/dota/datasets/small/splits")
 
-    dataset = ItemSessionDataset(
-        reader,
-        ItemSessionParser(
-            create_indexed_header(
-                read_csv_header(data_file_path, delimiter=delimiter)
-            ),
-            "item_id", delimiter=delimiter
-        )
-    )
+    train_data_file_path = base / "train.csv"
+    train_index_file_path = base / "train.idx"
+    train_nip_index_file_path = base / "train.nip.idx"
 
-    seq_item_index = NextItemIndex(next_item_index_file_path)
-    seq_item_dataset = NextItemIterableDataset(dataset, seq_item_index, seed=93938293)
+    valid_data_file_path = base / "valid.csv"
+    valid_index_file_path = base / "valid.idx"
+    valid_nip_index_file_path = base / "valid.nip.idx"
 
+    train_dataset = create_dataset(train_data_file_path, train_index_file_path, train_nip_index_file_path, delimiter)
     training_loader = DataLoader(
-        seq_item_dataset,
+        train_dataset,
         batch_size=batch_size,
         collate_fn=padded_session_collate(max_seq_length),
-        num_workers=4,
+        num_workers=1,
         worker_init_fn=mp_worker_init_fn
      )
 
+    valid_dataset = create_dataset(valid_data_file_path, valid_index_file_path, valid_nip_index_file_path, delimiter)
+    valid_loader = DataLoader(
+        valid_dataset,
+        batch_size=batch_size,
+        collate_fn=padded_session_collate(max_seq_length),
+    )
+
     training_config = GRUTrainingConfig(batch_size=batch_size)
+
     model_config = GRUConfig(
         item_voc_size=num_items,
         max_seq_length=max_seq_length,
@@ -62,8 +80,8 @@ def main():
     # trainer = pl.Trainer(gpus=None, max_epochs=10, check_val_every_n_epoch=1)
     # trainer.fit(model, train_dataloader=training_loader, val_dataloaders=validation_loader)
 
-    trainer = pl.Trainer(gpus=None, max_epochs=10)
-    trainer.fit(module, train_dataloader=training_loader)
+    trainer = pl.Trainer(gpus=None, max_epochs=max_epochs, val_check_interval=val_check_interval, limit_val_batches=20)
+    trainer.fit(module, train_dataloader=training_loader, val_dataloaders=valid_loader)
 
 
 if __name__ == "__main__":

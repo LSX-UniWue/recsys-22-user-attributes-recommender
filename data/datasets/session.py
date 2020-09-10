@@ -3,7 +3,7 @@ from typing import Dict, List, Any, Text, Type
 import csv
 from torch.utils.data import Dataset
 
-from data.base.reader import CsvSessionDatasetReader
+from data.base.reader import CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.mp import MultiProcessDataLoaderSupport
 from tokenization.tokenizer import Tokenizer
@@ -34,7 +34,7 @@ class ItemSessionParser(object):
 
 
 class ItemSessionDataset(Dataset, MultiProcessDataLoaderSupport):
-    def __init__(self, reader: CsvSessionDatasetReader, parser: SessionParser, tokenizer: Tokenizer = None):
+    def __init__(self, reader: CsvDatasetReader, parser: SessionParser, tokenizer: Tokenizer = None):
         self._reader = reader
         self._parser = parser
         self._tokenizer = tokenizer

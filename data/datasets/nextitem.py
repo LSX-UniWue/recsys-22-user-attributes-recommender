@@ -25,6 +25,8 @@ class NextItemIndexBuilder:
         with index_path.open("wb") as index_file:
             for session_idx in tqdm(range(len(dataset)), desc="Creating Index."):
                 sessions = dataset[session_idx][ITEM_SEQ_ENTRY_NAME]
+                # remove
+
                 if len(sessions) > self._min_session_length:
                     for target_pos in range(1, len(sessions)):
                         self._write_entry(index_file, session_idx, target_pos)

@@ -1,11 +1,11 @@
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Text
+from typing import Text, List
 
 from data.base.indexer import CsvSessionIndexer
 
 
-def run(input_path: Path, output_path: Path, session_key: Text, delimiter: Text = "\t"):
+def run(input_path: Path, output_path: Path, session_key: List[Text], delimiter: Text = "\t"):
 
     index = CsvSessionIndexer(delimiter=delimiter)
     index.create(input_path, output_path, session_key)

@@ -2,6 +2,7 @@ import torch
 
 import pytorch_lightning as pl
 import torch.nn as nn
+from pytorch_lightning.metrics.functional import precision, recall
 
 from configs.models.gru.gru_config import GRUConfig
 from configs.training.gru.gru_config import GRUTrainingConfig
@@ -29,6 +30,17 @@ class GRUModule(pl.LightningModule):
         return {
             "loss": loss
         }
+
+    def validation_step(self, batch, batch_idx):
+        result = pl.EvalResult()
+        prediction = self.forward(batch["session"], batch["session_length"], batch_idx)
+        p = precision(prediction, batch["target"])
+        r = recall(prediction, batch["target"])
+
+        result.log("precision", p, prog_bar=True)
+        result.log("recall", r, prog_bar=True)
+
+        return result
 
     def forward(self, session, lengths, batch_idx):
         return self.model.forward(session, lengths, batch_idx)

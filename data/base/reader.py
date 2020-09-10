@@ -1,17 +1,18 @@
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, List
 import sys
 import io
 
 from data.mp import MultiProcessDataLoaderSupport
 
 
-class CsvSessionDatasetIndex(MultiProcessDataLoaderSupport):
+class CsvDatasetIndex(MultiProcessDataLoaderSupport):
 
     INT_BYTE_SIZE = 8
 
     def __init__(self, index_file_path: Path):
         self._index_file_path = index_file_path
+
         self._init()
 
     def _init(self):
@@ -37,6 +38,9 @@ class CsvSessionDatasetIndex(MultiProcessDataLoaderSupport):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._index_file_handle.close()
 
+    def __len__(self):
+        return self.num_sessions()
+
     def get(self, session_num: int) -> Tuple[int, int]:
         """
         Returns the boundaries of a specific session as byte positions within the file. The sessions are sequentially
@@ -56,8 +60,8 @@ class CsvSessionDatasetIndex(MultiProcessDataLoaderSupport):
         self._init()
 
 
-class CsvSessionDatasetReader(MultiProcessDataLoaderSupport):
-    def __init__(self, data_file_path: Path, index: CsvSessionDatasetIndex):
+class CsvDatasetReader(MultiProcessDataLoaderSupport):
+    def __init__(self, data_file_path: Path, index: CsvDatasetIndex):
         self._data_file_path = data_file_path
         self._index = index
 
@@ -76,7 +80,7 @@ class CsvSessionDatasetReader(MultiProcessDataLoaderSupport):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._data_file_handle.close()
 
-    def get_session(self, idx: int):
+    def get_session(self, idx: int) -> str:
         if idx >= self._num_sessions:
             raise Exception(f"{idx} is not a valid index in [0, {self._num_sessions}]")
 
@@ -91,7 +95,3 @@ class CsvSessionDatasetReader(MultiProcessDataLoaderSupport):
 
     def _mp_init(self, id: int, num_worker: int, seed: int):
         self._init()
-
-
-
-

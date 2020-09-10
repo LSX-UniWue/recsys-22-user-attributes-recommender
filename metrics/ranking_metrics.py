@@ -30,7 +30,6 @@ class RecallAtMetric(pl.metrics.TensorMetric):
         pass
 
 
-
 if __name__ == '__main__':
     test = torch.randn([101, 2, 32])
     test = torch.softmax(test, dim=2)
