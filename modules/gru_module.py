@@ -25,20 +25,25 @@ class GRUModule(pl.LightningModule):
         self.model = GRUSeqItemRecommenderModel(model_config)
 
     def training_step(self, batch, batch_idx):
-        prediction = self.forward(batch["session"], batch["session_length"], batch_idx)
+        prediction = self._forward(batch["session"], batch["session_length"], batch_idx)
         # TODO: discuss: maybe the target should be generated here and not in the dataset; see bert4rec
 
-        loss = nn.CrossEntropyLoss()(prediction, batch["target"])
+        loss = self.loss(prediction, batch["target"])
 
         return {
             "loss": loss
         }
 
-    # FIXME need to include loss value in validation result otherwise no checkpoints will be saved
-    def validation_step(self, batch, batch_idx):
-        result = pl.EvalResult()
+    def loss(self, prediction, target):
+        return nn.CrossEntropyLoss()(prediction, target)
 
-        prediction = self.forward(batch["session"], batch["session_length"], batch_idx)
+    def validation_step(self, batch, batch_idx):
+
+        prediction = self._forward(batch["session"], batch["session_length"], batch_idx)
+
+        loss = self.loss(prediction, batch["target"])
+        result = pl.EvalResult(checkpoint_on=loss)
+        result.log("val_loss", loss, on_step=True, on_epoch=True)
 
         recall_at_metric = RecallAtMetric(k=5)
         tp, tpfn, recall_at_k = recall_at_metric(prediction, batch["target"])
@@ -48,15 +53,16 @@ class GRUModule(pl.LightningModule):
 
         return result
 
-    def validation_epoch_end(self, outputs: Union[List[Dict[str, Tensor]], List[List[Dict[str, Tensor]]]]) -> Dict[
+    def validation_epoch_end(self, outputs: Union[Dict[str, Tensor], List[Dict[str, Tensor]]]) -> Dict[
         str, Dict[str, Tensor]]:
-        result = pl.EvalResult()
-        result.log("recall_at_k", outputs["tp"].sum() / outputs["tpfn"].sum(), prog_bar=True)
+        print(outputs)
+        result = pl.EvalResult(checkpoint_on=outputs["step_val_loss"].mean())
+        result.log("val/recall_at_k", outputs["tp"].sum() / outputs["tpfn"].sum(), prog_bar=True)
 
         return result
 
-    def forward(self, session, lengths, batch_idx):
-        return self.model.forward(session, lengths, batch_idx)
+    def _forward(self, session, lengths, batch_idx):
+        return self.model(session, lengths, batch_idx)
 
     def configure_optimizers(self):
         return torch.optim.Adam(
