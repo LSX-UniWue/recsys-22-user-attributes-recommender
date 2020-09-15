@@ -8,7 +8,7 @@ from torch import Tensor
 
 from configs.models.gru.gru_config import GRUConfig
 from configs.training.gru.gru_config import GRUTrainingConfig
-from metrics.ranking_metrics import RecallAtMetric
+from metrics.ranking_metrics import RecallAtMetric, MRRAtMetric
 from models.gru.gru_model import GRUSeqItemRecommenderModel
 
 
@@ -46,19 +46,23 @@ class GRUModule(pl.LightningModule):
         result.log("val_loss", loss, on_step=True, on_epoch=True)
 
         recall_at_metric = RecallAtMetric(k=5)
+        mrr_at_metric = MRRAtMetric(k=5)
+
         tp, tpfn, recall_at_k = recall_at_metric(prediction, batch["target"])
+        mrr = mrr_at_metric(prediction, batch["target"])
 
         result.tp = tp
         result.tpfn = tpfn
+        result.mrr = mrr
 
         return result
 
     def validation_epoch_end(self, outputs: Union[Dict[str, Tensor], List[Dict[str, Tensor]]]) -> Dict[
         str, Dict[str, Tensor]]:
-        print(outputs)
+
         result = pl.EvalResult(checkpoint_on=outputs["step_val_loss"].mean())
         result.log("val/recall_at_k", outputs["tp"].sum() / outputs["tpfn"].sum(), prog_bar=True)
-
+        result.log("val/mrr_at_k", outputs["mrr"].mean(), prog_bar=True)
         return result
 
     def _forward(self, session, lengths, batch_idx):
