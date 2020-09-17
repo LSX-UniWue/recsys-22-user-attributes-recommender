@@ -129,9 +129,13 @@ class NextItemIterableDataset(IterableDataset, MultiProcessDataLoaderSupport):
 
         start = id * worker_share
         if id < num_worker - 1:
-            end = min(start + worker_share - 1, num_samples)
+            stop = min(start + worker_share - 1, num_samples)
         else:
-            end = num_samples
+            stop = num_samples
 
         self._start = start
-        self._end = end
+        self._stop = stop
+
+    # FIXME (AD): we need to return some length, otherwise test does not work, see: https://github.com/PyTorchLightning/pytorch-lightning/issues/3500
+    def __len__(self):
+        return self._stop - self._start

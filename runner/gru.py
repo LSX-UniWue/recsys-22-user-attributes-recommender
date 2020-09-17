@@ -12,6 +12,7 @@ from data.datasets.nextitem import NextItemIndex, NextItemIterableDataset
 from data.datasets.session import ItemSessionDataset, ItemSessionParser
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
+from metrics.ranking_metrics import RecallAtMetric, MRRAtMetric
 from modules.gru_module import GRUModule
 from padding import padded_session_collate
 
@@ -50,39 +51,85 @@ def main():
     valid_index_file_path = base / "valid.idx"
     valid_nip_index_file_path = base / "valid.nip.idx"
 
-    train_dataset = create_dataset(train_data_file_path, train_index_file_path, train_nip_index_file_path, delimiter)
-    training_loader = DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        collate_fn=padded_session_collate(max_seq_length),
-        num_workers=1,
-        worker_init_fn=mp_worker_init_fn
-     )
+    test_data_file_path = base / "test.csv"
+    test_index_file_path = base / "test.idx"
+    test_nip_index_file_path = base / "test.nip.idx"
 
-    valid_dataset = create_dataset(valid_data_file_path, valid_index_file_path, valid_nip_index_file_path, delimiter)
-    valid_loader = DataLoader(
-        valid_dataset,
-        batch_size=batch_size,
-        collate_fn=padded_session_collate(max_seq_length),
-    )
+    mode = "test"
 
-    training_config = GRUTrainingConfig(batch_size=batch_size)
+    if mode == "train":
 
-    model_config = GRUConfig(
-        item_voc_size=num_items,
-        max_seq_length=max_seq_length,
-        gru_hidden_size=64,
-        gru_token_embedding_size=16,
-        gru_num_layers=1
-    )
+        train_dataset = create_dataset(train_data_file_path, train_index_file_path, train_nip_index_file_path, delimiter)
+        training_loader = DataLoader(
+            train_dataset,
+            batch_size=batch_size,
+            collate_fn=padded_session_collate(max_seq_length),
+            num_workers=1,
+            worker_init_fn=mp_worker_init_fn
+         )
 
-    module = GRUModule(training_config, model_config)
-    # trainer = pl.Trainer(gpus=None, max_epochs=10, check_val_every_n_epoch=1)
-    # trainer.fit(model, train_dataloader=training_loader, val_dataloaders=validation_loader)
+        valid_dataset = create_dataset(valid_data_file_path, valid_index_file_path, valid_nip_index_file_path, delimiter)
+        valid_loader = DataLoader(
+            valid_dataset,
+            batch_size=batch_size,
+            collate_fn=padded_session_collate(max_seq_length),
+        )
 
-    trainer = pl.Trainer(gpus=None, max_epochs=max_epochs, val_check_interval=val_check_interval, limit_val_batches=50, limit_train_batches=10, checkpoint_callback=True)
-    trainer.fit(module, train_dataloader=training_loader, val_dataloaders=valid_loader)
+        training_config = GRUTrainingConfig(batch_size=batch_size)
 
+        model_config = GRUConfig(
+            item_voc_size=num_items,
+            max_seq_length=max_seq_length,
+            gru_hidden_size=64,
+            gru_token_embedding_size=16,
+            gru_num_layers=1
+        )
+
+        metrics = [
+            RecallAtMetric(k=1),
+            RecallAtMetric(k=5),
+            MRRAtMetric(k=1),
+            MRRAtMetric(k=5)
+        ]
+
+        module = GRUModule(training_config, model_config, metrics)
+        # trainer = pl.Trainer(gpus=None, max_epochs=10, check_val_every_n_epoch=1)
+        # trainer.fit(model, train_dataloader=training_loader, val_dataloaders=validation_loader)
+
+        trainer = pl.Trainer(gpus=None, max_epochs=max_epochs, val_check_interval=val_check_interval, limit_val_batches=50, limit_train_batches=10, checkpoint_callback=True)
+        trainer.fit(module, train_dataloader=training_loader, val_dataloaders=valid_loader)
+
+    else:
+        test_dataset = create_dataset(test_data_file_path, test_index_file_path, test_nip_index_file_path, delimiter)
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=batch_size,
+            collate_fn=padded_session_collate(max_seq_length),
+        )
+
+        training_config = GRUTrainingConfig(batch_size=batch_size)
+
+        model_config = GRUConfig(
+            item_voc_size=num_items,
+            max_seq_length=max_seq_length,
+            gru_hidden_size=64,
+            gru_token_embedding_size=16,
+            gru_num_layers=1
+        )
+
+        metrics = [
+            RecallAtMetric(k=1),
+            RecallAtMetric(k=5),
+            MRRAtMetric(k=1),
+            MRRAtMetric(k=5)
+        ]
+
+        module = GRUModule(training_config, model_config, metrics)
+        # trainer = pl.Trainer(gpus=None, max_epochs=10, check_val_every_n_epoch=1)
+        # trainer.fit(model, train_dataloader=training_loader, val_dataloaders=validation_loader)
+
+        trainer = pl.Trainer(gpus=None, max_epochs=max_epochs, val_check_interval=val_check_interval, limit_test_batches=5, checkpoint_callback=True)
+        trainer.test(module, test_loader, ckpt_path="/home/dallmann/uni/research/repositories/recommender/runner/lightning_logs/version_6/checkpoints/epoch=6.ckpt")
 
 if __name__ == "__main__":
     main()
