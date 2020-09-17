@@ -18,7 +18,8 @@ class GRUModule(pl.LightningModule):
     def __init__(self,
                  training_config: GRUTrainingConfig,
                  model_config: GRUConfig,
-                 metrics: List[AggregatingMetricTrait]):
+                 metrics: List[AggregatingMetricTrait]
+                 ):
 
         super(GRUModule, self).__init__()
 
@@ -80,7 +81,7 @@ class GRUModule(pl.LightningModule):
         result = EvalResult()
 
         for metric in self._metrics:
-            print(metric.on_epoch_end(outputs, result))
+            metric.on_epoch_end(outputs, result)
 
         return result
 

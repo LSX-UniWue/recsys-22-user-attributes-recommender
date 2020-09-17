@@ -1,5 +1,3 @@
-from typing import List
-
 import torch
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
@@ -31,6 +29,7 @@ def create_dataset(data_file_path: Path, index_file_path: Path, nip_index_file_p
     dataset = NextItemIterableDataset(session_dataset, nip_index)
 
     return dataset
+
 
 def main():
     torch.set_num_threads(4)
@@ -96,7 +95,7 @@ def main():
         # trainer = pl.Trainer(gpus=None, max_epochs=10, check_val_every_n_epoch=1)
         # trainer.fit(model, train_dataloader=training_loader, val_dataloaders=validation_loader)
 
-        trainer = pl.Trainer(gpus=None, max_epochs=max_epochs, val_check_interval=val_check_interval, limit_val_batches=50, limit_train_batches=10, checkpoint_callback=True)
+        trainer = pl.Trainer(gpus=None, max_epochs=max_epochs, val_check_interval=val_check_interval, limit_val_batches=50, limit_train_batches=50, checkpoint_callback=True)
         trainer.fit(module, train_dataloader=training_loader, val_dataloaders=valid_loader)
 
     else:
@@ -124,12 +123,14 @@ def main():
             MRRAtMetric(k=5)
         ]
 
-        module = GRUModule(training_config, model_config, metrics)
+        module = GRUModule.load_from_checkpoint("/home/dallmann/uni/research/repositories/recommender/runner/lightning_logs/version_0/checkpoints/epoch=9.ckpt", training_config, model_config, metrics)
         # trainer = pl.Trainer(gpus=None, max_epochs=10, check_val_every_n_epoch=1)
         # trainer.fit(model, train_dataloader=training_loader, val_dataloaders=validation_loader)
 
-        trainer = pl.Trainer(gpus=None, max_epochs=max_epochs, val_check_interval=val_check_interval, limit_test_batches=5, checkpoint_callback=True)
-        trainer.test(module, test_loader, ckpt_path="/home/dallmann/uni/research/repositories/recommender/runner/lightning_logs/version_6/checkpoints/epoch=6.ckpt")
+        trainer = pl.Trainer(gpus=None, max_epochs=max_epochs, val_check_interval=val_check_interval, limit_test_batches=100, checkpoint_callback=False)
+
+        trainer.test(module, test_dataloaders=test_loader)
+
 
 if __name__ == "__main__":
     main()
