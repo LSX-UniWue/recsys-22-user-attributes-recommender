@@ -122,8 +122,14 @@ def main():
             MRRAtMetric(k=1),
             MRRAtMetric(k=5)
         ]
+        checkpoint_path="/home/dallmann/uni/research/repositories/recommender/runner/lightning_logs/version_0/checkpoints/epoch=1.ckpt"
 
-        module = GRUModule.load_from_checkpoint("/home/dallmann/uni/research/repositories/recommender/runner/lightning_logs/version_0/checkpoints/epoch=9.ckpt", training_config, model_config, metrics)
+        module = GRUModule(training_config=training_config, model_config=model_config, metrics=metrics)
+        from pytorch_lightning.utilities.cloud_io import load as pl_load
+
+        checkpoint = pl_load(checkpoint_path, map_location=lambda storage, loc: storage)
+        module.load_state_dict(checkpoint["state_dict"], strict=False)
+
         # trainer = pl.Trainer(gpus=None, max_epochs=10, check_val_every_n_epoch=1)
         # trainer.fit(model, train_dataloader=training_loader, val_dataloaders=validation_loader)
 
