@@ -55,14 +55,7 @@ def add_trainer_args(parser: ArgumentParser):
             )
 
 
-def main():
-    parser = ArgumentParser()
-    parser = GRUConfig.add_model_specific_args(parser)
-    parser = GRUTrainingConfig.add_model_specific_args(parser)
-    add_trainer_args(parser)
-
-    args = parser.parse_args()
-
+def train(args):
     model_config = GRUConfig.from_args(vars(args))
     training_config = GRUTrainingConfig.from_args(vars(args))
 
@@ -112,37 +105,66 @@ def main():
     trainer = pl.Trainer.from_argparse_args(args, checkpoint_callback=checkpoint_callback)
     trainer.fit(module, train_dataloader=training_loader, val_dataloaders=valid_loader)
 
-    if False:
-        test_dataset = create_dataset(test_data_file_path, test_index_file_path, test_nip_index_file_path, delimiter)
-        test_loader = DataLoader(
-            test_dataset,
-            batch_size=batch_size,
-            collate_fn=padded_session_collate(max_seq_length),
-        )
 
-        training_config = GRUTrainingConfig.from_json_file(Path(f"{checkpoint_path}/{GRUTrainingConfig.MODEL_CONFIG_CONFIG_FILE}.json"))
-        model_config = GRUConfig.from_json_file(Path(f"{checkpoint_path}/{GRUConfig.MODEL_CONFIG_CONFIG_FILE}.json"))
+def test(args):
+    checkpoint_path = "/tmp/gru-test"
+    delimiter = "\t"
+    base = Path("/home/dallmann/uni/research/dota/datasets/small/splits")
 
-        metrics = [
-            RecallAtMetric(k=1),
-            RecallAtMetric(k=5),
-            MRRAtMetric(k=1),
-            MRRAtMetric(k=5)
-        ]
+    training_config = GRUTrainingConfig.from_json_file(Path(f"{checkpoint_path}/{GRUTrainingConfig.MODEL_CONFIG_CONFIG_FILE}.json"))
+    model_config = GRUConfig.from_json_file(Path(f"{checkpoint_path}/{GRUConfig.MODEL_CONFIG_CONFIG_FILE}.json"))
 
-        module = GRUModule(training_config=training_config, model_config=model_config, metrics=metrics)
-        from pytorch_lightning.utilities.cloud_io import load as pl_load
 
-        checkpoint = pl_load(f"{checkpoint_path}/last.ckpt", map_location=lambda storage, loc: storage)
-        module.load_state_dict(checkpoint["state_dict"], strict=False)
+    test_data_file_path = base / "test.csv"
+    test_index_file_path = base / "test.idx"
+    test_nip_index_file_path = base / "test.nip.idx"
 
-        # trainer = pl.Trainer(gpus=None, max_epochs=10, check_val_every_n_epoch=1)
-        # trainer.fit(model, train_dataloader=training_loader, val_dataloaders=validation_loader)
+    test_dataset = create_dataset(test_data_file_path, test_index_file_path, test_nip_index_file_path, delimiter)
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=training_config.batch_size,
+        collate_fn=padded_session_collate(model_config.max_seq_length),
+    )
 
-        trainer = pl.Trainer(gpus=None, max_epochs=max_epochs, val_check_interval=val_check_interval, limit_test_batches=100, checkpoint_callback=False)
 
-        trainer.test(module, test_dataloaders=test_loader)
+    metrics = [
+        RecallAtMetric(k=1),
+        RecallAtMetric(k=5),
+        MRRAtMetric(k=1),
+        MRRAtMetric(k=5)
+    ]
+
+    module = GRUModule(training_config=training_config, model_config=model_config, metrics=metrics)
+    from pytorch_lightning.utilities.cloud_io import load as pl_load
+
+    checkpoint = pl_load(f"{checkpoint_path}/last.ckpt", map_location=lambda storage, loc: storage)
+    module.load_state_dict(checkpoint["state_dict"], strict=False)
+
+    # trainer = pl.Trainer(gpus=None, max_epochs=10, check_val_every_n_epoch=1)
+    # trainer.fit(model, train_dataloader=training_loader, val_dataloaders=validation_loader)
+
+    trainer = pl.Trainer(limit_test_batches=100, checkpoint_callback=False)
+    trainer.test(module, test_dataloaders=test_loader)
+
+
+def main():
+    parser = ArgumentParser()
+    subparsers = parser.add_subparsers()
+
+    train_parser = subparsers.add_parser("train")
+    train_parser.set_defaults(func=train)
+    test_parser = subparsers.add_parser("test")
+    test_parser.set_defaults(func=test)
+
+    train_parser = GRUConfig.add_model_specific_args(train_parser)
+    train_parser = GRUTrainingConfig.add_model_specific_args(train_parser)
+    add_trainer_args(train_parser)
+
+    args = parser.parse_args()
+
+    args.func(args)
 
 
 if __name__ == "__main__":
     main()
+    # For now we need to specify this to train: train --max_seq_length 2047 --item_voc_size 1032 --default_root_dir /tmp/gru-test --batch_size 256 --val_check_interval 10 --max_epochs 10
