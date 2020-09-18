@@ -1,5 +1,8 @@
-import torch
+import argparse
+from argparse import ArgumentParser
+
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import DataLoader
 from pathlib import Path
 
@@ -15,7 +18,7 @@ from modules.gru_module import GRUModule
 from padding import padded_session_collate
 
 
-def create_dataset(data_file_path: Path, index_file_path: Path, nip_index_file_path: Path, delimiter):
+def create_dataset(data_file_path: Path, index_file_path: Path, nip_index_file_path: Path, delimiter: str):
     reader_index = CsvDatasetIndex(index_file_path)
     reader = CsvDatasetReader(data_file_path, reader_index)
     parser = ItemSessionParser(
@@ -31,14 +34,44 @@ def create_dataset(data_file_path: Path, index_file_path: Path, nip_index_file_p
     return dataset
 
 
+def add_trainer_args(parser: ArgumentParser):
+    trainer_parser = ArgumentParser()
+    trainer_parser = pl.Trainer.add_argparse_args(trainer_parser)
+
+    trainer_group = parser.add_argument_group("PL Trainer")
+
+    for action in trainer_parser._actions:
+        if isinstance(action, argparse._StoreAction):
+            trainer_group.add_argument(
+                action.option_strings[0],
+                dest=action.dest,
+                nargs=action.nargs,
+                const=action.const,
+                default=action.default,
+                type=action.type,
+                choices=action.choices,
+                help=action.help,
+                metavar=action.metavar
+            )
+
+
 def main():
-    torch.set_num_threads(4)
-    max_seq_length = 2047
-    num_items = 1032
-    batch_size = 256
-    val_check_interval = 10
-    delimiter = "\t"
-    max_epochs = 10
+    parser = ArgumentParser()
+    parser = GRUConfig.add_model_specific_args(parser)
+    parser = GRUTrainingConfig.add_model_specific_args(parser)
+    add_trainer_args(parser)
+
+    args = parser.parse_args()
+
+    model_config = GRUConfig.from_args(vars(args))
+    training_config = GRUTrainingConfig.from_args(vars(args))
+
+    metrics = [
+        RecallAtMetric(k=1),
+        RecallAtMetric(k=5),
+        MRRAtMetric(k=1),
+        MRRAtMetric(k=5)
+    ]
 
     base = Path("/home/dallmann/uni/research/dota/datasets/small/splits")
 
@@ -54,51 +87,32 @@ def main():
     test_index_file_path = base / "test.idx"
     test_nip_index_file_path = base / "test.nip.idx"
 
-    mode = "test"
+    delimiter = "\t"
 
-    if mode == "train":
+    train_dataset = create_dataset(train_data_file_path, train_index_file_path, train_nip_index_file_path, delimiter)
+    training_loader = DataLoader(
+        train_dataset,
+        batch_size=training_config.batch_size,
+        collate_fn=padded_session_collate(model_config.max_seq_length),
+        num_workers=1,
+        worker_init_fn=mp_worker_init_fn
+    )
 
-        train_dataset = create_dataset(train_data_file_path, train_index_file_path, train_nip_index_file_path, delimiter)
-        training_loader = DataLoader(
-            train_dataset,
-            batch_size=batch_size,
-            collate_fn=padded_session_collate(max_seq_length),
-            num_workers=1,
-            worker_init_fn=mp_worker_init_fn
-         )
+    valid_dataset = create_dataset(valid_data_file_path, valid_index_file_path, valid_nip_index_file_path, delimiter)
+    valid_loader = DataLoader(
+        valid_dataset,
+        batch_size=training_config.batch_size,
+        collate_fn=padded_session_collate(model_config.max_seq_length),
+    )
 
-        valid_dataset = create_dataset(valid_data_file_path, valid_index_file_path, valid_nip_index_file_path, delimiter)
-        valid_loader = DataLoader(
-            valid_dataset,
-            batch_size=batch_size,
-            collate_fn=padded_session_collate(max_seq_length),
-        )
+    checkpoint_path = args.default_root_dir
+    checkpoint_callback = ModelCheckpoint(f"{checkpoint_path}", save_last=True, save_top_k=3, save_weights_only=False)
 
-        training_config = GRUTrainingConfig(batch_size=batch_size)
+    module = GRUModule(training_config, model_config, metrics=metrics)
+    trainer = pl.Trainer.from_argparse_args(args, checkpoint_callback=checkpoint_callback)
+    trainer.fit(module, train_dataloader=training_loader, val_dataloaders=valid_loader)
 
-        model_config = GRUConfig(
-            item_voc_size=num_items,
-            max_seq_length=max_seq_length,
-            gru_hidden_size=64,
-            gru_token_embedding_size=16,
-            gru_num_layers=1
-        )
-
-        metrics = [
-            RecallAtMetric(k=1),
-            RecallAtMetric(k=5),
-            MRRAtMetric(k=1),
-            MRRAtMetric(k=5)
-        ]
-
-        module = GRUModule(training_config, model_config, metrics)
-        # trainer = pl.Trainer(gpus=None, max_epochs=10, check_val_every_n_epoch=1)
-        # trainer.fit(model, train_dataloader=training_loader, val_dataloaders=validation_loader)
-
-        trainer = pl.Trainer(gpus=None, max_epochs=max_epochs, val_check_interval=val_check_interval, limit_val_batches=50, limit_train_batches=50, checkpoint_callback=True)
-        trainer.fit(module, train_dataloader=training_loader, val_dataloaders=valid_loader)
-
-    else:
+    if False:
         test_dataset = create_dataset(test_data_file_path, test_index_file_path, test_nip_index_file_path, delimiter)
         test_loader = DataLoader(
             test_dataset,
@@ -106,15 +120,8 @@ def main():
             collate_fn=padded_session_collate(max_seq_length),
         )
 
-        training_config = GRUTrainingConfig(batch_size=batch_size)
-
-        model_config = GRUConfig(
-            item_voc_size=num_items,
-            max_seq_length=max_seq_length,
-            gru_hidden_size=64,
-            gru_token_embedding_size=16,
-            gru_num_layers=1
-        )
+        training_config = GRUTrainingConfig.from_json_file(Path(f"{checkpoint_path}/{GRUTrainingConfig.MODEL_CONFIG_CONFIG_FILE}.json"))
+        model_config = GRUConfig.from_json_file(Path(f"{checkpoint_path}/{GRUConfig.MODEL_CONFIG_CONFIG_FILE}.json"))
 
         metrics = [
             RecallAtMetric(k=1),
@@ -122,12 +129,11 @@ def main():
             MRRAtMetric(k=1),
             MRRAtMetric(k=5)
         ]
-        checkpoint_path="/home/dallmann/uni/research/repositories/recommender/runner/lightning_logs/version_0/checkpoints/epoch=1.ckpt"
 
         module = GRUModule(training_config=training_config, model_config=model_config, metrics=metrics)
         from pytorch_lightning.utilities.cloud_io import load as pl_load
 
-        checkpoint = pl_load(checkpoint_path, map_location=lambda storage, loc: storage)
+        checkpoint = pl_load(f"{checkpoint_path}/last.ckpt", map_location=lambda storage, loc: storage)
         module.load_state_dict(checkpoint["state_dict"], strict=False)
 
         # trainer = pl.Trainer(gpus=None, max_epochs=10, check_val_every_n_epoch=1)

@@ -23,9 +23,15 @@ class BaseConfig(object):
     DATA_CLASS_METADATA_KEY_HELP = 'help'
     DATA_CLASS_METADATA_KEY_DEFAULT_VALUE = 'default_value'
 
+
     @classmethod
     @abstractmethod
     def get_config_file_key(cls) -> str:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def get_arg_group_name(cls) -> str:
         pass
 
     @classmethod
@@ -35,7 +41,7 @@ class BaseConfig(object):
         :param parent_parser:
         :return:
         """
-        parser = ArgumentParser(parents=[parent_parser], add_help=False)
+        parser = parent_parser.add_argument_group(cls.get_arg_group_name())
         parser.add_argument('--{}'.format(cls.get_config_file_key()), type=str, default=None,
                             help='path to a config file')
 
@@ -46,7 +52,7 @@ class BaseConfig(object):
                 help_info = field.metadata[cls.DATA_CLASS_METADATA_KEY_HELP]
             parser.add_argument('--{}'.format(field_name), type=field.type, default=None,
                                 help=help_info)
-        return parser
+        return parent_parser
 
     @classmethod
     def from_args(cls,

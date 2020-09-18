@@ -8,4 +8,9 @@ class SASRecConfig(TransformerConfig):
     """
     configuration for a SASRecModel
     """
-    pass
+
+    @classmethod
+    def get_arg_group_name(cls) -> str:
+        return "SASRec Model"
+
+

@@ -8,6 +8,10 @@ from configs.models.model_config import ModelConfig
 class GRUConfig(ModelConfig):
     """Config for GRU model"""
 
+    @classmethod
+    def get_arg_group_name(cls) -> str:
+        return "GRU Model"
+
     gru_hidden_size: int = field(
         metadata={
             BaseConfig.DATA_CLASS_METADATA_KEY_HELP: 'hidden size of the gru layer',

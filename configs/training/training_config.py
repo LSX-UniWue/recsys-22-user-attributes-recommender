@@ -19,6 +19,10 @@ class TrainingConfig(BaseConfig):
         }
     )
 
+    @classmethod
+    def get_arg_group_name(cls) -> str:
+        return "Module"
+
 
 @dataclass
 class OptimizerConfig(object):

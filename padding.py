@@ -12,8 +12,8 @@ def _padded_session_collate(max_length, batch):
 
     def pad_session(sample):
         session = sample["session"]
-        if len(session) < max_length:
-            length = len(session)
+        length = len(session)
+        if length < max_length:
             session.extend([0] * (max_length - length))
 
         sample["session"] = torch.as_tensor(session)
