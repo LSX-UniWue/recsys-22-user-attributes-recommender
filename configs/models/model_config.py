@@ -28,17 +28,3 @@ class ModelConfig(BaseConfig):
         BaseConfig.DATA_CLASS_METADATA_KEY_HELP: 'the max sequence length',
         BaseConfig.DATA_CLASS_METADATA_KEY_DEFAULT_VALUE: 16
     })
-
-    def to_dict(self):
-        """ Serializes the config to a python dict. """
-        output = copy.deepcopy(self.__dict__)
-        return output
-
-    def to_json_string(self):
-        """ Serializes the config to a JSON string. """
-        return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
-
-    def to_json_file(self, json_file_path):
-        """ Save the config to a json file. """
-        with open(json_file_path, "w", encoding='utf-8') as writer:
-            writer.write(self.to_json_string())
