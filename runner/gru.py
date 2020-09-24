@@ -13,6 +13,7 @@ from data.datasets.nextitem import NextItemIndex, NextItemIterableDataset
 from data.datasets.session import ItemSessionDataset, ItemSessionParser
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
+from dm.dota.small import Dota2Small
 from metrics.ranking_metrics import RecallAtMetric, MRRAtMetric
 from modules.gru_module import GRUModule
 from padding import padded_session_collate
@@ -67,43 +68,15 @@ def train(args):
     ]
 
     base = Path("/home/dallmann/uni/research/dota/datasets/small/splits")
-
-    train_data_file_path = base / "train.csv"
-    train_index_file_path = base / "train.idx"
-    train_nip_index_file_path = base / "train.nip.idx"
-
-    valid_data_file_path = base / "valid.csv"
-    valid_index_file_path = base / "valid.idx"
-    valid_nip_index_file_path = base / "valid.nip.idx"
-
-    test_data_file_path = base / "test.csv"
-    test_index_file_path = base / "test.idx"
-    test_nip_index_file_path = base / "test.nip.idx"
-
     delimiter = "\t"
-
-    train_dataset = create_dataset(train_data_file_path, train_index_file_path, train_nip_index_file_path, delimiter)
-    training_loader = DataLoader(
-        train_dataset,
-        batch_size=training_config.batch_size,
-        collate_fn=padded_session_collate(model_config.max_seq_length),
-        num_workers=1,
-        worker_init_fn=mp_worker_init_fn
-    )
-
-    valid_dataset = create_dataset(valid_data_file_path, valid_index_file_path, valid_nip_index_file_path, delimiter)
-    valid_loader = DataLoader(
-        valid_dataset,
-        batch_size=training_config.batch_size,
-        collate_fn=padded_session_collate(model_config.max_seq_length),
-    )
+    dm = Dota2Small(base, delimiter=delimiter)
 
     checkpoint_path = args.default_root_dir
     checkpoint_callback = ModelCheckpoint(f"{checkpoint_path}", save_last=True, save_top_k=3, save_weights_only=False)
 
     module = GRUModule(training_config, model_config, metrics=metrics)
     trainer = pl.Trainer.from_argparse_args(args, checkpoint_callback=checkpoint_callback)
-    trainer.fit(module, train_dataloader=training_loader, val_dataloaders=valid_loader)
+    trainer.fit(module, datamodule=dm)
 
 
 def test(args):
@@ -113,19 +86,7 @@ def test(args):
 
     training_config = GRUTrainingConfig.from_json_file(Path(f"{checkpoint_path}/{GRUTrainingConfig.MODEL_CONFIG_CONFIG_FILE}.json"))
     model_config = GRUConfig.from_json_file(Path(f"{checkpoint_path}/{GRUConfig.MODEL_CONFIG_CONFIG_FILE}.json"))
-
-
-    test_data_file_path = base / "test.csv"
-    test_index_file_path = base / "test.idx"
-    test_nip_index_file_path = base / "test.nip.idx"
-
-    test_dataset = create_dataset(test_data_file_path, test_index_file_path, test_nip_index_file_path, delimiter)
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=training_config.batch_size,
-        collate_fn=padded_session_collate(model_config.max_seq_length),
-    )
-
+    dm = Dota2Small(base, delimiter=delimiter)
 
     metrics = [
         RecallAtMetric(k=1),
@@ -144,7 +105,7 @@ def test(args):
     # trainer.fit(model, train_dataloader=training_loader, val_dataloaders=validation_loader)
 
     trainer = pl.Trainer(limit_test_batches=100, checkpoint_callback=False)
-    trainer.test(module, test_dataloaders=test_loader)
+    trainer.test(module, datamodule=dm)
 
 
 def main():
