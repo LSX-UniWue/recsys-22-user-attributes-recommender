@@ -4,31 +4,50 @@ import torch
 
 import pytorch_lightning as pl
 import torch.nn as nn
+from pyhocon import ConfigTree
 from pytorch_lightning import EvalResult
 from torch import Tensor
 
-from configs.models.gru.gru_config import GRUConfig
-from configs.training.gru.gru_config import GRUTrainingConfig
-from metrics.base import AggregatingMetricTrait
+from metrics.ranking_metrics import RecallAtMetric, MRRAtMetric
 from models.gru.gru_model import GRUSeqItemRecommenderModel
 
 
 class GRUModule(pl.LightningModule):
 
     def __init__(self,
-                 training_config: GRUTrainingConfig,
-                 model_config: GRUConfig,
-                 metrics: List[AggregatingMetricTrait]
+                 model: GRUSeqItemRecommenderModel,
+                 lr: float,
+                 beta_1: float,
+                 beta_2: float,
+                 enable_metrics: bool,
+                 metrics_k: List[int]
                  ):
 
         super(GRUModule, self).__init__()
 
-        self.training_config = training_config
-        self.model_config = model_config
+        self.model = model
+        self.lr = lr
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
 
-        self.model = GRUSeqItemRecommenderModel(model_config)
+        self._metrics = []
 
-        self._metrics = metrics
+        if enable_metrics:
+            self._metrics = [RecallAtMetric(k) for k in metrics_k] + [MRRAtMetric(k) for k in metrics_k]
+
+    @staticmethod
+    def from_configuration(config: ConfigTree):
+        model = GRUSeqItemRecommenderModel.from_configuration(config)
+
+        optimizer_config = config["optimizer"]
+        lr = optimizer_config.get_float("learning_rate")
+        beta_1 = optimizer_config.get_float("beta_1")
+        beta_2 = optimizer_config.get_float("beta_2")
+
+        enable_metrics = config.get_bool("metrics.enable_metrics", False)
+        metrics_k = config.get_list("metrics.k", [])
+
+        return GRUModule(model, lr, beta_1, beta_2, enable_metrics, metrics_k)
 
     def training_step(self, batch, batch_idx):
         prediction = self._forward(batch["session"], batch["session_length"], batch_idx)
@@ -91,6 +110,6 @@ class GRUModule(pl.LightningModule):
     def configure_optimizers(self):
         return torch.optim.Adam(
             self.parameters(),
-            lr=self.training_config.learning_rate,
-            betas=(self.training_config.beta_1, self.training_config.beta_2)
+            lr=self.lr,
+            betas=(self.beta_1, self.beta_2)
         )

@@ -34,7 +34,7 @@ class RecallAtMetric(pl.metrics.metric.TensorMetric, AggregatingMetricTrait):
 
         # FIXME (AD) make it work for target vectors with size > 1
         tp = sorted_indices.eq(target_expanded).sum(dim=-1).to(dtype=torch.float)
-        fn = torch.ones(tp.size()) - tp
+        fn = torch.ones(tp.size(), device=tp.device) - tp
 
         tpfn = tp + fn
 
@@ -89,7 +89,7 @@ class MRRAtMetric(pl.metrics.metric.TensorMetric, AggregatingMetricTrait):
         sorted_indices = torch.topk(scores, k=self._k)[1]
         target = target.view(-1, 1).expand(-1, self._k)
 
-        rank = torch.topk((sorted_indices.eq(target) * torch.arange(1, self._k + 1, dtype=torch.float)), k=1)[0]
+        rank = torch.topk((sorted_indices.eq(target) * torch.arange(1, self._k + 1, dtype=torch.float, device=target.device)), k=1)[0]
 
         # mrr will contain 'inf' values if target is not in topk scores -> setting to 0
         mrr = 1 / rank

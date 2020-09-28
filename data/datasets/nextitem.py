@@ -2,6 +2,7 @@ import io
 import math
 from pathlib import Path
 import sys
+from typing import Tuple
 
 from numpy.random._generator import default_rng
 from torch.utils.data import Dataset, IterableDataset
@@ -83,11 +84,14 @@ class NextItemDataset(Dataset, MultiProcessDataLoaderSupport):
         self._dataset = dataset
         self._index = index
 
+        self._start = 0
+        self._stop = len(self._index)
+
     def __len__(self):
-        return len(self._index)
+        return self._stop - self._start
 
     def __getitem__(self, idx):
-        session_idx, target_pos = self._index[idx]
+        session_idx, target_pos = self._index[self._start + idx]
         session = self._dataset[session_idx][ITEM_SEQ_ENTRY_NAME]
 
         return {
@@ -96,7 +100,8 @@ class NextItemDataset(Dataset, MultiProcessDataLoaderSupport):
         }
 
     def _mp_init(self, id: int, num_worker: int, seed: int):
-        pass
+        num_samples = len(self._index)
+        self._start, self._stop = calculate_shard(id, num_worker, seed, num_samples)
 
 
 class NextItemIterableDataset(IterableDataset, MultiProcessDataLoaderSupport):
@@ -125,17 +130,21 @@ class NextItemIterableDataset(IterableDataset, MultiProcessDataLoaderSupport):
     def _mp_init(self, id: int, num_worker: int, seed: int):
         # use evenly sized shards for each worker
         num_samples = len(self._index)
-        worker_share = int(math.ceil(num_samples / float(num_worker)))
-
-        start = id * worker_share
-        if id < num_worker - 1:
-            stop = min(start + worker_share - 1, num_samples)
-        else:
-            stop = num_samples
-
-        self._start = start
-        self._stop = stop
+        self._start, self._stop = calculate_shard(id, num_worker, seed, num_samples)
 
     # FIXME (AD): we need to return some length, otherwise test does not work, see: https://github.com/PyTorchLightning/pytorch-lightning/issues/3500
     def __len__(self):
         return self._stop - self._start
+
+
+def calculate_shard(id: int, num_worker: int, seed: int, num_samples: int) -> Tuple[int, int]:
+    worker_share = int(math.ceil(num_samples / float(num_worker)))
+
+    start = id * worker_share
+    if id < num_worker - 1:
+        #stop = min(start + worker_share - 1, num_samples)
+        stop = min(start + worker_share, num_samples)
+    else:
+        stop = num_samples
+
+    return start, stop

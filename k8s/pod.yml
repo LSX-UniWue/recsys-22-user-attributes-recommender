@@ -17,12 +17,12 @@ spec:
       imagePullPolicy: "Always"
       resources:
         requests:
-          cpu: "4"
-          memory: "12Gi"
+          cpu: "6"
+          memory: "24Gi"
           nvidia.com/gpu: 1
         limits:
-          cpu: "4"
-          memory: "12Gi"
+          cpu: "6"
+          memory: "24Gi"
           nvidia.com/gpu: 1
       command: ["sleep", "365d"]
       env:
@@ -35,6 +35,8 @@ spec:
           name: scratch # matches volume-name from below
         - mountPath: /ssd
           name: cache
+        - mountPath: /dev/shm
+          name: dshm
       ports:
         - containerPort: 8888
   imagePullSecrets:
@@ -59,4 +61,7 @@ spec:
           name: ceph-secret-dallmann
     - name: cache
       emptyDir: {}
+    - name: dshm
+      emptyDir:
+        medium: Memory
 
