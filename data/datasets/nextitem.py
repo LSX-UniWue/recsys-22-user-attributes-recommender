@@ -93,7 +93,6 @@ class NextItemDataset(Dataset, MultiProcessDataLoaderSupport):
     def __getitem__(self, idx):
         session_idx, target_pos = self._index[self._start + idx]
         session = self._dataset[session_idx][ITEM_SEQ_ENTRY_NAME]
-
         return {
             ITEM_SEQ_ENTRY_NAME: session[:target_pos],
             TARGET_ENTRY_NAME: session[target_pos]

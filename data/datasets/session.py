@@ -44,7 +44,6 @@ class ItemSessionDataset(Dataset, MultiProcessDataLoaderSupport):
 
     def __getitem__(self, idx):
         items = self._parser.parse(self._reader.get_session(idx))[ITEM_SEQ_ENTRY_NAME]
-
         if self._tokenizer:
             tokenized_items = self._tokenizer.convert_tokens_to_ids(items)
         else:

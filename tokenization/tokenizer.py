@@ -79,13 +79,10 @@ class Tokenizer(object):
         """
         if item is None:
             return None
-
         id = self.vocabulary.get_id(item)
-
         if id is None:
             if self.unk_token is not None:
                 return self.vocabulary.get_id(self.unk_token)
-
         return id
 
     def __len__(self):

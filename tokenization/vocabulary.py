@@ -1,7 +1,7 @@
 import collections
 import csv
 
-from typing import List, Optional, OrderedDict, TextIO
+from typing import List, Optional, OrderedDict, TextIO, Union
 
 
 class Vocabulary(object):
@@ -9,7 +9,10 @@ class Vocabulary(object):
         self.token_to_id = token_to_id
         self.id_to_token = collections.OrderedDict([(id, token) for token, id in token_to_id.items()])
 
-    def get_id(self, token: str) -> Optional[int]:
+    def get_id(self, token: Union[int, str]) -> Optional[int]:
+        if isinstance(token, int):
+            token = str(token)
+
         if token not in self.token_to_id:
             return None
 
@@ -32,7 +35,7 @@ class Vocabulary(object):
 
 
 class VocabularyBuilder(object):
-    def __init__(self, tokens: List[str] = None, start_id: int = 0):
+    def __init__(self, tokens: List[str] = [], start_id: int = 0):
         self.next_id = start_id + len(tokens)
         self.token_to_id = collections.OrderedDict(zip(tokens, range(start_id, self.next_id)))
 
@@ -69,7 +72,7 @@ class CSVVocabularyReaderWriter(VocabularyReaderWriter):
 
     def read(self, input: TextIO) -> Vocabulary:
         reader = csv.reader(input, delimiter=self.delimiter)
-        vocabulary_entries = [(token, id) for [token, id] in reader]
+        vocabulary_entries = [(token, int(id)) for [token, id] in reader]
 
         return Vocabulary(collections.OrderedDict(vocabulary_entries))
 
