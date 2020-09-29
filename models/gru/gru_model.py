@@ -16,9 +16,11 @@ class GRUSeqItemRecommenderModel(nn.Module):
         self.item_embeddings = nn.Embedding(num_items, embedding_dim=item_embedding_dim)
         self.gru = nn.GRU(item_embedding_dim, hidden_size, dropout=dropout, num_layers=num_layers, batch_first=True)
         self.fcn = nn.Linear(hidden_size, num_items, bias=True)
+        self.dropout = nn.Dropout2d(p=dropout)
 
     def forward(self, session, lengths, batch_idx):
         embedded_session = self.item_embeddings(session)
+        embedded_session = self.dropout(embedded_session)
         packed_embedded_session = nn.utils.rnn.pack_padded_sequence(
             embedded_session,
             lengths,
