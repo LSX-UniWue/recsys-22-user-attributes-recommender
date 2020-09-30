@@ -1,10 +1,12 @@
 from pathlib import Path
 from typing import Union, List, Optional
-
+import shutil
+import urllib.parse
 import pytorch_lightning as pl
 from pyhocon import ConfigTree
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import tarfile
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
@@ -30,8 +32,13 @@ class Dota2Small(pl.LightningDataModule):
 
     PAD_TOKEN_NAME = "<PAD>"
 
-    def __init__(self, local_path: str, remote_uri: str = None, delimiter="\t", max_seq_length: int = 2047,
-                 batch_size: int = 64, num_workers: int = 1):
+    def __init__(self,
+                 local_path: str, 
+                 remote_uri: str = None,
+                 delimiter="\t",
+                 max_seq_length: int = 2047,
+                 batch_size: int = 64,
+                 num_workers: int = 1):
 
         super().__init__()
 
@@ -56,6 +63,8 @@ class Dota2Small(pl.LightningDataModule):
         return Dota2Small(local_path, remote_uri, delimiter, max_seq_length, batch_size, num_workers)
 
     def prepare_data(self, *args, **kwargs):
+        self._copy_remote_archive()
+        self._extract_archive()
         self._create_token_vocabulary()
 
     def setup(self, stage: Optional[str] = None):
@@ -166,3 +175,54 @@ class Dota2Small(pl.LightningDataModule):
         vocabulary = vocab_builder.build()
         with token_vocab_file.open("w") as file:
             CSVVocabularyReaderWriter().write(vocabulary, file)
+
+    def _get_remote_archive_name(self):
+        return str(self._get_remote_archive_path()).split("/")[-1]
+
+    def _get_local_archive_path(self) -> Path:
+        return self.local_path / self._get_remote_archive_name()
+
+    def _get_remote_archive_path(self) -> Path:
+        parsed_remote_uri = urllib.parse.urlparse(self.remote_uri)
+        return Path(parsed_remote_uri.path)
+
+    def _remote_uri_is_file(self):
+        parsed_remote_uri = urllib.parse.urlparse(self.remote_uri)
+        return parsed_remote_uri.scheme == "file"
+
+    def _copy_remote_archive(self):
+        if not self.remote_uri:
+            return
+
+        ds_local_archive_file_path = self._get_local_archive_path()
+
+        if not ds_local_archive_file_path.exists():
+            parsed_remote_uri = urllib.parse.urlparse(self.remote_uri)
+            if not self._remote_uri_is_file():
+                raise Exception("Only direct file copy is supported right now.")
+
+            print("Copying remote data file")
+            if not ds_local_archive_file_path.parent.exists():
+                ds_local_archive_file_path.parent.mkdir(parents=True)
+            shutil.copyfile(parsed_remote_uri.path, ds_local_archive_file_path)
+
+    def _guess_tarfile_mode(self) -> str:
+        archive_name = self._get_remote_archive_name()
+        suffix = archive_name.split(".")[-1]
+
+        if suffix == "tar":
+            return "r"
+        else:
+            return f"r:{suffix}"
+
+    def _extract_archive(self):
+        archive_path = self._get_remote_archive_path()
+        destination = Path(self.local_path)
+
+        print(f"Extracting data from {archive_path} to {destination}")
+        archive = tarfile.open(name=archive_path, mode=self._guess_tarfile_mode())
+        archive.extractall(destination)
+
+
+
+
