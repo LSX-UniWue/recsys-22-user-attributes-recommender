@@ -54,7 +54,10 @@ def sas_rec_binary_cross_entropy(pos_input: torch.Tensor,
     :param reduction: the reduction to perform
     :return: the SASRec binary corss entropy for the given inputs
     """
+    # AD: for some reason the transformer takes masks where 'True' signals the presence of a pad token. For this code
+    # to work, we need to negate the mask first
 
+    mask = ~mask
     pos = _log_sigmoid(pos_input) * mask
     neg = _log_sigmoid(neg_input, reverse=True) * mask
 

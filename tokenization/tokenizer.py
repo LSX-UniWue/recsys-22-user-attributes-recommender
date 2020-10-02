@@ -40,6 +40,9 @@ class Tokenizer(object):
     def cls_token_id(self) -> int:
         return self.convert_tokens_to_ids(self.cls_token)
 
+    def get_vocabulary(self) -> Vocabulary:
+        return self.vocabulary
+
     def convert_tokens_to_ids(self,
                               items: Any) -> Any:
         if items is None:

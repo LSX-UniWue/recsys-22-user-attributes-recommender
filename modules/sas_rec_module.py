@@ -8,14 +8,18 @@ from modules.bert4rec_module import get_padding_mask
 from configs.models.sasrec.sas_rec_config import SASRecConfig
 from models.sasrec.sas_rec_model import SASRecModel
 from registry import registry
+from tokenization.tokenizer import Tokenizer
 
 
-@registry.register_module('sasrec')
+
+
 class SASRecModule(pl.LightningModule):
 
     def __init__(self,
                  training_config: SASRecTrainingConfig,
-                 model_config: SASRecConfig
+                 model_config: SASRecConfig,
+                 tokenizer: Tokenizer,
+                 batch_first: bool = True
                  ):
         """
         inits the SASRec module
@@ -28,13 +32,20 @@ class SASRecModule(pl.LightningModule):
 
         self.model_config = model_config
         self.model = SASRecModel(self.model_config)
+        self.tokenizer = tokenizer
+        self.batch_first = batch_first
 
-    def training_step(self, batch, batch_idx, itemizer):
-        input_seq = batch['sequence']
+    def training_step(self, batch, batch_idx):
+        input_seq = batch['session']
         pos = batch['positive_samples']
         neg = batch['negative_samples']
 
-        padding_mask = get_padding_mask(input_seq, itemizer)
+        if self.batch_first:
+            input_seq = input_seq.transpose(1, 0)
+            pos = pos.transpose(1, 0)
+            neg = neg.transpose(1, 0)
+
+        padding_mask = get_padding_mask(input_seq, self.tokenizer)
 
         pos_logits, neg_logits = self.model(input_seq, pos, neg_items=neg, padding_mask=padding_mask)
 
@@ -48,10 +59,10 @@ class SASRecModule(pl.LightningModule):
         return pl.TrainResult(loss)
 
     def validation_step(self, batch, batch_idx):
-        input_seq = batch['sequence']
+        input_seq = batch['session']
         # the first entry in each tensor
-        items = batch['items']
-        scores = self.forward(input_seq, items)
+        #items = batch['items']
+        #scores = self.forward(input_seq, items)
 
         return pl.EvalResult()
 
