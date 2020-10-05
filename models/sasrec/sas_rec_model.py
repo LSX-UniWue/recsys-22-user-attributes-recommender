@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 
 from models.layers.transformer_layers import TransformerEmbedding
-from configs.models.sasrec.sas_rec_config import SASRecConfig
 from utils.tensor_utils import generate_square_subsequent_mask
 
 
@@ -17,30 +16,38 @@ class SASRecModel(nn.Module):
     """
 
     def __init__(self,
-                 config: SASRecConfig
+                 transformer_hidden_size: int,
+                 num_transformer_heads: int,
+                 num_transformer_layers: int,
+                 item_vocab_size: int,
+                 max_seq_length: int,
+                 dropout: float
                  ):
         """
         inits the SASRec model
         :param config: all model configurations
         """
         super().__init__()
-        self.config = config
 
-        hidden_size = self.config.transformer_hidden_size
-        dropout = self.config.transformer_dropout
+        self.dropout = dropout
+        self.max_seq_length = max_seq_length
+        self.transformer_hidden_size = transformer_hidden_size
+        self.num_transformer_heads = num_transformer_heads
+        self.num_transformer_layers = num_transformer_layers
+        self.item_vocab_size = item_vocab_size
 
-        self.embedding = TransformerEmbedding(item_voc_size=self.config.item_voc_size,
-                                              max_seq_len=self.config.max_seq_length,
-                                              embedding_size=hidden_size,
-                                              dropout=dropout)
+        self.embedding = TransformerEmbedding(item_voc_size=self.item_vocab_size,
+                                              max_seq_len=self.max_seq_length,
+                                              embedding_size=self.transformer_hidden_size,
+                                              dropout=self.dropout)
 
-        encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_size,
-                                                   nhead=self.config.num_transformer_heads,
-                                                   dim_feedforward=hidden_size,
-                                                   dropout=dropout)
-        encoder_norm = nn.LayerNorm(hidden_size)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=self.transformer_hidden_size,
+                                                   nhead=self.num_transformer_heads,
+                                                   dim_feedforward=self.transformer_hidden_size,
+                                                   dropout=self.dropout)
+        encoder_norm = nn.LayerNorm(self.transformer_hidden_size)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layer,
-                                                         num_layers=self.config.num_transformer_layers,
+                                                         num_layers=self.num_transformer_layers,
                                                          norm=encoder_norm)
 
         self.input_sequence_mask = None
@@ -93,17 +100,40 @@ class SASRecModel(nn.Module):
         # inference step
         # TODO: check, strange reshaping
         # original code
+        # BS x S x E
         # seq_emb = tf.reshape(self.seq, [tf.shape(self.input_seq)[0] * args.maxlen, args.hidden_units])
+        # (BS * S) x E
         # self.test_item = tf.placeholder(tf.int32, shape=(101))
+        # 1 x 101
         # test_item_emb = tf.nn.embedding_lookup(item_emb_table, self.test_item)
-        # self.test_logits = tf.matmul(seq_emb, tf.transpose(test_item_emb))
+        # 101 x E
+        # self.test_logits = tf.matmul(seq_emb, tf.transpose(test_item_emb)) # E x 101
+
         # self.test_logits = tf.reshape(self.test_logits, [tf.shape(self.input_seq)[0], args.maxlen, 101])
         # self.test_logits = self.test_logits[:, -1, :]
+
+        # pos_items: I x BS
         item_embeddings = self.embedding.get_item_embedding(pos_items)
+
+        # item_embeddings: I x BS x E
         item_embeddings = item_embeddings.permute(1, 2, 0)
+
+        # item_embeddings: BS x E x I
+        # tf_output: S x BS x E
         transformer_output = transformer_output.transpose(0, 1)
+
+        # item_embeddings: BS x E x I
+        # tf_output: BS x S x E
         output = torch.matmul(transformer_output, item_embeddings)
 
-        # here we return the logits of the last step of the sequence
-        output = output[:, -1, :]
-        return output.transpose(0, 1)
+        # output BS x S x I
+        # we use "advanced" indexing to slice the right elements from the sequence.
+        batch_size = output.size()[0]
+        batch_index = torch.arange(0, batch_size)
+
+        # calculate indices from the padding mask
+        seq_index = (~padding_mask).sum(-1) - 1
+        scores = output[batch_index, seq_index, :]
+        # scores BS x I
+        return scores.transpose(0, 1)
+        # return: I x BS <- to be consistent with the input format

@@ -36,7 +36,7 @@ class GRUModule(pl.LightningModule):
             self._metrics = [RecallAtMetric(k) for k in metrics_k] + [MRRAtMetric(k) for k in metrics_k]
 
     @staticmethod
-    def from_configuration(config: ConfigTree):
+    def from_configuration(config: ConfigTree) -> 'GRUModule':
         model = GRUSeqItemRecommenderModel.from_configuration(config)
 
         optimizer_config = config["optimizer"]

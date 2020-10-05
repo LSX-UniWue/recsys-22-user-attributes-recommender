@@ -6,6 +6,8 @@ from pytorch_lightning import EvalResult
 
 from metrics.base import AggregatingMetricTrait
 
+# TODO (AD): For Transformer models we could evaluate the whole sequence at once
+
 
 class RecallAtMetric(pl.metrics.metric.TensorMetric, AggregatingMetricTrait):
     def __init__(self,

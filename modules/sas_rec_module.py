@@ -1,25 +1,28 @@
+from typing import List, Union, Dict
+
 import torch
 
 import pytorch_lightning as pl
 
-from configs.training.sasrec.sas_rec_config import SASRecTrainingConfig
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
+from metrics.ranking_metrics import RecallAtMetric, MRRAtMetric
 from modules.bert4rec_module import get_padding_mask
-from configs.models.sasrec.sas_rec_config import SASRecConfig
 from models.sasrec.sas_rec_model import SASRecModel
-from registry import registry
 from tokenization.tokenizer import Tokenizer
-
-
 
 
 class SASRecModule(pl.LightningModule):
 
     def __init__(self,
-                 training_config: SASRecTrainingConfig,
-                 model_config: SASRecConfig,
+                 model: SASRecModel,
+                 batch_size: int,
+                 learning_rate: float,
+                 beta_1: float,
+                 beta_2: float,
                  tokenizer: Tokenizer,
-                 batch_first: bool = True
+                 batch_first: bool,
+                 metrics_k: List[int]
                  ):
         """
         inits the SASRec module
@@ -27,13 +30,16 @@ class SASRecModule(pl.LightningModule):
         :param model_config: all model configurations
         """
         super().__init__()
+        self.model = model
 
-        self.training_config = training_config
-
-        self.model_config = model_config
-        self.model = SASRecModel(self.model_config)
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
         self.tokenizer = tokenizer
         self.batch_first = batch_first
+
+        self.metrics = [RecallAtMetric(k) for k in metrics_k] + [MRRAtMetric(k) for k in metrics_k]
 
     def training_step(self, batch, batch_idx):
         input_seq = batch['session']
@@ -59,14 +65,49 @@ class SASRecModule(pl.LightningModule):
         return pl.TrainResult(loss)
 
     def validation_step(self, batch, batch_idx):
-        input_seq = batch['session']
-        # the first entry in each tensor
-        #items = batch['items']
-        #scores = self.forward(input_seq, items)
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        targets = batch[TARGET_ENTRY_NAME]
 
-        return pl.EvalResult()
+        if self.batch_first:
+            input_seq = input_seq.transpose(1, 0)
+            batch_size = input_seq.size()[1]
+        else:
+            batch_size = input_seq.size()[0]
+
+        padding_mask = get_padding_mask(input_seq, self.tokenizer)
+        # the first entry in each tensor
+
+        # provide items that the target item will be ranked against
+        # TODO (AD) refactor this into a composable class to allow different strategies for item selection
+        device = input_seq.device
+        items_to_rank = torch.as_tensor(self.tokenizer.get_vocabulary().ids(), dtype=torch.long, device=device)
+        items_to_rank = items_to_rank.repeat([batch_size, 1])
+        items_to_rank = items_to_rank.transpose(1, 0)
+
+        scores = self.model(input_seq, items_to_rank, padding_mask=padding_mask)
+
+        scores = scores.transpose(1, 0)
+        result = pl.EvalResult()
+        for metric in self.metrics:
+            metric.on_step_end(scores, targets, result)
+
+        return result
+
+    def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]) -> Dict[str, Dict[str, torch.Tensor]]:
+        result = pl.EvalResult()
+
+        for metric in self.metrics:
+            metric.on_epoch_end(outputs, result)
+
+        return result
+
+    def test_step(self, batch, batch_idx):
+        return self.validation_step(batch, batch_idx)
+
+    def test_epoch_end(self, outputs):
+        return self.validation_epoch_end(outputs)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(),
-                                lr=self.training_config.learning_rate,
-                                betas=(self.training_config.beta_1, self.training_config.beta_2))
+                                lr=self.learning_rate,
+                                betas=(self.beta_1, self.beta_2))

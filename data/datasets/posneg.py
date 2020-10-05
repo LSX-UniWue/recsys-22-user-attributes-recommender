@@ -22,10 +22,14 @@ class PosNegSessionDataset(Dataset):
         pos = session[1:]
         neg = self._sample_negative_target(session)
 
+        # TODO (AD) right now we only support ranking the full item set. Often on datasets with large item spaces,
+        #  only a sample is drawn and ranked. We need to parameterize this class so that different strategies can be
+        #  used.
         return {
             "session": x,
             "positive_samples": pos,
-            "negative_samples": neg
+            "negative_samples": neg,
+            "items": self.tokenizer.get_vocabulary().ids() # use the full dataset for ranking (for now)
         }
 
     def __len__(self) -> int:

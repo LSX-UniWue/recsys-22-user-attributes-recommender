@@ -37,6 +37,8 @@ def _padded_session_collate(max_length: int, pad_token_id: int, entries_to_pad: 
         for entry_name, value in padded_sample.items():
             if entry_name in entries_to_pad:
                 padded_sample[entry_name] = pad(value, pad_token_id, max_length)
+            else:
+                padded_sample[entry_name] = torch.as_tensor(value)
 
         padded_batch.append(padded_sample)
 
