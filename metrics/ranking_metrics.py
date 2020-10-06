@@ -13,12 +13,10 @@ class RecallAtMetric(pl.metrics.metric.TensorMetric, AggregatingMetricTrait):
     def __init__(self,
                  k: int,
                  reduction: str = 'elementwise_mean',
-                 reduce_group: Any = None,
-                 reduce_op: Any = None):
+                 reduce_group: Any = None):
 
         super().__init__(name='recall_at',
-                         reduce_group=reduce_group,
-                         reduce_op=reduce_op)
+                         reduce_group=reduce_group)
         self.reduction = reduction
         self._k = k
 
@@ -70,12 +68,10 @@ class MRRAtMetric(pl.metrics.metric.TensorMetric, AggregatingMetricTrait):
     def __init__(self,
                  k: int,
                  reduction: str = 'elementwise_mean',
-                 reduce_group: Any = None,
-                 reduce_op: Any = None):
+                 reduce_group: Any = None):
 
         super().__init__(name='mrr_at',
-                         reduce_group=reduce_group,
-                         reduce_op=reduce_op)
+                         reduce_group=reduce_group)
         self.reduction = reduction
         self._k = k
 
