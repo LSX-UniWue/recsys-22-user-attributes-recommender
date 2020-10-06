@@ -17,7 +17,6 @@ class PosNegSessionDataset(Dataset):
 
     def __getitem__(self, index: int):
         session = self.dataset[index][ITEM_SEQ_ENTRY_NAME]
-
         x = session[:-1]
         pos = session[1:]
         neg = self._sample_negative_target(session)
@@ -39,8 +38,8 @@ class PosNegSessionDataset(Dataset):
     # We need to patch the tokenizer for this
     def _sample_negative_target(self, session) -> List[int]:
         tokens = set(self.tokenizer.get_vocabulary().ids())
-        session = set(session)
+        used_tokens = set(session)
 
-        available_tokens = list(tokens - session)
+        available_tokens = list(tokens - used_tokens)
 
         return self._rng.choice(available_tokens, len(session) - 1, replace=True).tolist()
