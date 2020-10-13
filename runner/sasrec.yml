@@ -57,8 +57,10 @@ trainer:
   limit_val_batches: 10
   default_root_dir: /tmp/checkpoints
   checkpoint:
+    filepath: "/tmp/checkpoints/{epoch}-{recall_at_5:.4f}"
     save_top_k: 3
     monitor: "recall_at_5"
+    gpus: 0
 
 
 

@@ -39,11 +39,13 @@ class SASRecModule(pl.LightningModule):
         self.tokenizer = tokenizer
         self.batch_first = batch_first
 
-        self.metrics = {}
+        metrics = {}
 
         for k in metrics_k:
-            self.metrics[f"recall_at_{k}"] = RecallAtMetric(k)
-            self.metrics[f"mrr_at_{k}"] = MRRAtMetric(k)
+            metrics[f"recall_at_{k}"] = RecallAtMetric(k)
+            metrics[f"mrr_at_{k}"] = MRRAtMetric(k)
+
+        self.metrics = torch.nn.ModuleDict(modules=metrics)
 
     def training_step(self, batch, batch_idx):
         input_seq = batch['session']

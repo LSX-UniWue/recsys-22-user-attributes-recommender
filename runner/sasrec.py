@@ -169,8 +169,10 @@ class SASRecContainer(containers.DeclarativeContainer):
 
     checkpoint = providers.Singleton(
         ModelCheckpoint,
+        filepath=config.trainer.checkpoint.filepath,
         monitor=config.trainer.checkpoint.monitor,
-        save_top_k=config.trainer.checkpoint.save_top_k
+        save_top_k=config.trainer.checkpoint.save_top_k,
+
     )
 
     trainer = providers.Singleton(
@@ -178,7 +180,8 @@ class SASRecContainer(containers.DeclarativeContainer):
         limit_train_batches=config.trainer.limit_train_batches,
         limit_val_batches=config.trainer.limit_val_batches,
         default_root_dir=config.trainer.default_root_dir,
-        checkpoint_callback=checkpoint
+        checkpoint_callback=checkpoint,
+        gpus=config.trainer.gpus
     )
 
 
