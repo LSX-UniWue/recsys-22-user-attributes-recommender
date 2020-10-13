@@ -68,10 +68,10 @@ class SASRecModel(nn.Module):
         :param neg_items: random sampled negative items that are not in the session of the user :math:`(N)`
         :param position_ids: the optional position ids if not the position ids are generated :math:`(S, N)`
         :param padding_mask: the optional padding mask if the sequence is padded :math:`(N, S)`
-        :return: the logits of the pos_items and the logits of the negative_items, each of shape :math:`(I, N)`
-                iff neg_items is provided else
+        :return: the logits of the pos_items and the logits of the negative_items, each of shape :math:`(S, N)`
+                iff neg_items is provided else the logits for the provided positive items of the same shape
 
-        Where S is the (max) sequence length of the batch, N the batch size, and I the vocabulary size of the items.
+        Where S is the (max) sequence length of the batch and N the batch size.
         """
         # … and H is the hidden size of the transformer/embedding
         device = input_sequence.device
