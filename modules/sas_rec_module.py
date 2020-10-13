@@ -62,7 +62,9 @@ class SASRecModule(pl.LightningModule):
         # adds regularization losses, but they are empty, as far as I can see (dzo)
         # TODO: check
 
-        return pl.TrainResult(loss)
+        return {
+            "loss": loss
+        }
 
     def validation_step(self, batch, batch_idx):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
@@ -87,19 +89,19 @@ class SASRecModule(pl.LightningModule):
         scores = self.model(input_seq, items_to_rank, padding_mask=padding_mask)
 
         scores = scores.transpose(1, 0)
-        result = pl.EvalResult()
-        for metric in self.metrics:
-            metric.on_step_end(scores, targets, result)
+        output = {}
 
-        return result
+        for metric in self.metrics:
+            output[metric.name] = metric.on_step_end(scores, targets)
+            self.log(metric.name, output[metric.name], prog_bar=True)
+
+        return output
 
     def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]) -> Dict[str, Dict[str, torch.Tensor]]:
-        result = pl.EvalResult()
-
         for metric in self.metrics:
-            metric.on_epoch_end(outputs, result)
+            metric.on_epoch_end(outputs)
 
-        return result
+
 
     def test_step(self, batch, batch_idx):
         return self.validation_step(batch, batch_idx)
