@@ -39,7 +39,11 @@ class SASRecModule(pl.LightningModule):
         self.tokenizer = tokenizer
         self.batch_first = batch_first
 
-        self.metrics = [RecallAtMetric(k) for k in metrics_k] + [MRRAtMetric(k) for k in metrics_k]
+        self.metrics = {}
+
+        for k in metrics_k:
+            self.metrics[f"recall_at_{k}"] = RecallAtMetric(k)
+            self.metrics[f"mrr_at_{k}"] = MRRAtMetric(k)
 
     def training_step(self, batch, batch_idx):
         input_seq = batch['session']
@@ -86,28 +90,23 @@ class SASRecModule(pl.LightningModule):
         items_to_rank = items_to_rank.repeat([batch_size, 1])
         items_to_rank = items_to_rank.transpose(1, 0)
 
-        scores = self.model(input_seq, items_to_rank, padding_mask=padding_mask)
+        prediction = self.model(input_seq, items_to_rank, padding_mask=padding_mask)
 
-        scores = scores.transpose(1, 0)
-        output = {}
+        prediction = prediction.transpose(1, 0)
 
-        for metric in self.metrics:
-            output[metric.name] = metric.on_step_end(scores, targets)
-            self.log(metric.name, output[metric.name], prog_bar=True)
+        for name, metric in self.metrics.items():
+            step_value = metric(prediction, targets)
+            self.log(name, step_value, prog_bar=True)
 
-        return output
-
-    def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]) -> Dict[str, Dict[str, torch.Tensor]]:
-        for metric in self.metrics:
-            metric.on_epoch_end(outputs)
-
-
+    def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]) -> None:
+        for name, metric in self.metrics.items():
+            self.log(name, metric.compute(), prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         return self.validation_step(batch, batch_idx)
 
     def test_epoch_end(self, outputs):
-        return self.validation_epoch_end(outputs)
+        self.validation_epoch_end(outputs)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(),

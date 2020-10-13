@@ -89,7 +89,6 @@ if __name__ == "__main__":
 
     metric = MRRAtMetric(k=3)
     metric(prediction, target)
-    print(metric.compute())
 
     target = torch.tensor([[1], [1]])
     metric(prediction, target)
