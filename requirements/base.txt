@@ -8,3 +8,4 @@ pyhocon==0.3.55
 
 torchvision==0.7.0
 pytorch-lightning==1.0.0rc4
+dependency-injector==3.44.0
