@@ -37,7 +37,7 @@ class TransformerEmbedding(nn.Module):
         """
         return self.item_embedding.weight
 
-    def get_item_embedding(self, input_sequence: torch.Tensor):
+    def get_item_embedding(self, input_sequence: torch.Tensor) -> nn.Parameter:
         return self.item_embedding(input_sequence)
 
     def forward(self,

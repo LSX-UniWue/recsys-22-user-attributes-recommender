@@ -116,7 +116,7 @@ class BERT4RecContainer(containers.DeclarativeContainer):
 
 def main():
     container = BERT4RecContainer()
-    container.config.from_yaml("util/sas_config.yaml")
+    container.config.from_yaml("util/bert4rec_config.yaml")
     module = container.module()
 
     trainer = container.trainer()

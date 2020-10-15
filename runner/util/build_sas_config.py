@@ -41,11 +41,12 @@ if __name__ == '__main__':
     max_seq_length = 2047
     batch_size = 4
 
+    item_vocab_size = 248 # 249 for bert4rec
     model_config = {
         'transformer_hidden_size': 16,
         'num_transformer_heads': 1,
         'num_transformer_layers': 1,
-        'item_vocab_size': 248,
+        'item_vocab_size': item_vocab_size,
         'max_seq_length': max_seq_length,
         'dropout': 0.1
     }

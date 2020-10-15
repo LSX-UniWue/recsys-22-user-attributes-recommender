@@ -5,6 +5,7 @@ from typing import Tuple, List
 
 from torch import nn
 
+from data.datasets import ITEM_SEQ_ENTRY_NAME
 from metrics.utils.metric_utils import build_metrics
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
@@ -37,7 +38,10 @@ class BERT4RecModule(pl.LightningModule):
         self.metrics = build_metrics(ks)
 
     def training_step(self, batch, batch_idx):
-        input_seq = batch['session']
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+
+        if self.batch_first:
+            input_seq = input_seq.transpose(0, 1)
 
         # random mask some items
         input_seq, target = _mask_items(input_seq, self.tokenizer, 0.8)
@@ -47,11 +51,18 @@ class BERT4RecModule(pl.LightningModule):
         # call the model
         prediction_scores = self.model(input_seq, padding_mask=padding_mask)
         loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)
-        masked_lm_loss = loss_func(prediction_scores.view(-1, self.config.item_voc_size), target.view(-1))
+        masked_lm_loss = loss_func(prediction_scores.view(-1, len(self.tokenizer)), target.flatten())
 
         return {
             'loss': masked_lm_loss
         }
+
+    def configure_optimizers(self):
+        # TODO: warmup steps, weight decay
+        # TODO: clip norm
+        return torch.optim.Adam(self.parameters(),
+                                lr=self.learning_rate,
+                                betas=(self.beta_1, self.beta_2))
 
 
 def _mask_items(inputs: torch.Tensor,
@@ -61,7 +72,7 @@ def _mask_items(inputs: torch.Tensor,
 
     if tokenizer.mask_token is None:
         raise ValueError(
-            "This itemizer does not have a mask item which is necessary for masked modeling."
+            "This tokenizer does not have a mask item which is necessary for masked modeling."
         )
 
     target = inputs.clone()
@@ -75,7 +86,8 @@ def _mask_items(inputs: torch.Tensor,
         padding_mask = target.eq(tokenizer.pad_token_id)
         probability_matrix.masked_fill_(padding_mask, value=0.0)
     masked_indices = torch.bernoulli(probability_matrix).bool()
-    target[~masked_indices] = CROSS_ENTROPY_IGNORE_INDEX  # We only compute loss on masked items
+    # to compute loss on masked items, we set ignore index on the other positions
+    target[~masked_indices] = CROSS_ENTROPY_IGNORE_INDEX
 
     # 80% of the time, we replace masked input items with mask item ([MASK])
     indices_replaced = torch.bernoulli(torch.full(target.shape, 0.8)).bool() & masked_indices

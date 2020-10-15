@@ -5,8 +5,6 @@ from torch import nn
 from configs.models.bert4rec.bert4rec_config import BERT4RecConfig
 from models.layers.transformer_layers import TransformerEmbedding
 
-CROSS_ENTROPY_IGNORE_INDEX = -100
-
 
 class BERT4RecModel(nn.Module):
 
@@ -61,7 +59,8 @@ class BERT4RecModel(nn.Module):
         #                         bert_config.initializer_range))
         self.linear = nn.Linear(self.transformer_hidden_size, self.transformer_hidden_size)
         self.gelu = nn.GELU()
-        self.output_bias = nn.Parameter(torch.rand(1, 1))
+        self.layer_norm = nn.LayerNorm(self.transformer_hidden_size)
+        self.output_bias = nn.Parameter(torch.rand(1, self.item_vocab_size))
 
     def forward(self,
                 input_seq: torch.Tensor,
@@ -78,18 +77,20 @@ class BERT4RecModel(nn.Module):
 
         Where S is the (max) sequence length of the batch, B the batch size, and I the vocabulary size of the items.
         """
+        # H is the transformer hidden size
         # embed the input
-        input_seq = self.embedding(input_seq, position_ids)
+        input_seq = self.embedding(input_seq, position_ids)  # (S, N, H)
 
         # use the bidirectional transformer
         input_seq = self.transformer_encoder(input_seq,
-                                             src_key_padding_mask=padding_mask)[-1]
+                                             src_key_padding_mask=padding_mask)  # (S, N, H)
         # decode the hidden representation
-        dense = self.gelu(self.linear(input_seq))
+        dense = self.gelu(self.linear(input_seq))  # (S, N, H)
 
         # norm the output
-        dense = self.layer_norm(dense)
+        dense = self.layer_norm(dense)  # (S, N, H)
 
-        dense = dense * self.get_item_embedding_weight + self.output_bias
+        dense = torch.matmul(dense, self.embedding.get_item_embedding_weight().transpose(0, 1))
+        dense = dense + self.output_bias
 
         return dense

@@ -187,7 +187,7 @@ class SASRecContainer(containers.DeclarativeContainer):
 
 def main():
     container = SASRecContainer()
-    container.config.from_yaml("sasrec.yml")
+    container.config.from_yaml("util/sas_config.yaml")
     module = container.module()
 
     trainer = container.trainer()
