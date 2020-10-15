@@ -3,37 +3,65 @@ import torch
 from torch import nn
 
 from configs.models.bert4rec.bert4rec_config import BERT4RecConfig
-from models.layers.util_layers import MatrixFactorizationLayer
 from models.layers.transformer_layers import TransformerEmbedding
 
 CROSS_ENTROPY_IGNORE_INDEX = -100
 
 
 class BERT4RecModel(nn.Module):
+
+    @classmethod
+    def from_config(cls, config: BERT4RecConfig):
+
+        return cls(transformer_hidden_size=config.transformer_hidden_size,
+                   num_transformer_heads=config.num_transformer_heads,
+                   num_transformer_layers=config.num_transformer_layers,
+                   item_vocab_size=config.item_voc_size,
+                   max_seq_length=config.max_seq_length,
+                   dropout=config.transformer_dropout)
     """
     implementation of the paper "BERT4Rec: Sequential Recommendation with Bidirectional Encoder Representations from Transformer"
     see https://doi.org/10.1145%2f3357384.3357895 for more details.
     """
 
     def __init__(self,
-                 config: BERT4RecConfig):
+                 transformer_hidden_size: int,
+                 num_transformer_heads: int,
+                 num_transformer_layers: int,
+                 item_vocab_size: int,
+                 max_seq_length: int,
+                 dropout: float):
         super().__init__()
 
-        self.config = config
+        self.transformer_hidden_size = transformer_hidden_size
+        self.num_transformer_heads = num_transformer_heads
+        self.num_transformer_layers = num_transformer_layers
+        self.item_vocab_size = item_vocab_size
+        self.max_seq_length = max_seq_length
+        self.dropout = dropout
 
-        d_model = config.transformer_hidden_size
-        dropout = config.transformer_dropout
-        self.embedding = TransformerEmbedding(config.item_voc_size, config.max_seq_length, d_model, dropout)
+        self.embedding = TransformerEmbedding(item_voc_size=self.item_vocab_size,
+                                              max_seq_len=self.max_seq_length,
+                                              embedding_size=self.transformer_hidden_size,
+                                              dropout=self.dropout)
 
-        encoder_layers = nn.TransformerEncoderLayer(d_model, config.num_transformer_heads, d_model,
-                                                    dropout, activation='gelu')
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, config.num_transformer_layers)
+        encoder_layers = nn.TransformerEncoderLayer(d_model=self.transformer_hidden_size,
+                                                    nhead = self.num_transformer_heads,
+                                                    dim_feedforward=self.transformer_hidden_size,
+                                                    dropout=self.dropout,
+                                                    activation='gelu')
+
+        # TODO: check encoder norm?
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layers,
+                                                         num_layers=self.num_transformer_heads)
 
         # for decoding the sequence into the item space again
-        self.linear = nn.Linear(d_model, d_model)
+        # TODO: init the linear layer:
+        # kernel_initializer=modeling.create_initializer(
+        #                         bert_config.initializer_range))
+        self.linear = nn.Linear(self.transformer_hidden_size, self.transformer_hidden_size)
         self.gelu = nn.GELU()
-        self.mfl = MatrixFactorizationLayer(self.embedding.get_item_embedding_weight())
-        self.softmax = nn.Softmax(dim=2)
+        self.output_bias = nn.Parameter(torch.rand(1, 1))
 
     def forward(self,
                 input_seq: torch.Tensor,
@@ -55,11 +83,13 @@ class BERT4RecModel(nn.Module):
 
         # use the bidirectional transformer
         input_seq = self.transformer_encoder(input_seq,
-                                             src_key_padding_mask=padding_mask)
-
+                                             src_key_padding_mask=padding_mask)[-1]
         # decode the hidden representation
-        scores = self.gelu(self.linear(input_seq))
+        dense = self.gelu(self.linear(input_seq))
 
-        scores = self.mfl(scores)
-        scores = self.softmax(scores)
-        return scores
+        # norm the output
+        dense = self.layer_norm(dense)
+
+        dense = dense * self.get_item_embedding_weight + self.output_bias
+
+        return dense
