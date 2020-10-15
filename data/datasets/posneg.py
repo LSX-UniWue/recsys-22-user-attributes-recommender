@@ -17,6 +17,9 @@ class PosNegSessionDataset(Dataset):
 
     def __getitem__(self, index: int):
         session = self.dataset[index][ITEM_SEQ_ENTRY_NAME]
+
+        assert(len(session) > 1)
+
         x = session[:-1]
         pos = session[1:]
         neg = self._sample_negative_target(session)

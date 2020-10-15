@@ -26,6 +26,8 @@ def _padded_session_collate(max_length: int, pad_token_id: int, entries_to_pad: 
         padded_x = x
         if length < padded_length:
             padded_x = padded_x + ([pad_token_id] * (max_length - length))
+        elif length > padded_length:  # truncate if the sequence is longer
+            padded_x = padded_x[:padded_length]
 
         return torch.as_tensor(padded_x)
 
