@@ -5,7 +5,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 
 class ConfigTrainerBuilder:
 
-    def build(self, config: ConfigTree):
+    def build(self, config: ConfigTree) -> pl.Trainer:
         trainer_config = config["trainer"]
 
         max_epochs = trainer_config.get_int("max_epochs", 10)
