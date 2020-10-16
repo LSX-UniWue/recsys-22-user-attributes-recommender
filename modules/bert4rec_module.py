@@ -66,7 +66,6 @@ class BERT4RecModule(pl.LightningModule):
         def _filter(name: str) -> bool:
             return name.endswith("bias") or 'norm1' in name or 'norm2' in name or 'layer_norm' in name
 
-        # TODO: clip norm
         decay_exclude = [parameter for name, parameter in self.named_parameters() if _filter(name)]
         decay_include = [parameter for name, parameter in self.named_parameters() if not _filter(name)]
 
@@ -136,7 +135,7 @@ def get_padding_mask(tensor: torch.Tensor,
     """
     generates the padding mask based on the tokenizer (by default batch first)
     :param tensor:
-    :param itemizer:
+    :param tokenizer:
     :param transposed:
     :return:
     """

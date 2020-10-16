@@ -112,6 +112,7 @@ class BERT4RecContainer(containers.DeclarativeContainer):
         limit_val_batches=config.trainer.limit_val_batches,
         default_root_dir=config.trainer.default_root_dir,
         checkpoint_callback=checkpoint,
+        gradient_clip_val=config.trainer.gradient_clip_val,
         gpus=config.trainer.gpus
     )
 
