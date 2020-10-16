@@ -38,6 +38,8 @@ class BERT4RecContainer(containers.DeclarativeContainer):
         config.module.learning_rate,
         config.module.beta_1,
         config.module.beta_2,
+        config.module.weight_decay,
+        config.module.num_warmup_steps,
         tokenizer,
         config.module.batch_first,
         config.module.metrics_k

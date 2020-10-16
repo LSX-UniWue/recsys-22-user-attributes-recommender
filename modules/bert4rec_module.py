@@ -4,6 +4,7 @@ import pytorch_lightning as pl
 from typing import Tuple, List
 
 from torch import nn
+from torch.optim.lr_scheduler import LambdaLR
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 from metrics.utils.metric_utils import build_metrics
@@ -21,6 +22,8 @@ class BERT4RecModule(pl.LightningModule):
                  learning_rate: float,
                  beta_1: float,
                  beta_2: float,
+                 weight_decay: float,
+                 num_warmup_steps: int,
                  tokenizer: Tokenizer,
                  batch_first: bool,
                  ks: List[int]
@@ -32,6 +35,8 @@ class BERT4RecModule(pl.LightningModule):
         self.learning_rate = learning_rate
         self.beta_1 = beta_1
         self.beta_2 = beta_2
+        self.weight_decay = weight_decay
+        self.num_warmup_steps = num_warmup_steps
 
         self.tokenizer = tokenizer
         self.batch_first = batch_first
@@ -58,11 +63,34 @@ class BERT4RecModule(pl.LightningModule):
         }
 
     def configure_optimizers(self):
-        # TODO: warmup steps, weight decay
+        def _filter(name: str) -> bool:
+            return name.endswith("bias") or 'norm1' in name or 'norm2' in name or 'layer_norm' in name
+
         # TODO: clip norm
-        return torch.optim.Adam(self.parameters(),
-                                lr=self.learning_rate,
-                                betas=(self.beta_1, self.beta_2))
+        decay_exclude = [parameter for name, parameter in self.named_parameters() if _filter(name)]
+        decay_include = [parameter for name, parameter in self.named_parameters() if not _filter(name)]
+
+        parameters = {'params': decay_exclude, 'weight_decay': 0.0},\
+                     {'params': decay_include, 'weight_decay': self.weight_decay}
+        optimizer = torch.optim.Adam(parameters,
+                                     lr=self.learning_rate,
+                                     betas=(self.beta_1, self.beta_2))
+
+        if self.num_warmup_steps > 0:
+            num_warmup_steps = self.num_warmup_steps
+            initial_learning_rate = self.learning_rate
+
+            # learning rate = step/warmup-step * init_learning_rate if in warmup-steps, else the init_learning_rate
+            def _learning_rate_scheduler(step: int) -> float:
+                warmup_percent_done = step / num_warmup_steps
+                if warmup_percent_done >= 1:
+                    return initial_learning_rate
+                warmup_learning_rate = initial_learning_rate * warmup_percent_done
+                return warmup_learning_rate
+
+            scheduler = LambdaLR(optimizer, _learning_rate_scheduler)
+            return [optimizer], [scheduler]
+        return optimizer
 
 
 def _mask_items(inputs: torch.Tensor,
