@@ -1,12 +1,13 @@
 import torch
 import pytorch_lightning as pl
+import torch.nn.functional as F
 
-from typing import Tuple, List
+from typing import Tuple, List, Union, Dict
 
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
-from data.datasets import ITEM_SEQ_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from metrics.utils.metric_utils import build_metrics
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
@@ -49,6 +50,9 @@ class BERT4RecModule(pl.LightningModule):
             input_seq = input_seq.transpose(0, 1)
 
         # random mask some items
+        # FIXME: paper quote: we also produce samples that only mask the last item
+        # in the input sequences during training.
+        # how? TODO: check code!
         input_seq, target = _mask_items(input_seq, self.tokenizer, 0.8)
         # calc the padding mask
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=True)
@@ -61,6 +65,36 @@ class BERT4RecModule(pl.LightningModule):
         return {
             'loss': masked_lm_loss
         }
+
+    def validation_step(self, batch, batch_idx):
+        # FIXME: be careful, the last item must be the mask token (so the input_seq length must be at least on item
+        # shorter to allow the masking token
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        targets = batch[TARGET_ENTRY_NAME]
+
+        # calc the padding mask
+        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False)
+
+        # set the last non padding token to the mask token
+        input_seq, target_mask = _add_mask_token_at_ending(input_seq, padding_mask, self.tokenizer)
+
+        if self.batch_first:
+            input_seq = input_seq.transpose(1, 0)
+            target_mask = target_mask.transpose(1, 0)
+
+        # get predictions for all seq steps
+        prediction = self.model(input_seq, padding_mask=padding_mask)
+        # extract the relevant seq steps, where the mask was set
+        prediction = prediction[target_mask]
+
+        for name, metric in self.metrics.items():
+            step_value = metric(prediction, targets)
+            self.log(name, step_value, prog_bar=True)
+
+    # FIXME: copy paste code from sas rec module
+    def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]) -> None:
+        for name, metric in self.metrics.items():
+            self.log(name, metric.compute(), prog_bar=True)
 
     def configure_optimizers(self):
         def _filter(name: str) -> bool:
@@ -90,6 +124,23 @@ class BERT4RecModule(pl.LightningModule):
             scheduler = LambdaLR(optimizer, _learning_rate_scheduler)
             return [optimizer], [scheduler]
         return optimizer
+
+
+def _add_mask_token_at_ending(input_seq: torch.Tensor,
+                              padding_mask: torch.Tensor,
+                              tokenizer: Tokenizer,
+                              ) -> Tuple[torch.Tensor, torch.Tensor]:
+    """ This methods adds the masking token at the position of the first padding token
+        :return: the input_seq with the masking token,
+    """
+    input_seq = input_seq.clone()
+    batch_size, max_seq_length = input_seq.size()
+    inverse_indices = torch.arange(start=max_seq_length, end=0, step=-1).repeat([batch_size, 1])
+    inverse_padding_positions = padding_mask * inverse_indices
+    first_index = max_seq_length - inverse_padding_positions.max(dim=1).values
+    target_mask = F.one_hot(first_index, max_seq_length).bool()
+    input_seq[target_mask] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
+    return input_seq, target_mask
 
 
 def _mask_items(inputs: torch.Tensor,

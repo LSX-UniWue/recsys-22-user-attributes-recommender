@@ -82,8 +82,8 @@ class SASRecModule(pl.LightningModule):
         else:
             batch_size = input_seq.size()[0]
 
+        # calc the padding mask
         padding_mask = get_padding_mask(input_seq, self.tokenizer)
-        # the first entry in each tensor
 
         # provide items that the target item will be ranked against
         # TODO (AD) refactor this into a composable class to allow different strategies for item selection
@@ -93,7 +93,6 @@ class SASRecModule(pl.LightningModule):
         items_to_rank = items_to_rank.transpose(1, 0)
 
         prediction = self.model(input_seq, items_to_rank, padding_mask=padding_mask)
-
         prediction = prediction.transpose(1, 0)
 
         for name, metric in self.metrics.items():

@@ -60,7 +60,7 @@ class BERT4RecModel(nn.Module):
         self.linear = nn.Linear(self.transformer_hidden_size, self.transformer_hidden_size)
         self.gelu = nn.GELU()
         self.layer_norm = nn.LayerNorm(self.transformer_hidden_size)
-        self.output_bias = nn.Parameter(torch.rand(1, self.item_vocab_size))
+        self.output_bias = nn.Parameter(torch.rand(self.item_vocab_size))
 
     def forward(self,
                 input_seq: torch.Tensor,

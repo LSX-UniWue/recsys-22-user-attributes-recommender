@@ -8,7 +8,7 @@ datasets:
       nip_index_file: /Users/nosebrain/Desktop/small/test.nip.idx
     loader:
       batch_size: 4
-      max_seq_length: 2047
+      max_seq_length: 10
   train:
     dataset:
       csv_file: /Users/nosebrain/Desktop/small/train.csv
@@ -17,7 +17,7 @@ datasets:
       item_column_name: item_id
     loader:
       batch_size: 4
-      max_seq_length: 2047
+      max_seq_length: 10
   validation:
     dataset:
       csv_file: /Users/nosebrain/Desktop/small/valid.csv
@@ -27,11 +27,11 @@ datasets:
       nip_index_file: /Users/nosebrain/Desktop/small/valid.nip.idx
     loader:
       batch_size: 4
-      max_seq_length: 2047
+      max_seq_length: 10
 model:
   dropout: 0.1
   item_vocab_size: 249
-  max_seq_length: 2047
+  max_seq_length: 10
   num_transformer_heads: 1
   num_transformer_layers: 1
   transformer_hidden_size: 16
