@@ -60,7 +60,9 @@ class BERT4RecModule(pl.LightningModule):
         # call the model
         prediction_scores = self.model(input_seq, padding_mask=padding_mask)
         loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)
-        masked_lm_loss = loss_func(prediction_scores.view(-1, len(self.tokenizer)), target.flatten())
+        flatten_predictions = prediction_scores.view(-1, len(self.tokenizer))
+        flatten_targets = torch.flatten(target)
+        masked_lm_loss = loss_func(flatten_predictions, flatten_targets)
 
         return {
             'loss': masked_lm_loss
@@ -72,15 +74,15 @@ class BERT4RecModule(pl.LightningModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
-        # calc the padding mask
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False)
-
         # set the last non padding token to the mask token
-        input_seq, target_mask = _add_mask_token_at_ending(input_seq, padding_mask, self.tokenizer)
+        input_seq, target_mask = _add_mask_token_at_ending(input_seq, self.tokenizer)
 
         if self.batch_first:
             input_seq = input_seq.transpose(1, 0)
             target_mask = target_mask.transpose(1, 0)
+
+        # since we added the mask token, we have to update the padding mask
+        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=True)
 
         # get predictions for all seq steps
         prediction = self.model(input_seq, padding_mask=padding_mask)
@@ -127,13 +129,13 @@ class BERT4RecModule(pl.LightningModule):
 
 
 def _add_mask_token_at_ending(input_seq: torch.Tensor,
-                              padding_mask: torch.Tensor,
                               tokenizer: Tokenizer,
                               ) -> Tuple[torch.Tensor, torch.Tensor]:
     """ This methods adds the masking token at the position of the first padding token
         :return: the input_seq with the masking token,
     """
     input_seq = input_seq.clone()
+    padding_mask = get_padding_mask(input_seq, tokenizer, transposed=False)
     batch_size, max_seq_length = input_seq.size()
     inverse_indices = torch.arange(start=max_seq_length, end=0, step=-1).repeat([batch_size, 1])
     inverse_padding_positions = padding_mask * inverse_indices
