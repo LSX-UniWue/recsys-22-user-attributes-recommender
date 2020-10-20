@@ -35,6 +35,7 @@ class BERT4RecContainer(containers.DeclarativeContainer):
         BERT4RecModule,
         model,
         config.module.batch_size,
+        config.module.mask_probability,
         config.module.learning_rate,
         config.module.beta_1,
         config.module.beta_2,

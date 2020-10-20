@@ -20,6 +20,7 @@ class BERT4RecModule(pl.LightningModule):
     def __init__(self,
                  model: BERT4RecModel,
                  batch_size: int,
+                 mask_probability: float,
                  learning_rate: float,
                  beta_1: float,
                  beta_2: float,
@@ -33,6 +34,9 @@ class BERT4RecModule(pl.LightningModule):
         self.model = model
 
         self.batch_size = batch_size
+
+        self.mask_probability = mask_probability
+
         self.learning_rate = learning_rate
         self.beta_1 = beta_1
         self.beta_2 = beta_2
@@ -53,7 +57,7 @@ class BERT4RecModule(pl.LightningModule):
         # FIXME: paper quote: we also produce samples that only mask the last item
         # in the input sequences during training.
         # how? TODO: check code!
-        input_seq, target = _mask_items(input_seq, self.tokenizer, 0.8)
+        input_seq, target = _mask_items(input_seq, self.tokenizer, self.mask_probability)
         # calc the padding mask
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=True)
 
@@ -81,7 +85,7 @@ class BERT4RecModule(pl.LightningModule):
             input_seq = input_seq.transpose(1, 0)
             target_mask = target_mask.transpose(1, 0)
 
-        # since we added the mask token, we have to update the padding mask
+        # after adding the mask token we can calculate the padding mask
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=True)
 
         # get predictions for all seq steps
