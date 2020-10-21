@@ -49,6 +49,7 @@ class BERT4RecModule(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        input_seq = _expand_sequence(inputs=input_seq, tokenizer=self.tokenizer, batch_first=self.batch_first)
 
         if self.batch_first:
             input_seq = input_seq.transpose(0, 1)
@@ -57,9 +58,13 @@ class BERT4RecModule(pl.LightningModule):
         # FIXME: paper quote: we also produce samples that only mask the last item
         # in the input sequences during training.
         # how? TODO: check code!
-        input_seq, target = _mask_items(input_seq, self.tokenizer, self.mask_probability)
+        input_seq, target = _mask_items(inputs=input_seq,
+                                        tokenizer=self.tokenizer,
+                                        mask_probability=self.mask_probability)
         # calc the padding mask
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=True)
+        padding_mask = get_padding_mask(tensor=input_seq,
+                                        tokenizer=self.tokenizer,
+                                        transposed=True)
 
         # call the model
         prediction_scores = self.model(input_seq, padding_mask=padding_mask)
@@ -73,9 +78,10 @@ class BERT4RecModule(pl.LightningModule):
         }
 
     def validation_step(self, batch, batch_idx):
-        # FIXME: be careful, the last item must be the mask token (so the input_seq length must be at least on item
         # shorter to allow the masking token
-        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        input_seq = _expand_sequence(inputs=batch[ITEM_SEQ_ENTRY_NAME],
+                                     tokenizer=self.tokenizer,
+                                     batch_first=self.batch_first)
         targets = batch[TARGET_ENTRY_NAME]
 
         # set the last non padding token to the mask token
@@ -132,6 +138,22 @@ class BERT4RecModule(pl.LightningModule):
         return optimizer
 
 
+def _expand_sequence(inputs: torch.Tensor,
+                     tokenizer: Tokenizer,
+                     batch_first: bool = True
+                     ) -> torch.Tensor:
+    if tokenizer.pad_token is None:
+        raise ValueError("This tokenizer does not have a padding token which is required for the BERT4Rec model.")
+    input_shape = inputs.shape
+    shape_addition_padding = (input_shape[0], 1)
+    if not batch_first:
+        shape_addition_padding = (1, input_shape[1])
+
+    # generate a tensor with the addition seq step (filled with padding tokens)
+    additional_padding = torch.full(shape_addition_padding, tokenizer.pad_token_id, dtype=inputs.dtype)
+    return torch.cat([inputs, additional_padding], dim=1 if batch_first else 0)
+
+
 def _add_mask_token_at_ending(input_seq: torch.Tensor,
                               tokenizer: Tokenizer,
                               ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -145,7 +167,7 @@ def _add_mask_token_at_ending(input_seq: torch.Tensor,
     inverse_padding_positions = padding_mask * inverse_indices
     first_index = max_seq_length - inverse_padding_positions.max(dim=1).values
     target_mask = F.one_hot(first_index, max_seq_length).bool()
-    input_seq[target_mask] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
+    input_seq[target_mask] = tokenizer.mask_token_id
     return input_seq, target_mask
 
 
@@ -175,7 +197,7 @@ def _mask_items(inputs: torch.Tensor,
 
     # 80% of the time, we replace masked input items with mask item ([MASK])
     indices_replaced = torch.bernoulli(torch.full(target.shape, 0.8)).bool() & masked_indices
-    inputs[indices_replaced] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
+    inputs[indices_replaced] = tokenizer.mask_token_id
 
     # 10% of the time, we replace masked input items with random items
     indices_random = torch.bernoulli(torch.full(target.shape, 0.5)).bool() & masked_indices & ~indices_replaced

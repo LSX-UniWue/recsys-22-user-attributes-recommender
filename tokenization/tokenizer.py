@@ -1,4 +1,3 @@
-
 from tokenization import SPECIAL_TOKENS_ATTRIBUTES
 from tokenization.vocabulary import Vocabulary
 
@@ -18,7 +17,7 @@ class Tokenizer(object):
         self.sep_token = None
         self.cls_token = None
 
-        #TODO (AD) Do we really need that?
+        # TODO (AD) Do we really need that?
         # inputs and kwargs for saving and re-loading (see ``from_pretrained`` and ``save_pretrained``)
         # self.init_inputs = ()
         # self.init_kwargs = {}
@@ -31,6 +30,10 @@ class Tokenizer(object):
     @property
     def pad_token_id(self) -> int:
         return self.convert_tokens_to_ids(self.pad_token)
+
+    @property
+    def mask_token_id(self) -> int:
+        return self.convert_tokens_to_ids(self.mask_token)
 
     @property
     def sep_token_id(self) -> int:

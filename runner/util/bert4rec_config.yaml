@@ -62,5 +62,5 @@ trainer:
     save_top_k: 3
   default_root_dir: /tmp/checkpoints
   gradient_clip_val: 0.5
-  limit_train_batches: 10
+  limit_train_batches: 1.0
   limit_val_batches: 10

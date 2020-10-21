@@ -35,7 +35,9 @@ class BERT4RecModel(nn.Module):
         self.num_transformer_heads = num_transformer_heads
         self.num_transformer_layers = num_transformer_layers
         self.item_vocab_size = item_vocab_size
-        self.max_seq_length = max_seq_length
+        # here we increase the max sequence length by 1 to be later able to test or validate the model
+        # for validation/test a mask token must be appended to the session
+        self.max_seq_length = max_seq_length + 1
         self.dropout = dropout
 
         self.embedding = TransformerEmbedding(item_voc_size=self.item_vocab_size,
