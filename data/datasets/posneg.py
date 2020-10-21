@@ -3,7 +3,7 @@ from typing import List
 from numpy.random._generator import default_rng
 from torch.utils.data import Dataset
 
-from data.datasets import ITEM_SEQ_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME
 from data.datasets.session import ItemSessionDataset
 from tokenization.tokenizer import Tokenizer
 
@@ -28,9 +28,9 @@ class PosNegSessionDataset(Dataset):
         #  only a sample is drawn and ranked. We need to parameterize this class so that different strategies can be
         #  used.
         return {
-            "session": x,
-            "positive_samples": pos,
-            "negative_samples": neg,
+            ITEM_SEQ_ENTRY_NAME: x,
+            POSITIVE_SAMPLES_ENTRY_NAME: pos,
+            NEGATIVE_SAMPLES_ENTRY_NAME: neg,
             "items": self.tokenizer.get_vocabulary().ids() # use the full dataset for ranking (for now)
         }
 

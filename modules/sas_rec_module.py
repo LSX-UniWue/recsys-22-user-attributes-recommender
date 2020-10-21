@@ -4,9 +4,9 @@ import torch
 
 import pytorch_lightning as pl
 
-from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
 from losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
-from metrics.ranking_metrics import RecallAtMetric, MRRAtMetric
+from metrics.utils.metric_utils import build_metrics
 from modules.bert4rec_module import get_padding_mask
 from models.sasrec.sas_rec_model import SASRecModel
 from tokenization.tokenizer import Tokenizer
@@ -39,18 +39,12 @@ class SASRecModule(pl.LightningModule):
         self.tokenizer = tokenizer
         self.batch_first = batch_first
 
-        metrics = {}
-
-        for k in metrics_k:
-            metrics[f"recall_at_{k}"] = RecallAtMetric(k)
-            metrics[f"mrr_at_{k}"] = MRRAtMetric(k)
-
-        self.metrics = torch.nn.ModuleDict(modules=metrics)
+        self.metrics = build_metrics(metrics_k)
 
     def training_step(self, batch, batch_idx):
-        input_seq = batch['session']
-        pos = batch['positive_samples']
-        neg = batch['negative_samples']
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        pos = batch[POSITIVE_SAMPLES_ENTRY_NAME]
+        neg = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
 
         if self.batch_first:
             input_seq = input_seq.transpose(1, 0)
@@ -63,10 +57,9 @@ class SASRecModule(pl.LightningModule):
 
         loss_func = SASRecBinaryCrossEntropyLoss()
         loss = loss_func(pos_logits, neg_logits, mask=padding_mask.transpose(0, 1))
-        # the original code
+        # TODO: check: the original code
         # (https://github.com/kang205/SASRec/blob/641c378fcfac265ea8d1e5fe51d4d53eb892d1b4/model.py#L92)
         # adds regularization losses, but they are empty, as far as I can see (dzo)
-        # TODO: check
 
         return {
             "loss": loss

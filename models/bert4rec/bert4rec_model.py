@@ -7,20 +7,19 @@ from models.layers.transformer_layers import TransformerEmbedding
 
 
 class BERT4RecModel(nn.Module):
+    """
+    implementation of the paper "BERT4Rec: Sequential Recommendation with Bidirectional Encoder Representations from Transformer"
+    see https://doi.org/10.1145%2f3357384.3357895 for more details.
+    """
 
     @classmethod
     def from_config(cls, config: BERT4RecConfig):
-
         return cls(transformer_hidden_size=config.transformer_hidden_size,
                    num_transformer_heads=config.num_transformer_heads,
                    num_transformer_layers=config.num_transformer_layers,
                    item_vocab_size=config.item_voc_size,
                    max_seq_length=config.max_seq_length,
                    dropout=config.transformer_dropout)
-    """
-    implementation of the paper "BERT4Rec: Sequential Recommendation with Bidirectional Encoder Representations from Transformer"
-    see https://doi.org/10.1145%2f3357384.3357895 for more details.
-    """
 
     def __init__(self,
                  transformer_hidden_size: int,
@@ -62,6 +61,7 @@ class BERT4RecModel(nn.Module):
         self.linear = nn.Linear(self.transformer_hidden_size, self.transformer_hidden_size)
         self.gelu = nn.GELU()
         self.layer_norm = nn.LayerNorm(self.transformer_hidden_size)
+        # TODO: init bias
         self.output_bias = nn.Parameter(torch.rand(self.item_vocab_size))
 
     def forward(self,
@@ -71,20 +71,21 @@ class BERT4RecModel(nn.Module):
         """
         forward pass to calculate the scores for the mask item modelling
 
-        :param input_seq: the input sequence [S x B]
-        :param position_ids: (optional) positional_ids if None the position ids are generated [S x B]
-        :param padding_mask: (optional) the padding mask if the sequence is padded [B x S]
-        :return: the scores of the predicted tokens [S x B x I] (Note: here all scores for all positions are returned.
+        :param input_seq: the input sequence (S, N)
+        :param position_ids: (optional) positional_ids if None the position ids are generated (S, N)
+        :param padding_mask: (optional) the padding mask if the sequence is padded (N, S)
+        :return: the scores of the predicted tokens (S, N, I) (Note: here all scores for all positions are returned.
         For loss calculation please only use MASK tokens.)
 
-        Where S is the (max) sequence length of the batch, B the batch size, and I the vocabulary size of the items.
+        Where S is the (max) sequence length of the batch, N the batch size, and I the vocabulary size of the items.
         """
         # H is the transformer hidden size
         # embed the input
-        input_seq = self.embedding(input_seq, position_ids)  # (S, N, H)
+        input_seq = self.embedding(input_sequence=input_seq,
+                                   position_ids=position_ids)  # (S, N, H)
 
         # use the bidirectional transformer
-        input_seq = self.transformer_encoder(input_seq,
+        input_seq = self.transformer_encoder(src=input_seq,
                                              src_key_padding_mask=padding_mask)  # (S, N, H)
         # decode the hidden representation
         dense = self.gelu(self.linear(input_seq))  # (S, N, H)
@@ -93,6 +94,4 @@ class BERT4RecModel(nn.Module):
         dense = self.layer_norm(dense)  # (S, N, H)
 
         dense = torch.matmul(dense, self.embedding.get_item_embedding_weight().transpose(0, 1))
-        dense = dense + self.output_bias
-
-        return dense
+        return dense + self.output_bias
