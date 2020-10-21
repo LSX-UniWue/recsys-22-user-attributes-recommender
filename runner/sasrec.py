@@ -247,7 +247,7 @@ class SASRecContainer(containers.DeclarativeContainer):
 
     trainer = build_standard_trainer(config)
 
-
+# FIXME: remove use run_model
 def main():
     container = SASRecContainer()
     container.config.from_yaml("util/sas_config.yaml")
