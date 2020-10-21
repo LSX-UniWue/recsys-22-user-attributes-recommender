@@ -1,10 +1,14 @@
 from functools import partial
-from typing import Optional, List
+from typing import List
 
 import torch
 
 
-def padded_session_collate(max_length: int, pad_token_id: int, entries_to_pad: List[str] = ["session"], session_length_entry: str = "session"):
+def padded_session_collate(max_length: int,
+                           pad_token_id: int,
+                           entries_to_pad: List[str] = ["session"],
+                           session_length_entry: str = "session"
+                           ):
     """
         Pads sequences with a padding token to `max_length`.
 
@@ -18,7 +22,11 @@ def padded_session_collate(max_length: int, pad_token_id: int, entries_to_pad: L
     return partial(_padded_session_collate, max_length, pad_token_id, entries_to_pad, session_length_entry)
 
 
-def _padded_session_collate(max_length: int, pad_token_id: int, entries_to_pad: List[str], session_length_entry: str, batch):
+def _padded_session_collate(max_length: int,
+                            pad_token_id: int,
+                            entries_to_pad: List[str],
+                            session_length_entry: str, batch
+                            ):
     from torch.utils.data.dataloader import default_collate
 
     def pad(x: List[int], pad_token_id: int, padded_length: int):
