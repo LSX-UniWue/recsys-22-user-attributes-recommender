@@ -2,8 +2,7 @@ from argparse import ArgumentParser
 
 from dependency_injector import containers
 
-from runner.sasrec import SASRecContainer
-from runner.util.containers import BERT4RecContainer, CaserContainer
+from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer
 
 
 # TODO: introduce a subclass for all container configurations?

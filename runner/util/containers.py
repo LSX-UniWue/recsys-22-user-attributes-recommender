@@ -2,9 +2,10 @@ from dependency_injector import containers, providers
 
 from models.bert4rec.bert4rec_model import BERT4RecModel
 from models.caser.caser_model import CaserModel
-from modules import BERT4RecModule, CaserModule
-from runner.sasrec import build_tokenizer_provider, build_session_loader_provider_factory, \
-    build_nextitem_loader_provider_factory, build_standard_trainer, build_posneg_loader_provider_factory
+from models.sasrec.sas_rec_model import SASRecModel
+from modules import BERT4RecModule, CaserModule, SASRecModule
+from runner.util.provider_utils import build_tokenizer_provider, build_session_loader_provider_factory, \
+    build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, build_standard_trainer
 
 
 class BERT4RecContainer(containers.DeclarativeContainer):
@@ -99,4 +100,45 @@ class CaserContainer(containers.DeclarativeContainer):
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer)
 
     # trainer
+    trainer = build_standard_trainer(config)
+
+class SASRecContainer(containers.DeclarativeContainer):
+
+    config = providers.Configuration()
+
+    # tokenizer
+    tokenizer = build_tokenizer_provider(config)
+
+    # model
+    model = providers.Singleton(
+        SASRecModel,
+        config.model.transformer_hidden_size,
+        config.model.num_transformer_heads,
+        config.model.num_transformer_layers,
+        config.model.item_vocab_size,
+        config.model.max_seq_length,
+        config.model.dropout
+    )
+
+    module = providers.Singleton(
+        SASRecModule,
+        model,
+        config.module.batch_size,
+        config.module.learning_rate,
+        config.module.beta_1,
+        config.module.beta_2,
+        tokenizer,
+        config.module.batch_first,
+        config.module.metrics_k
+    )
+
+    train_dataset_config = config.datasets.train
+    validation_dataset_config = config.datasets.validation
+    test_dataset_config = config.datasets.test
+
+    # loaders
+    train_loader = build_posneg_loader_provider_factory(train_dataset_config, tokenizer)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer)
+    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer)
+
     trainer = build_standard_trainer(config)
