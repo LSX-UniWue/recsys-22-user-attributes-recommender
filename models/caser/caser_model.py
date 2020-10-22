@@ -130,14 +130,14 @@ class CaserModel(nn.Module):
         # Convolutional Layers
         out_vertical = None
         # vertical conv layer
-        if self.config.num_vertical_filters > 0:
+        if self.num_vertical_filters > 0:
             out_vertical = self.conv_vertical(item_embs)
             out_vertical = out_vertical.view(-1, self.fc1_dim_vertical)  # prepare for fully connect
 
         # horizontal conv layer
         out_horizontal = None
         out_hs = list()
-        if self.config.num_horizontal_filters > 0:
+        if self.num_horizontal_filters > 0:
             for conv in self.conv_horizontal:
                 conv_out = conv(item_embs)
                 out_hs.append(conv_out)

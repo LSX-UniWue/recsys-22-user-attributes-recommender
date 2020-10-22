@@ -143,7 +143,12 @@ def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider
                                           dataset_config: providers.ConfigurationOption
                                           ) -> providers.Factory:
 
-    def provide_posneg_dataset(csv_file: str, csv_file_index: str, tokenizer: Tokenizer, delimiter: str, item_column_name: str):
+    def provide_posneg_dataset(csv_file: str,
+                               csv_file_index: str,
+                               nip_index: str,  # unused but necessary to match the call signature
+                               tokenizer: Tokenizer,
+                               delimiter: str,
+                               item_column_name: str):
         index = CsvDatasetIndex(Path(csv_file_index))
         reader = CsvDatasetReader(Path(csv_file), index)
         header = create_indexed_header(read_csv_header(Path(csv_file), delimiter=delimiter))
