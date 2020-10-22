@@ -83,6 +83,7 @@ class CaserContainer(containers.DeclarativeContainer):
     module = providers.Singleton(
         CaserModule,
         model,
+        tokenizer,
         module_config.learning_rate,
         module_config.weight_decay,
         module_config.metrics_k

@@ -3,15 +3,22 @@ from typing import Union, Dict, List
 import pytorch_lightning as pl
 import torch
 
-from data.datasets import ITEM_SEQ_ENTRY_NAME, USER_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME, USER_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
+    NEGATIVE_SAMPLES_ENTRY_NAME, TARGET_ENTRY_NAME
 from metrics.utils.metric_utils import build_metrics
 from models.caser.caser_model import CaserModel
+from tokenization.tokenizer import Tokenizer
 
 
 class CaserModule(pl.LightningModule):
 
+    @staticmethod
+    def get_users_from_batch(batch):
+        return batch[USER_ENTRY_NAME] if USER_ENTRY_NAME in batch else None
+
     def __init__(self,
                  model: CaserModel,
+                 tokenizer: Tokenizer,
                  learning_rate: float,
                  weight_decay: float,
                  ks: List[int]
@@ -19,6 +26,9 @@ class CaserModule(pl.LightningModule):
         super().__init__()
 
         self.model = model
+
+        self.tokenizer = tokenizer
+
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
 
@@ -29,7 +39,7 @@ class CaserModule(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        users = batch[USER_ENTRY_NAME] if USER_ENTRY_NAME in batch else None
+        users = self.get_users_from_batch(batch)
         pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
 
@@ -43,6 +53,26 @@ class CaserModule(pl.LightningModule):
         return {
             'loss': loss
         }
+
+    # FIXME: a lot of copy paste code
+    def validation_step(self, batch, batch_idx):
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        users = self.get_users_from_batch(batch)
+        targets = batch[TARGET_ENTRY_NAME]
+
+        batch_size = input_seq.size()[0]
+
+        # provide items that the target item will be ranked against
+        # TODO (AD) refactor this into a composable class to allow different strategies for item selection
+        device = input_seq.device
+        items_to_rank = torch.as_tensor(self.tokenizer.get_vocabulary().ids(), dtype=torch.long, device=device)
+        items_to_rank = items_to_rank.repeat([batch_size, 1])
+
+        prediction = self.model(input_seq, users, items_to_rank)
+
+        for name, metric in self.metrics.items():
+            step_value = metric(prediction, targets)
+            self.log(name, step_value, prog_bar=True)
 
     # FIXME: copy paste code from sas rec module
     def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]) -> None:

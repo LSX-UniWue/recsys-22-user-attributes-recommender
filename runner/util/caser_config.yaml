@@ -35,7 +35,7 @@ model:
   max_seq_length: 10
   embedding_size: 16
   num_vertical_filters: 5
-  num_horizontal_filters: 5
+  num_horizontal_filters: 2
   fc_activation_fn: relu
   conv_activation_fn: relu
 module:

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 import torch
 
@@ -109,13 +109,13 @@ class CaserModel(nn.Module):
                 sequences: torch.Tensor,
                 users: torch.Tensor,
                 pos_items: torch.Tensor,
-                neg_items: torch.Tensor):
+                neg_items: Optional[torch.Tensor] = None):
         """
         forward pass for the
         :param sequences: the sequences :math`(N, S)`
         :param users: the users for each batch :math `(N)`
         :param pos_items: the positive (next) items of the sequence `(N)`
-        :param neg_items: the negative items (sampled) `(N, X)`
+        :param neg_items: the negative items (sampled) `(N, X)`, only required for training
         :return:
 
         Where B is the batch size, S the max sequence length (of the current batch),
@@ -159,18 +159,21 @@ class CaserModel(nn.Module):
         pos_w2 = self.W2(pos_items)
         pos_b2 = self.b2(pos_items)
 
-        if not self.training:
-            w2 = pos_w2.squeeze()
-            b2 = pos_b2.squeeze()
-            return (x * w2).sum(1) + b2
+        #if not self.training:
+        #    w2 = pos_w2.squeeze()
+        #    b2 = pos_b2.squeeze()
+        #    w2 = w2.permute(1, 0, 2)
+        #    return torch.matmul(x, w2).sum(dim=1) + b2
 
-        x_unsqueezed = x.unsqueeze(2)
-        res_pos = torch.baddbmm(pos_b2, pos_w2, x_unsqueezed).squeeze()
+        x = x.unsqueeze(2)
+        res_pos = torch.baddbmm(pos_b2, pos_w2, x).squeeze()
+        if neg_items is None:
+            return res_pos
 
         # negative items
         neg_w2 = self.W2(neg_items)
         neg_b2 = self.b2(neg_items)
-        res_negative = torch.baddbmm(neg_b2, neg_w2, x_unsqueezed).squeeze()
+        res_negative = torch.baddbmm(neg_b2, neg_w2, x).squeeze()
         return res_pos, res_negative
 
 
