@@ -30,7 +30,7 @@ class RecallAtMetric(pl.metrics.Metric):
             target = torch.unsqueeze(target, 1)
 
         if mask is None:
-            mask = torch.ones(target.size())
+            mask = torch.ones(target.size(), device=prediction.device)
 
         sorted_indices = torch.topk(prediction, k=self._k).indices
         sorted_indices = torch.repeat_interleave(sorted_indices, mask.size()[-1], dim=0)
