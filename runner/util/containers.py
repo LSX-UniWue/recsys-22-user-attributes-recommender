@@ -4,7 +4,7 @@ from models.bert4rec.bert4rec_model import BERT4RecModel
 from models.caser.caser_model import CaserModel
 from modules import BERT4RecModule, CaserModule
 from runner.sasrec import build_tokenizer_provider, build_session_loader_provider_factory, \
-    build_nextitem_loader_provider_factory, build_standard_trainer
+    build_nextitem_loader_provider_factory, build_standard_trainer, build_posneg_loader_provider_factory
 
 
 class BERT4RecContainer(containers.DeclarativeContainer):
@@ -93,7 +93,7 @@ class CaserContainer(containers.DeclarativeContainer):
     test_dataset_config = config.datasets.test
 
     # loaders
-    train_loader = build_session_loader_provider_factory(train_dataset_config, tokenizer)
+    train_loader = build_posneg_loader_provider_factory(train_dataset_config, tokenizer)
     validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer)
 
