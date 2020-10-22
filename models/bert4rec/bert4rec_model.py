@@ -8,8 +8,9 @@ from models.layers.transformer_layers import TransformerEmbedding
 
 class BERT4RecModel(nn.Module):
     """
-    implementation of the paper "BERT4Rec: Sequential Recommendation with Bidirectional Encoder Representations from Transformer"
-    see https://doi.org/10.1145%2f3357384.3357895 for more details.
+        implementation of the paper "BERT4Rec: Sequential Recommendation with Bidirectional Encoder Representations
+        from Transformer"
+        see https://doi.org/10.1145%2f3357384.3357895 for more details.
     """
 
     @classmethod
@@ -45,7 +46,7 @@ class BERT4RecModel(nn.Module):
                                               dropout=self.dropout)
 
         encoder_layers = nn.TransformerEncoderLayer(d_model=self.transformer_hidden_size,
-                                                    nhead = self.num_transformer_heads,
+                                                    nhead=self.num_transformer_heads,
                                                     dim_feedforward=self.transformer_hidden_size,
                                                     dropout=self.dropout,
                                                     activation='gelu')
@@ -71,11 +72,12 @@ class BERT4RecModel(nn.Module):
         """
         forward pass to calculate the scores for the mask item modelling
 
-        :param input_seq: the input sequence (S, N)
-        :param position_ids: (optional) positional_ids if None the position ids are generated (S, N)
-        :param padding_mask: (optional) the padding mask if the sequence is padded (N, S)
-        :return: the scores of the predicted tokens (S, N, I) (Note: here all scores for all positions are returned.
-        For loss calculation please only use MASK tokens.)
+        :param input_seq: the input sequence :math:`(S, N)`
+        :param position_ids: (optional) positional_ids if None the position ids are generated :math:`(S, N)`
+        :param padding_mask: (optional) the padding mask if the sequence is padded :math:`(N, S)`
+        :return: the scores of the predicted tokens :math:`(S, N, I)`
+        (Note: all scores for all positions are returned. For loss calculation please only use the positions of the
+        MASK tokens.)
 
         Where S is the (max) sequence length of the batch, N the batch size, and I the vocabulary size of the items.
         """
@@ -93,5 +95,5 @@ class BERT4RecModel(nn.Module):
         # norm the output
         dense = self.layer_norm(dense)  # (S, N, H)
 
-        dense = torch.matmul(dense, self.embedding.get_item_embedding_weight().transpose(0, 1))
+        dense = torch.matmul(dense, self.embedding.get_item_embedding_weight().transpose(0, 1))  # (S, N, I)
         return dense + self.output_bias

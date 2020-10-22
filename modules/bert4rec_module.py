@@ -19,7 +19,6 @@ class BERT4RecModule(pl.LightningModule):
 
     def __init__(self,
                  model: BERT4RecModel,
-                 batch_size: int,
                  mask_probability: float,
                  learning_rate: float,
                  beta_1: float,
@@ -32,8 +31,6 @@ class BERT4RecModule(pl.LightningModule):
                  ):
         super().__init__()
         self.model = model
-
-        self.batch_size = batch_size
 
         self.mask_probability = mask_probability
 

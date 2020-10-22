@@ -4,6 +4,7 @@ import pytorch_lightning as pl
 import torch
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, USER_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
+from metrics.utils.metric_utils import build_metrics
 from models.caser.caser_model import CaserModel
 
 
@@ -12,13 +13,16 @@ class CaserModule(pl.LightningModule):
     def __init__(self,
                  model: CaserModel,
                  learning_rate: float,
-                 weight_decay: float
+                 weight_decay: float,
+                 ks: List[int]
                  ):
         super().__init__()
 
         self.model = model
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
+
+        self.metrics = build_metrics(ks)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)

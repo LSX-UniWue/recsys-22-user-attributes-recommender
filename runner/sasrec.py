@@ -35,11 +35,9 @@ def build_tokenizer_provider(config: providers.Configuration) -> providers.Singl
     return providers.Singleton(provide_tokenizer, vocabulary, config.tokenizer.special_tokens)
 
 
-def build_session_loader_provider_factory(config: providers.Configuration,
-                                          tokenizer_provider: providers.Provider,
-                                          get_dataset_config: Callable[[providers.Configuration], providers.ConfigurationOption]
+def build_session_loader_provider_factory(dataset_config: providers.ConfigurationOption,
+                                          tokenizer_provider: providers.Provider
                                           ) -> providers.Factory:
-    dataset_config = get_dataset_config(config)
     dataset = build_session_dataset_provider_factory(tokenizer_provider, dataset_config)
     return providers.Factory(
         provide_posneg_loader,
@@ -50,11 +48,9 @@ def build_session_loader_provider_factory(config: providers.Configuration,
     )
 
 
-def build_nextitem_loader_provider_factory(config: providers.Configuration,
-                                           tokenizer_provider: providers.Provider,
-                                           get_dataset_config: Callable[[providers.Configuration], providers.ConfigurationOption]
+def build_nextitem_loader_provider_factory(dataset_config: providers.ConfigurationOption,
+                                           tokenizer_provider: providers.Provider
                                            ) -> providers.Factory:
-    dataset_config = get_dataset_config(config)
     dataset = build_nextitem_dataset_provider_factory(tokenizer_provider, dataset_config)
     return providers.Factory(
         provide_nextit_loader,
@@ -65,17 +61,15 @@ def build_nextitem_loader_provider_factory(config: providers.Configuration,
     )
 
 
-def build_posneg_loader_provider_factory(config: providers.Configuration,
-                                         tokenizer_provider: providers.Provider,
-                                         get_dataset_config: Callable[[providers.Configuration], providers.ConfigurationOption]
+def build_posneg_loader_provider_factory(dataset_config: providers.ConfigurationOption,
+                                         tokenizer_provider: providers.Provider
                                          ) -> providers.Factory:
-    dataset_config = get_dataset_config(config)
     dataset = build_posnet_dataset_provider_factory(tokenizer_provider, dataset_config)
     return providers.Factory(
         provide_posneg_loader,
         dataset,
-        config.datasets.train.loader.batch_size,
-        config.datasets.train.loader.max_seq_length,
+        dataset_config.loader.batch_size,
+        dataset_config.loader.max_seq_length,
         tokenizer_provider
     )
 
@@ -240,12 +234,17 @@ class SASRecContainer(containers.DeclarativeContainer):
         config.module.metrics_k
     )
 
+    train_dataset_config = config.datasets.train
+    validation_dataset_config = config.datasets.validation
+    test_dataset_config = config.datasets.test
+
     # loaders
-    train_loader = build_posneg_loader_provider_factory(config, tokenizer, lambda config: config.datasets.train)
-    validation_loader = build_nextitem_loader_provider_factory(config, tokenizer, lambda config: config.datasets.validation)
-    test_loader = build_nextitem_loader_provider_factory(config, tokenizer, lambda config: config.datasets.test)
+    train_loader = build_posneg_loader_provider_factory(train_dataset_config, tokenizer)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer)
+    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer)
 
     trainer = build_standard_trainer(config)
+
 
 # FIXME: remove use run_model
 def main():

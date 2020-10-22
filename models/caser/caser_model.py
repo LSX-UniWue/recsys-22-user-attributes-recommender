@@ -27,6 +27,8 @@ class CaserModel(nn.Module):
                    max_seq_length=config.max_seq_length,
                    num_vertical_filters=config.num_vertical_filters,
                    num_horizontal_filters=config.num_horizontal_filters,
+                   conv_activation_fn=config.conv_activation_fn,
+                   fc_activation_fn=config.fc_activation_fn,
                    dropout=config.dropout)
 
     def __init__(self,
@@ -36,6 +38,8 @@ class CaserModel(nn.Module):
                  max_seq_length: int,
                  num_vertical_filters: int,
                  num_horizontal_filters: int,
+                 conv_activation_fn: str,
+                 fc_activation_fn: str,
                  dropout: float
                  ):
         super().__init__()
@@ -46,6 +50,8 @@ class CaserModel(nn.Module):
         self.max_seq_length = max_seq_length
         self.num_vertical_filters = num_vertical_filters
         self.num_horizontal_filters = num_horizontal_filters
+        self.conv_activation_fn = conv_activation_fn
+        self.fc_activation_fn = fc_activation_fn
         self.dropout = dropout
 
         # user and item embedding
@@ -59,7 +65,8 @@ class CaserModel(nn.Module):
         # horizontal conv layer
         lengths = [i + 1 for i in range(self.max_seq_length)]
         self.conv_horizontal = nn.ModuleList(
-            [CaserHorizontalConvNet(1, num_vertical_filters, (length, embedding_size), self.config.conv_activation_fn) for length in lengths]
+            [CaserHorizontalConvNet(1, num_vertical_filters, (length, embedding_size), self.conv_activation_fn)
+                for length in lengths]
         )
 
         # fully-connected layer
@@ -69,13 +76,13 @@ class CaserModel(nn.Module):
 
         self.fc1 = nn.Linear(fc1_dim, embedding_size)
 
-        self.W2 = nn.Embedding(item_voc_size, 2 * embedding_size)
+        self.W2 = nn.Embedding(item_voc_size, 2 * embedding_size if self._has_users else embedding_size)
         self.b2 = nn.Embedding(item_voc_size, 1)
 
-        self.fc1_activation = get_activation_layer(self.config.fc_activation_fn)
+        self.fc1_activation = get_activation_layer(self.fc_activation_fn)
 
         # dropout
-        self.dropout = nn.Dropout(self.config.dropout)
+        self.dropout = nn.Dropout(self.dropout)
 
         self._init_weights()
 
@@ -123,7 +130,7 @@ class CaserModel(nn.Module):
         # Convolutional Layers
         out_vertical = None
         # vertical conv layer
-        if self.config.num_vertical_filters:
+        if self.config.num_vertical_filters > 0:
             out_vertical = self.conv_vertical(item_embs)
             out_vertical = out_vertical.view(-1, self.fc1_dim_vertical)  # prepare for fully connect
 
