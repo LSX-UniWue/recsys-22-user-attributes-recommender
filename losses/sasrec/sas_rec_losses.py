@@ -36,10 +36,10 @@ class SASRecBinaryCrossEntropyLoss(nn.Module):
 def _log_sigmoid(tensor: torch.Tensor,
                  eps: float = 1e-24,
                  reverse: bool = False) -> torch.Tensor:
-    tensor_eps = torch.sigmoid(tensor) + eps
+    tensor_eps = torch.sigmoid(tensor)
     if reverse:
         tensor_eps = 1 - tensor_eps
-    return torch.log(tensor_eps)
+    return torch.log(tensor_eps + eps)
 
 
 def sas_rec_binary_cross_entropy(pos_input: torch.Tensor,

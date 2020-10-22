@@ -7,7 +7,7 @@ DATA_FILENAME="small.csv"
 
 for FN in "valid" "test" "train"
 do
-  #python -m runner.create_reader_index "${BASE}/${FN}.csv" "${BASE}/${FN}.csv.idx" --session_key id hero_id
+  python -m runner.create_reader_index "${BASE}/${FN}.csv" "${BASE}/${FN}.csv.idx" --session_key id hero_id
   python -m runner.create_next_item_index "${BASE}/${FN}.csv" "${BASE}/${FN}.csv.idx" "${BASE}/${FN}.csv.nip" item_id --min_session_length 2
 done;
 
