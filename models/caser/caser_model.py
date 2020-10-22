@@ -56,27 +56,31 @@ class CaserModel(nn.Module):
 
         # user and item embedding
         if self._has_users:
-            self.user_embedding = nn.Embedding(user_voc_size, embedding_dim=self.embedding_size)
-        self.item_embedding = nn.Embedding(item_voc_size, embedding_dim=self.embedding_size)
+            self.user_embedding = nn.Embedding(self.user_voc_size, embedding_dim=self.embedding_size)
+        self.item_embedding = nn.Embedding(self.item_voc_size, embedding_dim=self.embedding_size)
 
         # vertical conv layer
-        self.conv_vertical = nn.Conv2d(1, num_vertical_filters, (self.max_seq_length, 1))
+        self.conv_vertical = nn.Conv2d(1, self.num_vertical_filters, (self.max_seq_length, 1))
 
         # horizontal conv layer
         lengths = [i + 1 for i in range(self.max_seq_length)]
+
         self.conv_horizontal = nn.ModuleList(
-            [CaserHorizontalConvNet(1, num_vertical_filters, (length, embedding_size), self.conv_activation_fn)
+            [CaserHorizontalConvNet(num_filters=self.num_horizontal_filters,
+                                    kernel_size=(length, embedding_size),
+                                    activation_fn=self.conv_activation_fn,
+                                    max_length=self.max_seq_length)
                 for length in lengths]
         )
 
         # fully-connected layer
-        self.fc1_dim_vertical = num_vertical_filters * embedding_size
-        fc1_dim_horizontal = num_horizontal_filters * len(lengths)
+        self.fc1_dim_vertical = self.num_vertical_filters * self.embedding_size
+        fc1_dim_horizontal = self.num_horizontal_filters * len(lengths)
         fc1_dim = self.fc1_dim_vertical + fc1_dim_horizontal
 
-        self.fc1 = nn.Linear(fc1_dim, embedding_size)
+        self.fc1 = nn.Linear(fc1_dim, self.embedding_size)
 
-        self.W2 = nn.Embedding(item_voc_size, 2 * embedding_size if self._has_users else embedding_size)
+        self.W2 = nn.Embedding(item_voc_size, 2 * self.embedding_size if self._has_users else self.embedding_size)
         self.b2 = nn.Embedding(item_voc_size, 1)
 
         self.fc1_activation = get_activation_layer(self.fc_activation_fn)
@@ -108,10 +112,10 @@ class CaserModel(nn.Module):
                 neg_items: torch.Tensor):
         """
         forward pass for the
-        :param sequences: the sequences [B x S]
-        :param users: the users for each batch [B]
-        :param pos_items: the positive (next) items of the sequence
-        :param neg_items: the negative items (sampled)
+        :param sequences: the sequences :math`(N, S)`
+        :param users: the users for each batch :math `(N)`
+        :param pos_items: the positive (next) items of the sequence `(N)`
+        :param neg_items: the negative items (sampled) `(N, X)`
         :return:
 
         Where B is the batch size, S the max sequence length (of the current batch),
@@ -175,17 +179,17 @@ class CaserHorizontalConvNet(nn.Module):
     the horizontal convolution module for the Caser model
     """
     def __init__(self,
-                 max_length: int,
                  num_filters: int,
                  kernel_size: Tuple[int, int],
-                 activation_fn: str
+                 activation_fn: str,
+                 max_length: int
                  ):
         super().__init__()
 
         self.conv = nn.Conv2d(in_channels=1, out_channels=num_filters, kernel_size=kernel_size)
         self.conv_activation = get_activation_layer(activation_fn)
         length = kernel_size[0]
-        self.conv_pooling = nn.MaxPool1d(kernel_size=max_length - length)
+        self.conv_pooling = nn.MaxPool1d(kernel_size=max_length + 1 - length)
 
     def forward(self,
                 input_tensor: torch.Tensor):
