@@ -135,7 +135,6 @@ class SASRecContainer(containers.DeclarativeContainer):
     module = providers.Singleton(
         SASRecModule,
         model,
-        module_config.batch_size,
         module_config.learning_rate,
         module_config.beta_1,
         module_config.beta_2,

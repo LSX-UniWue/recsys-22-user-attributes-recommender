@@ -210,6 +210,5 @@ def build_metrics_provider(config: providers.ConfigurationOption
                            ) -> providers.Singleton:
     return providers.Singleton(
         build_metrics,
-        config.ids,
-        config.k
+        config
     )

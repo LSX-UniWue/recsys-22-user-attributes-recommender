@@ -1,6 +1,6 @@
 import pytorch_lightning as pl
 
-from typing import List
+from typing import List, Dict, Union
 
 import torch
 
@@ -16,13 +16,15 @@ def _build_metric(metric_id: str
     }[metric_id]
 
 
-def build_metrics(metric_ids: List[str],
-                  ks: List[int]
+def build_metrics(metric_dict: Dict[str, Union[int, List[int]]]
                   ) -> torch.nn.ModuleDict:
     metrics = {}
 
-    for k in ks:
-        for metric_id in metric_ids:
+    for metric_id, ks in metric_dict.items():
+        # ks can be a single k => first convert it to a list
+        if not isinstance(ks, list):
+            ks = [ks]
+        for k in ks:
             metrics[f"{metric_id}_at_{k}"] = _build_metric(metric_id, k)
 
     return torch.nn.ModuleDict(modules=metrics)

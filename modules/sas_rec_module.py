@@ -6,7 +6,6 @@ import pytorch_lightning as pl
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
 from losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
-from metrics.utils.metric_utils import build_metrics
 from modules.bert4rec_module import get_padding_mask
 from models.sasrec.sas_rec_model import SASRecModel
 from tokenization.tokenizer import Tokenizer
@@ -16,7 +15,6 @@ class SASRecModule(pl.LightningModule):
 
     def __init__(self,
                  model: SASRecModel,
-                 batch_size: int,
                  learning_rate: float,
                  beta_1: float,
                  beta_2: float,
@@ -26,13 +24,17 @@ class SASRecModule(pl.LightningModule):
                  ):
         """
         inits the SASRec module
-        :param training_config: all training configurations
-        :param model_config: all model configurations
+        :param model: the model to learn
+        :param learning_rate: the learning rate
+        :param beta_1: the beta1 of the adam optimizer
+        :param beta_2: the beta2 of the adam optimizer
+        :param tokenizer: the tokenizer
+        :param batch_first: True iff the dataloader returns batch_first tensors
+        :param metrics: the metrics to use for evaluation
         """
         super().__init__()
         self.model = model
 
-        self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.beta_1 = beta_1
         self.beta_2 = beta_2
