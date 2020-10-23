@@ -8,7 +8,6 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
-from metrics.utils.metric_utils import build_metrics
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
 
@@ -27,7 +26,7 @@ class BERT4RecModule(pl.LightningModule):
                  num_warmup_steps: int,
                  tokenizer: Tokenizer,
                  batch_first: bool,
-                 ks: List[int]
+                 metrics: torch.nn.ModuleDict
                  ):
         super().__init__()
         self.model = model
@@ -42,7 +41,7 @@ class BERT4RecModule(pl.LightningModule):
 
         self.tokenizer = tokenizer
         self.batch_first = batch_first
-        self.metrics = build_metrics(ks)
+        self.metrics = metrics
 
     def training_step(self, batch, batch_idx):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]

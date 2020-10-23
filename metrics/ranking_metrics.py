@@ -2,6 +2,60 @@ import pytorch_lightning as pl
 import torch
 
 
+def get_tp(predictions: torch.Tensor,
+           target: torch.Tensor,
+           mask: torch.Tensor,
+           k: int
+           ) -> torch.Tensor:
+    sorted_indices = torch.topk(predictions, k=k).indices
+    sorted_indices = torch.repeat_interleave(sorted_indices, mask.size()[-1], dim=0)
+
+    target_expanded = target.view(-1, 1).expand(-1, k)
+    tp_mask = torch.repeat_interleave(mask.view(-1, 1), k, dim=1)
+
+    tp = (sorted_indices.eq(target_expanded) * tp_mask).sum(dim=-1).to(dtype=torch.float)
+    return tp.view(mask.size()).sum(-1)
+
+
+class PrecisionAtMetric(pl.metrics.Metric):
+
+    def __init__(self,
+                 k: int,
+                 dist_sync_on_step: bool = False
+                 ):
+        super().__init__(dist_sync_on_step=dist_sync_on_step)
+        self._k = k
+        self.add_state("precision", torch.tensor(0.), dist_reduce_fx="sum")
+        self.add_state("count", torch.tensor(0), dist_reduce_fx="sum")
+
+    def update(self,
+               prediction: torch.Tensor,
+               target: torch.Tensor,
+               mask: torch.Tensor = None,
+               ):
+        """
+        :param prediction: the scores of all items :math `(N, I)`
+        :param target: the target label tensor :math `(N, T)` or :math `(N)`
+        :param mask: the mask to apply, iff no mask is provided all targets are used for calculating the metric
+        :math `(N, I)`
+        """
+        if len(target.size()) == 1:
+            # single dimension, unsqueeze it
+            target = torch.unsqueeze(target, 1)
+
+        if mask is None:
+            mask = torch.ones(target.size())
+
+        tp = get_tp(predictions=prediction, target=target, mask=mask, k=self._k)
+
+        precision = tp / self._k
+        self.precision += precision.sum()
+        self.count += precision.size()[0]
+
+    def compute(self):
+        return self.precision / self.count
+
+
 class RecallAtMetric(pl.metrics.Metric):
     def __init__(self,
                  k: int,
@@ -17,7 +71,7 @@ class RecallAtMetric(pl.metrics.Metric):
                prediction: torch.Tensor,
                target: torch.Tensor,
                mask: torch.Tensor = None,
-               ) -> torch.Tensor:
+               ):
         """
         :param prediction: the scores of all items :math `(N, I)`
         :param target: the target label tensor :math `(N, T)` or :math `(N)`
@@ -32,15 +86,7 @@ class RecallAtMetric(pl.metrics.Metric):
         if mask is None:
             mask = torch.ones(target.size(), device=prediction.device)
 
-        sorted_indices = torch.topk(prediction, k=self._k).indices
-        sorted_indices = torch.repeat_interleave(sorted_indices, mask.size()[-1], dim=0)
-
-        target_expanded = target.view(-1, 1).expand(-1, self._k)
-        tp_mask = torch.repeat_interleave(mask.view(-1, 1), self._k, dim=1)
-
-        tp = (sorted_indices.eq(target_expanded) * tp_mask).sum(dim=-1).to(dtype=torch.float)
-        tp = tp.view(mask.size()).sum(-1)
-
+        tp = get_tp(predictions=prediction, target=target, mask=mask, k=self._k)
         fn = mask.sum(-1) - tp
 
         recall = tp / (tp + fn)

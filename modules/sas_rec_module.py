@@ -22,7 +22,7 @@ class SASRecModule(pl.LightningModule):
                  beta_2: float,
                  tokenizer: Tokenizer,
                  batch_first: bool,
-                 metrics_k: List[int]
+                 metrics: torch.nn.ModuleDict
                  ):
         """
         inits the SASRec module
@@ -39,7 +39,7 @@ class SASRecModule(pl.LightningModule):
         self.tokenizer = tokenizer
         self.batch_first = batch_first
 
-        self.metrics = build_metrics(metrics_k)
+        self.metrics = metrics
 
     def training_step(self, batch, batch_idx):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
