@@ -21,7 +21,7 @@ class CaserModule(pl.LightningModule):
                  tokenizer: Tokenizer,
                  learning_rate: float,
                  weight_decay: float,
-                 ks: List[int]
+                 metrics: torch.nn.ModuleDict
                  ):
         super().__init__()
 
@@ -32,7 +32,7 @@ class CaserModule(pl.LightningModule):
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
 
-        self.metrics = build_metrics(ks)
+        self.metrics = metrics
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)

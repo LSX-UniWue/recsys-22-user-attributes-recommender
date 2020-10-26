@@ -71,7 +71,7 @@ def extract_splits(split_desc: List[str]) -> Dict[str, float]:
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser()
+    parser = ArgumentParser('split a csv file (with its session index file) in train, valid and test files')
 
     parser.add_argument("data_file", help="data file in csv format", type=str)
     parser.add_argument("session_index_file", help="session index for the data file.", type=str)

@@ -7,7 +7,8 @@ from models.sasrec.sas_rec_model import SASRecModel
 from modules import BERT4RecModule, CaserModule, SASRecModule
 from modules.narm_module import NarmModule
 from runner.util.provider_utils import build_tokenizer_provider, build_session_loader_provider_factory, \
-    build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, build_standard_trainer
+    build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, build_standard_trainer, \
+    build_metrics_provider
 
 
 class BERT4RecContainer(containers.DeclarativeContainer):
@@ -32,6 +33,8 @@ class BERT4RecContainer(containers.DeclarativeContainer):
 
     module_config = config.module
 
+    metrics = build_metrics_provider(module_config.metrics)
+
     module = providers.Singleton(
         BERT4RecModule,
         model,
@@ -43,7 +46,7 @@ class BERT4RecContainer(containers.DeclarativeContainer):
         module_config.num_warmup_steps,
         tokenizer,
         module_config.batch_first,
-        module_config.metrics_k
+        metrics
     )
 
     train_dataset_config = config.datasets.train
@@ -83,13 +86,15 @@ class CaserContainer(containers.DeclarativeContainer):
 
     module_config = config.module
 
+    metrics = build_metrics_provider(module_config.metrics)
+
     module = providers.Singleton(
         CaserModule,
         model,
         tokenizer,
         module_config.learning_rate,
         module_config.weight_decay,
-        module_config.metrics_k
+        metrics
     )
 
     train_dataset_config = config.datasets.train
@@ -112,27 +117,32 @@ class SASRecContainer(containers.DeclarativeContainer):
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
 
+    model_config = config.model
+
     # model
     model = providers.Singleton(
         SASRecModel,
-        config.model.transformer_hidden_size,
-        config.model.num_transformer_heads,
-        config.model.num_transformer_layers,
-        config.model.item_vocab_size,
-        config.model.max_seq_length,
-        config.model.dropout
+        model_config.transformer_hidden_size,
+        model_config.num_transformer_heads,
+        model_config.num_transformer_layers,
+        model_config.item_vocab_size,
+        model_config.max_seq_length,
+        model_config.dropout
     )
+
+    module_config = config.module
+
+    metrics = build_metrics_provider(module_config.metrics)
 
     module = providers.Singleton(
         SASRecModule,
         model,
-        config.module.batch_size,
-        config.module.learning_rate,
-        config.module.beta_1,
-        config.module.beta_2,
+        module_config.learning_rate,
+        module_config.beta_1,
+        module_config.beta_2,
         tokenizer,
-        config.module.batch_first,
-        config.module.metrics_k
+        module_config.batch_first,
+        metrics
     )
 
     train_dataset_config = config.datasets.train
@@ -154,28 +164,33 @@ class NarmContainer(containers.DeclarativeContainer):
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
 
+    model_config = config.model
+
     # model
     model = providers.Singleton(
         NarmModel,
-        config.model.item_vocab_size,
-        config.model.item_embedding_size,
-        config.model.global_encoder_size,
-        config.model.global_encoder_num_layers,
-        config.model.embedding_dropout,
-        config.model.context_dropout,
-        config.model.batch_first
+        model_config.item_vocab_size,
+        model_config.item_embedding_size,
+        model_config.global_encoder_size,
+        model_config.global_encoder_num_layers,
+        model_config.embedding_dropout,
+        model_config.context_dropout,
+        model_config.batch_first
     )
+
+    module_config = config.module
+    metrics = build_metrics_provider(module_config.metrics)
 
     module = providers.Singleton(
         NarmModule,
         model,
-        config.module.batch_size,
-        config.module.learning_rate,
-        config.module.beta_1,
-        config.module.beta_2,
+        module_config.batch_size,
+        module_config.learning_rate,
+        module_config.beta_1,
+        module_config.beta_2,
         tokenizer,
-        config.module.batch_first,
-        config.module.metrics_k
+        module_config.batch_first,
+        metrics
     )
 
     train_dataset_config = config.datasets.train

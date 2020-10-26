@@ -41,11 +41,17 @@ model:
 module:
   learning_rate: 0.001
   weight_decay: 0.01
-  metrics_k:
-    - 1
-    - 3
-    - 5
-    - 10
+  metrics:
+    recall:
+      - 1
+      - 3
+      - 5
+      - 10
+    mrr:
+      - 1
+      - 3
+      - 5
+      - 10
 tokenizer:
   special_tokens:
     pad_token: <PAD>

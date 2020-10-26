@@ -18,11 +18,17 @@ module:
   beta_1: 0.99
   beta_2: 0.998
   batch_first: true
-  metrics_k:
-    - 1
-    - 3
-    - 5
-    - 10
+  metrics:
+    recall:
+      - 1
+      - 3
+      - 5
+      - 10
+    mrr:
+      - 1
+      - 3
+      - 5
+      - 10
 datasets:
   train:
     dataset:
