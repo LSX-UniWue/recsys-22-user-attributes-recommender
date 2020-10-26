@@ -11,9 +11,23 @@ from runner.util.provider_utils import build_tokenizer_provider, build_session_l
     build_metrics_provider
 
 
+def build_default_config() -> providers.Configuration:
+    config = providers.Configuration()
+    # init some default values
+    config.from_dict({
+        'trainer': {
+            'limit_train_batches': 1.0,
+            'limit_val_batches': 1.0,
+            'gradient_clip_val': 0.0,
+            'default_root_dir': '/tmp/checkpoints'
+        }
+    })
+    return config
+
+
 class BERT4RecContainer(containers.DeclarativeContainer):
 
-    config = providers.Configuration()
+    config = build_default_config()
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
@@ -23,12 +37,12 @@ class BERT4RecContainer(containers.DeclarativeContainer):
     # model
     model = providers.Singleton(
         BERT4RecModel,
-        model_config.transformer_hidden_size,
-        model_config.num_transformer_heads,
-        model_config.num_transformer_layers,
-        model_config.item_vocab_size,
-        model_config.max_seq_length,
-        model_config.dropout
+        transformer_hidden_size=model_config.transformer_hidden_size,
+        num_transformer_heads=model_config.num_transformer_heads,
+        num_transformer_layers=model_config.num_transformer_layers,
+        item_vocab_size=model_config.item_vocab_size,
+        max_seq_length=model_config.max_seq_length,
+        dropout=model_config.dropout
     )
 
     module_config = config.module
@@ -37,16 +51,16 @@ class BERT4RecContainer(containers.DeclarativeContainer):
 
     module = providers.Singleton(
         BERT4RecModule,
-        model,
-        module_config.mask_probability,
-        module_config.learning_rate,
-        module_config.beta_1,
-        module_config.beta_2,
-        module_config.weight_decay,
-        module_config.num_warmup_steps,
-        tokenizer,
-        module_config.batch_first,
-        metrics
+        model=model,
+        mask_probability=module_config.mask_probability,
+        learning_rate=module_config.learning_rate,
+        beta_1=module_config.beta_1,
+        beta_2=module_config.beta_2,
+        weight_decay=module_config.weight_decay,
+        num_warmup_steps=module_config.num_warmup_steps,
+        tokenizer=tokenizer,
+        batch_first=module_config.batch_first,
+        metrics=metrics
     )
 
     train_dataset_config = config.datasets.train
@@ -63,7 +77,8 @@ class BERT4RecContainer(containers.DeclarativeContainer):
 
 
 class CaserContainer(containers.DeclarativeContainer):
-    config = providers.Configuration()
+
+    config = build_default_config()
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
@@ -112,7 +127,7 @@ class CaserContainer(containers.DeclarativeContainer):
 
 class SASRecContainer(containers.DeclarativeContainer):
 
-    config = providers.Configuration()
+    config = build_default_config()
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)

@@ -1,12 +1,12 @@
 import yaml
 
 
-def build_config(dataset_path: str,
-                 batch_size: int,
-                 max_seq_length:int,
-                 dataset_id:str,
-                 nip: bool = False
-                 ) -> dict:
+def build_dataset_config(dataset_path: str,
+                         batch_size: int,
+                         max_seq_length:int,
+                         dataset_id:str,
+                         nip: bool = False
+                         ) -> dict:
     dataset_config = {
         'csv_file': "{}/{}.csv".format(dataset_path, dataset_id),
         'csv_file_index': "{}/{}.idx".format(dataset_path, dataset_id),
@@ -60,13 +60,13 @@ if __name__ == '__main__':
         'metrics_k': [1, 3, 5, 10]
     }
 
-    train_config = build_config(dataset_path, batch_size, max_seq_length, 'train')
-    val_config = build_config(dataset_path, batch_size, max_seq_length, 'valid', nip=True)
-    test_config = build_config(dataset_path, batch_size, max_seq_length, 'test', nip=True)
+    train_config = build_dataset_config(dataset_path, batch_size, max_seq_length, 'train')
+    val_config = build_dataset_config(dataset_path, batch_size, max_seq_length, 'valid', nip=True)
+    test_config = build_dataset_config(dataset_path, batch_size, max_seq_length, 'test', nip=True)
 
     datasets_config = {
         'train': train_config,
-        'validation' : val_config,
+        'validation': val_config,
         'test': test_config
     }
 

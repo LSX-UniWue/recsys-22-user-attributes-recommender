@@ -187,13 +187,16 @@ def provide_nextit_loader(dataset: Dataset, batch_size: int, max_seq_length: int
 
 def build_standard_trainer(config: providers.Configuration) -> providers.Singleton:
     checkpoint = build_standard_model_checkpoint(config)
+
+    trainer_config = config.trainer
     return providers.Singleton(
         Trainer,
-        limit_train_batches=config.trainer.limit_train_batches,
-        limit_val_batches=config.trainer.limit_val_batches,
-        default_root_dir=config.trainer.default_root_dir,
+        limit_train_batches=trainer_config.limit_train_batches,
+        limit_val_batches=trainer_config.limit_val_batches,
+        default_root_dir=trainer_config.default_root_dir,
         checkpoint_callback=checkpoint,
-        gpus=config.trainer.gpus
+        gradient_clip_val=trainer_config.gradient_clip_val,
+        gpus=trainer_config.gpus
     )
 
 
