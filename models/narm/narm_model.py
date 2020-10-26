@@ -56,6 +56,7 @@ class NarmModel(nn.Module):
         embedded_session = self.item_embeddings(session)
         embedded_session_do = self.item_embedding_dropout(embedded_session)
 
+        max_seq_length = embedded_session_do.size()[1]
         packed_embedded_session = nn.utils.rnn.pack_padded_sequence(
             embedded_session_do,
             torch.sum(mask, dim=-1),
@@ -66,7 +67,7 @@ class NarmModel(nn.Module):
         h_i, h_t = self.global_encoder(packed_embedded_session)
         c_tg = h_t = torch.squeeze(h_t, dim=0)
 
-        h_i, _ = nn.utils.rnn.pad_packed_sequence(h_i, batch_first=self.batch_first)  # we throw away the lengths, since we alreay have them.
+        h_i, _ = nn.utils.rnn.pad_packed_sequence(h_i, batch_first=self.batch_first, total_length=max_seq_length)  # we throw away the lengths, since we already have them.
         c_tl = self.local_encoder(h_t, h_i, mask)
 
         c_t = torch.cat([c_tg, c_tl], dim=1)
@@ -109,7 +110,7 @@ class LocalEncoderLayer(nn.Module):
         # we need to repeat s_1 for every step in the batch to calculate all steps at once
         s1_prj = torch.unsqueeze(s1_prj, dim=1)  # B x 1 x H
         s1_prj = torch.repeat_interleave(s1_prj, repeats=s2_prj.size()[1], dim=1)  # B x N x H
-        alphas = torch.matmul(self.v, torch.sigmoid(s1_prj + s2_prj))  # B x N (v: 1 x H * B x N x H)
+        alphas = torch.matmul(torch.sigmoid(s1_prj + s2_prj), self.v)  # B x N (v: 1 x H * B x N x H)
         alphas = torch.unsqueeze(alphas, dim=2)  # B x N x 1 (one scalar weight for every position in the sequence)
 
         weighted = alphas * s2
@@ -159,7 +160,7 @@ class BilinearDecoder(nn.Module):
         # B: E x H
 
         if not items:
-            items = torch.arange(self.embedding_layer.weight.size()[0])
+            items = torch.arange(self.embedding_layer.weight.size()[0], dtype=torch.long, device=context.device)
         # items: NI <- number of items evaluated
 
         embi = self.embedding_layer(items)  # NI x E
@@ -183,8 +184,8 @@ def main():
 
     narm = NarmModel(
         num_items=10,
-        item_embedding_size=6,
-        global_encoder_size=4,
+        item_embedding_size=8,
+        global_encoder_size=7,
         global_encoder_num_layers=1,
         embedding_dropout=0.25,
         context_dropout=0.2
