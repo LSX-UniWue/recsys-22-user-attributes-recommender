@@ -18,8 +18,6 @@ class PosNegSessionDataset(Dataset):
     def __getitem__(self, index: int):
         session = self.dataset[index][ITEM_SEQ_ENTRY_NAME]
 
-        if len(session) == 0:
-            return self[index - 1]
         assert(len(session) > 1)
 
         x = session[:-1]
