@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 
 from dependency_injector import containers
 
-from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer
+from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer
 
 
 # TODO: introduce a subclass for all container configurations?
@@ -10,7 +10,8 @@ def build_container(model_id) -> containers.DeclarativeContainer:
     return {
         'bert4rec': BERT4RecContainer(),
         'sasrec': SASRecContainer(),
-        'caser': CaserContainer()
+        'caser': CaserContainer(),
+        "narm": NarmContainer()
     }[model_id]
 
 
