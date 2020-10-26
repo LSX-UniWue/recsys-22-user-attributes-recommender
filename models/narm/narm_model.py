@@ -44,12 +44,12 @@ class NarmModel(nn.Module):
         self.context_dropout = nn.Dropout(context_dropout)
         self.decoder = BilinearDecoder(self.item_embeddings, encoded_representation_size=2 * global_encoder_size)
 
-    def forward(self, session: torch.Tensor, lengths: torch.Tensor, batch_idx: int):
+    def forward(self, session: torch.Tensor, mask: torch.Tensor, batch_idx: int):
         """
         Computes item similarity scores using the NARM model.
 
         :param session: a sequence of item ids (B x N)
-        :param lengths: a tensor containing the length of every sequence in the batch (B)
+        :param mask: a tensor masking padded sequence elements (B x N)
         :param batch_idx:
         :return: scores for every item (B x NI)
         """
@@ -58,7 +58,7 @@ class NarmModel(nn.Module):
 
         packed_embedded_session = nn.utils.rnn.pack_padded_sequence(
             embedded_session_do,
-            lengths,
+            torch.sum(mask, dim=-1),
             batch_first=True,
             enforce_sorted=False
         )
@@ -67,7 +67,7 @@ class NarmModel(nn.Module):
         c_tg = h_t = torch.squeeze(h_t, dim=0)
 
         h_i, _ = nn.utils.rnn.pad_packed_sequence(h_i, batch_first=self.batch_first)  # we throw away the lengths, since we alreay have them.
-        c_tl = self.local_encoder(h_t, h_i, lengths)
+        c_tl = self.local_encoder(h_t, h_i, mask)
 
         c_t = torch.cat([c_tg, c_tl], dim=1)
 
@@ -95,7 +95,7 @@ class LocalEncoderLayer(nn.Module):
     def _init_weights(self):
         torch.nn.init.uniform_(self.v, -1.0, 1.0)
 
-    def forward(self, s1: torch.Tensor, s2: torch.Tensor, lengths: torch.Tensor):
+    def forward(self, s1: torch.Tensor, s2: torch.Tensor, mask: torch.Tensor):
         """
         Calculates v * sigmoid(A1 * s1 + A2 * s2)
         :param s1: a tensor (B x H)
@@ -115,10 +115,6 @@ class LocalEncoderLayer(nn.Module):
         weighted = alphas * s2
         # B x N x H: the alphas get broadcasted along the last dimension and then a component-wise multiplication
         # is performed, scaling every step differently
-
-        # create mask
-        max_len = s2.size()[1]
-        mask = torch.arange(max_len).expand(len(lengths), max_len) < lengths.unsqueeze(1)  # B x N
 
         # B x N x 1 make sure that the mask value for each sequence member is broadcasted to all features
         # -> zeroing out masked features
@@ -180,7 +176,10 @@ class BilinearDecoder(nn.Module):
 
 def main():
     session = torch.as_tensor([[1, 3, 5, 4], [4, 5, 8, 0]], dtype=torch.long)
-    lengths = torch.as_tensor([4, 3], dtype=torch.long)
+    mask = torch.as_tensor([
+        [True, True, True, True],
+        [True, True, True, False]
+    ], dtype=torch.bool)
 
     narm = NarmModel(
         num_items=10,
@@ -191,8 +190,8 @@ def main():
         context_dropout=0.2
     )
 
-    prediction = narm(session, lengths, batch_idx=0)
+    prediction = narm(session, mask, batch_idx=0)
 
-
+    print(prediction)
 if __name__ == "__main__":
     main()
