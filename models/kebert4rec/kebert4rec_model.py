@@ -1,3 +1,5 @@
+from typing import Dict, Any
+
 import torch
 
 from models.bert4rec.bert4rec_model import BERT4RecBaseModel
@@ -11,7 +13,8 @@ class KeBERT4Rec(BERT4RecBaseModel):
                  num_transformer_layers: int,
                  item_vocab_size: int,
                  max_seq_length: int,
-                 dropout: float):
+                 dropout: float,
+                 additional_attributes: Dict[str, (str, Any)]):
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
                          num_transformer_layers=num_transformer_layers,
@@ -19,6 +22,8 @@ class KeBERT4Rec(BERT4RecBaseModel):
 
         self.item_vocab_size = item_vocab_size
         self.max_seq_length = max_seq_length + 1
+
+        self.additional_attributes = additional_attributes
 
 
 
