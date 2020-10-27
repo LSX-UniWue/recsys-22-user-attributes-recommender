@@ -13,7 +13,7 @@ from data.datasets.posneg import PosNegSessionDataset
 from data.datasets.session import ItemSessionDataset, ItemSessionParser
 from data.utils import create_indexed_header, read_csv_header
 from metrics.utils.metric_utils import build_metrics
-from padding import padded_session_collate
+from data.collate import padded_session_collate
 from tokenization.tokenizer import Tokenizer
 from tokenization.vocabulary import VocabularyReaderWriter, Vocabulary, CSVVocabularyReaderWriter
 

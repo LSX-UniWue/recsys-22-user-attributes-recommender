@@ -9,12 +9,12 @@ from tqdm import tqdm
 import tarfile
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
-from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.nextitem import NextItemIndex, NextItemIterableDataset, NextItemDataset
 from data.datasets.session import ItemSessionParser, ItemSessionDataset
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
-from padding import padded_session_collate
+from data.collate import padded_session_collate
 from tokenization.tokenizer import Tokenizer
 from tokenization.vocabulary import VocabularyBuilder, CSVVocabularyReaderWriter
 
