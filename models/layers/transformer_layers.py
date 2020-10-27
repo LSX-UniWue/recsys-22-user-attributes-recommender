@@ -59,4 +59,5 @@ class TransformerEmbedding(nn.Module):
         input_sequence = input_sequence + self.position_embedding(position_ids)
         input_sequence = self.embedding_norm(input_sequence)
 
+        input_sequence = self.dropout(input_sequence)
         return input_sequence
