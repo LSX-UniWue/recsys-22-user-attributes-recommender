@@ -1,3 +1,4 @@
+import os
 from argparse import ArgumentParser
 
 from dependency_injector import containers
@@ -33,4 +34,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    run_model(args.model, args.path_to_config_file)
+    # XXX: because the dependency injector does not provide a error message when the config file does not exists,
+    # we manually check if the config file exists
+    config_file = args.path_to_config_file
+    if not os.path.isfile(config_file):
+        print(f"the config file cannot be found. Please check the path '{config_file}'!")
+        exit(-1)
+
+    run_model(args.model, config_file)
