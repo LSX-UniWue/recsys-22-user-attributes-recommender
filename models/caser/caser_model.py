@@ -6,6 +6,7 @@ import torch
 from torch import nn
 
 from configs.models.caser.caser_config import CaserConfig
+from models.layers.layers import ItemEmbedding
 from models.layers.util_layers import get_activation_layer
 
 
@@ -40,11 +41,13 @@ class CaserModel(nn.Module):
                  num_horizontal_filters: int,
                  conv_activation_fn: str,
                  fc_activation_fn: str,
-                 dropout: float
+                 dropout: float,
+                 embedding_mode: str = None
                  ):
         super().__init__()
 
         self.embedding_size = embedding_size
+        self.embedding_mode = embedding_mode
         self.item_voc_size = item_voc_size
         self.user_voc_size = user_voc_size
         self.max_seq_length = max_seq_length
@@ -57,7 +60,9 @@ class CaserModel(nn.Module):
         # user and item embedding
         if self._has_users:
             self.user_embedding = nn.Embedding(self.user_voc_size, embedding_dim=self.embedding_size)
-        self.item_embedding = nn.Embedding(self.item_voc_size, embedding_dim=self.embedding_size)
+        self.item_embedding = ItemEmbedding(item_voc_size=self.item_voc_size,
+                                            embedding_size=self.embedding_size,
+                                            embedding_mode=self.embedding_mode)
 
         # vertical conv layer
         self.conv_vertical = nn.Conv2d(1, self.num_vertical_filters, (self.max_seq_length, 1))
