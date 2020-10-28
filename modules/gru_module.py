@@ -4,12 +4,12 @@ import torch
 
 import pytorch_lightning as pl
 import torch.nn as nn
-from pyhocon import ConfigTree
-from pytorch_lightning import EvalResult
 from torch import Tensor
 
-from metrics.ranking_metrics import RecallAtMetric, MRRAtMetric
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.gru.gru_model import GRUSeqItemRecommenderModel
+from modules.bert4rec_module import get_padding_mask
+from tokenization.tokenizer import Tokenizer
 
 
 class GRUModule(pl.LightningModule):
@@ -19,8 +19,8 @@ class GRUModule(pl.LightningModule):
                  lr: float,
                  beta_1: float,
                  beta_2: float,
-                 enable_metrics: bool,
-                 metrics_k: List[int]
+                 tokenizer: Tokenizer,
+                 metrics: torch.nn.ModuleDict
                  ):
 
         super(GRUModule, self).__init__()
@@ -29,80 +29,45 @@ class GRUModule(pl.LightningModule):
         self.lr = lr
         self.beta_1 = beta_1
         self.beta_2 = beta_2
-
-        self._metrics = []
-
-        if enable_metrics:
-            self._metrics = [RecallAtMetric(k) for k in metrics_k] + [MRRAtMetric(k) for k in metrics_k]
-
-    @staticmethod
-    def from_configuration(config: ConfigTree) -> 'GRUModule':
-        model = GRUSeqItemRecommenderModel.from_configuration(config)
-
-        optimizer_config = config["optimizer"]
-        lr = optimizer_config.get_float("learning_rate")
-        beta_1 = optimizer_config.get_float("beta_1")
-        beta_2 = optimizer_config.get_float("beta_2")
-
-        enable_metrics = config.get_bool("metrics.enable_metrics", False)
-        metrics_k = config.get_list("metrics.k", [])
-
-        return GRUModule(model, lr, beta_1, beta_2, enable_metrics, metrics_k)
+        self.tokenizer = tokenizer
+        self.metrics = metrics
 
     def training_step(self, batch, batch_idx):
-        prediction = self._forward(batch["session"], batch["session_length"], batch_idx)
-        # TODO: discuss: maybe the target should be generated here and not in the dataset; see bert4rec
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        target = batch[TARGET_ENTRY_NAME]
+        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
-        loss = self.loss(prediction, batch["target"])
+        logits = self._forward(input_seq, padding_mask, batch_idx)
+
+        loss = nn.functional.cross_entropy(logits, target)
 
         return {
             "loss": loss
         }
 
-    def loss(self, prediction, target):
-        return nn.CrossEntropyLoss()(prediction, target)
-
     def validation_step(self, batch, batch_idx):
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        target = batch[TARGET_ENTRY_NAME]
+        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
-        prediction = self._forward(batch["session"], batch["session_length"], batch_idx)
+        logits = self._forward(input_seq, padding_mask, batch_idx)
 
-        target = batch["target"]
+        loss = nn.functional.cross_entropy(logits, target)
+        self.log("val_loss", loss, prog_bar=True)
 
-        loss = self.loss(prediction, target)
-        result = EvalResult(checkpoint_on=loss)
-        result.log("val_loss", loss, on_step=True, on_epoch=True)
+        for name, metric in self.metrics.items():
+            step_value = metric(logits, target)
+            self.log(name, step_value, prog_bar=True)
 
-        for metric in self._metrics:
-            metric.on_step_end(prediction, target, result)
+    def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]):
+        for name, metric in self.metrics.items():
+            self.log(name, metric.compute(), prog_bar=True)
 
-        return result
+    def test_step(self, batch, batch_idx):
+        self.validation_step(batch, batch_idx)
 
-    def validation_epoch_end(self, outputs: Union[Dict[str, Tensor], List[Dict[str, Tensor]]]) -> Dict[str, Dict[str, Tensor]]:
-
-        result = EvalResult(checkpoint_on=outputs["step_val_loss"].mean())
-
-        for metric in self._metrics:
-            metric.on_epoch_end(outputs, result)
-
-        return result
-
-    def test_step(self, batch, batch_idx) -> EvalResult:
-        prediction = self._forward(batch["session"], batch["session_length"], batch_idx)
-
-        result = EvalResult()
-
-        for metric in self._metrics:
-            metric.on_step_end(prediction, batch["target"], result)
-
-        return result
-
-    def test_epoch_end(self, outputs: Union[Dict[str, Tensor], List[Dict[str, Tensor]]]) -> EvalResult:
-        result = EvalResult()
-
-        for metric in self._metrics:
-            metric.on_epoch_end(outputs, result)
-
-        return result
+    def test_epoch_end(self, outputs: Union[Dict[str, Tensor], List[Dict[str, Tensor]]]):
+        self.validation_epoch_end(outputs)
 
     def _forward(self, session, lengths, batch_idx):
         return self.model(session, lengths, batch_idx)
