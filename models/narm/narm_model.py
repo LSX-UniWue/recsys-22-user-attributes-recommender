@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from models.layers.layers import ItemEmbedding
+
 
 class NarmModel(nn.Module):
     """
@@ -23,10 +25,10 @@ class NarmModel(nn.Module):
                  global_encoder_num_layers: int,
                  embedding_dropout: float,
                  context_dropout: float,
-                 batch_first: bool = True):
+                 batch_first: bool = True,
+                 embedding_mode: str = None):
 
         """
-
         :param num_items: number of items (NI)
         :param item_embedding_size: item embedding size (E)
         :param global_encoder_size: hidden size of the GRU used as the encoder (H)
@@ -34,12 +36,17 @@ class NarmModel(nn.Module):
         :param embedding_dropout: dropout applied after embedding the items
         :param context_dropout: dropout applied on the full context representation
         :param batch_first: whether data is batch first.
+        :param embedding_mode: the embedding mode to use if multiple items per
         """
         super(NarmModel, self).__init__()
         self.batch_first = batch_first
-        self.item_embeddings = nn.Embedding(num_items, embedding_dim=item_embedding_size)
+        self.item_embeddings = ItemEmbedding(item_voc_size=num_items,
+                                             embedding_size=item_embedding_size,
+                                             embedding_mode=embedding_mode)
         self.item_embedding_dropout = nn.Dropout(embedding_dropout)
-        self.global_encoder = nn.GRU(item_embedding_size, global_encoder_size, num_layers=global_encoder_num_layers, batch_first=batch_first)
+        self.global_encoder = nn.GRU(item_embedding_size, global_encoder_size,
+                                     num_layers=global_encoder_num_layers,
+                                     batch_first=batch_first)
         self.local_encoder = LocalEncoderLayer(global_encoder_size, global_encoder_size)
         self.context_dropout = nn.Dropout(context_dropout)
         self.decoder = BilinearDecoder(self.item_embeddings, encoded_representation_size=2 * global_encoder_size)
@@ -133,7 +140,7 @@ class BilinearDecoder(nn.Module):
 
         See https://github.com/lijingsdu/sessionRec_NARM for the original Theano implementation.
     """
-    def __init__(self, embedding_layer: nn.Embedding, encoded_representation_size: int, apply_softmax: bool = False):
+    def __init__(self, embedding_layer: ItemEmbedding, encoded_representation_size: int, apply_softmax: bool = False):
         """
 
         :param embedding_layer: an item embedding layer
@@ -143,7 +150,7 @@ class BilinearDecoder(nn.Module):
         super(BilinearDecoder, self).__init__()
 
         self.embedding_layer = embedding_layer
-        self.B = nn.Linear(embedding_layer.weight.size()[1], encoded_representation_size, bias=False)
+        self.B = nn.Linear(embedding_layer.embedding.weight.size()[1], encoded_representation_size, bias=False)
         self.apply_softmax = apply_softmax
 
     def forward(self, context: torch.Tensor, items: torch.Tensor = None):
@@ -160,7 +167,7 @@ class BilinearDecoder(nn.Module):
         # B: E x H
 
         if not items:
-            items = torch.arange(self.embedding_layer.weight.size()[0], dtype=torch.long, device=context.device)
+            items = torch.arange(self.embedding_layer.embedding.weight.size()[0], dtype=torch.long, device=context.device)
         # items: NI <- number of items evaluated
 
         embi = self.embedding_layer(items)  # NI x E

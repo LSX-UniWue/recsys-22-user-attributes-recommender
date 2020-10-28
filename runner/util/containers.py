@@ -25,8 +25,9 @@ def build_default_config() -> providers.Configuration:
     return config
 
 
-def _build_BERT4Rec_model(kwargs):
-    return BERT4RecModel(**kwargs)
+# XXX: find a better
+def _kwargs_adapter(clazz, kwargs):
+    return clazz(**kwargs)
 
 
 class BERT4RecContainer(containers.DeclarativeContainer):
@@ -36,10 +37,8 @@ class BERT4RecContainer(containers.DeclarativeContainer):
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
 
-    model_config = config.model
-
     # model
-    model = providers.Singleton(_build_BERT4Rec_model, model_config)
+    model = providers.Singleton(_kwargs_adapter, BERT4RecModel, config.model)
 
     module_config = config.module
 
@@ -79,21 +78,8 @@ class CaserContainer(containers.DeclarativeContainer):
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
 
-    model_config = config.model
-
     # model
-    model = providers.Singleton(
-        CaserModel,
-        model_config.embedding_size,
-        model_config.item_vocab_size,
-        model_config.user_vocab_size,
-        model_config.max_seq_length,
-        model_config.num_vertical_filters,
-        model_config.num_horizontal_filters,
-        model_config.conv_activation_fn,
-        model_config.fc_activation_fn,
-        model_config.dropout
-    )
+    model = providers.Singleton(_kwargs_adapter, CaserModel, config.model)
 
     module_config = config.module
 
@@ -131,15 +117,7 @@ class SASRecContainer(containers.DeclarativeContainer):
     model_config = config.model
 
     # model
-    model = providers.Singleton(
-        SASRecModel,
-        model_config.transformer_hidden_size,
-        model_config.num_transformer_heads,
-        model_config.num_transformer_layers,
-        model_config.item_vocab_size,
-        model_config.max_seq_length,
-        model_config.dropout
-    )
+    model = providers.Singleton(_kwargs_adapter, SASRecModel, config.model)
 
     module_config = config.module
 
@@ -175,19 +153,8 @@ class NarmContainer(containers.DeclarativeContainer):
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
 
-    model_config = config.model
-
     # model
-    model = providers.Singleton(
-        NarmModel,
-        model_config.item_vocab_size,
-        model_config.item_embedding_size,
-        model_config.global_encoder_size,
-        model_config.global_encoder_num_layers,
-        model_config.embedding_dropout,
-        model_config.context_dropout,
-        model_config.batch_first
-    )
+    model = providers.Singleton(_kwargs_adapter, NarmModel, config.model)
 
     module_config = config.module
     metrics = build_metrics_provider(module_config.metrics)

@@ -21,7 +21,8 @@ class SASRecModel(nn.Module):
                  num_transformer_layers: int,
                  item_vocab_size: int,
                  max_seq_length: int,
-                 dropout: float
+                 dropout: float,
+                 embedding_mode: str,
                  ):
         """
         inits the SASRec model
@@ -35,11 +36,13 @@ class SASRecModel(nn.Module):
         self.num_transformer_heads = num_transformer_heads
         self.num_transformer_layers = num_transformer_layers
         self.item_vocab_size = item_vocab_size
+        self.embedding_mode = embedding_mode
 
         self.embedding = TransformerEmbedding(item_voc_size=self.item_vocab_size,
                                               max_seq_len=self.max_seq_length,
                                               embedding_size=self.transformer_hidden_size,
-                                              dropout=self.dropout)
+                                              dropout=self.dropout,
+                                              embedding_mode=self.embedding_mode)
 
         encoder_layer = nn.TransformerEncoderLayer(d_model=self.transformer_hidden_size,
                                                    nhead=self.num_transformer_heads,
