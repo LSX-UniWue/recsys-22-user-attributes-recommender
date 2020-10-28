@@ -15,13 +15,14 @@ class TransformerEmbedding(nn.Module):
                  item_voc_size: int,
                  max_seq_len: int,
                  embedding_size: int,
-                 dropout: float):
+                 dropout: float,
+                 norm_embedding: bool = True):
         super().__init__()
 
         self.embedding_size = embedding_size
         self.item_embedding = nn.Embedding(item_voc_size, self.embedding_size)
         self.position_embedding = nn.Embedding(max_seq_len, self.embedding_size)
-        self.embedding_norm = nn.LayerNorm(self.embedding_size)
+        self.embedding_norm = nn.LayerNorm(self.embedding_size) if norm_embedding else nn.Identity()
         self.dropout = nn.Dropout(p=dropout)
         # now init the item embedding
         self.init_weights()
@@ -59,4 +60,5 @@ class TransformerEmbedding(nn.Module):
         input_sequence = input_sequence + self.position_embedding(position_ids)
         input_sequence = self.embedding_norm(input_sequence)
 
+        input_sequence = self.dropout(input_sequence)
         return input_sequence
