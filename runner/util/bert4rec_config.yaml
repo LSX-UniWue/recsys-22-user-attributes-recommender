@@ -35,6 +35,7 @@ model:
   num_transformer_heads: 1
   num_transformer_layers: 1
   transformer_hidden_size: 16
+  embedding_mode: sum
 module:
   batch_first: true
   mask_probability: 0.15

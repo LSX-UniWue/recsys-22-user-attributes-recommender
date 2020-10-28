@@ -25,6 +25,10 @@ def build_default_config() -> providers.Configuration:
     return config
 
 
+def _build_BERT4Rec_model(kwargs):
+    return BERT4RecModel(**kwargs)
+
+
 class BERT4RecContainer(containers.DeclarativeContainer):
 
     config = build_default_config()
@@ -35,15 +39,7 @@ class BERT4RecContainer(containers.DeclarativeContainer):
     model_config = config.model
 
     # model
-    model = providers.Singleton(
-        BERT4RecModel,
-        transformer_hidden_size=model_config.transformer_hidden_size,
-        num_transformer_heads=model_config.num_transformer_heads,
-        num_transformer_layers=model_config.num_transformer_layers,
-        item_vocab_size=model_config.item_vocab_size,
-        max_seq_length=model_config.max_seq_length,
-        dropout=model_config.dropout
-    )
+    model = providers.Singleton(_build_BERT4Rec_model, model_config)
 
     module_config = config.module
 

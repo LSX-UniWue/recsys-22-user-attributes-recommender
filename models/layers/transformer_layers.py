@@ -3,6 +3,7 @@ import math
 import torch
 from torch import nn as nn
 
+from models.layers.layers import ItemEmbedding
 from utils.tensor_utils import generate_position_ids
 
 
@@ -16,29 +17,29 @@ class TransformerEmbedding(nn.Module):
                  max_seq_len: int,
                  embedding_size: int,
                  dropout: float,
+                 embedding_mode: str = None,
                  norm_embedding: bool = True):
         super().__init__()
 
         self.embedding_size = embedding_size
-        self.item_embedding = nn.Embedding(item_voc_size, self.embedding_size)
+
+        self.item_embedding = ItemEmbedding(item_voc_size=item_voc_size,
+                                            embedding_size=embedding_size,
+                                            embedding_mode=embedding_mode)
         self.position_embedding = nn.Embedding(max_seq_len, self.embedding_size)
         self.embedding_norm = nn.LayerNorm(self.embedding_size) if norm_embedding else nn.Identity()
         self.dropout = nn.Dropout(p=dropout)
-        # now init the item embedding
-        self.init_weights()
-
-    def init_weights(self):
-        initrange = 0.1
-        self.item_embedding.weight.data.uniform_(- initrange, initrange)
 
     def get_item_embedding_weight(self) -> torch.Tensor:
         """
         :return: the weight matrix of the item embedding
         some methods reuse the matrix to reduce the parameter size
         """
-        return self.item_embedding.weight
+        return self.item_embedding.embedding.weight
 
-    def get_item_embedding(self, input_sequence: torch.Tensor) -> nn.Parameter:
+    def get_item_embedding(self,
+                           input_sequence: torch.Tensor
+                           ) -> torch.Tensor:
         return self.item_embedding(input_sequence)
 
     def forward(self,
