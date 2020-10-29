@@ -11,6 +11,7 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.nextitem import NextItemDataset, NextItemIndex
 from data.datasets.posneg import PosNegSessionDataset
 from data.datasets.session import ItemSessionDataset, ItemSessionParser
+from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
 from metrics.utils.metric_utils import build_metrics
 from data.collate import padded_session_collate
@@ -74,6 +75,8 @@ def build_nextitem_loader_provider_factory(dataset_config: providers.Configurati
         dataset,
         dataset_config.loader.batch_size,
         dataset_config.loader.max_seq_length,
+        dataset_config.loader.shuffle,
+        dataset_config.loader.num_workers,
         tokenizer_provider
     )
 
@@ -170,18 +173,26 @@ def provide_posneg_loader(dataset: Dataset, batch_size: int, max_seq_length: int
     )
 
 
-def provide_nextit_loader(dataset: Dataset, batch_size: int, max_seq_length: int, tokenizer: Tokenizer):
+def provide_nextit_loader(
+        dataset: Dataset,
+        batch_size: int,
+        max_seq_length: int,
+        shuffle: bool,
+        num_workers: int,
+        tokenizer: Tokenizer):
 
     return DataLoader(
         dataset,
         batch_size=batch_size,
-        shuffle=False,
+        shuffle=shuffle,
+        num_workers=num_workers,
         collate_fn=padded_session_collate(
             max_seq_length,
             tokenizer.pad_token_id,
             [ITEM_SEQ_ENTRY_NAME],
             ITEM_SEQ_ENTRY_NAME
-        )
+        ),
+        worker_init_fn=mp_worker_init_fn
     )
 
 

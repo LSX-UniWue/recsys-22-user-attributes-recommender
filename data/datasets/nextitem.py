@@ -84,14 +84,12 @@ class NextItemDataset(Dataset, MultiProcessDataLoaderSupport):
         self._dataset = dataset
         self._index = index
 
-        self._start = 0
-        self._stop = len(self._index)
 
     def __len__(self):
-        return self._stop - self._start
+        return len(self._index)
 
     def __getitem__(self, idx):
-        session_idx, target_pos = self._index[self._start + idx]
+        session_idx, target_pos = self._index[idx]
         session = self._dataset[session_idx][ITEM_SEQ_ENTRY_NAME]
         return {
             ITEM_SEQ_ENTRY_NAME: session[:target_pos],
@@ -99,8 +97,7 @@ class NextItemDataset(Dataset, MultiProcessDataLoaderSupport):
         }
 
     def _mp_init(self, id: int, num_worker: int, seed: int):
-        num_samples = len(self._index)
-        self._start, self._stop = calculate_shard(id, num_worker, seed, num_samples)
+        pass
 
 
 class NextItemIterableDataset(IterableDataset, MultiProcessDataLoaderSupport):
