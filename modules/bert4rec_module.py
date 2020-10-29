@@ -166,7 +166,7 @@ def _add_mask_token_at_ending(input_seq: torch.Tensor,
     input_seq[target_mask] = tokenizer.mask_token_id
     return input_seq, target_mask
 
-
+# TODO: implement as collate function
 def _mask_items(inputs: torch.Tensor,
                 tokenizer: Tokenizer,
                 mask_probability: float) -> Tuple[torch.Tensor, torch.Tensor]:
