@@ -6,7 +6,7 @@ import torch
 
 def padded_session_collate(max_length: int,
                            pad_token_id: int,
-                           entries_to_pad: List[str] = ["session"],
+                           entries_to_pad: List[str] = None,
                            session_length_entry: str = "session"
                            ):
     """
@@ -19,17 +19,23 @@ def padded_session_collate(max_length: int,
 
     :return: a collate function that can be used to collate session data.
     """
+    if entries_to_pad is None:
+        entries_to_pad = ["session"]
     return partial(_padded_session_collate, max_length, pad_token_id, entries_to_pad, session_length_entry)
 
 
 def _padded_session_collate(max_length: int,
                             pad_token_id: int,
                             entries_to_pad: List[str],
-                            session_length_entry: str, batch
+                            session_length_entry: str,
+                            batch
                             ):
     from torch.utils.data.dataloader import default_collate
 
-    def pad(x: List[int], pad_token_id: int, padded_length: int):
+    def pad(x: List[int],
+            pad_token_id: int,
+            padded_length: int
+            ) -> torch.Tensor:
         length = len(x)
         padded_x = x
         if length < padded_length:
