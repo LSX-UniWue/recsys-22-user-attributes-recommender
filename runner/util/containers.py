@@ -22,7 +22,29 @@ def build_default_config() -> providers.Configuration:
             'limit_val_batches': 1.0,
             'gradient_clip_val': 0.0,
             'default_root_dir': '/tmp/checkpoints'
+        },
+        'datasets': {
+            'train': {
+                'loader': {
+                    'num_workers': 4,
+                    'shuffle': True
+                }
+            },
+            'validation': {
+                'loader': {
+                    'num_workers': 4,
+                    'shuffle': False
+                }
+            },
+            'test': {
+                'loader': {
+                    'num_workers': 4,
+                    'shuffle': False
+                }
+            }
         }
+
+
     })
     return config
 
@@ -176,7 +198,7 @@ class SASRecContainer(containers.DeclarativeContainer):
 
 class NarmContainer(containers.DeclarativeContainer):
 
-    config = providers.Configuration()
+    config = build_default_config()
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
@@ -224,7 +246,7 @@ class NarmContainer(containers.DeclarativeContainer):
 
 class GRUContainer(containers.DeclarativeContainer):
 
-    config = providers.Configuration()
+    config = build_default_config()
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)

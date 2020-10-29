@@ -40,8 +40,6 @@ datasets:
     loader:
       batch_size: 512
       max_seq_length: 100
-      shuffle: true
-      num_workers: 4
   validation:
     dataset:
       csv_file: "/home/dallmann/uni/research/dota/datasets/small/preprocessed/splits/valid.csv"
@@ -52,8 +50,6 @@ datasets:
     loader:
       batch_size: 512
       max_seq_length: 100
-      shuffle: false
-      num_workers: 1
   test:
     dataset:
       csv_file: "/home/dallmann/uni/research/dota/datasets/small/preprocessed/splits/test.csv"
@@ -64,8 +60,6 @@ datasets:
     loader:
       batch_size: 512
       max_seq_length: 100
-      shuffle: false
-      num_workers: 1
 trainer:
   limit_train_batches: 1.0
   limit_val_batches: 1.0
@@ -73,8 +67,7 @@ trainer:
   checkpoint:
     filepath: "/tmp/checkpoints/{epoch}-{recall_at_5:.4f}"
     save_top_k: 3
-    monitor: "recall_at_5"
-  gradient_clip_val: 1.0
+    monitor: "val_loss"
   gpus: 1
 
 
