@@ -81,7 +81,8 @@ def _build_bert4rec_config_clinic():
         },
         'special_tokens': {
             'pad_token': "<PAD>",
-            'mask_token': "<MASK>"
+            'mask_token': "<MASK>",
+            'unk_token': "<UNK>"
         }
     }
 
@@ -119,8 +120,6 @@ def _build_bert4rec_config_clinic():
     }
 
     trainer_config = {
-        'limit_train_batches': 10,
-        'limit_val_batches': 10,
         'default_root_dir': result_dir,
         'checkpoints': {
             'save_top_k': 3,
