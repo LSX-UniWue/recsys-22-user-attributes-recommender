@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict
 from torch import nn
 
 import torch
@@ -45,7 +45,7 @@ class KeBERT4Rec(BERT4RecBaseModel):
                  item_vocab_size: int,
                  max_seq_length: int,
                  dropout: float,
-                 additional_attributes: Dict[str, (str, Any)]):
+                 additional_attributes: Dict[str, (str, int)]):
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
                          num_transformer_layers=num_transformer_layers,
