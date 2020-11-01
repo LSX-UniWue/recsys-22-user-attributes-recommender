@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from models.layers.layers import ItemEmbedding
+
 
 class GRUSeqItemRecommenderModel(nn.Module):
 
@@ -9,10 +11,15 @@ class GRUSeqItemRecommenderModel(nn.Module):
                  item_embedding_dim: int,
                  hidden_size: int,
                  num_layers: int,
-                 dropout: float):
+                 dropout: float,
+                 embedding_mode: str = None):
         super(GRUSeqItemRecommenderModel, self).__init__()
 
-        self.item_embeddings = nn.Embedding(num_items, embedding_dim=item_embedding_dim)
+        self.embedding_mode = embedding_mode
+
+        self.item_embeddings = ItemEmbedding(item_voc_size=self.item_voc_size,
+                                             embedding_size=self.embedding_size,
+                                             embedding_mode=self.embedding_mode)
         self.gru = nn.GRU(item_embedding_dim, hidden_size, dropout=dropout, num_layers=num_layers, batch_first=True)
         self.fcn = nn.Linear(hidden_size, num_items, bias=True)
         self.dropout = nn.Dropout2d(p=dropout)
