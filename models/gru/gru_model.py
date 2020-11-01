@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from pyhocon import ConfigTree
 
 
 class GRUSeqItemRecommenderModel(nn.Module):
@@ -18,12 +17,12 @@ class GRUSeqItemRecommenderModel(nn.Module):
         self.fcn = nn.Linear(hidden_size, num_items, bias=True)
         self.dropout = nn.Dropout2d(p=dropout)
 
-    def forward(self, session, lengths, batch_idx):
+    def forward(self, session, mask: torch.Tensor, batch_idx):
         embedded_session = self.item_embeddings(session)
         embedded_session = self.dropout(embedded_session)
         packed_embedded_session = nn.utils.rnn.pack_padded_sequence(
             embedded_session,
-            lengths,
+            torch.sum(mask, dim=-1),
             batch_first=True,
             enforce_sorted=False
         )
@@ -31,15 +30,3 @@ class GRUSeqItemRecommenderModel(nn.Module):
 
         output = self.fcn(final_state)
         return torch.squeeze(output, dim=0)
-
-    @staticmethod
-    def from_configuration(config: ConfigTree):
-        model_config = config["model"]["gru"]
-
-        num_items = model_config.get_int("num_items")
-        item_embedding_dim = model_config.get_int("item_embedding_dim")
-        hidden_size = model_config.get_int("hidden_size")
-        num_layers = model_config.get_int("num_layers")
-        dropout = model_config.get_float("dropout")
-
-        return GRUSeqItemRecommenderModel(num_items, item_embedding_dim, hidden_size, num_layers, dropout)

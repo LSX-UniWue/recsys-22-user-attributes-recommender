@@ -5,7 +5,6 @@ import torch
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, USER_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME, TARGET_ENTRY_NAME
-from metrics.utils.metric_utils import build_metrics
 from models.caser.caser_model import CaserModel
 from tokenization.tokenizer import Tokenizer
 

@@ -59,6 +59,9 @@ class NarmModule(pl.LightningModule):
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
         logits = self.model(input_seq, padding_mask, batch_idx)
+        loss = torch.nn.functional.cross_entropy(logits, target)
+
+        self.log("val_loss", loss, prog_bar=True)
 
         for name, metric in self.metrics.items():
             step_value = metric(logits, target)
@@ -69,7 +72,7 @@ class NarmModule(pl.LightningModule):
             self.log(name, metric.compute(), prog_bar=True)
 
     def test_step(self, batch, batch_idx):
-        return self.validation_step(batch, batch_idx)
+        self.validation_step(batch, batch_idx)
 
     def test_epoch_end(self, outputs):
         self.validation_epoch_end(outputs)

@@ -2,9 +2,11 @@ from dependency_injector import containers, providers
 
 from models.bert4rec.bert4rec_model import BERT4RecModel
 from models.caser.caser_model import CaserModel
+from models.gru.gru_model import GRUSeqItemRecommenderModel
 from models.narm.narm_model import NarmModel
 from models.sasrec.sas_rec_model import SASRecModel
 from modules import BERT4RecModule, CaserModule, SASRecModule
+from modules.gru_module import GRUModule
 from modules.narm_module import NarmModule
 from runner.util.provider_utils import build_tokenizer_provider, build_session_loader_provider_factory, \
     build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, build_standard_trainer, \
@@ -20,7 +22,29 @@ def build_default_config() -> providers.Configuration:
             'limit_val_batches': 1.0,
             'gradient_clip_val': 0.0,
             'default_root_dir': '/tmp/checkpoints'
+        },
+        'datasets': {
+            'train': {
+                'loader': {
+                    'num_workers': 1,
+                    'shuffle': True
+                }
+            },
+            'validation': {
+                'loader': {
+                    'num_workers': 1,
+                    'shuffle': False
+                }
+            },
+            'test': {
+                'loader': {
+                    'num_workers': 1,
+                    'shuffle': False
+                }
+            }
         }
+
+
     })
     return config
 
@@ -148,7 +172,7 @@ class SASRecContainer(containers.DeclarativeContainer):
 
 class NarmContainer(containers.DeclarativeContainer):
 
-    config = providers.Configuration()
+    config = build_default_config()
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
@@ -168,6 +192,49 @@ class NarmContainer(containers.DeclarativeContainer):
         module_config.beta_2,
         tokenizer,
         module_config.batch_first,
+        metrics
+    )
+
+    train_dataset_config = config.datasets.train
+    validation_dataset_config = config.datasets.validation
+    test_dataset_config = config.datasets.test
+
+    # loaders
+    train_loader = build_nextitem_loader_provider_factory(train_dataset_config, tokenizer)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer)
+    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer)
+
+    trainer = build_standard_trainer(config)
+
+class GRUContainer(containers.DeclarativeContainer):
+
+    config = build_default_config()
+
+    # tokenizer
+    tokenizer = build_tokenizer_provider(config)
+
+    model_config = config.model
+
+    # model
+    model = providers.Singleton(
+        GRUSeqItemRecommenderModel,
+        model_config.num_items,
+        model_config.item_embedding_dim,
+        model_config.hidden_size,
+        model_config.num_layers,
+        model_config.dropout,
+    )
+
+    module_config = config.module
+    metrics = build_metrics_provider(module_config.metrics)
+
+    module = providers.Singleton(
+        GRUModule,
+        model,
+        module_config.learning_rate,
+        module_config.beta_1,
+        module_config.beta_2,
+        tokenizer,
         metrics
     )
 

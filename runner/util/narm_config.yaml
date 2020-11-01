@@ -61,13 +61,13 @@ datasets:
       batch_size: 512
       max_seq_length: 100
 trainer:
-  limit_train_batches: 100
-  limit_val_batches: 100
+  limit_train_batches: 1.0
+  limit_val_batches: 1.0
   default_root_dir: /tmp/checkpoints
   checkpoint:
     filepath: "/tmp/checkpoints/{epoch}-{recall_at_5:.4f}"
     save_top_k: 3
-    monitor: "recall_at_5"
+    monitor: "val_loss"
   gpus: 1
 
 
