@@ -1,8 +1,6 @@
 import io
-import math
 from pathlib import Path
 import sys
-from typing import Tuple
 
 from numpy.random._generator import default_rng
 from torch.utils.data import Dataset, IterableDataset
@@ -10,7 +8,6 @@ from tqdm import tqdm
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, INT_BYTE_SIZE, TARGET_ENTRY_NAME
 from data.datasets.session import ItemSessionDataset
-from data.mp import MultiProcessDataLoaderSupport
 
 
 class NextItemIndexBuilder:
@@ -42,12 +39,12 @@ class NextItemIndexBuilder:
         index_file.write(target_pos.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
 
 
-class NextItemIndex(MultiProcessDataLoaderSupport):
+class NextItemIndex:
     def __init__(self, index_path: Path):
+        super().__init__()
         if not index_path.exists():
             raise Exception(f"could not find file with index at: {index_path}")
         self._index_path = index_path
-
         self._init()
 
     def _init(self):
@@ -73,13 +70,10 @@ class NextItemIndex(MultiProcessDataLoaderSupport):
 
         return session_idx, target_pos
 
-    def _mp_init(self, id: int, num_worker: int, seed: int):
-        self._init()
 
-
-class NextItemDataset(Dataset, MultiProcessDataLoaderSupport):
+class NextItemDataset(Dataset):
     def __init__(self, dataset: ItemSessionDataset, index: NextItemIndex):
-        super(NextItemDataset, self).__init__()
+        super().__init__()
         self._dataset = dataset
         self._index = index
 
@@ -94,11 +88,8 @@ class NextItemDataset(Dataset, MultiProcessDataLoaderSupport):
             TARGET_ENTRY_NAME: session[target_pos]
         }
 
-    def _mp_init(self, id: int, num_worker: int, seed: int):
-        pass
 
-
-class NextItemIterableDataset(IterableDataset, MultiProcessDataLoaderSupport):
+class NextItemIterableDataset(IterableDataset):
     def __init__(self, dataset: ItemSessionDataset, index: NextItemIndex, seed: int = None):
         self._dataset = dataset
         self._index = index
@@ -121,24 +112,5 @@ class NextItemIterableDataset(IterableDataset, MultiProcessDataLoaderSupport):
                 TARGET_ENTRY_NAME: session[target_idx]
             }
 
-    def _mp_init(self, id: int, num_worker: int, seed: int):
-        # use evenly sized shards for each worker
-        num_samples = len(self._index)
-        self._start, self._stop = calculate_shard(id, num_worker, seed, num_samples)
-
-    # FIXME (AD): we need to return some length, otherwise test does not work, see: https://github.com/PyTorchLightning/pytorch-lightning/issues/3500
     def __len__(self):
-        return self._stop - self._start
-
-
-def calculate_shard(id: int, num_worker: int, seed: int, num_samples: int) -> Tuple[int, int]:
-    worker_share = int(math.ceil(num_samples / float(num_worker)))
-
-    start = id * worker_share
-    if id < num_worker - 1:
-        #stop = min(start + worker_share - 1, num_samples)
-        stop = min(start + worker_share, num_samples)
-    else:
-        stop = num_samples
-
-    return start, stop
+        return len(self._index)
