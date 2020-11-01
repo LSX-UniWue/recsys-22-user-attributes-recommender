@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Dict, Any
 
 from dependency_injector import providers
 from pytorch_lightning import Trainer
@@ -11,12 +11,20 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.nextitem import NextItemDataset, NextItemIndex
 from data.datasets.posneg import PosNegSessionDataset
 from data.datasets.session import ItemSessionDataset, ItemSessionParser
-from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
 from metrics.utils.metric_utils import build_metrics
 from data.collate import padded_session_collate
 from tokenization.tokenizer import Tokenizer
 from tokenization.vocabulary import VocabularyReaderWriter, Vocabulary, CSVVocabularyReaderWriter
+
+
+def build_session_parser(csv_file: Path,
+                         item_column_name: str,
+                         delimiter: str,
+                         additional_features: Dict[str, Any]
+                         ) -> ItemSessionParser:
+    header = create_indexed_header(read_csv_header(csv_file, delimiter=delimiter))
+    return ItemSessionParser(header, item_column_name, additional_features=additional_features, delimiter=delimiter)
 
 
 def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider,
@@ -28,11 +36,18 @@ def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider
                                nip_index: str,  # unused but necessary to match the call signature
                                tokenizer: Tokenizer,
                                delimiter: str,
-                               item_column_name: str):
+                               item_column_name: str,
+                               additional_features: Dict[str, Any]
+                               ) -> Dataset:
         index = CsvDatasetIndex(Path(csv_file_index))
-        reader = CsvDatasetReader(Path(csv_file), index)
-        header = create_indexed_header(read_csv_header(Path(csv_file), delimiter=delimiter))
-        session_dataset = ItemSessionDataset(reader, ItemSessionParser(header, item_column_name, delimiter), tokenizer)
+        csv_file = Path(csv_file)
+        reader = CsvDatasetReader(csv_file, index)
+
+        session_parser = build_session_parser(csv_file=csv_file,
+                                              item_column_name=item_column_name,
+                                              delimiter=delimiter,
+                                              additional_features=additional_features)
+        session_dataset = ItemSessionDataset(reader, session_parser, tokenizer)
 
         return PosNegSessionDataset(session_dataset, tokenizer)
 
@@ -101,12 +116,17 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
                                 csv_file_index: str,
                                 tokenizer: Tokenizer,
                                 delimiter: str,
-                                item_column_name: str
+                                item_column_name: str,
+                                additional_features: Dict[str, Any]
                                 ):
         index = CsvDatasetIndex(Path(csv_file_index))
-        reader = CsvDatasetReader(Path(csv_file), index)
-        header = create_indexed_header(read_csv_header(Path(csv_file), delimiter=delimiter))
-        return ItemSessionDataset(reader, ItemSessionParser(header, item_column_name, delimiter), tokenizer)
+        csv_file = Path(csv_file)
+        reader = CsvDatasetReader(csv_file, index)
+        session_parser = build_session_parser(csv_file=csv_file,
+                                              item_column_name=item_column_name,
+                                              delimiter=delimiter,
+                                              additional_features=additional_features)
+        return ItemSessionDataset(reader, session_parser, tokenizer)
 
     dataset_config = dataset_config.dataset
 
@@ -116,11 +136,12 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
         dataset_config.csv_file_index,
         tokenizer_provider,
         dataset_config.delimiter,
-        dataset_config.item_column_name
+        dataset_config.item_column_name,
+        dataset_config.additional_features
     )
 
 
-def build_dataset_provider_factory(dataset_build_fn: Callable[[str, str, str, Tokenizer, str, str], Dataset],
+def build_dataset_provider_factory(dataset_build_fn: Callable[[str, str, str, Tokenizer, str, str, Dict[str, Any]], Dataset],
                                    tokenizer_provider: providers.Provider,
                                    dataset_config: providers.ConfigurationOption
                                    ) -> providers.Factory:
@@ -134,7 +155,8 @@ def build_dataset_provider_factory(dataset_build_fn: Callable[[str, str, str, To
         dataset_config.nip_index_file,
         tokenizer_provider,
         dataset_config.delimiter,
-        dataset_config.item_column_name
+        dataset_config.item_column_name,
+        dataset_config.additional_features
     )
 
 
@@ -147,12 +169,17 @@ def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provid
                                  nip_index: str,
                                  tokenizer: Tokenizer,
                                  delimiter: str,
-                                 item_column_name: str
+                                 item_column_name: str,
+                                 additional_features: Dict[str, Any]
                                  ) -> Dataset:
         index = CsvDatasetIndex(Path(csv_file_index))
-        reader = CsvDatasetReader(Path(csv_file), index)
-        header = create_indexed_header(read_csv_header(Path(csv_file), delimiter=delimiter))
-        session_dataset = ItemSessionDataset(reader, ItemSessionParser(header, item_column_name, delimiter), tokenizer)
+        csv_file = Path(csv_file)
+        reader = CsvDatasetReader(csv_file, index)
+        session_parser = build_session_parser(csv_file=csv_file,
+                                              item_column_name=item_column_name,
+                                              delimiter=delimiter,
+                                              additional_features=additional_features)
+        session_dataset = ItemSessionDataset(reader, session_parser, tokenizer)
 
         return NextItemDataset(session_dataset, NextItemIndex(Path(nip_index)))
 

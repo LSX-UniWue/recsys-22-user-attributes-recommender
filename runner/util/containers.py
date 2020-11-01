@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 from dependency_injector import containers, providers
 
 from models.bert4rec.bert4rec_model import BERT4RecModel
@@ -24,24 +26,9 @@ def build_default_config() -> providers.Configuration:
             'default_root_dir': '/tmp/checkpoints'
         },
         'datasets': {
-            'train': {
-                'loader': {
-                    'num_workers': 1,
-                    'shuffle': True
-                }
-            },
-            'validation': {
-                'loader': {
-                    'num_workers': 1,
-                    'shuffle': False
-                }
-            },
-            'test': {
-                'loader': {
-                    'num_workers': 1,
-                    'shuffle': False
-                }
-            }
+            'train': _build_default_dataset_config(shuffle=True),
+            'validation': _build_default_dataset_config(shuffle=False),
+            'test': _build_default_dataset_config(shuffle=False)
         }
 
 
@@ -49,7 +36,19 @@ def build_default_config() -> providers.Configuration:
     return config
 
 
-# XXX: find a better
+def _build_default_dataset_config(shuffle: bool) -> Dict[str, Any]:
+    return {
+        'dataset': {
+            'additional_features': {}
+        },
+        'loader': {
+            'num_workers': 1,
+            'shuffle': shuffle
+        }
+    }
+
+
+# XXX: find a better way to allow
 def _kwargs_adapter(clazz, kwargs):
     return clazz(**kwargs)
 
@@ -111,11 +110,11 @@ class CaserContainer(containers.DeclarativeContainer):
 
     module = providers.Singleton(
         CaserModule,
-        model,
-        tokenizer,
-        module_config.learning_rate,
-        module_config.weight_decay,
-        metrics
+        model=model,
+        tokenizer=tokenizer,
+        learning_rate=module_config.learning_rate,
+        weight_decay=module_config.weight_decay,
+        metrics=metrics
     )
 
     train_dataset_config = config.datasets.train
@@ -149,13 +148,13 @@ class SASRecContainer(containers.DeclarativeContainer):
 
     module = providers.Singleton(
         SASRecModule,
-        model,
-        module_config.learning_rate,
-        module_config.beta_1,
-        module_config.beta_2,
-        tokenizer,
-        module_config.batch_first,
-        metrics
+        model=model,
+        learning_rate=module_config.learning_rate,
+        beta_1=module_config.beta_1,
+        beta_2=module_config.beta_2,
+        teokinizer=tokenizer,
+        batch_first=module_config.batch_first,
+        metrics=metrics
     )
 
     train_dataset_config = config.datasets.train
@@ -205,6 +204,7 @@ class NarmContainer(containers.DeclarativeContainer):
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer)
 
     trainer = build_standard_trainer(config)
+
 
 class GRUContainer(containers.DeclarativeContainer):
 

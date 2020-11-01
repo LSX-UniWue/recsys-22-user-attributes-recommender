@@ -1,6 +1,7 @@
 import io
 from pathlib import Path
 import sys
+from typing import Dict, Any, Iterable, Callable
 
 from numpy.random._generator import default_rng
 from torch.utils.data import Dataset, IterableDataset
@@ -10,10 +11,22 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME, INT_BYTE_SIZE, TARGET_ENTRY_NAME
 from data.datasets.session import ItemSessionDataset
 
 
-class NextItemIndexBuilder:
+def all_remaining_items(session: Dict[str, Any]
+                        ) -> Iterable[int]:
+    return range(1, len(session[ITEM_SEQ_ENTRY_NAME]))
 
-    def __init__(self, min_session_length: int = 2):
+
+class NextItemIndexBuilder:
+    """
+    This index builder builds
+    """
+
+    def __init__(self,
+                 min_session_length: int = 2,
+                 target_positions_extractor: Callable[[Dict[str, Any]], Iterable[int]] = all_remaining_items
+                 ):
         self._min_session_length = min_session_length
+        self._target_positions_extractor = target_positions_extractor
 
     def build(self, dataset: ItemSessionDataset, index_path: Path):
         if not index_path.exists():
@@ -22,10 +35,12 @@ class NextItemIndexBuilder:
         current_idx = 0
         with index_path.open("wb") as index_file:
             for session_idx in tqdm(range(len(dataset)), desc="Creating Index."):
-                sessions = dataset[session_idx][ITEM_SEQ_ENTRY_NAME]
-                # remove sessions with
-                if len(sessions) > self._min_session_length:
-                    for target_pos in range(1, len(sessions)):
+                session = dataset[session_idx]
+                items = session[ITEM_SEQ_ENTRY_NAME]
+                # remove session with lower min session length
+                if len(items) > self._min_session_length:
+                    target_positions = self._target_positions_extractor(session)
+                    for target_pos in target_positions:
                         self._write_entry(index_file, session_idx, target_pos)
                         current_idx += 1
             # write length at the end

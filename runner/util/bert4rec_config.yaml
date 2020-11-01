@@ -4,6 +4,17 @@ datasets:
       csv_file: /Users/nosebrain/Desktop/small/test.csv
       csv_file_index: /Users/nosebrain/Desktop/small/test.idx
       delimiter: "\t"
+      additional_features:
+        hero_id:
+          type: int
+          sequence: false
+        timestamp:
+          type: timestamp
+          format: '%Y-%m-%dT%H:%M:%S.%f'
+          sequence: true
+        is_start_item:
+          type: bool
+          sequence: true
       item_column_name: item_id
       nip_index_file: /Users/nosebrain/Desktop/small/test.nip.idx
     loader:
@@ -14,6 +25,17 @@ datasets:
       csv_file: /Users/nosebrain/Desktop/small/train.csv
       csv_file_index: /Users/nosebrain/Desktop/small/train.idx
       delimiter: "\t"
+      additional_features:
+        hero_id:
+          type: int
+          sequence: false
+        timestamp:
+          type: timestamp
+          format: '%Y-%m-%dT%H:%M:%S.%f'
+          sequence: true
+        is_start_item:
+          type: bool
+          sequence: true
       item_column_name: item_id
     loader:
       batch_size: 4
@@ -23,6 +45,17 @@ datasets:
       csv_file: /Users/nosebrain/Desktop/small/valid.csv
       csv_file_index: /Users/nosebrain/Desktop/small/valid.idx
       delimiter: "\t"
+      additional_features:
+        hero_id:
+          type: int
+          sequence: false
+        timestamp:
+          type: timestamp
+          format: '%Y-%m-%dT%H:%M:%S.%f'
+          sequence: true
+        is_start_item:
+          type: bool
+          sequence: true
       item_column_name: item_id
       nip_index_file: /Users/nosebrain/Desktop/small/valid.nip.idx
     loader:
@@ -35,7 +68,7 @@ model:
   num_transformer_heads: 1
   num_transformer_layers: 1
   transformer_hidden_size: 16
-  embedding_mode: sum
+#  embedding_mode: sum
 module:
   batch_first: true
   mask_probability: 0.15

@@ -12,7 +12,8 @@ class GRUSeqItemRecommenderModel(nn.Module):
                  hidden_size: int,
                  num_layers: int,
                  dropout: float,
-                 embedding_mode: str = None):
+                 embedding_mode: str = None
+                 ):
         super(GRUSeqItemRecommenderModel, self).__init__()
 
         self.embedding_mode = embedding_mode
