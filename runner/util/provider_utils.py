@@ -185,14 +185,14 @@ def provide_nextit_loader(
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        num_workers=num_workers,
+#        num_workers=num_workers,
         collate_fn=padded_session_collate(
             max_seq_length,
             tokenizer.pad_token_id,
             [ITEM_SEQ_ENTRY_NAME],
             ITEM_SEQ_ENTRY_NAME
         ),
-        worker_init_fn=mp_worker_init_fn
+     #   worker_init_fn=mp_worker_init_fn
     )
 
 

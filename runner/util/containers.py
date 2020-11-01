@@ -26,19 +26,19 @@ def build_default_config() -> providers.Configuration:
         'datasets': {
             'train': {
                 'loader': {
-                    'num_workers': 4,
+                    'num_workers': 1,
                     'shuffle': True
                 }
             },
             'validation': {
                 'loader': {
-                    'num_workers': 4,
+                    'num_workers': 1,
                     'shuffle': False
                 }
             },
             'test': {
                 'loader': {
-                    'num_workers': 4,
+                    'num_workers': 1,
                     'shuffle': False
                 }
             }
