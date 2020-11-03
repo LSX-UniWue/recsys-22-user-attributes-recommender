@@ -13,6 +13,7 @@ from data.utils import create_indexed_header, read_csv_header
 def filter_by_sequence_feature(session: Dict[str, Any],
                                feature_key: str
                                ) -> Iterable[int]:
+    print(",".join(session.keys()))
     feature_values = session[feature_key]
     targets = list(filter(itemgetter(1), enumerate(feature_values)))
     target_idxs = list(map(itemgetter(0), targets))
