@@ -37,7 +37,10 @@ def build_default_config() -> providers.Configuration:
 def _build_default_dataset_config(shuffle: bool) -> Dict[str, Any]:
     return {
         'dataset': {
-            'additional_features': {}
+            'parser': {
+                'additional_features': {},
+                'item_separator': None
+            }
         },
         'loader': {
             'num_workers': 4,

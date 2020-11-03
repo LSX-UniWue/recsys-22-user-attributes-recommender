@@ -130,15 +130,16 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
         return ItemSessionDataset(reader, session_parser, tokenizer)
 
     dataset_config = dataset_config.dataset
+    parser_config = dataset_config.parser
 
     return providers.Factory(
         provide_session_dataset,
         dataset_config.csv_file,
         dataset_config.csv_file_index,
         tokenizer_provider,
-        dataset_config.delimiter,
-        dataset_config.item_column_name,
-        dataset_config.additional_features
+        parser_config.delimiter,
+        parser_config.item_column_name,
+        parser_config.additional_features
     )
 
 
@@ -148,6 +149,7 @@ def build_dataset_provider_factory(dataset_build_fn: Callable[[str, str, str, To
                                    ) -> providers.Factory:
 
     dataset_config = dataset_config.dataset
+    parser_config = dataset_config.parser
 
     return providers.Factory(
         dataset_build_fn,
@@ -155,9 +157,9 @@ def build_dataset_provider_factory(dataset_build_fn: Callable[[str, str, str, To
         dataset_config.csv_file_index,
         dataset_config.nip_index_file,
         tokenizer_provider,
-        dataset_config.delimiter,
-        dataset_config.item_column_name,
-        dataset_config.additional_features
+        parser_config.delimiter,
+        parser_config.item_column_name,
+        parser_config.additional_features
     )
 
 
