@@ -185,11 +185,17 @@ def _mask_items(inputs: torch.Tensor,
 
     target = inputs.clone()
     # we sample a few items in all sequences for the mask training
-    probability_matrix = torch.full(target.shape, mask_probability)
+    device_to_use = inputs.device
+    probability_matrix = torch.full(size=target.shape,
+                                    fill_value=mask_probability,
+                                    device=device_to_use)
     special_tokens_mask = [
         tokenizer.get_special_tokens_mask(val, already_has_special_tokens=True) for val in inputs.tolist()
     ]
-    probability_matrix.masked_fill_(torch.tensor(special_tokens_mask, dtype=torch.bool), value=0.0)
+    probability_matrix.masked_fill_(torch.tensor(special_tokens_mask,
+                                                 dtype=torch.bool,
+                                                 device=device_to_use),
+                                    value=0.0)
     if tokenizer.pad_token is not None:
         padding_mask = target.eq(tokenizer.pad_token_id)
         probability_matrix.masked_fill_(padding_mask, value=0.0)
