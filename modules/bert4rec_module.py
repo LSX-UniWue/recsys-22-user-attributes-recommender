@@ -146,7 +146,9 @@ def _expand_sequence(inputs: torch.Tensor,
         shape_addition_padding = (1, input_shape[1])
 
     # generate a tensor with the addition seq step (filled with padding tokens)
-    additional_padding = torch.full(shape_addition_padding, tokenizer.pad_token_id, dtype=inputs.dtype)
+    additional_padding = torch.full(shape_addition_padding, tokenizer.pad_token_id,
+                                    dtype=inputs.dtype,
+                                    device=inputs.device)
     return torch.cat([inputs, additional_padding], dim=1 if batch_first else 0)
 
 
@@ -165,6 +167,7 @@ def _add_mask_token_at_ending(input_seq: torch.Tensor,
     target_mask = F.one_hot(first_index, max_seq_length).bool()
     input_seq[target_mask] = tokenizer.mask_token_id
     return input_seq, target_mask
+
 
 # TODO: implement as collate function
 def _mask_items(inputs: torch.Tensor,
