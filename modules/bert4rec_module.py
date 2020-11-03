@@ -208,8 +208,9 @@ def _mask_items(inputs: torch.Tensor,
     inputs[indices_replaced] = tokenizer.mask_token_id
 
     # 10% of the time, we replace masked input items with random items
-    indices_random = torch.bernoulli(torch.full(target.shape, 0.5)).bool() & masked_indices & ~indices_replaced
-    random_words = torch.randint(len(tokenizer), target.shape, dtype=torch.long)
+    indices_random = torch.bernoulli(torch.full(target.shape, 0.5,
+                                                device=device_to_use)).bool() & masked_indices & ~indices_replaced
+    random_words = torch.randint(len(tokenizer), target.shape, dtype=torch.long, device=device_to_use)
     inputs[indices_random] = random_words[indices_random]
 
     # the rest of the time (10% of the time) we keep the masked input tokens unchanged
