@@ -64,7 +64,8 @@ class ItemSessionParser(SessionParser):
     def parse(self,
               raw_session: str
               ) -> Dict[str, Any]:
-        reader = csv.reader(io.StringIO(raw_session), delimiter=self._delimiter)
+        reader = csv.reader(io.StringIO(raw_session),
+                            delimiter=self._delimiter)
 
         entries = list(reader)
         items = [self._get_item(entry) for entry in entries]
@@ -95,9 +96,9 @@ class ItemSessionParser(SessionParser):
 
     def _get_item(self,
                   entry: List[str]
-                  ) -> int:
+                  ) -> str:
         item_column_idx = self._indexed_headers[self._item_header_name]
-        return int(entry[item_column_idx])
+        return entry[item_column_idx]
 
 
 class ItemSessionDataset(Dataset):
