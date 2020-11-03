@@ -14,18 +14,18 @@ class BERT4RecBaseModel(nn.Module):
                  transformer_hidden_size: int,
                  num_transformer_heads: int,
                  num_transformer_layers: int,
-                 dropout: float):
+                 transformer_dropout: float):
         super().__init__()
 
         self.transformer_hidden_size = transformer_hidden_size
         self.num_transformer_heads = num_transformer_heads
         self.num_transformer_layers = num_transformer_layers
-        self.dropout = dropout
+        self.transformer_dropout = transformer_dropout
 
         encoder_layers = nn.TransformerEncoderLayer(d_model=self.transformer_hidden_size,
                                                     nhead=self.num_transformer_heads,
                                                     dim_feedforward=self.transformer_hidden_size,
-                                                    dropout=self.dropout,
+                                                    dropout=self.transformer_dropout,
                                                     activation='gelu')
 
         # TODO: check encoder norm?
@@ -100,9 +100,9 @@ class BERT4RecModel(BERT4RecBaseModel):
         return cls(transformer_hidden_size=config.transformer_hidden_size,
                    num_transformer_heads=config.num_transformer_heads,
                    num_transformer_layers=config.num_transformer_layers,
-                   item_vocab_size=config.item_voc_size,
+                   item_vocab_size=config.item_vocab_size,
                    max_seq_length=config.max_seq_length,
-                   dropout=config.transformer_dropout)
+                   transformer_dropout=config.transformer_dropout)
 
     def __init__(self,
                  transformer_hidden_size: int,
@@ -110,12 +110,12 @@ class BERT4RecModel(BERT4RecBaseModel):
                  num_transformer_layers: int,
                  item_vocab_size: int,
                  max_seq_length: int,
-                 dropout: float,
+                 transformer_dropout: float,
                  embedding_mode: str = None):
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
                          num_transformer_layers=num_transformer_layers,
-                         dropout=dropout)
+                         transformer_dropout=transformer_dropout)
 
         self.item_vocab_size = item_vocab_size
         self.max_seq_length = max_seq_length + 1
@@ -124,7 +124,7 @@ class BERT4RecModel(BERT4RecBaseModel):
         self.embedding = TransformerEmbedding(item_voc_size=self.item_vocab_size,
                                               max_seq_len=self.max_seq_length,
                                               embedding_size=self.transformer_hidden_size,
-                                              dropout=self.dropout,
+                                              dropout=self.transformer_dropout,
                                               embedding_mode=self.embedding_mode)
         # TODO: init bias
         self.output_bias = nn.Parameter(torch.rand(self.item_vocab_size))
