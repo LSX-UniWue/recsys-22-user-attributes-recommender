@@ -56,6 +56,16 @@ def _kwargs_adapter(clazz, kwargs):
 class BERT4RecContainer(containers.DeclarativeContainer):
 
     config = build_default_config()
+    # some model specific default value
+    config.from_dict({
+        'module': {
+            'num_warmup_steps': 10000,
+            'learning_rate': 0.001,
+            'beta_1': 0.99,
+            'beta_2': 0.998,
+            'batch_first': True
+        }
+    })
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
