@@ -23,9 +23,11 @@ class NextItemIndexBuilder:
 
     def __init__(self,
                  min_session_length: int = 2,
-                 target_positions_extractor: Callable[[Dict[str, Any]], Iterable[int]] = all_remaining_items
+                 target_positions_extractor: Callable[[Dict[str, Any]], Iterable[int]] = None
                  ):
         self._min_session_length = min_session_length
+        if target_positions_extractor is None:
+            target_positions_extractor = all_remaining_items
         self._target_positions_extractor = target_positions_extractor
 
     def build(self, dataset: ItemSessionDataset, index_path: Path):
