@@ -120,7 +120,5 @@ class ItemSessionDataset(Dataset):
         parsed_session = self._parser.parse(session)
         items = parsed_session[ITEM_SEQ_ENTRY_NAME]
         tokenized_items = self._tokenizer.convert_tokens_to_ids(items) if self._tokenizer else items
-
-        return {
-            ITEM_SEQ_ENTRY_NAME: tokenized_items
-        }
+        parsed_session[ITEM_SEQ_ENTRY_NAME] = tokenized_items
+        return parsed_session
