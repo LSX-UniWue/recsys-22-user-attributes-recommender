@@ -18,6 +18,7 @@ datasets:
       item_column_name: item_id
       nip_index_file: /Users/nosebrain/Desktop/small/test.nip.idx
     loader:
+      num_workers: 0
       batch_size: 4
       max_seq_length: 10
   train:
@@ -38,6 +39,7 @@ datasets:
           sequence: true
       item_column_name: item_id
     loader:
+      num_workers: 0
       batch_size: 4
       max_seq_length: 10
   validation:
@@ -59,15 +61,16 @@ datasets:
       item_column_name: item_id
       nip_index_file: /Users/nosebrain/Desktop/small/valid.nip.idx
     loader:
+      num_workers: 0
       batch_size: 4
       max_seq_length: 10
 model:
-  dropout: 0.1
   item_vocab_size: 250
   max_seq_length: 10
   num_transformer_heads: 1
   num_transformer_layers: 1
   transformer_hidden_size: 16
+  transformer_dropout: 0.1
 #  embedding_mode: sum
 module:
   batch_first: true

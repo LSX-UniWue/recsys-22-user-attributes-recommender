@@ -30,8 +30,6 @@ def build_default_config() -> providers.Configuration:
             'validation': _build_default_dataset_config(shuffle=False),
             'test': _build_default_dataset_config(shuffle=False)
         }
-
-
     })
     return config
 
@@ -42,7 +40,7 @@ def _build_default_dataset_config(shuffle: bool) -> Dict[str, Any]:
             'additional_features': {}
         },
         'loader': {
-            'num_workers': 1,
+            'num_workers': 4,
             'shuffle': shuffle
         }
     }

@@ -27,6 +27,7 @@ class PosNegSessionDataset(Dataset):
         # TODO (AD) right now we only support ranking the full item set. Often on datasets with large item spaces,
         #  only a sample is drawn and ranked. We need to parameterize this class so that different strategies can be
         #  used.
+        # FIXME: this should only add the items to the map, not create a new one
         return {
             ITEM_SEQ_ENTRY_NAME: x,
             POSITIVE_SAMPLES_ENTRY_NAME: pos,

@@ -118,7 +118,10 @@ class ItemSessionDataset(Dataset):
     def __getitem__(self, idx):
         session = self._reader.get_session(idx)
         parsed_session = self._parser.parse(session)
+        if self._tokenizer is None:
+            return parsed_session
+        # convert the tokens into ids
         items = parsed_session[ITEM_SEQ_ENTRY_NAME]
-        tokenized_items = self._tokenizer.convert_tokens_to_ids(items) if self._tokenizer else items
+        tokenized_items = self._tokenizer.convert_tokens_to_ids(items)
         parsed_session[ITEM_SEQ_ENTRY_NAME] = tokenized_items
         return parsed_session
