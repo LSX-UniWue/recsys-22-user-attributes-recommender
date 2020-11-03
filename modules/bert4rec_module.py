@@ -204,7 +204,7 @@ def _mask_items(inputs: torch.Tensor,
     target[~masked_indices] = CROSS_ENTROPY_IGNORE_INDEX
 
     # 80% of the time, we replace masked input items with mask item ([MASK])
-    indices_replaced = torch.bernoulli(torch.full(target.shape, 0.8)).bool() & masked_indices
+    indices_replaced = torch.bernoulli(torch.full(target.shape, 0.8, device=device_to_use)).bool() & masked_indices
     inputs[indices_replaced] = tokenizer.mask_token_id
 
     # 10% of the time, we replace masked input items with random items
