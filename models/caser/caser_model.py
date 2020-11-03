@@ -23,7 +23,7 @@ class CaserModel(nn.Module):
     def from_config(cls,
                     config: CaserConfig) -> 'CaserModel':
         return cls(embedding_size=config.d,
-                   item_voc_size=config.item_voc_size,
+                   item_voc_size=config.item_vocab_size,
                    user_voc_size=config.user_voc_size,
                    max_seq_length=config.max_seq_length,
                    num_vertical_filters=config.num_vertical_filters,
