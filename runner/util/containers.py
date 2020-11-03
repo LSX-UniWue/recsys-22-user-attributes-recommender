@@ -64,7 +64,8 @@ class BERT4RecContainer(containers.DeclarativeContainer):
             'beta_1': 0.99,
             'beta_2': 0.998,
             'batch_first': True,
-            'mask_probability': 0.2
+            'mask_probability': 0.2,
+            'weight_decay': 0.01
         }
     })
 
