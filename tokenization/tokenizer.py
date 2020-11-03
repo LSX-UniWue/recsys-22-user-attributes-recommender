@@ -57,7 +57,7 @@ class Tokenizer:
         return self.vocabulary
 
     def convert_tokens_to_ids(self,
-                              items: Union[str, List[str]]
+                              items: Union[str, List[str], List[List[str]]]
                               ) -> Union[Optional[int], List[int]]:
         if items is None:
             return None
@@ -87,7 +87,7 @@ class Tokenizer:
         return [True] + ([False] * len(token_ids)) + [True, True] + ([False] * len(second_item_ids)) + [True]
 
     def _convert_item_to_id(self,
-                            token: str
+                            token: Union[str, List[str]]
                             ) -> Optional[int]:
         """
         Converts the token into its id. If the token is not part of the vocabulary and the unk_token property is set,
@@ -99,11 +99,20 @@ class Tokenizer:
         """
         if token is None:
             return None
-        token_id = self.vocabulary.get_id(token)
-        if token_id is None:
-            if self.unk_token is not None:
-                return self.unk_token_id
-        return token_id
+
+        if isinstance(token, str):
+            token_id = self.vocabulary.get_id(token)
+            if token_id is None:
+                if self.unk_token is not None:
+                    return self.unk_token_id
+            return token_id
+
+        # here we assume it is a list
+        ids = []
+        for item in token:
+            encoded_token = self._convert_item_to_id(item)
+            ids.append(encoded_token)
+        return ids
 
     def __len__(self):
         """ Size of the full vocabulary with the added tokens """

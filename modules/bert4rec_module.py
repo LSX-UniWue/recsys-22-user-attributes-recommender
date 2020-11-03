@@ -149,6 +149,9 @@ def _expand_sequence(inputs: torch.Tensor,
     additional_padding = torch.full(shape_addition_padding, tokenizer.pad_token_id,
                                     dtype=inputs.dtype,
                                     device=inputs.device)
+    if len(input_shape) > 2:
+        additional_padding = additional_padding.repeat(1, input_shape[2]).unsqueeze(1)
+
     return torch.cat([inputs, additional_padding], dim=1 if batch_first else 0)
 
 
@@ -159,8 +162,15 @@ def _add_mask_token_at_ending(input_seq: torch.Tensor,
         :return: the input_seq with the masking token,
     """
     input_seq = input_seq.clone()
-    padding_mask = get_padding_mask(input_seq, tokenizer, transposed=False)
-    batch_size, max_seq_length = input_seq.size()
+    input_shape = input_seq.size()
+    padding_input_to_use = input_seq
+    if len(input_shape) > 2:
+        padding_input_to_use = input_seq.max(dim=2).values
+    padding_mask = get_padding_mask(padding_input_to_use, tokenizer, transposed=False)
+
+    batch_size = input_shape[0]
+    max_seq_length = input_shape[1]
+
     inverse_indices = torch.arange(start=max_seq_length,
                                    end=0,
                                    step=-1,

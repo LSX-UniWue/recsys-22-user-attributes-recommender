@@ -5,7 +5,7 @@ def generate_position_ids(length: int,
                           shape,
                           device: torch.device = None):
     position_ids = torch.arange(length, dtype=torch.long, device=device)
-    return position_ids.unsqueeze(0).transpose(0, 1).expand(shape)
+    return position_ids.unsqueeze(0).transpose(0, 1).expand(shape[0: 2])
 
 
 def generate_square_subsequent_mask(size: int):

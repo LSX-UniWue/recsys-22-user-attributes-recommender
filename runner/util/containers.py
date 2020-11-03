@@ -44,7 +44,8 @@ def _build_default_dataset_config(shuffle: bool) -> Dict[str, Any]:
         },
         'loader': {
             'num_workers': 4,
-            'shuffle': shuffle
+            'shuffle': shuffle,
+            'max_seq_step_length': None
         }
     }
 

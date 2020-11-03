@@ -22,10 +22,14 @@ from tokenization.vocabulary import VocabularyReaderWriter, Vocabulary, CSVVocab
 def build_session_parser(csv_file: Path,
                          item_column_name: str,
                          delimiter: str,
-                         additional_features: Dict[str, Any]
+                         additional_features: Dict[str, Any],
+                         item_separator: str
                          ) -> ItemSessionParser:
     header = create_indexed_header(read_csv_header(csv_file, delimiter=delimiter))
-    return ItemSessionParser(header, item_column_name, additional_features=additional_features, delimiter=delimiter)
+    return ItemSessionParser(header, item_column_name,
+                             additional_features=additional_features,
+                             item_separator=item_separator,
+                             delimiter=delimiter)
 
 
 def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider,
@@ -38,6 +42,7 @@ def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider
                                tokenizer: Tokenizer,
                                delimiter: str,
                                item_column_name: str,
+                               item_separator: str,
                                additional_features: Dict[str, Any]
                                ) -> Dataset:
         index = CsvDatasetIndex(Path(csv_file_index))
@@ -47,6 +52,7 @@ def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider
         session_parser = build_session_parser(csv_file=csv_file,
                                               item_column_name=item_column_name,
                                               delimiter=delimiter,
+                                              item_separator=item_separator,
                                               additional_features=additional_features)
         session_dataset = ItemSessionDataset(reader, session_parser, tokenizer)
 
@@ -73,11 +79,13 @@ def build_session_loader_provider_factory(dataset_config: providers.Configuratio
                                           tokenizer_provider: providers.Provider
                                           ) -> providers.Factory:
     dataset = build_session_dataset_provider_factory(tokenizer_provider, dataset_config)
+    dataset_loader_config = dataset_config.loader
     return providers.Factory(
         provide_posneg_loader,
         dataset,
-        dataset_config.loader.batch_size,
-        dataset_config.loader.max_seq_length,
+        dataset_loader_config.batch_size,
+        dataset_loader_config.max_seq_length,
+        dataset_loader_config.max_seq_step_length,
         tokenizer_provider
     )
 
@@ -91,6 +99,7 @@ def build_nextitem_loader_provider_factory(dataset_config: providers.Configurati
         dataset,
         dataset_config.loader.batch_size,
         dataset_config.loader.max_seq_length,
+        dataset_config.loader.max_seq_step_length,
         dataset_config.loader.shuffle,
         dataset_config.loader.num_workers,
         tokenizer_provider
@@ -106,6 +115,7 @@ def build_posneg_loader_provider_factory(dataset_config: providers.Configuration
         dataset,
         dataset_config.loader.batch_size,
         dataset_config.loader.max_seq_length,
+        dataset_config.loader.max_seq_step_length,
         tokenizer_provider
     )
 
@@ -118,6 +128,7 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
                                 tokenizer: Tokenizer,
                                 delimiter: str,
                                 item_column_name: str,
+                                item_separator: str,
                                 additional_features: Dict[str, Any]
                                 ):
         index = CsvDatasetIndex(Path(csv_file_index))
@@ -126,6 +137,7 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
         session_parser = build_session_parser(csv_file=csv_file,
                                               item_column_name=item_column_name,
                                               delimiter=delimiter,
+                                              item_separator=item_separator,
                                               additional_features=additional_features)
         return ItemSessionDataset(reader, session_parser, tokenizer)
 
@@ -139,11 +151,12 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
         tokenizer_provider,
         parser_config.delimiter,
         parser_config.item_column_name,
+        parser_config.item_separator,
         parser_config.additional_features
     )
 
 
-def build_dataset_provider_factory(dataset_build_fn: Callable[[str, str, str, Tokenizer, str, str, Dict[str, Any]], Dataset],
+def build_dataset_provider_factory(dataset_build_fn: Callable[[str, str, str, Tokenizer, str, str, str, Dict[str, Any]], Dataset],
                                    tokenizer_provider: providers.Provider,
                                    dataset_config: providers.ConfigurationOption
                                    ) -> providers.Factory:
@@ -159,6 +172,7 @@ def build_dataset_provider_factory(dataset_build_fn: Callable[[str, str, str, To
         tokenizer_provider,
         parser_config.delimiter,
         parser_config.item_column_name,
+        parser_config.item_separator,
         parser_config.additional_features
     )
 
@@ -173,6 +187,7 @@ def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provid
                                  tokenizer: Tokenizer,
                                  delimiter: str,
                                  item_column_name: str,
+                                 item_separator: str,
                                  additional_features: Dict[str, Any]
                                  ) -> Dataset:
         index = CsvDatasetIndex(Path(csv_file_index))
@@ -181,6 +196,7 @@ def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provid
         session_parser = build_session_parser(csv_file=csv_file,
                                               item_column_name=item_column_name,
                                               delimiter=delimiter,
+                                              item_separator=item_separator,
                                               additional_features=additional_features)
         session_dataset = ItemSessionDataset(reader, session_parser, tokenizer)
 
@@ -192,16 +208,18 @@ def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provid
 def provide_posneg_loader(dataset: Dataset,
                           batch_size: int,
                           max_seq_length: int,
+                          max_seq_step_length: int,
                           tokenizer: Tokenizer):
     return DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=True,
         collate_fn=padded_session_collate(
-            max_seq_length,
-            tokenizer.pad_token_id,
-            ["session", "positive_samples", "negative_samples"],
-            "session"
+            max_length=max_seq_length,
+            pad_token_id=tokenizer.pad_token_id,
+            entries_to_pad=["session", "positive_samples", "negative_samples"],
+            session_length_entry="session",
+            max_seq_step_length=max_seq_step_length
         )
     )
 
@@ -209,6 +227,7 @@ def provide_posneg_loader(dataset: Dataset,
 def provide_nextit_loader(dataset: Dataset,
                           batch_size: int,
                           max_seq_length: int,
+                          max_seq_step_length: int,
                           shuffle: bool,
                           num_workers: int,
                           tokenizer: Tokenizer
@@ -221,10 +240,11 @@ def provide_nextit_loader(dataset: Dataset,
         shuffle=shuffle,
         num_workers=num_workers,
         collate_fn=padded_session_collate(
-            max_seq_length,
-            tokenizer.pad_token_id,
-            [ITEM_SEQ_ENTRY_NAME],
-            ITEM_SEQ_ENTRY_NAME
+            max_length=max_seq_length,
+            pad_token_id=tokenizer.pad_token_id,
+            entries_to_pad=[ITEM_SEQ_ENTRY_NAME],
+            session_length_entry=ITEM_SEQ_ENTRY_NAME,
+            max_seq_step_length=max_seq_step_length
         ),
         worker_init_fn=init_worker_fn
     )

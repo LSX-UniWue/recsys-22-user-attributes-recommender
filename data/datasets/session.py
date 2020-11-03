@@ -1,7 +1,7 @@
 import datetime
 import functools
 import io
-from typing import Dict, List, Any, Callable
+from typing import Dict, List, Any, Callable, Union
 import csv
 from torch.utils.data import Dataset
 
@@ -49,6 +49,7 @@ class ItemSessionParser(SessionParser):
                  indexed_headers: Dict[str, int],
                  item_header_name: str,
                  additional_features: Dict[str, Any] = None,
+                 item_separator: str = None,
                  delimiter: str = "\t"
                  ):
         super().__init__()
@@ -58,6 +59,8 @@ class ItemSessionParser(SessionParser):
         if additional_features is None:
             additional_features = {}
         self._additional_features = additional_features
+
+        self._item_separator = item_separator
 
         self._delimiter = delimiter
 
@@ -96,9 +99,12 @@ class ItemSessionParser(SessionParser):
 
     def _get_item(self,
                   entry: List[str]
-                  ) -> str:
+                  ) -> Union[str, List[str]]:
         item_column_idx = self._indexed_headers[self._item_header_name]
-        return entry[item_column_idx]
+        entry = entry[item_column_idx]
+        if self._item_separator is None:
+            return entry
+        return entry.split(self._item_separator)
 
 
 class ItemSessionDataset(Dataset):
