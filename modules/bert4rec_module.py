@@ -161,7 +161,10 @@ def _add_mask_token_at_ending(input_seq: torch.Tensor,
     input_seq = input_seq.clone()
     padding_mask = get_padding_mask(input_seq, tokenizer, transposed=False)
     batch_size, max_seq_length = input_seq.size()
-    inverse_indices = torch.arange(start=max_seq_length, end=0, step=-1).repeat([batch_size, 1])
+    inverse_indices = torch.arange(start=max_seq_length,
+                                   end=0,
+                                   step=-1,
+                                   device=input_seq.device).repeat([batch_size, 1])
     inverse_padding_positions = padding_mask * inverse_indices
     first_index = max_seq_length - inverse_padding_positions.max(dim=1).values
     target_mask = F.one_hot(first_index, max_seq_length).bool()
