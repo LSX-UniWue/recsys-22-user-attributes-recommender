@@ -16,7 +16,8 @@ def filter_by_sequence_feature(session: Dict[str, Any],
     feature_values = session[feature_key]
     targets = list(filter(itemgetter(1), enumerate(feature_values)))
     target_idxs = list(map(itemgetter(0), targets))
-    target_idxs.remove(0)  # XXX: quick hack to remove the first sequence that
+    if 0 in target_idxs:
+        target_idxs.remove(0)  # XXX: quick hack to remove the first sequence that
     return target_idxs
 
 
