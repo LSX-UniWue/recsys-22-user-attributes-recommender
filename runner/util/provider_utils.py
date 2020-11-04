@@ -81,11 +81,12 @@ def build_session_loader_provider_factory(dataset_config: providers.Configuratio
     dataset = build_session_dataset_provider_factory(tokenizer_provider, dataset_config)
     dataset_loader_config = dataset_config.loader
     return providers.Factory(
-        provide_posneg_loader,
+        provide_session_loader,
         dataset,
         dataset_loader_config.batch_size,
         dataset_loader_config.max_seq_length,
         dataset_loader_config.max_seq_step_length,
+        dataset_loader_config.num_workers
         tokenizer_provider
     )
 
@@ -221,6 +222,23 @@ def provide_posneg_loader(dataset: Dataset,
             session_length_entry="session",
             max_seq_step_length=max_seq_step_length
         )
+    )
+
+
+def provide_session_loader(dataset: Dataset, batch_size: int, max_seq_length: int, num_workers: int, tokenizer: Tokenizer):
+    init_worker_fn = None if num_workers == 0 else mp_worker_init_fn
+    return DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        collate_fn=padded_session_collate(
+            max_seq_length,
+            tokenizer.pad_token_id,
+            ["session", "positive_samples", "negative_samples"],
+            "session"
+        ),
+        num_workers=num_workers,
+        worker_init_fn=init_worker_fn
     )
 
 

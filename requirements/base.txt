@@ -7,5 +7,6 @@ pytest==6.0.1
 pyhocon==0.3.55
 
 torchvision==0.7.0
-pytorch-lightning==1.0.1
+pytorch-lightning==1.0.5
 dependency-injector==3.44.0
+typer[all]==0.3.2
