@@ -80,7 +80,7 @@ model:
   num_transformer_layers: 1
   transformer_hidden_size: 16
   transformer_dropout: 0.1
-  embedding_mode: sum
+  embedding_mode: mean
 module:
   batch_first: true
   mask_probability: 0.15
@@ -88,14 +88,12 @@ module:
   beta_2: 0.998
   learning_rate: 0.001
   weight_decay: 0.01
-  num_warmup_steps: 100
+  num_warmup_steps: 0
   metrics:
-    recall: 5
-    mrr:
+    recall:
       - 1
       - 3
       - 5
-      - 10
 tokenizer:
   special_tokens:
     pad_token: <PAD>

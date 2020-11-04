@@ -64,10 +64,24 @@ class BERT4RecModule(pl.LightningModule):
 
         # call the model
         prediction_scores = self.model(input_seq, padding_mask=padding_mask)
-        loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)
-        flatten_predictions = prediction_scores.view(-1, len(self.tokenizer))
-        flatten_targets = torch.flatten(target)
-        masked_lm_loss = loss_func(flatten_predictions, flatten_targets)
+
+        if len(input_seq.size()) > 2:
+            pos_weight = torch.ones(len(self.tokenizer), dtype=torch.float, device=prediction_scores.device)
+            pos_weight[self.tokenizer.get_special_token_ids()] = 0.0
+            loss_func = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+            # replace the -100 masking from the normal sequence token with the pad token
+            # (which is set to be ignored, see pos_weights; padding token is a special token)
+            target[target == CROSS_ENTROPY_IGNORE_INDEX] = self.tokenizer.pad_token_id
+            # than convert the targets to a multi one hot encoding
+            targets = torch.zeros(prediction_scores.size()).scatter_(2, target, 1.)
+            targets = targets.squeeze(0)
+            targets = targets.float()
+            masked_lm_loss = loss_func(prediction_scores, targets)
+        else:
+            loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)
+            flatten_predictions = prediction_scores.view(-1, len(self.tokenizer))
+            flatten_targets = torch.flatten(target)
+            masked_lm_loss = loss_func(flatten_predictions, flatten_targets)
 
         return {
             'loss': masked_lm_loss
@@ -196,7 +210,8 @@ def _mask_items(inputs: torch.Tensor,
     target = inputs.clone()
     # we sample a few items in all sequences for the mask training
     device_to_use = inputs.device
-    probability_matrix = torch.full(size=target.shape,
+    target_shape_to_use = target.shape[:2]
+    probability_matrix = torch.full(size=target_shape_to_use,
                                     fill_value=mask_probability,
                                     device=device_to_use)
     special_tokens_mask = [
@@ -207,18 +222,23 @@ def _mask_items(inputs: torch.Tensor,
                                                  device=device_to_use),
                                     value=0.0)
     if tokenizer.pad_token is not None:
-        padding_mask = target.eq(tokenizer.pad_token_id)
+        padding_tensor_to_use = target
+        if len(target.size()) > 2:
+            # we can use the max function to check if each entry is the padding token
+            padding_tensor_to_use = target.max(dim=2).values
+
+        padding_mask = padding_tensor_to_use.eq(tokenizer.pad_token_id)
         probability_matrix.masked_fill_(padding_mask, value=0.0)
     masked_indices = torch.bernoulli(probability_matrix).bool()
     # to compute loss on masked items, we set ignore index on the other positions
     target[~masked_indices] = CROSS_ENTROPY_IGNORE_INDEX
 
     # 80% of the time, we replace masked input items with mask item ([MASK])
-    indices_replaced = torch.bernoulli(torch.full(target.shape, 0.8, device=device_to_use)).bool() & masked_indices
+    indices_replaced = torch.bernoulli(torch.full(target_shape_to_use, 0.8, device=device_to_use)).bool() & masked_indices
     inputs[indices_replaced] = tokenizer.mask_token_id
 
     # 10% of the time, we replace masked input items with random items
-    indices_random = torch.bernoulli(torch.full(target.shape, 0.5,
+    indices_random = torch.bernoulli(torch.full(target_shape_to_use, 0.5,
                                                 device=device_to_use)).bool() & masked_indices & ~indices_replaced
     random_words = torch.randint(len(tokenizer), target.shape, dtype=torch.long, device=device_to_use)
     inputs[indices_random] = random_words[indices_random]
@@ -241,6 +261,10 @@ def get_padding_mask(tensor: torch.Tensor,
     :return:
     """
     # the masking should be true where the padding token is set
+
+    if len(tensor.size()) > 2:
+        tensor = tensor.max(dim=2).values
+
     if inverse:
         padding_mask = tensor.ne(tokenizer.pad_token_id)
     else:

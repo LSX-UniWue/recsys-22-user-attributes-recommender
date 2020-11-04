@@ -1,4 +1,5 @@
 from abc import ABC
+from functools import partial
 
 import torch
 from torch import nn as nn
@@ -13,14 +14,15 @@ class ItemEmbedding(nn.Module):
                  ):
         super().__init__()
         self.embedding_size = embedding_size
-        if embedding_mode is not None:
-            embedding = nn.EmbeddingBag(num_embeddings=item_voc_size,
-                                        embedding_dim=self.embedding_size,
-                                        mode=embedding_mode)
-        else:
-            embedding = nn.Embedding(num_embeddings=item_voc_size,
-                                     embedding_dim=self.embedding_size)
-        self.embedding = embedding
+        self.embedding_mode = embedding_mode
+        self.embedding = nn.Embedding(num_embeddings=item_voc_size,
+                                      embedding_dim=self.embedding_size)
+
+        self.embedding_flatten = {
+            None: lambda x: x,
+            'sum': partial(torch.sum, dim=-2),
+            'mean': partial(torch.mean, dim=-2)
+        }[self.embedding_mode]
         self.init_weights()
 
     def init_weights(self):
@@ -30,7 +32,9 @@ class ItemEmbedding(nn.Module):
     def forward(self,
                 items: torch.Tensor
                 ) -> torch.Tensor:
-        return self.embedding(items)
+        embedding = self.embedding(items)
+        embedding = self.embedding_flatten(embedding)
+        return embedding
 
 
 class MatrixFactorizationLayer(nn.Linear, ABC):

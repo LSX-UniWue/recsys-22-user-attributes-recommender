@@ -53,6 +53,16 @@ class Tokenizer:
     def cls_token_id(self) -> int:
         return self.convert_tokens_to_ids(self.cls_token)
 
+    def get_special_token_ids(self) -> List[int]:
+        special_token_ids = []
+        for key in SPECIAL_TOKENS_ATTRIBUTES:
+            token = getattr(self, key)
+            token_id = self.convert_tokens_to_ids(token)
+            if token_id is not None:
+                special_token_ids.append(token_id)
+
+        return special_token_ids
+
     def get_vocabulary(self) -> Vocabulary:
         return self.vocabulary
 

@@ -79,7 +79,7 @@ class ItemSessionParser(SessionParser):
         for feature_key, info in self._additional_features.items():
             feature_sequence = info['sequence']
 
-            # if feature changes over the sequence parse it over all entries, else extract it form the first item
+            # if feature changes over the sequence parse it over all entries, else extract it form the first entry
             if feature_sequence:
                 feature = [self._get_feature(entry, feature_key, info) for entry in entries]
             else:
