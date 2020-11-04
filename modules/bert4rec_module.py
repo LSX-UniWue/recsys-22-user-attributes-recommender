@@ -119,18 +119,23 @@ class BERT4RecModule(pl.LightningModule):
 
         if self.num_warmup_steps > 0:
             num_warmup_steps = self.num_warmup_steps
-            initial_learning_rate = self.learning_rate
 
-            # learning rate = step/warmup-step * init_learning_rate if in warmup-steps, else the init_learning_rate
             def _learning_rate_scheduler(step: int) -> float:
                 warmup_percent_done = step / num_warmup_steps
-                if warmup_percent_done >= 1:
-                    return initial_learning_rate
-                warmup_learning_rate = initial_learning_rate * warmup_percent_done
-                return warmup_learning_rate
+                # the learning rate should be reduce by step/warmup-step if in warmup-steps,
+                # else the learning rate is fixed
+                return min(1.0, warmup_percent_done)
 
             scheduler = LambdaLR(optimizer, _learning_rate_scheduler)
-            return [optimizer], [scheduler]
+
+            schedulers = [
+                {
+                    'scheduler': scheduler,
+                    'interval': 'step',
+                    'strict': True,
+                }
+            ]
+            return [optimizer], schedulers
         return optimizer
 
 
