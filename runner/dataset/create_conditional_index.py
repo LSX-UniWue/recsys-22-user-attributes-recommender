@@ -1,13 +1,16 @@
 import functools
-from argparse import ArgumentParser
 from operator import itemgetter
 from pathlib import Path
 from typing import Dict, Any, Iterable, Callable, Optional
+
+import typer
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets.nextitem import NextItemIndexBuilder
 from data.datasets.session import ItemSessionDataset, ItemSessionParser
 from data.utils import create_indexed_header, read_csv_header
+
+app = typer.Typer()
 
 
 def filter_by_sequence_feature(session: Dict[str, Any],
@@ -29,13 +32,17 @@ def _build_target_position_extractor(target_feature: str
     return functools.partial(filter_by_sequence_feature, feature_key=target_feature)
 
 
-def run(data_file_path: Path,
-        session_index_path: Path,
-        output_file_path: Path,
-        item_header_name: str,
-        min_session_length: int = 2,
-        delimiter: str = "\t",
-        target_feature: str = None):
+@app.command()
+def run(data_file_path: Path = typer.Argument(..., help="path to the input file in CSV format"),
+        session_index_path: Path = typer.Argument(..., help="path to the session index file"),
+        output_file_path: Path = typer.Argument(..., help="path to the output file"),
+        item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
+        min_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
+        delimiter: str = typer.Option("\t", help="the delimiter used in the CSV file."),
+        target_feature: str = typer.Option(..., help="the target column name to build the targets against (default all next"
+                                                     "subsequences will be considered); the target must be a boolean"
+                                                     "feature")
+        ) -> None:
 
     target_positions_extractor = _build_target_position_extractor(target_feature)
 
@@ -60,28 +67,4 @@ def run(data_file_path: Path,
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser()
-    parser.add_argument("data_file", help="path to the csv data file", type=str)
-    parser.add_argument("session_index_file", help="path to the session index file", type=str)
-    parser.add_argument("output_file", help="path where the index is written to", type=str)
-    parser.add_argument("item_header_name", help="name of the item column (header)", type=str)
-    parser.add_argument("--min_session_length", help="minimum session length (Default: 2)", default=2, type=int)
-    parser.add_argument("--delimiter", help="delimiter used in the csv data file (Default: \\t).", default="\t",
-                        type=str)
-    parser.add_argument('--target_feature', help='the target column name to build the targets against (default all next'
-                                                 'subsequences will be considered); the target must be a boolean'
-                                                 'feature',
-                        default=None, type=str)
-
-    args = parser.parse_args()
-
-    data_file = Path(args.data_file)
-    session_index_file = Path(args.session_index_file)
-    output_file = Path(args.output_file)
-    item_header_name = args.item_header_name
-
-    min_session_length = args.min_session_length
-    delimiter = args.delimiter
-
-    run(data_file, session_index_file, output_file, item_header_name, min_session_length, delimiter,
-        args.target_feature)
+    app()
