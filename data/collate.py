@@ -2,7 +2,6 @@ from functools import partial
 from typing import List, Optional, Callable, Any, Union
 
 import torch
-from torch.nn.utils.rnn import pad_sequence
 
 
 def padded_session_collate(max_length: int,

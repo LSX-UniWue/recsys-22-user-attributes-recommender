@@ -17,6 +17,70 @@ def get_tp(predictions: torch.Tensor,
     return tp.view(mask.size()).sum(-1)
 
 
+def calc_precision(prediction: torch.Tensor,
+                   target: torch.Tensor,
+                   k: int,
+                   mask: torch.Tensor = None
+                   ) -> torch.Tensor:
+    if len(target.size()) == 1:
+        # single dimension, unsqueeze it
+        target = torch.unsqueeze(target, dim=1)
+
+    if mask is None:
+        mask = torch.ones(target.size())
+
+    tp = get_tp(predictions=prediction, target=target, mask=mask, k=k)
+
+    return tp / k
+
+
+def calc_recall(prediction: torch.Tensor,
+                target: torch.Tensor,
+                k: int,
+                mask: torch.Tensor = None
+                ) -> torch.Tensor:
+    if len(target.size()) == 1:
+        # single dimension, unsqueeze it
+        target = torch.unsqueeze(target, dim=1)
+
+    if mask is None:
+        mask = torch.ones(target.size(), device=prediction.device)
+
+    tp = get_tp(predictions=prediction, target=target, mask=mask, k=k)
+    fn = mask.sum(-1) - tp
+
+    return tp / (tp + fn)
+
+
+class F1AtMetric(pl.metrics.Metric):
+
+    def __init__(self,
+                 k: int,
+                 dist_sync_on_step: bool = False
+                 ):
+        super().__init__(dist_sync_on_step=dist_sync_on_step)
+        self.add_state("f1", torch.tensor(0.0), dist_reduce_fx="sum")
+        self.add_state("count", torch.tensor(0), dist_reduce_fx="sum")
+        self._k = k
+
+    def update(self,
+               prediction: torch.Tensor,
+               target: torch.Tensor,
+               mask: torch.Tensor = None,
+               ):
+        recall = calc_recall(prediction, target, self._k, mask=mask)
+        precision = calc_precision(prediction, target, self._k, mask=mask)
+
+        f1 = 2 * recall * precision / (recall + precision)
+        f1[torch.isnan(f1)] = 0.0
+
+        self.f1 += f1.sum()
+        self.count += f1.size()[0]
+
+    def compute(self):
+        return self.f1 / self.count
+
+
 class PrecisionAtMetric(pl.metrics.Metric):
 
     def __init__(self,
@@ -25,7 +89,7 @@ class PrecisionAtMetric(pl.metrics.Metric):
                  ):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
         self._k = k
-        self.add_state("precision", torch.tensor(0.), dist_reduce_fx="sum")
+        self.add_state("precision", torch.tensor(0.0), dist_reduce_fx="sum")
         self.add_state("count", torch.tensor(0), dist_reduce_fx="sum")
 
     def update(self,
@@ -39,16 +103,7 @@ class PrecisionAtMetric(pl.metrics.Metric):
         :param mask: the mask to apply, iff no mask is provided all targets are used for calculating the metric
         :math `(N, I)`
         """
-        if len(target.size()) == 1:
-            # single dimension, unsqueeze it
-            target = torch.unsqueeze(target, 1)
-
-        if mask is None:
-            mask = torch.ones(target.size())
-
-        tp = get_tp(predictions=prediction, target=target, mask=mask, k=self._k)
-
-        precision = tp / self._k
+        precision = calc_precision(prediction, target, self._k, mask=mask)
         self.precision += precision.sum()
         self.count += precision.size()[0]
 
@@ -79,17 +134,7 @@ class RecallAtMetric(pl.metrics.Metric):
         :math `(N, I)`
         """
 
-        if len(target.size()) == 1:
-            # single dimension, unsqueeze it
-            target = torch.unsqueeze(target, 1)
-
-        if mask is None:
-            mask = torch.ones(target.size(), device=prediction.device)
-
-        tp = get_tp(predictions=prediction, target=target, mask=mask, k=self._k)
-        fn = mask.sum(-1) - tp
-
-        recall = tp / (tp + fn)
+        recall = calc_recall(prediction, target, self._k, mask=mask)
         self.recall += recall.sum()
         self.count += recall.size()[0]
 

@@ -4,7 +4,7 @@ from typing import List, Dict, Union
 
 import torch
 
-from metrics.ranking_metrics import PrecisionAtMetric, RecallAtMetric, MRRAtMetric
+from metrics.ranking_metrics import PrecisionAtMetric, RecallAtMetric, F1AtMetric, MRRAtMetric
 
 
 def _build_metric(metric_id: str
@@ -12,6 +12,7 @@ def _build_metric(metric_id: str
     return {
         'recall': RecallAtMetric(k),
         'precision': PrecisionAtMetric(k),
+        'f1': F1AtMetric(k),
         'mrr': MRRAtMetric(k)
     }[metric_id]
 
