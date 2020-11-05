@@ -9,6 +9,7 @@ from tqdm import tqdm
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, INT_BYTE_SIZE, TARGET_ENTRY_NAME
 from data.datasets.session import ItemSessionDataset
+from data.mp import MultiProcessDataLoaderSupport
 
 
 def all_remaining_items(session: Dict[str, Any]
@@ -88,7 +89,8 @@ class NextItemIndex:
         return session_idx, target_pos
 
 
-class NextItemDataset(Dataset):
+class NextItemDataset(Dataset, MultiProcessDataLoaderSupport):
+
     def __init__(self, dataset: ItemSessionDataset, index: NextItemIndex):
         super().__init__()
         self._dataset = dataset
@@ -104,6 +106,9 @@ class NextItemDataset(Dataset):
             ITEM_SEQ_ENTRY_NAME: session[:target_pos],
             TARGET_ENTRY_NAME: session[target_pos]
         }
+
+    def _mp_init(self, id: int, num_worker: int, seed: int):
+        pass
 
 
 class NextItemIterableDataset(IterableDataset):
