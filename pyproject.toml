@@ -6,7 +6,7 @@ authors = ["Alexander Dallmann <dallman@informatik.uni-wuerzburg.de>"]
 license = "LGPLv3"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = ">=3.7"
 tqdm = "^4.48.2"
 numpy = "^1.19.1"
 scipy = "^1.5.2"
