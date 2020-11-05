@@ -73,7 +73,7 @@ class BERT4RecModule(pl.LightningModule):
             # (which is set to be ignored, see pos_weights; padding token is a special token)
             target[target == CROSS_ENTROPY_IGNORE_INDEX] = self.tokenizer.pad_token_id
             # than convert the targets to a multi one hot encoding
-            targets = torch.zeros(prediction_scores.size()).scatter_(2, target, 1.)
+            targets = torch.zeros(prediction_scores.size(), device=target.device).scatter_(2, target, 1.)
             targets = targets.squeeze(0)
             targets = targets.float()
             masked_lm_loss = loss_func(prediction_scores, targets)
