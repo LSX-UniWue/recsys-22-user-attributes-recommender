@@ -110,7 +110,12 @@ class BERT4RecModule(pl.LightningModule):
         prediction = prediction[target_mask]
 
         for name, metric in self.metrics.items():
-            step_value = metric(prediction, targets)
+            mask = None
+            # when we have mulitple target per sequence step, we have to provide a mask for the paddings applied to
+            # the target tensor
+            if len(input_seq.size()) > 2:
+                mask = ~ targets.eq(self.tokenizer.pad_token_id)
+            step_value = metric(prediction, targets, mask=mask)
             self.log(name, step_value, prog_bar=True)
 
     # FIXME: copy paste code from sas rec module

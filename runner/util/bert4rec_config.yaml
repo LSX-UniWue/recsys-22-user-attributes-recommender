@@ -17,7 +17,7 @@ datasets:
 #            type: bool
 #            sequence: true
         item_column_name: item_id
-#        item_separator: ' + '
+        item_separator: ' + '
       nip_index_file: /Users/nosebrain/Desktop/small/test.nip.idx
     loader:
       num_workers: 0
@@ -42,7 +42,7 @@ datasets:
 #            type: bool
 #            sequence: true
         item_column_name: item_id
-#        item_separator: ' + '
+        item_separator: ' + '
     loader:
       num_workers: 0
       batch_size: 4
@@ -66,13 +66,13 @@ datasets:
 #            type: bool
 #            sequence: true
         item_column_name: item_id
-#        item_separator: ' + '
+        item_separator: ' + '
       nip_index_file: /Users/nosebrain/Desktop/small/valid.nip.idx
     loader:
       num_workers: 0
       batch_size: 4
       max_seq_length: 10
- #     max_seq_step_length: 5
+      max_seq_step_length: 5
 model:
   item_vocab_size: 250
   max_seq_length: 10
@@ -80,7 +80,7 @@ model:
   num_transformer_layers: 1
   transformer_hidden_size: 16
   transformer_dropout: 0.1
-#  embedding_mode: mean
+  embedding_mode: mean
 module:
   batch_first: true
   mask_probability: 0.15
@@ -88,7 +88,7 @@ module:
   beta_2: 0.998
   learning_rate: 0.001
   weight_decay: 0.01
-  num_warmup_steps: 0
+  num_warmup_steps: 3
   metrics:
     precision:
       - 1
