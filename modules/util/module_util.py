@@ -16,6 +16,10 @@ def get_padding_mask(tensor: torch.Tensor,
 
     :return:
     """
+
+    if len(tensor.size()) > 2:
+        tensor = tensor.max(dim=2).values
+
     # the masking should be true where the padding token is set
     if inverse:
         padding_mask = tensor.ne(tokenizer.pad_token_id)
