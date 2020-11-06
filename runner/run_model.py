@@ -22,7 +22,9 @@ def build_container(model_id) -> containers.DeclarativeContainer:
 
 @app.command()
 def run_model(model: str = typer.Argument(..., help="the model to run"),
-              config_file: str = typer.Argument(..., help='the path to the config file')
+              config_file: str = typer.Argument(..., help='the path to the config file'),
+              do_train: bool = typer.Option(True, help='flag iff the model should be trained'),
+              do_test: bool = typer.Option(False, help='flag iff the model should be tested (after training)')
               ) -> None:
     # XXX: because the dependency injector does not provide a error message when the config file does not exists,
     # we manually check if the config file exists
@@ -35,7 +37,12 @@ def run_model(model: str = typer.Argument(..., help="the model to run"),
     module = container.module()
 
     trainer = container.trainer()
-    trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
+
+    if do_train:
+        trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
+
+    if do_test:
+        trainer.test(test_dataloader=container.test_dataloader())
 
 
 if __name__ == "__main__":
