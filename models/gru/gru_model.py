@@ -13,6 +13,12 @@ class GRUSeqItemRecommenderModel(nn.Module):
         super(GRUSeqItemRecommenderModel, self).__init__()
 
         self.item_embeddings = nn.Embedding(num_items, embedding_dim=item_embedding_dim)
+
+        # FIXME: maybe this should not be done here
+        if num_layers == 1 and dropout > 0:
+            print("setting the dropout to 0 because the number of layers is 1")
+            dropout = 0
+
         self.gru = nn.GRU(item_embedding_dim, hidden_size, dropout=dropout, num_layers=num_layers, batch_first=True)
         self.fcn = nn.Linear(hidden_size, num_items, bias=True)
         self.dropout = nn.Dropout2d(p=dropout)
