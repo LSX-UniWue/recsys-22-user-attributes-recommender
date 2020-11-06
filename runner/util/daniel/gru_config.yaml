@@ -46,9 +46,6 @@ model:
   dropout: 0.1
   embedding_mode: mean
 module:
-  beta_1: 0.99
-  beta_2: 0.998
-  learning_rate: 0.001
   metrics:
     precision:
       - 1
