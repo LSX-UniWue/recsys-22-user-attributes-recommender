@@ -38,7 +38,7 @@ class GRUModule(pl.LightningModule):
         target = batch[TARGET_ENTRY_NAME]
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
-        logits = self._forward(input_seq, padding_mask, batch_idx)
+        logits = self._forward(input_seq, padding_mask)
         loss = self.loss(logits, target)
 
         return {
@@ -50,7 +50,7 @@ class GRUModule(pl.LightningModule):
         target = batch[TARGET_ENTRY_NAME]
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
-        logits = self._forward(input_seq, padding_mask, batch_idx)
+        logits = self._forward(input_seq, padding_mask)
 
         loss = self.loss(logits, target)
         self.log("val_loss", loss, prog_bar=True)
@@ -69,8 +69,8 @@ class GRUModule(pl.LightningModule):
     def test_epoch_end(self, outputs: Union[Dict[str, Tensor], List[Dict[str, Tensor]]]):
         self.validation_epoch_end(outputs)
 
-    def _forward(self, session, lengths, batch_idx):
-        return self.model(session, lengths, batch_idx)
+    def _forward(self, session, lengths):
+        return self.model(session, lengths)
 
     def configure_optimizers(self):
         return torch.optim.Adam(

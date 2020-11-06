@@ -112,7 +112,7 @@ class BERT4RecModule(pl.LightningModule):
 
         for name, metric in self.metrics.items():
             mask = None
-            # when we have mulitple target per sequence step, we have to provide a mask for the paddings applied to
+            # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
             # the target tensor
             if len(input_seq.size()) > 2:
                 mask = ~ targets.eq(self.tokenizer.pad_token_id)

@@ -6,6 +6,10 @@ from torch import nn as nn
 
 
 class ItemEmbedding(nn.Module):
+    """
+    embedding to use for the items
+    handles multiple items per sequence step, by averaging or summing the single embeddings
+    """
 
     def __init__(self,
                  item_voc_size: int,
