@@ -8,6 +8,7 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
+from modules.util.module_util import get_padding_mask
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
 
@@ -255,32 +256,3 @@ def _mask_items(inputs: torch.Tensor,
 
     # the rest of the time (10% of the time) we keep the masked input tokens unchanged
     return inputs, target
-
-
-def get_padding_mask(tensor: torch.Tensor,
-                     tokenizer: Tokenizer,
-                     transposed: bool = True,
-                     inverse: bool = False) -> torch.Tensor:
-    """
-    generates the padding mask based on the tokenizer (by default batch first)
-    :param tensor:
-    :param tokenizer:
-    :param transposed:
-    :param inverse
-
-    :return:
-    """
-    # the masking should be true where the padding token is set
-
-    if len(tensor.size()) > 2:
-        tensor = tensor.max(dim=2).values
-
-    if inverse:
-        padding_mask = tensor.ne(tokenizer.pad_token_id)
-    else:
-        padding_mask = tensor.eq(tokenizer.pad_token_id)
-
-    if transposed:
-        return padding_mask.transpose(0, 1)
-
-    return padding_mask

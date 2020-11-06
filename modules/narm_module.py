@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from metrics.utils.metric_utils import build_metrics
 from models.narm.narm_model import NarmModel
-from modules.bert4rec_module import get_padding_mask
+from modules.util.module_util import get_padding_mask
 from tokenization.tokenizer import Tokenizer
 
 

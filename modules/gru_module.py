@@ -8,7 +8,7 @@ from torch import Tensor
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.gru.gru_model import GRUSeqItemRecommenderModel
-from modules.bert4rec_module import get_padding_mask
+from modules.util.module_util import get_padding_mask
 from tokenization.tokenizer import Tokenizer
 
 
@@ -31,6 +31,7 @@ class GRUModule(pl.LightningModule):
         self.beta_2 = beta_2
         self.tokenizer = tokenizer
         self.metrics = metrics
+        self.loss = nn.CrossEntropyLoss()
 
     def training_step(self, batch, batch_idx):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
@@ -38,8 +39,7 @@ class GRUModule(pl.LightningModule):
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
         logits = self._forward(input_seq, padding_mask, batch_idx)
-
-        loss = nn.functional.cross_entropy(logits, target)
+        loss = self.loss(logits, target)
 
         return {
             "loss": loss
@@ -52,7 +52,7 @@ class GRUModule(pl.LightningModule):
 
         logits = self._forward(input_seq, padding_mask, batch_idx)
 
-        loss = nn.functional.cross_entropy(logits, target)
+        loss = self.loss(logits, target)
         self.log("val_loss", loss, prog_bar=True)
 
         for name, metric in self.metrics.items():
