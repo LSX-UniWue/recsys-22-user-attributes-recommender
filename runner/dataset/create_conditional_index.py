@@ -39,9 +39,9 @@ def run(data_file_path: Path = typer.Argument(..., help="path to the input file 
         item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
         min_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
         delimiter: str = typer.Option("\t", help="the delimiter used in the CSV file."),
-        target_feature: str = typer.Option(..., help="the target column name to build the targets against"
-                                                     "(default all next subsequences will be considered);"
-                                                     "the target must be a boolean feature")
+        target_feature: str = typer.Option(None, help="the target column name to build the targets against"
+                                                      "(default all next subsequences will be considered);"
+                                                      "the target must be a boolean feature")
         ) -> None:
 
     target_positions_extractor = _build_target_position_extractor(target_feature)
