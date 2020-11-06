@@ -44,7 +44,7 @@ def _build_default_dataset_config(shuffle: bool) -> Dict[str, Any]:
             }
         },
         'loader': {
-            'num_workers': 4,
+            'num_workers': 0,
             'shuffle': shuffle,
             'max_seq_step_length': None
         }
@@ -231,14 +231,7 @@ class GRUContainer(containers.DeclarativeContainer):
     model_config = config.model
 
     # model
-    model = providers.Singleton(
-        GRUSeqItemRecommenderModel,
-        model_config.num_items,
-        model_config.item_embedding_dim,
-        model_config.hidden_size,
-        model_config.num_layers,
-        model_config.dropout,
-    )
+    model = providers.Singleton(_kwargs_adapter, GRUSeqItemRecommenderModel, config.model)
 
     module_config = config.module
     metrics = build_metrics_provider(module_config.metrics)

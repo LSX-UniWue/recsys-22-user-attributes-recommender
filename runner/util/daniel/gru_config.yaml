@@ -16,6 +16,7 @@ datasets:
     dataset:
       csv_file: /Users/nosebrain/Desktop/small/train.csv
       csv_file_index: /Users/nosebrain/Desktop/small/train.idx
+      nip_index_file: /Users/nosebrain/Desktop/small/train.nip.idx
       parser:
         delimiter: "\t"
         item_column_name: item_id
