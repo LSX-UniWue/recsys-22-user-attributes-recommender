@@ -102,8 +102,12 @@ class NextItemDataset(Dataset, MultiProcessDataLoaderSupport):
     def __getitem__(self, idx):
         session_idx, target_pos = self._index[idx]
         session = self._dataset[session_idx][ITEM_SEQ_ENTRY_NAME]
+        input_sequence = session[:target_pos]
+
+        if len(input_sequence) == 0:
+            print(f"index_ids = {idx}, session_idx = {session_idx}, target_pos = {target_pos} ")
         return {
-            ITEM_SEQ_ENTRY_NAME: session[:target_pos],
+            ITEM_SEQ_ENTRY_NAME: input_sequence,
             TARGET_ENTRY_NAME: session[target_pos]
         }
 
