@@ -15,6 +15,17 @@ from runner.util.provider_utils import build_tokenizer_provider, build_session_l
     build_metrics_provider
 
 
+CONFIG_KEY_MODULE = 'module'
+
+MODULE_ADAM_OPTIMIZER_DEFAULT_VALUES = {
+    CONFIG_KEY_MODULE: {
+        'learning_rate': 0.001,
+        'beta_1': 0.99,
+        'beta_2': 0.998,
+    }
+}
+
+
 def build_default_config() -> providers.Configuration:
     config = providers.Configuration()
     # init some default values
@@ -61,16 +72,14 @@ class BERT4RecContainer(containers.DeclarativeContainer):
     config = build_default_config()
     # some model specific default value
     config.from_dict({
-        'module': {
+        CONFIG_KEY_MODULE: {
             'num_warmup_steps': 10000,
-            'learning_rate': 0.001,
-            'beta_1': 0.99,
-            'beta_2': 0.998,
             'batch_first': True,
             'mask_probability': 0.2,
             'weight_decay': 0.01
         }
     })
+    config.from_dict(MODULE_ADAM_OPTIMIZER_DEFAULT_VALUES)
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
@@ -224,6 +233,7 @@ class NarmContainer(containers.DeclarativeContainer):
 class GRUContainer(containers.DeclarativeContainer):
 
     config = build_default_config()
+    config.from_dict(MODULE_ADAM_OPTIMIZER_DEFAULT_VALUES)
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
