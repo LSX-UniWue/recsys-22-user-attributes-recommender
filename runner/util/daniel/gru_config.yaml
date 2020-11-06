@@ -5,22 +5,10 @@ datasets:
       csv_file_index: /Users/nosebrain/Desktop/small/test.idx
       parser:
         delimiter: "\t"
-#        additional_features:
-#          hero_id:
-#            type: int
-#            sequence: false
-#          timestamp:
-#            type: timestamp
-#            format: '%Y-%m-%dT%H:%M:%S.%f'
-#            sequence: true
-#          is_start_item:
-#            type: bool
-#            sequence: true
         item_column_name: item_id
         item_separator: ' + '
       nip_index_file: /Users/nosebrain/Desktop/small/test.nip.idx
     loader:
-      num_workers: 0
       batch_size: 4
       max_seq_length: 10
       max_seq_step_length: 5
@@ -30,21 +18,9 @@ datasets:
       csv_file_index: /Users/nosebrain/Desktop/small/train.idx
       parser:
         delimiter: "\t"
-#        additional_features:
-#          hero_id:
-#            type: int
-#            sequence: false
-#          timestamp:
-#            type: timestamp
-#            format: '%Y-%m-%dT%H:%M:%S.%f'
-#            sequence: true
-#          is_start_item:
-#            type: bool
-#            sequence: true
         item_column_name: item_id
         item_separator: ' + '
     loader:
-      num_workers: 0
       batch_size: 4
       max_seq_length: 10
       max_seq_step_length: 5
@@ -54,41 +30,24 @@ datasets:
       csv_file_index: /Users/nosebrain/Desktop/small/valid.idx
       parser:
         delimiter: "\t"
-#        additional_features:
-#          hero_id:
-#            type: int
-#            sequence: false
-#          timestamp:
-#            type: timestamp
-#            format: '%Y-%m-%dT%H:%M:%S.%f'
-#            sequence: true
-#          is_start_item:
-#            type: bool
-#            sequence: true
         item_column_name: item_id
         item_separator: ' + '
       nip_index_file: /Users/nosebrain/Desktop/small/valid.nip.idx
     loader:
-      num_workers: 0
       batch_size: 4
       max_seq_length: 10
       max_seq_step_length: 5
 model:
-  item_vocab_size: 250
-  max_seq_length: 10
-  num_transformer_heads: 1
-  num_transformer_layers: 1
-  transformer_hidden_size: 16
-  transformer_dropout: 0.1
+  num_items: 250
+  item_embedding_dim: 32
+  hidden_size: 128
+  num_layers: 1
+  dropout: 0.1
   embedding_mode: mean
 module:
-  batch_first: true
-  mask_probability: 0.15
   beta_1: 0.99
   beta_2: 0.998
   learning_rate: 0.001
-  weight_decay: 0.01
-  num_warmup_steps: 3
   metrics:
     precision:
       - 1
@@ -116,7 +75,4 @@ trainer:
   checkpoints:
     monitor: recall_at_5
     save_top_k: 3
-  gradient_clip_val: 0.5
   max_epochs: 1
-  limit_train_batches: 10
-  limit_val_batches: 10
