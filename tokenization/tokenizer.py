@@ -96,6 +96,7 @@ class Tokenizer:
             return [True] + ([False] * len(token_ids)) + [True]
         return [True] + ([False] * len(token_ids)) + [True, True] + ([False] * len(second_item_ids)) + [True]
 
+    # FIXME (AD) if the vocabulary does not contain an UNK token, this will cause an endless recursion.
     def _convert_item_to_id(self,
                             token: Union[str, List[str]]
                             ) -> Optional[int]:

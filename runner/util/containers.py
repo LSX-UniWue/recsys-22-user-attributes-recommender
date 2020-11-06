@@ -23,7 +23,8 @@ def build_default_config() -> providers.Configuration:
             'limit_train_batches': 1.0,
             'limit_val_batches': 1.0,
             'gradient_clip_val': 0.0,
-            'default_root_dir': '/tmp/checkpoints'
+            'default_root_dir': '/tmp/checkpoints',
+            'max_epochs': 20
         },
         'datasets': {
             'train': _build_default_dataset_config(shuffle=True),

@@ -1,5 +1,8 @@
 # A repository containing various recommender models
+## Development
+* Install [Poetry](https://python-poetry.org)
+* Clone the repository
+* Build the development virtual environment: `poetry install`
+* Enter the virtual environment: `poetry shell`
 
-Requirements:
-
-- Python >= 3.8
+ 
