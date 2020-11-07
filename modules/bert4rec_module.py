@@ -8,6 +8,7 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
+from modules import LOG_KEY_VALIDATION_LOSS
 from modules.util.module_util import get_padding_mask
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
@@ -67,15 +68,21 @@ class BERT4RecModule(pl.LightningModule):
                                         transposed=True)
 
         # call the model
-        prediction_scores = self.model(input_seq, padding_mask=padding_mask)
-        loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)
-        flatten_predictions = prediction_scores.view(-1, len(self.tokenizer))
-        flatten_targets = torch.flatten(target)
-        masked_lm_loss = loss_func(flatten_predictions, flatten_targets)
+        prediction_logit = self.model(input_seq, padding_mask=padding_mask)
 
+        masked_lm_loss = self._calc_loss(prediction_logit, target)
         return {
             'loss': masked_lm_loss
         }
+
+    def _calc_loss(self,
+                   prediction_logit: torch.Tensor,
+                   target: torch.Tensor
+                   ) -> float:
+        loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)
+        flatten_predictions = prediction_logit.view(-1, len(self.tokenizer))
+        flatten_targets = torch.flatten(target)
+        return loss_func(flatten_predictions, flatten_targets)
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
@@ -101,6 +108,9 @@ class BERT4RecModule(pl.LightningModule):
         prediction = self.model(input_seq, padding_mask=padding_mask)
         # extract the relevant seq steps, where the mask was set
         prediction = prediction[target_mask]
+
+        loss = self._calc_loss(prediction, targets)
+        self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
         for name, metric in self.metrics.items():
             step_value = metric(prediction, targets)

@@ -7,6 +7,7 @@ import torch.nn as nn
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.gru.gru_model import GRUSeqItemRecommenderModel
+from modules import LOG_KEY_VALIDATION_LOSS
 from modules.util.module_util import get_padding_mask
 from tokenization.tokenizer import Tokenizer
 
@@ -41,11 +42,18 @@ class GRUModule(pl.LightningModule):
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
         logits = self._forward(input_seq, padding_mask, batch_idx)
-        loss = self.loss(logits, target)
+        loss = self._calc_loss(logits, target)
 
         return {
             "loss": loss
         }
+
+    def _calc_loss(self,
+                   logits: torch.Tensor,
+                   target: torch.Tensor
+                   ) -> float:
+
+        return self.loss(logits, target)
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
@@ -57,8 +65,8 @@ class GRUModule(pl.LightningModule):
 
         logits = self._forward(input_seq, padding_mask, batch_idx)
 
-        loss = self.loss(logits, target)
-        self.log("val_loss", loss, prog_bar=True)
+        loss = self._calc_loss(logits, target)
+        self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
         for name, metric in self.metrics.items():
             step_value = metric(logits, target)
