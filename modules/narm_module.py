@@ -1,4 +1,4 @@
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Optional
 
 import torch
 
@@ -38,7 +38,10 @@ class NarmModule(pl.LightningModule):
 
         self.metrics = metrics
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self,
+                      batch: Dict[str, torch.Tensor],
+                      batch_idx: int
+                      ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
 
@@ -51,7 +54,10 @@ class NarmModule(pl.LightningModule):
             "loss": loss
         }
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self,
+                        batch: Dict[str, torch.Tensor],
+                        batch_idx: int
+                        ) -> None:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
 

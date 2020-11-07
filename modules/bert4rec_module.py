@@ -2,7 +2,7 @@ import torch
 import pytorch_lightning as pl
 import torch.nn.functional as F
 
-from typing import Tuple, List, Union, Dict
+from typing import Tuple, List, Union, Dict, Optional
 
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
@@ -44,7 +44,10 @@ class BERT4RecModule(pl.LightningModule):
         self.batch_first = batch_first
         self.metrics = metrics
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self,
+                      batch: Dict[str, torch.Tensor],
+                      batch_idx: int
+                      ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         input_seq = _expand_sequence(inputs=input_seq, tokenizer=self.tokenizer, batch_first=self.batch_first)
 
@@ -88,7 +91,10 @@ class BERT4RecModule(pl.LightningModule):
             'loss': masked_lm_loss
         }
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self,
+                        batch: Dict[str, torch.Tensor],
+                        batch_idx: int
+                        ) -> None:
         # shorter to allow the masking token
         input_seq = _expand_sequence(inputs=batch[ITEM_SEQ_ENTRY_NAME],
                                      tokenizer=self.tokenizer,
@@ -120,9 +126,19 @@ class BERT4RecModule(pl.LightningModule):
             self.log(name, step_value, prog_bar=True)
 
     # FIXME: copy paste code from sas rec module
-    def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]) -> None:
+    def validation_epoch_end(self,
+                             outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
+                             ) -> None:
         for name, metric in self.metrics.items():
             self.log(name, metric.compute(), prog_bar=True)
+
+    def test_step(self, batch, batch_idx):
+        self.validation_step(batch, batch_idx)
+
+    def test_epoch_end(self,
+                       outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
+                       ) -> None:
+        self.validation_epoch_end(outputs)
 
     def configure_optimizers(self):
         def _filter(name: str) -> bool:

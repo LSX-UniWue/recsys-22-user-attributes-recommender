@@ -1,4 +1,4 @@
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Optional
 
 import torch
 
@@ -43,7 +43,10 @@ class SASRecModule(pl.LightningModule):
 
         self.metrics = metrics
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self,
+                      batch: Dict[str, torch.Tensor],
+                      batch_idx: int
+                      ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         pos = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
@@ -67,7 +70,10 @@ class SASRecModule(pl.LightningModule):
             "loss": loss
         }
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self,
+                        batch: Dict[str, torch.Tensor],
+                        batch_idx: int
+                        ) -> None:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
@@ -94,7 +100,9 @@ class SASRecModule(pl.LightningModule):
             step_value = metric(prediction, targets)
             self.log(name, step_value, prog_bar=True)
 
-    def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]) -> None:
+    def validation_epoch_end(self,
+                             outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
+                             ) -> None:
         for name, metric in self.metrics.items():
             self.log(name, metric.compute(), prog_bar=True)
 
