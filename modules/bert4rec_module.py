@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from modules import LOG_KEY_VALIDATION_LOSS
-from modules.util.module_util import get_padding_mask
+from modules.util.module_util import get_padding_mask, convert_target_for_multi_label_margin_loss
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
 
@@ -78,19 +78,33 @@ class BERT4RecModule(pl.LightningModule):
     def _calc_loss(self,
                    prediction_logits: torch.Tensor,
                    target: torch.Tensor
-                   ) -> float:
+                   ) -> torch.Tensor:
         if len(target.size()) > 1:
-            pos_weight = torch.ones(len(self.tokenizer), dtype=torch.float, device=prediction_scores.device)
-            pos_weight[self.tokenizer.get_special_token_ids()] = 0.0
-            loss_func = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-            # replace the -100 masking from the normal sequence token with the pad token
-            # (which is set to be ignored, see pos_weights; padding token is a special token)
-            target[target == CROSS_ENTROPY_IGNORE_INDEX] = self.tokenizer.pad_token_id
-            # than convert the targets to a multi one hot encoding
-            targets = torch.zeros(prediction_logits.size(), device=target.device).scatter_(2, target, 1.)
-            targets = targets.squeeze(0)
-            targets = targets.float()
-            return loss_func(prediction_logits, targets)
+            # handle multiple items per sequence step
+            # for validation only one sequence step is taken into account
+            if len(prediction_logits.size()) == 2:
+                loss_fnc = nn.MultiLabelMarginLoss()
+                target = convert_target_for_multi_label_margin_loss(target, len(self.tokenizer),
+                                                                    self.tokenizer.pad_token_id)
+                return loss_fnc(prediction_logits, target)
+            # the multi label margin loss can't mask sequences of -1 when reducing the mean
+            # and can also not consider multiple sequence steps, so we do both things by hand
+            loss_fnc = nn.MultiLabelMarginLoss(reduction='sum')
+            # for training there maybe more than one steps
+            total_loss = torch.tensor(0., device=target.device)
+            total_steps = 0
+            for sequence_step, target_step in zip(prediction_logits, target):
+                # first check for a mask sequence for batch than sum all non mask sequence steps
+                steps = (~ target_step.eq(CROSS_ENTROPY_IGNORE_INDEX)).max(dim=1).values.sum(dim=0)
+                total_steps += steps
+                target_step = convert_target_for_multi_label_margin_loss(target_step, len(self.tokenizer),
+                                                                         self.tokenizer.pad_token_id)
+
+                target_step[target_step == CROSS_ENTROPY_IGNORE_INDEX] = -1
+                loss = loss_fnc(sequence_step, target_step)
+                total_loss += loss
+
+            return total_loss / total_steps
 
         # handle single item per sequence step
         loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)

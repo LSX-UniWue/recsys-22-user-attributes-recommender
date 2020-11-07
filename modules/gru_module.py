@@ -4,22 +4,12 @@ import torch
 
 import pytorch_lightning as pl
 import torch.nn as nn
-import torch.nn.functional as F
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.gru.gru_model import GRUSeqItemRecommenderModel
 from modules import LOG_KEY_VALIDATION_LOSS
-from modules.util.module_util import get_padding_mask
+from modules.util.module_util import get_padding_mask, convert_target_for_multi_label_margin_loss
 from tokenization.tokenizer import Tokenizer
-
-
-def _convert_target_for_multi_label_margin_loss(target: torch.Tensor,
-                                                num_classes: int,
-                                                pad_token_id: int
-                                                ) -> torch.Tensor:
-    converted_target = F.pad(target, (0, num_classes - target.size()[1]))
-    converted_target[converted_target == pad_token_id] = -1
-    return converted_target
 
 
 class GRUModule(pl.LightningModule):
@@ -61,13 +51,13 @@ class GRUModule(pl.LightningModule):
                    logits: torch.Tensor,
                    target: torch.Tensor
                    ) -> float:
-
         if len(target.size()) == 1:
+            # only one item per sequence step
             loss_fnc = nn.CrossEntropyLoss()
             return loss_fnc(logits, target)
 
         loss_fnc = nn.MultiLabelMarginLoss()
-        target = _convert_target_for_multi_label_margin_loss(target, len(self.tokenizer), self.tokenizer.pad_token_id)
+        target = convert_target_for_multi_label_margin_loss(target, len(self.tokenizer), self.tokenizer.pad_token_id)
         return loss_fnc(logits, target)
 
     def validation_step(self,
