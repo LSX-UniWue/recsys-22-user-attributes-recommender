@@ -5,12 +5,17 @@ from torch.utils.data import Dataset
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME
 from data.datasets.session import ItemSessionDataset
+from data.mp import MultiProcessSupport
 from tokenization.tokenizer import Tokenizer
 
 
-class PosNegSessionDataset(Dataset):
+class PosNegSessionDataset(Dataset, MultiProcessSupport):
 
-    def __init__(self, dataset: ItemSessionDataset, tokenizer: Tokenizer, seed: int = None):
+    def __init__(self,
+                 dataset: ItemSessionDataset,
+                 tokenizer: Tokenizer,
+                 seed: int = None
+                 ):
         self.dataset = dataset
         self.tokenizer = tokenizer
         self._rng = default_rng(seed=seed)
@@ -47,3 +52,7 @@ class PosNegSessionDataset(Dataset):
         available_tokens = list(tokens - used_tokens)
 
         return self._rng.choice(available_tokens, len(session) - 1, replace=True).tolist()
+
+    def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
+        # nothing to do here
+        pass

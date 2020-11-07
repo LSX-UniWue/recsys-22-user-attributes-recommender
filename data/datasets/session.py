@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 
 from data.base.reader import CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME
-from data.mp import MultiProcessDataLoaderSupport
+from data.mp import MultiProcessSupport
 from tokenization.tokenizer import Tokenizer
 
 
@@ -108,7 +108,7 @@ class ItemSessionParser(SessionParser):
         return entry.split(self._item_separator)
 
 
-class ItemSessionDataset(Dataset, MultiProcessDataLoaderSupport):
+class ItemSessionDataset(Dataset, MultiProcessSupport):
 
     def __init__(self,
                  reader: CsvDatasetReader,
@@ -134,5 +134,6 @@ class ItemSessionDataset(Dataset, MultiProcessDataLoaderSupport):
         parsed_session[ITEM_SEQ_ENTRY_NAME] = tokenized_items
         return parsed_session
 
-    def _mp_init(self, id: int, num_worker: int, seed: int):
+    def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
+        # nothing to do here
         pass

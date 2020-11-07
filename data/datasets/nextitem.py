@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, INT_BYTE_SIZE, TARGET_ENTRY_NAME
 from data.datasets.session import ItemSessionDataset
-from data.mp import MultiProcessDataLoaderSupport
+from data.mp import MultiProcessSupport
 
 
 def all_remaining_items(session: Dict[str, Any]
@@ -57,8 +57,11 @@ class NextItemIndexBuilder:
         index_file.write(target_pos.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
 
 
-class NextItemIndex:
-    def __init__(self, index_path: Path):
+class NextItemIndex(MultiProcessSupport):
+
+    def __init__(self,
+                 index_path: Path
+                 ):
         super().__init__()
         if not index_path.exists():
             raise Exception(f"could not find file with index at: {index_path}")
@@ -88,10 +91,16 @@ class NextItemIndex:
 
         return session_idx, target_pos
 
+    def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
+        self._init()
 
-class NextItemDataset(Dataset, MultiProcessDataLoaderSupport):
 
-    def __init__(self, dataset: ItemSessionDataset, index: NextItemIndex):
+class NextItemDataset(Dataset, MultiProcessSupport):
+
+    def __init__(self,
+                 dataset: ItemSessionDataset,
+                 index: NextItemIndex
+                 ):
         super().__init__()
         self._dataset = dataset
         self._index = index
@@ -111,7 +120,8 @@ class NextItemDataset(Dataset, MultiProcessDataLoaderSupport):
             TARGET_ENTRY_NAME: session[target_pos]
         }
 
-    def _mp_init(self, id: int, num_worker: int, seed: int):
+    def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
+        # nothing to do here
         pass
 
 

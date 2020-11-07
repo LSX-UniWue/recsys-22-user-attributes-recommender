@@ -1,12 +1,12 @@
 from pathlib import Path
-from typing import Tuple, List
+from typing import Tuple
 import sys
 import io
 
-from data.mp import MultiProcessDataLoaderSupport
+from data.mp import MultiProcessSupport
 
 
-class CsvDatasetIndex(MultiProcessDataLoaderSupport):
+class CsvDatasetIndex(MultiProcessSupport):
 
     INT_BYTE_SIZE = 8
 
@@ -56,12 +56,15 @@ class CsvDatasetIndex(MultiProcessDataLoaderSupport):
 
         return start, end
 
-    def _mp_init(self, id: int, num_worker: int, seed: int):
+    def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
         self._init()
 
 
-class CsvDatasetReader(MultiProcessDataLoaderSupport):
-    def __init__(self, data_file_path: Path, index: CsvDatasetIndex):
+class CsvDatasetReader(MultiProcessSupport):
+    def __init__(self,
+                 data_file_path: Path,
+                 index: CsvDatasetIndex
+                 ):
         self._data_file_path = data_file_path
         self._index = index
 
@@ -93,5 +96,5 @@ class CsvDatasetReader(MultiProcessDataLoaderSupport):
         self._data_file_handle.seek(start)
         return self._data_file_handle.read(end - start).decode(encoding="utf-8")
 
-    def _mp_init(self, id: int, num_worker: int, seed: int):
+    def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
         self._init()
