@@ -2,7 +2,7 @@ import torch
 import pytorch_lightning as pl
 import torch.nn.functional as F
 
-from typing import Tuple, List, Union, Dict
+from typing import Tuple, List, Union, Dict, Optional
 
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
@@ -47,7 +47,7 @@ class BERT4RecModule(pl.LightningModule):
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
-                      ) -> Dict[str, Union[torch.Tensor, float]]:
+                      ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         input_seq = _expand_sequence(inputs=input_seq, tokenizer=self.tokenizer, batch_first=self.batch_first)
 

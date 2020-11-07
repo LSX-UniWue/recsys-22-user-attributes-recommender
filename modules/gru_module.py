@@ -1,4 +1,4 @@
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Optional
 
 import torch
 
@@ -35,7 +35,7 @@ class GRUModule(pl.LightningModule):
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
-                      ) -> Dict[str, Union[torch.Tensor, float]]:
+                      ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)

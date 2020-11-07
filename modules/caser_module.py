@@ -1,4 +1,4 @@
-from typing import Union, Dict, List
+from typing import Union, Dict, List, Optional
 
 import pytorch_lightning as pl
 import torch
@@ -12,7 +12,8 @@ from tokenization.tokenizer import Tokenizer
 class CaserModule(pl.LightningModule):
 
     @staticmethod
-    def get_users_from_batch(batch):
+    def get_users_from_batch(batch: Dict[str, torch.Tensor]
+                             ) -> Optional[torch.Tensor]:
         return batch[USER_ENTRY_NAME] if USER_ENTRY_NAME in batch else None
 
     def __init__(self,
@@ -33,12 +34,12 @@ class CaserModule(pl.LightningModule):
 
         self.metrics = metrics
 
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
-
-    def training_step(self, batch, batch_idx):
+    def training_step(self,
+                      batch: Dict[str, torch.Tensor],
+                      batch_idx: int
+                      ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        users = self.get_users_from_batch(batch)
+        users = CaserModule.get_users_from_batch(batch)
         pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
 
@@ -54,9 +55,12 @@ class CaserModule(pl.LightningModule):
         }
 
     # FIXME: a lot of copy paste code
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self,
+                        batch: Dict[str, torch.Tensor],
+                        batch_idx: int
+                        ) -> None:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        users = self.get_users_from_batch(batch)
+        users = CaserModule.get_users_from_batch(batch)
         targets = batch[TARGET_ENTRY_NAME]
 
         batch_size = input_seq.size()[0]
@@ -74,6 +78,15 @@ class CaserModule(pl.LightningModule):
             self.log(name, step_value, prog_bar=True)
 
     # FIXME: copy paste code from sas rec module
-    def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]) -> None:
+    def validation_epoch_end(self,
+                             outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
+                             ) -> None:
         for name, metric in self.metrics.items():
             self.log(name, metric.compute(), prog_bar=True)
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(
+            self.parameters(),
+            lr=self.learning_rate,
+            weight_decay=self.weight_decay
+        )
