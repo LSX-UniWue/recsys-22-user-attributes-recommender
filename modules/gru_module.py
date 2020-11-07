@@ -4,7 +4,6 @@ import torch
 
 import pytorch_lightning as pl
 import torch.nn as nn
-from torch import Tensor
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.gru.gru_model import GRUSeqItemRecommenderModel
@@ -33,7 +32,10 @@ class GRUModule(pl.LightningModule):
         self.metrics = metrics
         self.loss = nn.CrossEntropyLoss()
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self,
+                      batch: Dict[str, torch.Tensor],
+                      batch_idx: int
+                      ) -> Dict[str, Union[torch.Tensor, float]]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
@@ -45,7 +47,10 @@ class GRUModule(pl.LightningModule):
             "loss": loss
         }
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self,
+                        batch: Dict[str, torch.Tensor],
+                        batch_idx: int
+                        ) -> None:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
@@ -59,17 +64,28 @@ class GRUModule(pl.LightningModule):
             step_value = metric(logits, target)
             self.log(name, step_value, prog_bar=True)
 
-    def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]):
+    def validation_epoch_end(self,
+                             outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
+                             ) -> None:
         for name, metric in self.metrics.items():
             self.log(name, metric.compute(), prog_bar=True)
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self,
+                  batch: Dict[str, torch.Tensor],
+                  batch_idx: int
+                  ):
         self.validation_step(batch, batch_idx)
 
-    def test_epoch_end(self, outputs: Union[Dict[str, Tensor], List[Dict[str, Tensor]]]):
+    def test_epoch_end(self,
+                       outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
+                       ):
         self.validation_epoch_end(outputs)
 
-    def _forward(self, session, lengths, batch_idx):
+    def _forward(self,
+                 session,
+                 lengths,
+                 batch_idx
+                 ):
         return self.model(session, lengths, batch_idx)
 
     def configure_optimizers(self):
