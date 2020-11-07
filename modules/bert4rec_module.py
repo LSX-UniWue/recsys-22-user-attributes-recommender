@@ -8,6 +8,7 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
+from modules import LOG_KEY_VALIDATION_LOSS
 from modules.util.module_util import get_padding_mask
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
@@ -67,9 +68,18 @@ class BERT4RecModule(pl.LightningModule):
                                         transposed=True)
 
         # call the model
-        prediction_scores = self.model(input_seq, padding_mask=padding_mask)
+        prediction_logits = self.model(input_seq, padding_mask=padding_mask)
 
-        if len(input_seq.size()) > 2:
+        masked_lm_loss = self._calc_loss(prediction_logits, target)
+        return {
+            'loss': masked_lm_loss
+        }
+
+    def _calc_loss(self,
+                   prediction_logits: torch.Tensor,
+                   target: torch.Tensor
+                   ) -> float:
+        if len(target.size()) > 1:
             pos_weight = torch.ones(len(self.tokenizer), dtype=torch.float, device=prediction_scores.device)
             pos_weight[self.tokenizer.get_special_token_ids()] = 0.0
             loss_func = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
@@ -77,19 +87,16 @@ class BERT4RecModule(pl.LightningModule):
             # (which is set to be ignored, see pos_weights; padding token is a special token)
             target[target == CROSS_ENTROPY_IGNORE_INDEX] = self.tokenizer.pad_token_id
             # than convert the targets to a multi one hot encoding
-            targets = torch.zeros(prediction_scores.size(), device=target.device).scatter_(2, target, 1.)
+            targets = torch.zeros(prediction_logits.size(), device=target.device).scatter_(2, target, 1.)
             targets = targets.squeeze(0)
             targets = targets.float()
-            masked_lm_loss = loss_func(prediction_scores, targets)
-        else:
-            loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)
-            flatten_predictions = prediction_scores.view(-1, len(self.tokenizer))
-            flatten_targets = torch.flatten(target)
-            masked_lm_loss = loss_func(flatten_predictions, flatten_targets)
+            return loss_func(prediction_logits, targets)
 
-        return {
-            'loss': masked_lm_loss
-        }
+        # handle single item per sequence step
+        loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)
+        flatten_predictions = prediction_logits.view(-1, len(self.tokenizer))
+        flatten_targets = torch.flatten(target)
+        return loss_func(flatten_predictions, flatten_targets)
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
@@ -115,6 +122,9 @@ class BERT4RecModule(pl.LightningModule):
         prediction = self.model(input_seq, padding_mask=padding_mask)
         # extract the relevant seq steps, where the mask was set
         prediction = prediction[target_mask]
+
+        loss = self._calc_loss(prediction, targets)
+        self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
         for name, metric in self.metrics.items():
             mask = None

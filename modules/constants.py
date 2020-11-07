@@ -1,0 +1,1 @@
+LOG_KEY_VALIDATION_LOSS = 'val_loss'

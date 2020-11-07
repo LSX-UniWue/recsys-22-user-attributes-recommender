@@ -8,6 +8,7 @@ import torch.nn.functional as F
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.gru.gru_model import GRUSeqItemRecommenderModel
+from modules import LOG_KEY_VALIDATION_LOSS
 from modules.util.module_util import get_padding_mask
 from tokenization.tokenizer import Tokenizer
 
@@ -50,18 +51,24 @@ class GRUModule(pl.LightningModule):
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
         logits = self._forward(input_seq, padding_mask)
-
-        loss_target = target
-        if len(target.size()) == 1:
-            loss_fnc = nn.CrossEntropyLoss()
-        else:
-            loss_fnc = nn.MultiLabelMarginLoss()
-            loss_target = _convert_target_for_multi_label_margin_loss(target, len(self.tokenizer), self.tokenizer.pad_token_id)
-        loss = loss_fnc(logits, loss_target)
+        loss = self.loss(logits, target)
 
         return {
             "loss": loss
         }
+
+    def _calc_loss(self,
+                   logits: torch.Tensor,
+                   target: torch.Tensor
+                   ) -> float:
+
+        if len(target.size()) == 1:
+            loss_fnc = nn.CrossEntropyLoss()
+            return loss_fnc(logits, target)
+
+        loss_fnc = nn.MultiLabelMarginLoss()
+        target = _convert_target_for_multi_label_margin_loss(target, len(self.tokenizer), self.tokenizer.pad_token_id)
+        return loss_fnc(logits, target)
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
@@ -73,19 +80,10 @@ class GRUModule(pl.LightningModule):
 
         logits = self._forward(input_seq, padding_mask)
 
-        mask = None
-        loss_target = target
-        if len(target.size()) == 1:
-            loss_func = nn.CrossEntropyLoss()
-        else:
-            # first calc the mask
-            mask = ~ target.eq(self.tokenizer.pad_token_id)
-            loss_func = nn.MultiLabelMarginLoss()
+        loss = self._calc_loss(logits, target)
+        self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
-            # after calculating the mask, adapt the target
-            loss_target = _convert_target_for_multi_label_margin_loss(target, len(self.tokenizer), self.tokenizer.pad_token_id)
-        loss = loss_func(logits, loss_target)
-        self.log("val_loss", loss, prog_bar=True)
+        mask = None if len(target.size()) == 1 else ~ target.eq(self.tokenizer.pad_token_id)
 
         for name, metric in self.metrics.items():
             step_value = metric(logits, target, mask=mask)
