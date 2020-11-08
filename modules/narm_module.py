@@ -5,10 +5,11 @@ import torch
 import pytorch_lightning as pl
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
-from metrics.utils.metric_utils import build_metrics
 from models.narm.narm_model import NarmModel
+from modules import LOG_KEY_VALIDATION_LOSS
 from modules.util.module_util import get_padding_mask
 from tokenization.tokenizer import Tokenizer
+from torch import nn
 
 
 class NarmModule(pl.LightningModule):
@@ -48,11 +49,18 @@ class NarmModule(pl.LightningModule):
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
         logits = self.model(input_seq, padding_mask, batch_idx)
-        loss = torch.nn.functional.cross_entropy(logits, target)
+        loss = self._calc_loss(logits, target)
 
         return {
             "loss": loss
         }
+
+    def _calc_loss(self,
+                   logits: torch.Tensor,
+                   target: torch.Tensor
+                   ) -> torch.Tensor:
+        loss = nn.CrossEntropyLoss()
+        return loss(logits, target)
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
@@ -65,9 +73,9 @@ class NarmModule(pl.LightningModule):
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
         logits = self.model(input_seq, padding_mask, batch_idx)
-        loss = torch.nn.functional.cross_entropy(logits, target)
+        loss = self._calc_loss(logits, target)
 
-        self.log("val_loss", loss, prog_bar=True)
+        self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
         for name, metric in self.metrics.items():
             step_value = metric(logits, target)
