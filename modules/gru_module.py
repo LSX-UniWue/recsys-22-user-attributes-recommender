@@ -41,7 +41,7 @@ class GRUModule(pl.LightningModule):
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
         logits = self._forward(input_seq, padding_mask)
-        loss = self.loss(logits, target)
+        loss = self._calc_loss(logits, target)
 
         return {
             "loss": loss
