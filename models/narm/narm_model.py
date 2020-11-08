@@ -167,7 +167,10 @@ class BilinearDecoder(nn.Module):
         self.B = nn.Linear(embedding_layer.embedding.weight.size()[1], encoded_representation_size, bias=False)
         self.activation = nn.Softmax() if apply_softmax else nn.Identity()
 
-    def forward(self, context: torch.Tensor, items: torch.Tensor = None):
+    def forward(self,
+                context: torch.Tensor,
+                items: torch.Tensor = None
+                ):
         """
         Computes the similarity scores for the context with each item in 'items'.
         If 'items' is none a similarity score for every item will be computed.
