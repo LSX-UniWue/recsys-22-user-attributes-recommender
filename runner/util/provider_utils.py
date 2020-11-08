@@ -263,7 +263,6 @@ def provide_nextit_loader(dataset: Dataset,
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        num_workers=num_workers,
         collate_fn=padded_session_collate(
             max_length=max_seq_length,
             pad_token_id=tokenizer.pad_token_id,
@@ -271,6 +270,7 @@ def provide_nextit_loader(dataset: Dataset,
             session_length_entry=ITEM_SEQ_ENTRY_NAME,
             max_seq_step_length=max_seq_step_length
         ),
+        num_workers=num_workers,
         worker_init_fn=init_worker_fn
     )
 
