@@ -1,4 +1,8 @@
+import logging
+import logging.handlers
 import os
+from pathlib import Path
+from typing import Dict, Any
 
 import typer
 from dependency_injector import containers
@@ -20,6 +24,18 @@ def build_container(model_id) -> containers.DeclarativeContainer:
     }[model_id]
 
 
+# FIXME: progress bar is not logged :(
+def _config_logging(config: Dict[str, Any]
+                    ) -> None:
+    logger = logging.getLogger("lightning")
+    handler = logging.handlers.RotatingFileHandler(
+        Path(config['trainer']['default_root_dir']) / 'run.log', maxBytes=(1048576*5), backupCount=7
+    )
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+
 @app.command()
 def run_model(model: str = typer.Argument(..., help="the model to run"),
               config_file: str = typer.Argument(..., help='the path to the config file'),
@@ -37,6 +53,8 @@ def run_model(model: str = typer.Argument(..., help="the model to run"),
     module = container.module()
 
     trainer = container.trainer()
+
+    _config_logging(container.config())
 
     if do_train:
         trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
