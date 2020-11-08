@@ -48,7 +48,7 @@ class NarmModule(pl.LightningModule):
 
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
-        logits = self.model(input_seq, padding_mask, batch_idx)
+        logits = self.model(input_seq, padding_mask)
         loss = self._calc_loss(logits, target)
 
         return {
@@ -72,7 +72,7 @@ class NarmModule(pl.LightningModule):
         # calc the padding mask
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
-        logits = self.model(input_seq, padding_mask, batch_idx)
+        logits = self.model(input_seq, padding_mask)
         loss = self._calc_loss(logits, target)
 
         self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)

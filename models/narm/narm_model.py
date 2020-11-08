@@ -51,13 +51,15 @@ class NarmModel(nn.Module):
         self.context_dropout = nn.Dropout(context_dropout)
         self.decoder = BilinearDecoder(self.item_embeddings, encoded_representation_size=2 * global_encoder_size)
 
-    def forward(self, session: torch.Tensor, mask: torch.Tensor, batch_idx: int):
+    def forward(self,
+                session: torch.Tensor,
+                mask: torch.Tensor
+                ):
         """
         Computes item similarity scores using the NARM model.
 
         :param session: a sequence of item ids (B x N)
         :param mask: a tensor masking padded sequence elements (B x N)
-        :param batch_idx:
         :return: scores for every item (B x NI)
         """
         embedded_session = self.item_embeddings(session)
@@ -86,7 +88,10 @@ class NarmModel(nn.Module):
 
 class LocalEncoderLayer(nn.Module):
 
-    def __init__(self, hidden_size: int, latent_size: int):
+    def __init__(self,
+                 hidden_size: int,
+                 latent_size: int
+                 ):
         """
         Local encoder as defined in "Neural Attentive Session-based Recommendation." (https://dl.acm.org/doi/10.1145/3132847.3132926).
 
@@ -103,11 +108,16 @@ class LocalEncoderLayer(nn.Module):
     def _init_weights(self):
         torch.nn.init.uniform_(self.v, -1.0, 1.0)
 
-    def forward(self, s1: torch.Tensor, s2: torch.Tensor, mask: torch.Tensor):
+    def forward(self,
+                s1: torch.Tensor,
+                s2: torch.Tensor,
+                mask: torch.Tensor
+                ):
         """
         Calculates v * sigmoid(A1 * s1 + A2 * s2)
         :param s1: a tensor (B x H)
         :param s2: a tensor (B x N x H)
+        :param mask: a tensor TODO: alex: please add the dimension
 
         :return: (B x N x 1)
         """
@@ -140,7 +150,11 @@ class BilinearDecoder(nn.Module):
 
         See https://github.com/lijingsdu/sessionRec_NARM for the original Theano implementation.
     """
-    def __init__(self, embedding_layer: ItemEmbedding, encoded_representation_size: int, apply_softmax: bool = False):
+    def __init__(self,
+                 embedding_layer: ItemEmbedding,
+                 encoded_representation_size: int,
+                 apply_softmax: bool = False
+                 ):
         """
 
         :param embedding_layer: an item embedding layer
@@ -151,7 +165,7 @@ class BilinearDecoder(nn.Module):
 
         self.embedding_layer = embedding_layer
         self.B = nn.Linear(embedding_layer.embedding.weight.size()[1], encoded_representation_size, bias=False)
-        self.apply_softmax = apply_softmax
+        self.activation = nn.Softmax() if apply_softmax else nn.Identity()
 
     def forward(self, context: torch.Tensor, items: torch.Tensor = None):
         """
@@ -176,10 +190,7 @@ class BilinearDecoder(nn.Module):
 
         similarities = torch.matmul(context, embi_b_T)  # B x NI <- a score for each item
 
-        if self.apply_softmax:
-            return nn.functional.softmax(similarities)
-        else:
-            return similarities
+        return self.activation(similarities)
 
 
 def main():
