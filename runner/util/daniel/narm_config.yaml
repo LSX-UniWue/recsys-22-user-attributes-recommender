@@ -4,9 +4,9 @@ datasets:
       csv_file: /Users/nosebrain/Desktop/small/test.csv
       csv_file_index: /Users/nosebrain/Desktop/small/test.idx
       parser:
-      delimiter: "\t"
-      item_column_name: item_id
-#        item_separator: ' + '
+        delimiter: "\t"
+        item_column_name: item_id
+        item_separator: ' + '
       nip_index_file: /Users/nosebrain/Desktop/small/test.nip.idx
     loader:
       batch_size: 4
@@ -18,9 +18,9 @@ datasets:
       csv_file_index: /Users/nosebrain/Desktop/small/train.idx
       nip_index_file: /Users/nosebrain/Desktop/small/train.nip.idx
       parser:
-      delimiter: "\t"
-      item_column_name: item_id
-#        item_separator: ' + '
+        delimiter: "\t"
+        item_column_name: item_id
+        item_separator: ' + '
     loader:
       batch_size: 4
       max_seq_length: 10
@@ -30,23 +30,23 @@ datasets:
       csv_file: /Users/nosebrain/Desktop/small/valid.csv
       csv_file_index: /Users/nosebrain/Desktop/small/valid.idx
       parser:
-      delimiter: "\t"
-      item_column_name: item_id
-#        item_separator: ' + '
+        delimiter: "\t"
+        item_column_name: item_id
+        item_separator: ' + '
       nip_index_file: /Users/nosebrain/Desktop/small/valid.nip.idx
     loader:
       batch_size: 4
       max_seq_length: 10
       max_seq_step_length: 5
 model:
-  item_vocab_size: 250
+  num_items: 250
   item_embedding_size: 32
   global_encoder_size: 128
   global_encoder_num_layers: 1
   embedding_dropout: 0.25
   context_dropout: 0.25
   batch_first: true
-#  embedding_mode: mean
+  embedding_mode: mean
 module:
   learning_rate: 0.001
   beta_1: 0.99
