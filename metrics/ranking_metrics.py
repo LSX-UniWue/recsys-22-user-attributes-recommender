@@ -27,7 +27,7 @@ def calc_precision(prediction: torch.Tensor,
         target = torch.unsqueeze(target, dim=1)
 
     if mask is None:
-        mask = torch.ones(target.size())
+        mask = torch.ones(target.size(), device=target.device)
 
     tp = get_tp(predictions=prediction, target=target, mask=mask, k=k)
 
@@ -44,7 +44,7 @@ def calc_recall(prediction: torch.Tensor,
         target = torch.unsqueeze(target, dim=1)
 
     if mask is None:
-        mask = torch.ones(target.size(), device=prediction.device)
+        mask = torch.ones(target.size(), device=target.device)
 
     tp = get_tp(predictions=prediction, target=target, mask=mask, k=k)
     fn = mask.sum(-1) - tp
