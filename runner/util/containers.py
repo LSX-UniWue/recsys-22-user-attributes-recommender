@@ -124,7 +124,8 @@ class BERT4RecContainer(containers.DeclarativeContainer):
 
     # loaders
     train_loader = build_session_loader_provider_factory(train_dataset_config, tokenizer, train_processors)
-    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer, validation_processors)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
+                                                               validation_processors)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
     # trainer
@@ -165,7 +166,8 @@ class CaserContainer(containers.DeclarativeContainer):
 
     # loaders
     train_loader = build_posneg_loader_provider_factory(train_dataset_config, tokenizer, train_processors)
-    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer, validation_processors)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
+                                                               validation_processors)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
     # trainer
@@ -210,7 +212,8 @@ class SASRecContainer(containers.DeclarativeContainer):
 
     # loaders
     train_loader = build_posneg_loader_provider_factory(train_dataset_config, tokenizer, train_processors)
-    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer, validation_processors)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
+                                                               validation_processors)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
     trainer = build_standard_trainer(config)
@@ -245,10 +248,16 @@ class NarmContainer(containers.DeclarativeContainer):
     validation_dataset_config = config.datasets.validation
     test_dataset_config = config.datasets.test
 
+    processors_objects = {'tokenizer': tokenizer}
+    train_processors = build_processors_provider(train_dataset_config.dataset.processors, processors_objects)
+    validation_processors = build_processors_provider(validation_dataset_config.dataset.processors, processors_objects)
+    test_processors = build_processors_provider(test_dataset_config.dataset.processors, processors_objects)
+
     # loaders
-    train_loader = build_nextitem_loader_provider_factory(train_dataset_config, tokenizer, None) # FIXME: adapt
-    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer, None)
-    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, None)
+    train_loader = build_nextitem_loader_provider_factory(train_dataset_config, tokenizer, train_processors)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
+                                                               validation_processors)
+    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
     trainer = build_standard_trainer(config)
 
@@ -283,9 +292,15 @@ class GRUContainer(containers.DeclarativeContainer):
     validation_dataset_config = config.datasets.validation
     test_dataset_config = config.datasets.test
 
+    processors_objects = {'tokenizer': tokenizer}
+    train_processors = build_processors_provider(train_dataset_config.dataset.processors, processors_objects)
+    validation_processors = build_processors_provider(validation_dataset_config.dataset.processors, processors_objects)
+    test_processors = build_processors_provider(test_dataset_config.dataset.processors, processors_objects)
+
     # loaders
-    train_loader = build_nextitem_loader_provider_factory(train_dataset_config, tokenizer, None)  # FIXME: adapt
-    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer, None)
-    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, None)
+    train_loader = build_nextitem_loader_provider_factory(train_dataset_config, tokenizer, train_processors)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
+                                                               validation_processors)
+    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
     trainer = build_standard_trainer(config)
