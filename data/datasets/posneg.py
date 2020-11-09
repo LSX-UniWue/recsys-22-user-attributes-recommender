@@ -9,6 +9,7 @@ from data.mp import MultiProcessSupport
 from tokenization.tokenizer import Tokenizer
 
 
+# FIXME: adapt to new base dataset
 class PosNegSessionDataset(Dataset, MultiProcessSupport):
 
     def __init__(self,
@@ -30,14 +31,14 @@ class PosNegSessionDataset(Dataset, MultiProcessSupport):
         neg = self._sample_negative_target(session)
 
         # TODO (AD) right now we only support ranking the full item set. Often on datasets with large item spaces,
-        #  only a sample is drawn and ranked. We need to parameterize this class so that different strategies can be
-        #  used.
+        # only a sample is drawn and ranked. We need to parameterize this class so that different strategies can be
+        # used.
         # FIXME: this should only add the items to the map, not create a new one
         return {
             ITEM_SEQ_ENTRY_NAME: x,
             POSITIVE_SAMPLES_ENTRY_NAME: pos,
             NEGATIVE_SAMPLES_ENTRY_NAME: neg,
-            "items": self.tokenizer.get_vocabulary().ids() # use the full dataset for ranking (for now)
+            "items": self.tokenizer.get_vocabulary().ids()  # use the full dataset for ranking (for now)
         }
 
     def __len__(self) -> int:

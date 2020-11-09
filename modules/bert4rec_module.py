@@ -8,7 +8,6 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
-from modules import LOG_KEY_VALIDATION_LOSS
 from modules.util.module_util import get_padding_mask, convert_target_for_multi_label_margin_loss
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
@@ -20,7 +19,7 @@ class BERT4RecModule(pl.LightningModule):
 
     @staticmethod
     def get_position_ids(batch: Dict[str, torch.Tensor]
-                             ) -> Optional[torch.Tensor]:
+                         ) -> Optional[torch.Tensor]:
         return batch[POSITION_IDS] if POSITION_IDS in batch else None
 
     def __init__(self,
@@ -60,6 +59,8 @@ class BERT4RecModule(pl.LightningModule):
 
         if self.batch_first:
             input_seq = input_seq.transpose(0, 1)
+            if position_ids is not None:
+                position_ids = position_ids.transpose(0, 1)
 
         # random mask some items
         # FIXME: paper quote: we also produce samples that only mask the last item
@@ -85,7 +86,7 @@ class BERT4RecModule(pl.LightningModule):
                    prediction_logits: torch.Tensor,
                    target: torch.Tensor
                    ) -> torch.Tensor:
-        if len(target.size()) > 1:
+        if len(target.size()) > 2:
             # handle multiple items per sequence step
             # for validation only one sequence step is taken into account
             if len(prediction_logits.size()) == 2:
@@ -143,15 +144,17 @@ class BERT4RecModule(pl.LightningModule):
         # extract the relevant seq steps, where the mask was set
         prediction = prediction[target_mask]
 
-        loss = self._calc_loss(prediction, targets)
-        self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
+        # FIXME: the cross entropy loss cannot be calculated for multi item per sequence
+        # loss = self._calc_loss(prediction, targets)
+        # self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
+
+        mask = None
+        # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
+        # the target tensor
+        if len(targets.size()) > 1:
+            mask = ~ targets.eq(self.tokenizer.pad_token_id)
 
         for name, metric in self.metrics.items():
-            mask = None
-            # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
-            # the target tensor
-            if len(input_seq.size()) > 2:
-                mask = ~ targets.eq(self.tokenizer.pad_token_id)
             step_value = metric(prediction, targets, mask=mask)
             self.log(name, step_value, prog_bar=True)
 

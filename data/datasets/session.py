@@ -9,7 +9,6 @@ from data.base.reader import CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.prepare import Processor
 from data.mp import MultiProcessSupport
-from tokenization.tokenizer import Tokenizer
 
 
 def _parse_boolean(text: str
@@ -109,26 +108,47 @@ class ItemSessionParser(SessionParser):
         return entry.split(self._item_separator)
 
 
-class ItemSessionDataset(Dataset, MultiProcessSupport):
+class PlainSessionDataset(Dataset, MultiProcessSupport):
 
     def __init__(self,
                  reader: CsvDatasetReader,
-                 parser: SessionParser,
-                 processors: List[Processor] = None
-                 ):
+                 parser: SessionParser
+                ):
         super().__init__()
         self._reader = reader
         self._parser = parser
+
+    def __getitem__(self, idx):
+        session = self._reader.get_session(idx)
+        parsed_session = self._parser.parse(session)
+
+        return parsed_session
+
+    def __len__(self):
+        return len(self._reader)
+
+    def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
+        # nothing to do here
+        pass
+
+
+class ItemSessionDataset(Dataset, MultiProcessSupport):
+
+    def __init__(self,
+                 plain_session_dataset: PlainSessionDataset,
+                 processors: List[Processor] = None
+                 ):
+        super().__init__()
+        self._plain_session_dataset = plain_session_dataset
         if processors is None:
             processors = []
         self._processors = processors
 
     def __len__(self):
-        return len(self._reader)
+        return len(self._plain_session_dataset)
 
     def __getitem__(self, idx):
-        session = self._reader.get_session(idx)
-        parsed_session = self._parser.parse(session)
+        parsed_session = self._plain_session_dataset[idx]
 
         for processor in self._processors:
             parsed_session = processor.process(parsed_session)

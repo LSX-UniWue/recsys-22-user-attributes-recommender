@@ -1,14 +1,15 @@
 import io
 from pathlib import Path
 import sys
-from typing import Dict, Any, Iterable, Callable
+from typing import Dict, Any, Iterable, Callable, List
 
 from numpy.random._generator import default_rng
 from torch.utils.data import Dataset, IterableDataset
 from tqdm import tqdm
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, INT_BYTE_SIZE, TARGET_ENTRY_NAME
-from data.datasets.session import ItemSessionDataset
+from data.datasets.prepare import Processor
+from data.datasets.session import ItemSessionDataset, PlainSessionDataset
 from data.mp import MultiProcessSupport
 
 
@@ -98,27 +99,32 @@ class NextItemIndex(MultiProcessSupport):
 class NextItemDataset(Dataset, MultiProcessSupport):
 
     def __init__(self,
-                 dataset: ItemSessionDataset,
-                 index: NextItemIndex
+                 dataset: PlainSessionDataset,
+                 index: NextItemIndex,
+                 processors: List[Processor] = None
                  ):
         super().__init__()
         self._dataset = dataset
         self._index = index
+        if processors is None:
+            processors = []
+        self._processors = processors
 
     def __len__(self):
         return len(self._index)
 
     def __getitem__(self, idx):
         session_idx, target_pos = self._index[idx]
-        session = self._dataset[session_idx][ITEM_SEQ_ENTRY_NAME]
-        input_sequence = session[:target_pos]
+        parsed_session = self._dataset[session_idx]
+        session = parsed_session[ITEM_SEQ_ENTRY_NAME]
+        truncated_session = session[:target_pos]
+        parsed_session[ITEM_SEQ_ENTRY_NAME] = truncated_session
+        parsed_session[TARGET_ENTRY_NAME] = session[target_pos]
 
-        if len(input_sequence) == 0:
-            print(f"index_ids = {idx}, session_idx = {session_idx}, target_pos = {target_pos} ")
-        return {
-            ITEM_SEQ_ENTRY_NAME: input_sequence,
-            TARGET_ENTRY_NAME: session[target_pos]
-        }
+        for processor in self._processors:
+            parsed_session = processor.process(parsed_session)
+
+        return parsed_session
 
     def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
         # nothing to do here

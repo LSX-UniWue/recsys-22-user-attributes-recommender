@@ -59,7 +59,7 @@ def _padded_session_collate(max_length: int,
 
         for entry_name, value in padded_sample.items():
             value_to_convert = value
-            if isinstance(value, list):
+            if isinstance(value, list) and entry_name in entries_to_pad:
                 if isinstance(value[0], list):
                     # first pad entries in the list to the maximum seq step length
                     padded_entries = [

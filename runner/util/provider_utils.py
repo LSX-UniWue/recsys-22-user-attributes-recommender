@@ -7,11 +7,11 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import Dataset, DataLoader
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
-from data.datasets import ITEM_SEQ_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from data.datasets.nextitem import NextItemDataset, NextItemIndex
 from data.datasets.posneg import PosNegSessionDataset
 from data.datasets.prepare import Processor, build_processors
-from data.datasets.session import ItemSessionDataset, ItemSessionParser
+from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
 from metrics.utils.metric_utils import build_metrics
@@ -68,7 +68,8 @@ def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider
                                               delimiter=delimiter,
                                               item_separator=item_separator,
                                               additional_features=additional_features)
-        session_dataset = ItemSessionDataset(reader, session_parser, processors=processors)
+        basic_dataset = PlainSessionDataset(reader, session_parser)
+        session_dataset = ItemSessionDataset(basic_dataset, processors=processors)
 
         return PosNegSessionDataset(session_dataset, tokenizer)
 
@@ -160,7 +161,8 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
                                               delimiter=delimiter,
                                               item_separator=item_separator,
                                               additional_features=additional_features)
-        return ItemSessionDataset(reader, session_parser, processors=processors)
+        basic_dataset = PlainSessionDataset(reader, session_parser)
+        return ItemSessionDataset(basic_dataset, processors=processors)
 
     dataset_config = dataset_config.dataset
     parser_config = dataset_config.parser
@@ -224,9 +226,8 @@ def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provid
                                               delimiter=delimiter,
                                               item_separator=item_separator,
                                               additional_features=additional_features)
-        session_dataset = ItemSessionDataset(reader, session_parser, processors=preprocessors)
-
-        return NextItemDataset(session_dataset, NextItemIndex(Path(nip_index)))
+        basic_dataset = PlainSessionDataset(reader, session_parser)
+        return NextItemDataset(basic_dataset, NextItemIndex(Path(nip_index)), processors=preprocessors)
 
     return build_dataset_provider_factory(provide_nextitem_dataset, tokenizer_provider, preprocessor_provider,
                                           dataset_config)
@@ -292,7 +293,7 @@ def provide_nextit_loader(dataset: Dataset,
         collate_fn=padded_session_collate(
             max_length=max_seq_length,
             pad_token_id=tokenizer.pad_token_id,
-            entries_to_pad=[ITEM_SEQ_ENTRY_NAME],
+            entries_to_pad=[ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME],
             session_length_entry=ITEM_SEQ_ENTRY_NAME,
             max_seq_step_length=max_seq_step_length
         ),

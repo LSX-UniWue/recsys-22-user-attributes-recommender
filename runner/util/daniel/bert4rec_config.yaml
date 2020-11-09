@@ -19,15 +19,15 @@ datasets:
         item_column_name: item_id
         item_separator: ' + '
       nip_index_file: /Users/nosebrain/Desktop/small/test.nip.idx
-#      processors:
-#        tokenizer_processor:
-#          tokenize: true
-#       position_processor:
-#          seq_length: 51 # 5 (max length seq step) * 10 (max_length per sequence) + 1 because we add + 1 for evaluation
+      processors:
+        tokenizer_processor:
+          tokenize: true
+        position_processor:
+          seq_length: 51 # 5 (max length seq step) * 10 (max_length per sequence) + 1 because we add + 1 for evaluation
     loader:
       num_workers: 0
       batch_size: 4
-      max_seq_length: 10
+      max_seq_length: 50
       max_seq_step_length: 5
   train:
     dataset:
@@ -48,10 +48,15 @@ datasets:
 #            sequence: true
         item_column_name: item_id
         item_separator: ' + '
+      processors:
+        tokenizer_processor:
+          tokenize: true
+        position_processor:
+          seq_length: 51 # 5 (max length seq step) * 10 (max_length per sequence) + 1 because we add + 1 for evaluation
     loader:
       num_workers: 0
       batch_size: 4
-      max_seq_length: 10
+      max_seq_length: 50
       max_seq_step_length: 5
   validation:
     dataset:
@@ -72,11 +77,16 @@ datasets:
 #            sequence: true
         item_column_name: item_id
         item_separator: ' + '
+      processors:
+        tokenizer_processor:
+          tokenize: true
+        position_processor:
+          seq_length: 51 # 5 (max length seq step) * 10 (max_length per sequence) + 1 because we add + 1 for evaluation
       nip_index_file: /Users/nosebrain/Desktop/small/valid.nip.idx
     loader:
       num_workers: 0
       batch_size: 4
-      max_seq_length: 10
+      max_seq_length: 50
       max_seq_step_length: 5
 model:
   item_vocab_size: 250
@@ -85,7 +95,7 @@ model:
   num_transformer_layers: 1
   transformer_hidden_size: 16
   transformer_dropout: 0.1
-  embedding_mode: mean
+#  embedding_mode: mean
 module:
   batch_first: true
   mask_probability: 0.15
