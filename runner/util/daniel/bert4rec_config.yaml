@@ -19,6 +19,11 @@ datasets:
         item_column_name: item_id
         item_separator: ' + '
       nip_index_file: /Users/nosebrain/Desktop/small/test.nip.idx
+#      processors:
+#        tokenizer_processor:
+#          tokenize: true
+#       position_processor:
+#          seq_length: 51 # 5 (max length seq step) * 10 (max_length per sequence) + 1 because we add + 1 for evaluation
     loader:
       num_workers: 0
       batch_size: 4
@@ -75,7 +80,7 @@ datasets:
       max_seq_step_length: 5
 model:
   item_vocab_size: 250
-  max_seq_length: 10
+  max_seq_length: 50
   num_transformer_heads: 1
   num_transformer_layers: 1
   transformer_hidden_size: 16

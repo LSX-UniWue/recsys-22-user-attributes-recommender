@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, List
 
 from dependency_injector import providers
 from pytorch_lightning import Trainer
@@ -10,6 +10,7 @@ from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.nextitem import NextItemDataset, NextItemIndex
 from data.datasets.posneg import PosNegSessionDataset
+from data.datasets.prepare import Preprocessor, build_processors
 from data.datasets.session import ItemSessionDataset, ItemSessionParser
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
@@ -30,6 +31,17 @@ def build_session_parser(csv_file: Path,
                              additional_features=additional_features,
                              item_separator=item_separator,
                              delimiter=delimiter)
+
+
+def build_processors_provider(dataset_config: providers.ConfigurationOption,
+                              additional_objects: Dict[str, Any]
+                              ) -> providers.Factory:
+
+    return providers.Factory(
+        build_processors,
+        dataset_config,
+        **additional_objects
+    )
 
 
 def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider,
@@ -76,9 +88,10 @@ def build_tokenizer_provider(config: providers.Configuration) -> providers.Singl
 
 
 def build_session_loader_provider_factory(dataset_config: providers.ConfigurationOption,
-                                          tokenizer_provider: providers.Provider
+                                          tokenizer_provider: providers.Provider,
+                                          processors_providers: providers.Provider
                                           ) -> providers.Factory:
-    dataset = build_session_dataset_provider_factory(tokenizer_provider, dataset_config)
+    dataset = build_session_dataset_provider_factory(processors_providers, dataset_config)
     dataset_loader_config = dataset_config.loader
     return providers.Factory(
         provide_session_loader,
@@ -92,9 +105,10 @@ def build_session_loader_provider_factory(dataset_config: providers.Configuratio
 
 
 def build_nextitem_loader_provider_factory(dataset_config: providers.ConfigurationOption,
-                                           tokenizer_provider: providers.Provider
+                                           tokenizer_provider: providers.Provider,
+                                           processors_provider: providers.Provider
                                            ) -> providers.Factory:
-    dataset = build_nextitem_dataset_provider_factory(tokenizer_provider, dataset_config)
+    dataset = build_nextitem_dataset_provider_factory(processors_provider, dataset_config)
     return providers.Factory(
         provide_nextit_loader,
         dataset,
@@ -108,25 +122,25 @@ def build_nextitem_loader_provider_factory(dataset_config: providers.Configurati
 
 
 def build_posneg_loader_provider_factory(dataset_config: providers.ConfigurationOption,
-                                         tokenizer_provider: providers.Provider
+                                         preprocessor_provider_provider: providers.Provider
                                          ) -> providers.Factory:
-    dataset = build_posnet_dataset_provider_factory(tokenizer_provider, dataset_config)
+    dataset = build_posnet_dataset_provider_factory(preprocessor_provider_provider, dataset_config)
     return providers.Factory(
         provide_posneg_loader,
         dataset,
         dataset_config.loader.batch_size,
         dataset_config.loader.max_seq_length,
         dataset_config.loader.max_seq_step_length,
-        tokenizer_provider
+        preprocessor_provider_provider
     )
 
 
-def build_session_dataset_provider_factory(tokenizer_provider: providers.Provider,
+def build_session_dataset_provider_factory(preprocessor_provider_provider: providers.Provider,
                                            dataset_config: providers.ConfigurationOption
                                            ) -> providers.Factory:
     def provide_session_dataset(csv_file: str,
                                 csv_file_index: str,
-                                tokenizer: Tokenizer,
+                                preprocessors: List[Preprocessor],
                                 delimiter: str,
                                 item_column_name: str,
                                 item_separator: str,
@@ -140,7 +154,7 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
                                               delimiter=delimiter,
                                               item_separator=item_separator,
                                               additional_features=additional_features)
-        return ItemSessionDataset(reader, session_parser, tokenizer)
+        return ItemSessionDataset(reader, session_parser, preprocessors=preprocessors)
 
     dataset_config = dataset_config.dataset
     parser_config = dataset_config.parser
@@ -149,7 +163,7 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
         provide_session_dataset,
         dataset_config.csv_file,
         dataset_config.csv_file_index,
-        tokenizer_provider,
+        preprocessor_provider_provider,
         parser_config.delimiter,
         parser_config.item_column_name,
         parser_config.item_separator,
@@ -178,14 +192,14 @@ def build_dataset_provider_factory(dataset_build_fn: Callable[[str, str, str, To
     )
 
 
-def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provider,
+def build_nextitem_dataset_provider_factory(preprocessor_provider: providers.Provider,
                                             dataset_config: providers.ConfigurationOption
                                             ) -> providers.Factory:
 
     def provide_nextitem_dataset(csv_file: str,
                                  csv_file_index: str,
                                  nip_index: str,
-                                 tokenizer: Tokenizer,
+                                 preprocessors: List[Preprocessor],
                                  delimiter: str,
                                  item_column_name: str,
                                  item_separator: str,
@@ -199,11 +213,11 @@ def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provid
                                               delimiter=delimiter,
                                               item_separator=item_separator,
                                               additional_features=additional_features)
-        session_dataset = ItemSessionDataset(reader, session_parser, tokenizer)
+        session_dataset = ItemSessionDataset(reader, session_parser, preprocessors=preprocessors)
 
         return NextItemDataset(session_dataset, NextItemIndex(Path(nip_index)))
 
-    return build_dataset_provider_factory(provide_nextitem_dataset, tokenizer_provider, dataset_config)
+    return build_dataset_provider_factory(provide_nextitem_dataset, preprocessor_provider, dataset_config)
 
 
 def provide_posneg_loader(dataset: Dataset,

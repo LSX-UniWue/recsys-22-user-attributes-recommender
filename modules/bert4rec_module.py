@@ -7,7 +7,7 @@ from typing import Tuple, List, Union, Dict, Optional
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
-from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
 from modules import LOG_KEY_VALIDATION_LOSS
 from modules.util.module_util import get_padding_mask, convert_target_for_multi_label_margin_loss
 from tokenization.tokenizer import Tokenizer
@@ -17,6 +17,11 @@ CROSS_ENTROPY_IGNORE_INDEX = -100
 
 
 class BERT4RecModule(pl.LightningModule):
+
+    @staticmethod
+    def get_position_ids(batch: Dict[str, torch.Tensor]
+                             ) -> Optional[torch.Tensor]:
+        return batch[POSITION_IDS] if POSITION_IDS in batch else None
 
     def __init__(self,
                  model: BERT4RecModel,
@@ -50,6 +55,7 @@ class BERT4RecModule(pl.LightningModule):
                       batch_idx: int
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        position_ids = BERT4RecModule.get_position_ids(batch)
         input_seq = _expand_sequence(inputs=input_seq, tokenizer=self.tokenizer, batch_first=self.batch_first)
 
         if self.batch_first:
@@ -68,7 +74,7 @@ class BERT4RecModule(pl.LightningModule):
                                         transposed=True)
 
         # call the model
-        prediction_logits = self.model(input_seq, padding_mask=padding_mask)
+        prediction_logits = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
 
         masked_lm_loss = self._calc_loss(prediction_logits, target)
         return {
