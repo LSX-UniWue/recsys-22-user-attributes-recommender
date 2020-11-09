@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 
 from data.base.reader import CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME
-from data.datasets.prepare import Preprocessor
+from data.datasets.prepare import Processor
 from data.mp import MultiProcessSupport
 from tokenization.tokenizer import Tokenizer
 
@@ -114,14 +114,14 @@ class ItemSessionDataset(Dataset, MultiProcessSupport):
     def __init__(self,
                  reader: CsvDatasetReader,
                  parser: SessionParser,
-                 preprocessors: List[Preprocessor] = None
+                 processors: List[Processor] = None
                  ):
         super().__init__()
         self._reader = reader
         self._parser = parser
-        if preprocessors is None:
-            preprocessors = []
-        self._preprocessors = preprocessors
+        if processors is None:
+            processors = []
+        self._processors = processors
 
     def __len__(self):
         return len(self._reader)
@@ -130,8 +130,8 @@ class ItemSessionDataset(Dataset, MultiProcessSupport):
         session = self._reader.get_session(idx)
         parsed_session = self._parser.parse(session)
 
-        for preprocessor in self._preprocessors:
-            parsed_session = preprocessor.preprocess(parsed_session)
+        for processor in self._processors:
+            parsed_session = processor.process(parsed_session)
 
         return parsed_session
 

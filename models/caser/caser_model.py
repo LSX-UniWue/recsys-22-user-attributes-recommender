@@ -23,8 +23,8 @@ class CaserModel(nn.Module):
     def from_config(cls,
                     config: CaserConfig) -> 'CaserModel':
         return cls(embedding_size=config.d,
-                   item_voc_size=config.item_vocab_size,
-                   user_voc_size=config.user_voc_size,
+                   item_vocab_size=config.item_vocab_size,
+                   user_vocab_size=config.user_voc_size,
                    max_seq_length=config.max_seq_length,
                    num_vertical_filters=config.num_vertical_filters,
                    num_horizontal_filters=config.num_horizontal_filters,
@@ -34,8 +34,8 @@ class CaserModel(nn.Module):
 
     def __init__(self,
                  embedding_size: int,
-                 item_voc_size: int,
-                 user_voc_size: int,
+                 item_vocab_size: int,
+                 user_vocab_size: int,
                  max_seq_length: int,
                  num_vertical_filters: int,
                  num_horizontal_filters: int,
@@ -48,8 +48,8 @@ class CaserModel(nn.Module):
 
         self.embedding_size = embedding_size
         self.embedding_mode = embedding_mode
-        self.item_voc_size = item_voc_size
-        self.user_voc_size = user_voc_size
+        self.item_vocab_size = item_vocab_size
+        self.user_vocab_size = user_vocab_size
         self.max_seq_length = max_seq_length
         self.num_vertical_filters = num_vertical_filters
         self.num_horizontal_filters = num_horizontal_filters
@@ -59,10 +59,11 @@ class CaserModel(nn.Module):
 
         # user and item embedding
         if self._has_users:
-            self.user_embedding = nn.Embedding(self.user_voc_size, embedding_dim=self.embedding_size)
-        self.item_embedding = ItemEmbedding(item_voc_size=self.item_voc_size,
+            self.user_embedding = nn.Embedding(self.user_vocab_size, embedding_dim=self.embedding_size)
+        self.item_embedding = ItemEmbedding(item_voc_size=self.item_vocab_size,
                                             embedding_size=self.embedding_size,
-                                            embedding_mode=self.embedding_mode)
+                                            embedding_mode=self.embedding_mode,
+                                            init_weights_fnc=lambda weight: weight.data.normal_(0, 1.0 / embedding_size))
 
         # vertical conv layer
         self.conv_vertical = nn.Conv2d(1, self.num_vertical_filters, (self.max_seq_length, 1))
@@ -85,8 +86,8 @@ class CaserModel(nn.Module):
 
         self.fc1 = nn.Linear(fc1_dim, self.embedding_size)
 
-        self.W2 = nn.Embedding(item_voc_size, 2 * self.embedding_size if self._has_users else self.embedding_size)
-        self.b2 = nn.Embedding(item_voc_size, 1)
+        self.W2 = nn.Embedding(item_vocab_size, 2 * self.embedding_size if self._has_users else self.embedding_size)
+        self.b2 = nn.Embedding(item_vocab_size, 1)
 
         self.fc1_activation = get_activation_layer(self.fc_activation_fn)
 
@@ -97,14 +98,14 @@ class CaserModel(nn.Module):
 
     @property
     def _has_users(self):
-        return self.user_voc_size > 0
+        return self.user_vocab_size > 0
 
     def _init_weights(self):
         # weight initialization
+        # note: item embedding already init when initialized
         if self._has_users:
             self.user_embedding.weight.data.normal_(0, 1.0 / self.user_embedding.embedding_dim)
 
-        self.item_embedding.weight.data.normal_(0, 1.0 / self.item_embedding.embedding_dim)
         self.W2.weight.data.normal_(0, 1.0 / self.W2.embedding_dim)
         self.b2.weight.data.zero_()
 

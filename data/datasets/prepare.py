@@ -5,17 +5,17 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME
 from tokenization.tokenizer import Tokenizer
 
 
-class Preprocessor:
+class Processor:
 
     @abstractmethod
-    def preprocess(self,
-                   parsed_session: Dict[str, Any]) -> Dict[str, Any]:
+    def process(self,
+                parsed_session: Dict[str, Any]) -> Dict[str, Any]:
         pass
 
 
 def build_processors(processors_config: Dict[str, Any],
                      **kwargs: Dict[str, Any]
-                     ) -> List[Preprocessor]:
+                     ) -> List[Processor]:
 
     processors = []
     for key, config in processors_config.items():
@@ -27,14 +27,14 @@ def build_processors(processors_config: Dict[str, Any],
 
 def build_processor(processor_id: str,
                     **kwargs
-                    ) -> Preprocessor:
+                    ) -> Processor:
     if processor_id == 'tokenizer_processor':
         return TokenizerPreprocessor(kwargs.get('tokenizer'))
 
     raise NotImplementedError(f"unknown preprocessor {processor_id}")
 
 
-class TokenizerPreprocessor(Preprocessor):
+class TokenizerPreprocessor(Processor):
 
     def __init__(self,
                  tokenizer: Tokenizer
@@ -42,7 +42,7 @@ class TokenizerPreprocessor(Preprocessor):
         super().__init__()
         self._tokenizer = tokenizer
 
-    def preprocess(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
+    def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
         items = parsed_session[ITEM_SEQ_ENTRY_NAME]
         tokenized_items = self._tokenizer.convert_tokens_to_ids(items)
         parsed_session[ITEM_SEQ_ENTRY_NAME] = tokenized_items
