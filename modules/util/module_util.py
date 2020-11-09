@@ -48,6 +48,7 @@ def convert_target_for_multi_label_margin_loss(target: torch.Tensor,
 
     where C is the number of classes, N the batch size, and X the padded class id length
     """
-    converted_target = F.pad(target, [0, num_classes - target.size()[1]])
+    converted_target = F.pad(target, [0, num_classes - target.size()[1]], value=pad_token_id)
+    # TODO: also mask all special tokens
     converted_target[converted_target == pad_token_id] = -1
     return converted_target

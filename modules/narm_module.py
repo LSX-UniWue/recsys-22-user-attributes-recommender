@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.narm.narm_model import NarmModel
 from modules import LOG_KEY_VALIDATION_LOSS
-from modules.util.module_util import get_padding_mask
+from modules.util.module_util import get_padding_mask, convert_target_for_multi_label_margin_loss
 from tokenization.tokenizer import Tokenizer
 from torch import nn
 
@@ -59,8 +59,14 @@ class NarmModule(pl.LightningModule):
                    logits: torch.Tensor,
                    target: torch.Tensor
                    ) -> torch.Tensor:
-        loss = nn.CrossEntropyLoss()
-        return loss(logits, target)
+        if len(target.size()) == 1:
+            # only one item per sequence step
+            loss_fnc = nn.CrossEntropyLoss()
+            return loss_fnc(logits, target)
+
+        loss_fnc = nn.MultiLabelMarginLoss()
+        target = convert_target_for_multi_label_margin_loss(target, len(self.tokenizer), self.tokenizer.pad_token_id)
+        return loss_fnc(logits, target)
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],

@@ -37,7 +37,10 @@ class ItemEmbedding(nn.Module):
                 items: torch.Tensor
                 ) -> torch.Tensor:
         embedding = self.embedding(items)
-        embedding = self.embedding_flatten(embedding)
+
+        # this is a quick hack, if a module needs the embeddings of a single item
+        if len(embedding.size()) > 2:
+            embedding = self.embedding_flatten(embedding)
         return embedding
 
 
