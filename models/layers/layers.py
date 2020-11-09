@@ -36,8 +36,8 @@ class ItemEmbedding(nn.Module):
         if init_weights_fnc is None:
             initrange = 0.1
             self.embedding.weight.data.uniform_(- initrange, initrange)
-
-        init_weights_fnc(self.embedding.weight)
+        else:
+            init_weights_fnc(self.embedding.weight)
 
     def forward(self,
                 items: torch.Tensor
