@@ -148,11 +148,9 @@ class BERT4RecModule(pl.LightningModule):
         # loss = self._calc_loss(prediction, targets)
         # self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
-        mask = None
         # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
         # the target tensor
-        if len(targets.size()) > 1:
-            mask = ~ targets.eq(self.tokenizer.pad_token_id)
+        mask = None if len(targets.size()) == 1 else ~ targets.eq(self.tokenizer.pad_token_id)
 
         for name, metric in self.metrics.items():
             step_value = metric(prediction, targets, mask=mask)
