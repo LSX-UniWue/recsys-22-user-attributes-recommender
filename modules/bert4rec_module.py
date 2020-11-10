@@ -8,7 +8,7 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
-from modules.util.module_util import get_padding_mask, convert_target_for_multi_label_margin_loss
+from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
 
@@ -87,31 +87,9 @@ class BERT4RecModule(pl.LightningModule):
                    target: torch.Tensor
                    ) -> torch.Tensor:
         if len(target.size()) > 2:
-            # handle multiple items per sequence step
-            # for validation only one sequence step is taken into account
-            if len(prediction_logits.size()) == 2:
-                loss_fnc = nn.MultiLabelMarginLoss()
-                target = convert_target_for_multi_label_margin_loss(target, len(self.tokenizer),
-                                                                    self.tokenizer.pad_token_id)
-                return loss_fnc(prediction_logits, target)
-            # the multi label margin loss can't mask sequences of -1 when reducing the mean
-            # and can also not consider multiple sequence steps, so we do both things by hand
-            loss_fnc = nn.MultiLabelMarginLoss(reduction='sum')
-            # for training there maybe more than one steps
-            total_loss = torch.tensor(0., device=target.device)
-            total_steps = 0
-            for sequence_step, target_step in zip(prediction_logits, target):
-                # first check for a mask sequence for batch than sum all non mask sequence steps
-                steps = (~ target_step.eq(CROSS_ENTROPY_IGNORE_INDEX)).max(dim=1).values.sum(dim=0)
-                total_steps += steps
-                target_step = convert_target_for_multi_label_margin_loss(target_step, len(self.tokenizer),
-                                                                         self.tokenizer.pad_token_id)
-
-                target_step[target_step == CROSS_ENTROPY_IGNORE_INDEX] = -1
-                loss = loss_fnc(sequence_step, target_step)
-                total_loss += loss
-
-            return total_loss / total_steps
+            target = convert_target_to_multi_hot(target, len(self.tokenizer), self.tokenizer.pad_token_id)
+            loss_fnc = nn.BCEWithLogitsLoss()
+            return loss_fnc(prediction_logits, target)
 
         # handle single item per sequence step
         loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)

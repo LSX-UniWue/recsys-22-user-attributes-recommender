@@ -65,8 +65,12 @@ def convert_target_to_multi_hot(target_tensor: torch.Tensor,
     :param pad_token_id:
     :return: a tensor with 1s in the indices specified by
     """
-    multi_hot = torch.zeros(target_tensor.size()[0], num_classes, device=target_tensor.device)
-    multi_hot.scatter_(1, target_tensor, 1)
+
+    multi_hot = torch.zeros(list(target_tensor.size()[:-1]) + [num_classes], device=target_tensor.device)
+    target = target_tensor.clone()
+    target[target == -100] = pad_token_id
+
+    multi_hot.scatter_(-1, target, 1)
     # remove the padding for each multi-hot target
-    multi_hot[:, pad_token_id] = 0
+    multi_hot[..., pad_token_id] = 0
     return multi_hot
