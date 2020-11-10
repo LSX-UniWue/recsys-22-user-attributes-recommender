@@ -73,7 +73,7 @@ class NarmModule(pl.LightningModule):
                                     num_clases: int,
                                     pad_token_id: int
                                     ) -> torch.Tensor:
-        mulit_hot = torch.zeros(target_tensor.size()[0], num_clases)
+        mulit_hot = torch.zeros(target_tensor.size()[0], num_clases, device=target_tensor.device)
         mulit_hot.scatter_(1, target_tensor, 1)
         mulit_hot[:, pad_token_id] = 0
         return mulit_hot
