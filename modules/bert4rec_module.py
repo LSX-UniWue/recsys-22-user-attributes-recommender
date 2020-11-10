@@ -110,19 +110,23 @@ class BERT4RecModule(pl.LightningModule):
                                      batch_first=self.batch_first)
         targets = batch[TARGET_ENTRY_NAME]
 
+        position_ids = BERT4RecModule.get_position_ids(batch)
+
         # set the last non padding token to the mask token
         input_seq, target_mask = _add_mask_token_at_ending(input_seq, self.tokenizer)
 
         if self.batch_first:
             input_seq = input_seq.transpose(1, 0)
             target_mask = target_mask.transpose(1, 0)
+            if position_ids is not None:
+                position_ids = position_ids.transpose(1, 0)
 
         # after adding the mask token we can calculate the padding mask
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=True)
 
         # get predictions for all seq steps
-        prediction = self.model(input_seq, padding_mask=padding_mask)
-        # extract the relevant seq steps, where the mask was set
+        prediction = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
+        # extract the relevant seq steps, where the mask was set, here only one mask per sequence steps exists
         prediction = prediction[target_mask]
 
         # FIXME: the cross entropy loss cannot be calculated for multi item per sequence
@@ -284,13 +288,3 @@ def _mask_items(inputs: torch.Tensor,
 
     # the rest of the time (10% of the time) we keep the masked input tokens unchanged
     return inputs, target
-
-
-if __name__ == '__main__':
-    loss = nn.BCEWithLogitsLoss()
-    input = torch.tensor([1.0, 1.0, 1.0])
-    print(input)
-    target = torch.tensor([0, 0, 0]).to(dtype=torch.float)
-    print(target)
-    output = loss(input, target)
-    print(output)
