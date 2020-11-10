@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.narm.narm_model import NarmModel
 from modules import LOG_KEY_VALIDATION_LOSS
-from modules.util.module_util import get_padding_mask
+from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot
 from tokenization.tokenizer import Tokenizer
 from torch import nn
 
@@ -65,18 +65,8 @@ class NarmModule(pl.LightningModule):
             return loss_fnc(logits, target_tensor)
 
         loss_fnc = nn.BCEWithLogitsLoss()
-        target_tensor = self.convert_target_to_multi_hot(target_tensor, len(self.tokenizer), self.tokenizer.pad_token_id)
+        target_tensor = convert_target_to_multi_hot(target_tensor, len(self.tokenizer), self.tokenizer.pad_token_id)
         return loss_fnc(logits, target_tensor)
-
-    def convert_target_to_multi_hot(self,
-                                    target_tensor: torch.Tensor,
-                                    num_clases: int,
-                                    pad_token_id: int
-                                    ) -> torch.Tensor:
-        mulit_hot = torch.zeros(target_tensor.size()[0], num_clases, device=target_tensor.device)
-        mulit_hot.scatter_(1, target_tensor, 1)
-        mulit_hot[:, pad_token_id] = 0
-        return mulit_hot
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],

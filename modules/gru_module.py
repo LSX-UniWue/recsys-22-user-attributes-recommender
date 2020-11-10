@@ -8,7 +8,7 @@ import torch.nn as nn
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.gru.gru_model import GRUSeqItemRecommenderModel
 from modules import LOG_KEY_VALIDATION_LOSS
-from modules.util.module_util import get_padding_mask, convert_target_for_multi_label_margin_loss
+from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot
 from tokenization.tokenizer import Tokenizer
 
 
@@ -47,6 +47,7 @@ class GRUModule(pl.LightningModule):
             "loss": loss
         }
 
+    # FIXME: same loss as in NARM module
     def _calc_loss(self,
                    logits: torch.Tensor,
                    target: torch.Tensor
@@ -56,8 +57,8 @@ class GRUModule(pl.LightningModule):
             loss_fnc = nn.CrossEntropyLoss()
             return loss_fnc(logits, target)
 
-        loss_fnc = nn.MultiLabelMarginLoss()
-        target = convert_target_for_multi_label_margin_loss(target, len(self.tokenizer), self.tokenizer.pad_token_id)
+        loss_fnc = nn.BCEWithLogitsLoss()
+        target = convert_target_to_multi_hot(target, len(self.tokenizer), self.tokenizer.pad_token_id)
         return loss_fnc(logits, target)
 
     def validation_step(self,

@@ -52,3 +52,21 @@ def convert_target_for_multi_label_margin_loss(target: torch.Tensor,
     # TODO: also mask all special tokens
     converted_target[converted_target == pad_token_id] = -1
     return converted_target
+
+
+def convert_target_to_multi_hot(target_tensor: torch.Tensor,
+                                num_classes: int,
+                                pad_token_id: int
+                                ) -> torch.Tensor:
+    """
+    generates a mulit-hot vector of the provided indices in target_tensor
+    :param target_tensor:
+    :param num_classes:
+    :param pad_token_id:
+    :return: a tensor with 1s in the indices specified by
+    """
+    multi_hot = torch.zeros(target_tensor.size()[0], num_classes, device=target_tensor.device)
+    multi_hot.scatter_(1, target_tensor, 1)
+    # remove the padding for each multi-hot target
+    multi_hot[:, pad_token_id] = 0
+    return multi_hot
