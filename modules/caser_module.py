@@ -45,14 +45,19 @@ class CaserModule(pl.LightningModule):
 
         pos_logits, neg_logits = self.model(input_seq, users, pos_items, neg_items)
 
-        # TODO: check: this could be the sas loss
-        positive_loss = - torch.mean(torch.log(torch.sigmoid(pos_logits)))
-        negative_loss = - torch.mean(torch.log(1 - torch.sigmoid(neg_logits)))
-        loss = positive_loss + negative_loss
-
+        loss = self._calc_loss(pos_logits, neg_logits)
         return {
             'loss': loss
         }
+
+    def _calc_loss(self,
+                   pos_logits: torch.Tensor,
+                   neg_logits: torch.Tensor
+                   ) -> torch.Tensor:
+        # TODO: check: this could be the sas loss
+        positive_loss = - torch.mean(torch.log(torch.sigmoid(pos_logits)))
+        negative_loss = - torch.mean(torch.log(1 - torch.sigmoid(neg_logits)))
+        return positive_loss + negative_loss
 
     # FIXME: a lot of copy paste code
     def validation_step(self,
