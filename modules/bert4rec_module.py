@@ -87,8 +87,11 @@ class BERT4RecModule(pl.LightningModule):
                    target: torch.Tensor
                    ) -> torch.Tensor:
         if len(target.size()) > 2:
+            target = target.transpose(0, 1)  # FIXME only do this when not batch first
+            prediction_logits = prediction_logits.transpose(0, 1)
             target = convert_target_to_multi_hot(target, len(self.tokenizer), self.tokenizer.pad_token_id)
-            loss_fnc = nn.BCEWithLogitsLoss()
+            mask = target.sum(-1).gt(0).unsqueeze(2)
+            loss_fnc = nn.BCEWithLogitsLoss(weight=mask)
             return loss_fnc(prediction_logits, target)
 
         # handle single item per sequence step
@@ -281,3 +284,13 @@ def _mask_items(inputs: torch.Tensor,
 
     # the rest of the time (10% of the time) we keep the masked input tokens unchanged
     return inputs, target
+
+
+if __name__ == '__main__':
+    loss = nn.BCEWithLogitsLoss()
+    input = torch.tensor([1.0, 1.0, 1.0])
+    print(input)
+    target = torch.tensor([0, 0, 0]).to(dtype=torch.float)
+    print(target)
+    output = loss(input, target)
+    print(output)
