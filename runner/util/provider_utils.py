@@ -314,7 +314,8 @@ def build_standard_trainer(config: providers.Configuration) -> providers.Singlet
         checkpoint_callback=checkpoint,
         gradient_clip_val=trainer_config.gradient_clip_val,
         gpus=trainer_config.gpus,
-        max_epochs=trainer_config.max_epochs
+        max_epochs=trainer_config.max_epochs,
+        weights_summary='full'
     )
 
 
