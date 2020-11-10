@@ -20,17 +20,29 @@ spec:
           imagePullPolicy: "Always"
           resources:
             requests:
-              cpu: "6"
-              memory: "24Gi"
+              cpu: "4"
+              memory: "16Gi"
               nvidia.com/gpu: 1
             limits:
-              cpu: "6"
-              memory: "24Gi"
+              cpu: "4"
+              memory: "16Gi"
               nvidia.com/gpu: 1
-          command: ["sleep", "365d"]
           env:
             - name: HOME
               value: /home/ls6/dallmann
+            - name: PROJECT_DIR
+              value: /home/ls6/dallmann/research/dota/workspace/prj1
+            - name: GIT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: gitlab-token
+            - name: PREPARE_SCRIPT
+              value: /home/ls6/dallmann/research/dota/workspace/prepare.sh
+            - name: RUN_SCRIPT
+              value: /home/ls6/dallmann/research/dota/workspace/prj1/run.sh
+          command: ["/bin/bash"]
+          args: ["-c", "/home/ls6/dallmann/research/dota/workspace/entrypoint.sh"]
           volumeMounts:
             - mountPath: /home/ls6/dallmann # directory IN the container
               name: home # matches volume-name from below

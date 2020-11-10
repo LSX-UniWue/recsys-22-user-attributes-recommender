@@ -7,6 +7,7 @@ RUN apt update && apt -y install zsh byobu tmux curl htop vim git wget mc && rm 
 ENV POETRY_HOME=/opt/poetry
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
 ENV PATH="/opt/poetry/bin:${PATH}"
+RUN chmod o+rx /opt/poetry/bin/poetry
 
 ENV PYTHONUNBUFFERED=1
 ENV LANG C.UTF-8

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: ml-dev
+  name: ml-dev-tmp
   labels:
     app: ml-dev
 spec:
@@ -13,16 +13,16 @@ spec:
   #      effect: "NoSchedule"
   containers:
     - name: ml-dev
-      image: lsx-harbor.informatik.uni-wuerzburg.de/dallmann/ml-dev:latest
+      image: lsx-harbor.informatik.uni-wuerzburg.de/dallmann/recommender:latest
       imagePullPolicy: "Always"
       resources:
         requests:
-          cpu: "6"
-          memory: "24Gi"
+          cpu: "2"
+          memory: "4Gi"
           nvidia.com/gpu: 1
         limits:
-          cpu: "6"
-          memory: "24Gi"
+          cpu: "2"
+          memory: "4Gi"
           nvidia.com/gpu: 1
       command: ["sleep", "365d"]
       env:
