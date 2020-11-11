@@ -165,7 +165,8 @@ class BERT4RecModule(pl.LightningModule):
 
         parameters = {'params': decay_exclude, 'weight_decay': 0.0},\
                      {'params': decay_include, 'weight_decay': self.weight_decay}
-        optimizer = torch.optim.Adam(parameters,
+        # FIXME: reset weight_decay
+        optimizer = torch.optim.Adam(self.parameters(),
                                      lr=self.learning_rate,
                                      betas=(self.beta_1, self.beta_2))
 
