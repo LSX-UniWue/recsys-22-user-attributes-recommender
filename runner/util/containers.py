@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from dependency_injector import containers, providers
 
@@ -13,6 +13,12 @@ from modules.narm_module import NarmModule
 from runner.util.provider_utils import build_tokenizer_provider, build_session_loader_provider_factory, \
     build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, build_standard_trainer, \
     build_metrics_provider, build_processors_provider
+
+DEFAULT_PROCESSORS = {
+    'tokenizer_processor': {
+        'tokenize': True
+    }
+}
 
 CONFIG_KEY_MODULE = 'module'
 
@@ -48,23 +54,36 @@ def build_default_config() -> providers.Configuration:
     return config
 
 
-def _build_default_dataset_config(shuffle: bool) -> Dict[str, Any]:
+def _build_default_dataset_config(shuffle: bool,
+                                  processors: Dict[str, Dict[str, Any]] = None
+                                  ) -> Dict[str, Any]:
+    if processors is None:
+        processors = DEFAULT_PROCESSORS
+
     return {
         'dataset': {
             'parser': {
                 'additional_features': {},
                 'item_separator': None
             },
-            'processors': {
-                'tokenizer_processor': {
-                    'tokenize': True
-                }
-            }
+            'processors': processors
         },
         'loader': {
             'num_workers': 0,
             'shuffle': shuffle,
             'max_seq_step_length': None
+        }
+    }
+
+
+def _build_pos_neg_model_processors() -> Dict[str, Any]:
+    processors = DEFAULT_PROCESSORS.copy()
+    processors['pos_neg_sampler'] = {
+        'pos_neg_sampling': True
+    }
+    return {
+        'datasets': {
+            'train': _build_default_dataset_config(shuffle=True, processors=processors)
         }
     }
 
@@ -135,6 +154,8 @@ class BERT4RecContainer(containers.DeclarativeContainer):
 class CaserContainer(containers.DeclarativeContainer):
 
     config = build_default_config()
+    # add pos neg sampler by default TODO: can we do this later?
+    config.from_dict(_build_pos_neg_model_processors())
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
@@ -177,6 +198,8 @@ class CaserContainer(containers.DeclarativeContainer):
 class SASRecContainer(containers.DeclarativeContainer):
 
     config = build_default_config()
+    # add pos neg sampler by default
+    config.from_dict(_build_pos_neg_model_processors())
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)

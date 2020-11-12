@@ -9,8 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from data.datasets.nextitem import NextItemDataset, NextItemIndex
-from data.datasets.posneg import PosNegSessionDataset
-from data.datasets.prepare import Processor, build_processors
+from data.datasets.prepare import Processor, build_processors, PositiveNegativeSampler
 from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
@@ -69,9 +68,14 @@ def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider
                                               item_separator=item_separator,
                                               additional_features=additional_features)
         basic_dataset = PlainSessionDataset(reader, session_parser)
-        session_dataset = ItemSessionDataset(basic_dataset, processors=processors)
 
-        return PosNegSessionDataset(session_dataset, tokenizer)
+        has_pos_neg_sampler_processor = False
+        for processor in processors:
+            if isinstance(processor, PositiveNegativeSampler):
+                has_pos_neg_sampler_processor = True
+        if not has_pos_neg_sampler_processor:
+            raise ValueError('please configure a pos neg sampler')
+        return ItemSessionDataset(basic_dataset, processors)
 
     return build_dataset_provider_factory(provide_posneg_dataset, tokenizer_provider, processors_provider,
                                           dataset_config)
@@ -130,12 +134,14 @@ def build_posneg_loader_provider_factory(dataset_config: providers.Configuration
                                          processor_provider_provider: providers.Provider
                                          ) -> providers.Factory:
     dataset = build_posnet_dataset_provider_factory(tokenizer_provider, processor_provider_provider, dataset_config)
+    dataset_loader_config = dataset_config.loader
     return providers.Factory(
-        provide_posneg_loader,
+        provide_session_loader,
         dataset,
-        dataset_config.loader.batch_size,
-        dataset_config.loader.max_seq_length,
-        dataset_config.loader.max_seq_step_length,
+        dataset_loader_config.batch_size,
+        dataset_loader_config.max_seq_length,
+        dataset_loader_config.max_seq_step_length,
+        dataset_loader_config.num_workers,
         tokenizer_provider
     )
 
@@ -231,25 +237,6 @@ def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provid
 
     return build_dataset_provider_factory(provide_nextitem_dataset, tokenizer_provider, preprocessor_provider,
                                           dataset_config)
-
-
-def provide_posneg_loader(dataset: Dataset,
-                          batch_size: int,
-                          max_seq_length: int,
-                          max_seq_step_length: int,
-                          tokenizer: Tokenizer):
-    return DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=padded_session_collate(
-            max_length=max_seq_length,
-            pad_token_id=tokenizer.pad_token_id,
-            entries_to_pad=["session", "positive_samples", "negative_samples"],
-            session_length_entry="session",
-            max_seq_step_length=max_seq_step_length
-        )
-    )
 
 
 def provide_session_loader(dataset: Dataset,

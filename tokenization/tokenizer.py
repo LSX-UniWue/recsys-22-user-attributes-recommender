@@ -57,8 +57,8 @@ class Tokenizer:
         special_token_ids = []
         for key in SPECIAL_TOKENS_ATTRIBUTES:
             token = getattr(self, key)
-            token_id = self.convert_tokens_to_ids(token)
-            if token_id is not None:
+            if token is not None:
+                token_id = self.convert_tokens_to_ids(token)
                 special_token_ids.append(token_id)
 
         return special_token_ids
