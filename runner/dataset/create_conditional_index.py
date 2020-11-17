@@ -7,7 +7,7 @@ import typer
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets.nextitem import NextItemIndexBuilder
-from data.datasets.session import ItemSessionDataset, ItemSessionParser
+from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
 from data.utils import create_indexed_header, read_csv_header
 
 app = typer.Typer()
@@ -60,7 +60,10 @@ def run(data_file_path: Path = typer.Argument(..., help="path to the input file 
         delimiter=delimiter,
         additional_features=additional_features
     )
-    dataset = ItemSessionDataset(reader, session_parser)
+
+    plain_dataset = PlainSessionDataset(reader, session_parser)
+    dataset = ItemSessionDataset(plain_dataset)
+
     builder = NextItemIndexBuilder(min_session_length=min_session_length,
                                    target_positions_extractor=target_positions_extractor)
     builder.build(dataset, output_file_path)
