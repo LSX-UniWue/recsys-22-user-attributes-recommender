@@ -1,0 +1,82 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ds4rec
+  labels:
+    app: ds4rec
+spec:
+  #  nodeSelector:
+  #    kubernetes.io/hostname: vana
+  #  tolerations:
+  #    - key: "node.kubernetes.io/unschedulable"
+  #      operator: "Equal"
+  #      effect: "NoSchedule"
+  backoffLimit: 1
+  template:
+    spec:
+      containers:
+        - name: ds4rec
+          image: lsx-harbor.informatik.uni-wuerzburg.de/dallmann/recommender:latest
+          imagePullPolicy: "Always"
+          resources:
+            requests:
+              cpu: "4"
+              memory: "16Gi"
+              nvidia.com/gpu: 1
+            limits:
+              cpu: "4"
+              memory: "16Gi"
+              nvidia.com/gpu: 1
+          env:
+            - name: HOME
+              value: /home/ls6/dallmann
+            - name: PROJECT_DIR
+              value: /home/ls6/dallmann/research/dota/workspace/prj1
+            - name: GIT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: gitlab-token
+            - name: PREPARE_SCRIPT
+              value: /home/ls6/dallmann/research/dota/workspace/prepare.sh
+            - name: RUN_SCRIPT
+              value: /home/ls6/dallmann/research/dota/workspace/prj1/run.sh
+          command: ["/bin/bash"]
+          args: ["-c", "/home/ls6/dallmann/research/dota/workspace/entrypoint.sh"]
+          volumeMounts:
+            - mountPath: /home/ls6/dallmann # directory IN the container
+              name: home # matches volume-name from below
+            - mountPath: /scratch # directory IN the container
+              name: scratch # matches volume-name from below
+            - mountPath: /ssd
+              name: cache
+            - mountPath: /dev/shm
+              name: dshm
+          ports:
+            - containerPort: 8888
+      imagePullSecrets:
+        - name: lsx-harbor
+      restartPolicy: "Never"
+      volumes:
+        - name: home
+          cephfs:
+            monitors:
+              - 132.187.14.16,132.187.14.17,132.187.14.19,132.187.14.20  # Not important for you, just copy along
+            user: dallmann  # <namespace>
+            path: "/home/ls6/dallmann" # The path you want to mount
+            secretRef: # The name of the secret for auth. Is always "ceph-secret"
+              name: ceph-secret-dallmann
+        - name: scratch
+          cephfs:
+            monitors:
+              - 132.187.14.16,132.187.14.17,132.187.14.19,132.187.14.20  # Not important for you, just copy along
+            user: dallmann  # <namespace>
+            path: "/scratch" # The path you want to mount
+            secretRef: # The name of the secret for auth. Is always "ceph-secret"
+              name: ceph-secret-dallmann
+        - name: cache
+          emptyDir: {}
+        - name: dshm
+          emptyDir:
+            medium: Memory
+
