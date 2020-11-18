@@ -105,7 +105,7 @@ class SASRecModel(nn.Module):
 
         # inference step (I is the number of positive items to test)
         # embeddings of pos_items
-        item_embeddings = self.embedding.get_item_embedding(pos_items)  # (I, N, H)
+        item_embeddings = self.embedding.get_item_embedding(pos_items, flatten=False)  # (I, N, H)
 
         # permute embeddings for batch matrix multiplication
         item_embeddings = item_embeddings.permute(1, 2, 0)  # (N, H, I)

@@ -40,12 +40,13 @@ class ItemEmbedding(nn.Module):
             init_weights_fnc(self.embedding.weight)
 
     def forward(self,
-                items: torch.Tensor
+                items: torch.Tensor,
+                flatten: bool = True
                 ) -> torch.Tensor:
         embedding = self.embedding(items)
 
         # this is a quick hack, if a module needs the embeddings of a single item
-        if len(embedding.size()) > 2:
+        if flatten:
             embedding = self.embedding_flatten(embedding)
         return embedding
 
