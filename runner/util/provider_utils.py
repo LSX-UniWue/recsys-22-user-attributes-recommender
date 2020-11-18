@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import Dataset, DataLoader
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
-from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
 from data.datasets.nextitem import NextItemDataset, NextItemIndex
 from data.datasets.prepare import Processor, build_processors, PositiveNegativeSampler
 from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
@@ -242,10 +242,15 @@ def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provid
 def _build_entries_to_pad(max_seq_length: int,
                           max_seq_step_length: Optional[int]
                           ) -> Dict[str, List[int]]:
-    entries_to_pad = {ITEM_SEQ_ENTRY_NAME: [max_seq_length]}
+    entries_to_pad = {
+        ITEM_SEQ_ENTRY_NAME: [max_seq_length],
+        POSITIVE_SAMPLES_ENTRY_NAME: [max_seq_length],
+        NEGATIVE_SAMPLES_ENTRY_NAME: [max_seq_length]
+    }
 
     if max_seq_step_length is not None:
-        entries_to_pad[ITEM_SEQ_ENTRY_NAME].append(max_seq_step_length)
+        for key in [ITEM_SEQ_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME]:
+            entries_to_pad[key].append(max_seq_step_length)
         entries_to_pad[TARGET_ENTRY_NAME] = [max_seq_step_length]
 
     return entries_to_pad
