@@ -6,12 +6,10 @@ datasets:
       parser:
         delimiter: "\t"
         item_column_name: item_id
-        item_separator: ' + '
       nip_index_file: /Users/nosebrain/Desktop/small/test.nip.idx
     loader:
       batch_size: 4
       max_seq_length: 10
-      max_seq_step_length: 5
   train:
     dataset:
       csv_file: /Users/nosebrain/Desktop/small/train.csv
@@ -20,11 +18,9 @@ datasets:
       parser:
         delimiter: "\t"
         item_column_name: item_id
-        item_separator: ' + '
     loader:
       batch_size: 4
       max_seq_length: 10
-      max_seq_step_length: 5
   validation:
     dataset:
       csv_file: /Users/nosebrain/Desktop/small/valid.csv
@@ -32,12 +28,10 @@ datasets:
       parser:
         delimiter: "\t"
         item_column_name: item_id
-        item_separator: ' + '
       nip_index_file: /Users/nosebrain/Desktop/small/valid.nip.idx
     loader:
       batch_size: 4
       max_seq_length: 10
-      max_seq_step_length: 5
 model:
   num_items: 250
   item_embedding_size: 32
