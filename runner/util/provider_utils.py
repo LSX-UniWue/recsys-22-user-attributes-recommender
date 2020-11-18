@@ -4,6 +4,7 @@ from typing import Callable
 from dependency_injector import providers
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger
 from torch.utils.data import Dataset, DataLoader
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
@@ -216,6 +217,7 @@ def provide_nextit_loader(
 
 def build_standard_trainer(config: providers.Configuration) -> providers.Singleton:
     checkpoint = build_standard_model_checkpoint(config)
+    logger = build_tensorboard_logger(config)
 
     trainer_config = config.trainer
     return providers.Singleton(
@@ -226,7 +228,8 @@ def build_standard_trainer(config: providers.Configuration) -> providers.Singlet
         checkpoint_callback=checkpoint,
         gradient_clip_val=trainer_config.gradient_clip_val,
         gpus=trainer_config.gpus,
-        max_epochs=trainer_config.max_epochs
+        max_epochs=trainer_config.max_epochs,
+        logger=logger
     )
 
 
@@ -245,3 +248,9 @@ def build_metrics_provider(config: providers.ConfigurationOption
         build_metrics,
         config
     )
+
+def build_tensorboard_logger(config: providers.Configuration) -> providers.Singleton:
+    return providers.Singleton(
+        TensorBoardLogger,
+        save_dir=config.trainer.log_dir,
+        name=config.trainer.experiment_name)
