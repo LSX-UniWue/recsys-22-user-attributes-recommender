@@ -35,6 +35,8 @@ def convert_data_to_csv(dataset_folder,name):
 
     merged_df = pd.merge(ratings_df, movies_df).sort_values(by=["userId", "timestamp"])
     merged_df.to_csv("/".join([dataset_folder, name, name+".csv"]), sep="\t", index=False)
+    movies_df["id"] = movies_df.index
+    movies_df[['title','id']].to_csv("/".join([dataset_folder, name, name+".vocab"]),sep ="\t",index=False)
 
 
 def read_csv(dataset_folder, name, file, file_type, sep, header=None):
