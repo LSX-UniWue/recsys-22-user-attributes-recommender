@@ -8,6 +8,7 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
+from modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TEST_LOSS, LOG_KEY_TRAINING_LOSS
 from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
@@ -78,6 +79,7 @@ class BERT4RecModule(pl.LightningModule):
         prediction_logits = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
 
         masked_lm_loss = self._calc_loss(prediction_logits, target)
+        self.log(LOG_KEY_TRAINING_LOSS, masked_lm_loss, prog_bar=False)
         return {
             'loss': masked_lm_loss
         }
@@ -104,6 +106,13 @@ class BERT4RecModule(pl.LightningModule):
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
                         ) -> None:
+        self._eval_epoch_step(batch, batch_idx)
+
+    def _eval_epoch_step(self,
+                         batch: Dict[str, torch.Tensor],
+                         batch_idx: int,
+                         is_test: bool = False
+                         ) -> None:
         # shorter to allow the masking token
         input_seq = _expand_sequence(inputs=batch[ITEM_SEQ_ENTRY_NAME],
                                      tokenizer=self.tokenizer,
@@ -129,9 +138,8 @@ class BERT4RecModule(pl.LightningModule):
         # extract the relevant seq steps, where the mask was set, here only one mask per sequence steps exists
         prediction = prediction[target_mask]
 
-        # FIXME: the cross entropy loss cannot be calculated for multi item per sequence
-        # loss = self._calc_loss(prediction, targets)
-        # self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
+        loss = self._calc_loss(prediction, targets)
+        self.log(LOG_KEY_TEST_LOSS if is_test else LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
         # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
         # the target tensor
@@ -149,7 +157,7 @@ class BERT4RecModule(pl.LightningModule):
             self.log(name, metric.compute(), prog_bar=True)
 
     def test_step(self, batch, batch_idx):
-        self.validation_step(batch, batch_idx)
+        self._eval_epoch_step(batch, batch_idx, is_test=True)
 
     def test_epoch_end(self,
                        outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
@@ -165,8 +173,8 @@ class BERT4RecModule(pl.LightningModule):
 
         parameters = {'params': decay_exclude, 'weight_decay': 0.0},\
                      {'params': decay_include, 'weight_decay': self.weight_decay}
-        # FIXME: reset weight_decay
-        optimizer = torch.optim.Adam(self.parameters(),
+
+        optimizer = torch.optim.Adam(parameters,
                                      lr=self.learning_rate,
                                      betas=(self.beta_1, self.beta_2))
 
