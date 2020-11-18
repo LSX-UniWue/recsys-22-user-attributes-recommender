@@ -35,8 +35,9 @@ datasets:
       csv_file: "/home/dallmann/uni/research/dota/datasets/small/preprocessed/splits/train.csv"
       csv_file_index: "/home/dallmann/uni/research/dota/datasets/small/preprocessed/splits/train.csv.idx"
       nip_index_file: "/home/dallmann/uni/research/dota/datasets/small/preprocessed/splits/train.csv.nip"
-      delimiter: "\t"
-      item_column_name: "item_id"
+      parser:
+        delimiter: "\t"
+        item_column_name: "item_id"
     loader:
       batch_size: 512
       max_seq_length: 100
@@ -45,8 +46,9 @@ datasets:
       csv_file: "/home/dallmann/uni/research/dota/datasets/small/preprocessed/splits/valid.csv"
       csv_file_index: "/home/dallmann/uni/research/dota/datasets/small/preprocessed/splits/valid.csv.idx"
       nip_index_file: "/home/dallmann/uni/research/dota/datasets/small/preprocessed/splits/valid.csv.nip"
-      delimiter: "\t"
-      item_column_name: "item_id"
+      parser:
+        delimiter: "\t"
+        item_column_name: "item_id"
     loader:
       batch_size: 512
       max_seq_length: 100
@@ -55,8 +57,9 @@ datasets:
       csv_file: "/home/dallmann/uni/research/dota/datasets/small/preprocessed/splits/test.csv"
       csv_file_index: "/home/dallmann/uni/research/dota/datasets/small/preprocessed/splits/test.csv.idx"
       nip_index_file: "/home/dallmann/uni/research/dota/datasets/small/preprocessed/splits/test.csv.nip"
-      delimiter: "\t"
-      item_column_name: "item_id"
+      parser:
+        delimiter: "\t"
+        item_column_name: "item_id"
     loader:
       batch_size: 512
       max_seq_length: 100
