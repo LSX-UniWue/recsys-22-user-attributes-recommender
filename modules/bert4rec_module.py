@@ -86,14 +86,14 @@ class BERT4RecModule(pl.LightningModule):
 
     def _calc_loss(self,
                    prediction_logits: torch.Tensor,
-                   target: torch.Tensor
+                   target: torch.Tensor,
+                   is_eval: bool = False
                    ) -> torch.Tensor:
-        if len(target.size()) > 2:
-            target = target.transpose(0, 1)  # FIXME only do this when not batch first
-            prediction_logits = prediction_logits.transpose(0, 1)
+        target_size = len(target.size())
+        is_basket_recommendation = target_size > 1 if is_eval else target_size > 2
+        if is_basket_recommendation:
             target = convert_target_to_multi_hot(target, len(self.tokenizer), self.tokenizer.pad_token_id)
-            mask = target.sum(-1).gt(0).unsqueeze(2)
-            loss_fnc = nn.BCEWithLogitsLoss(weight=mask)
+            loss_fnc = nn.BCEWithLogitsLoss()
             return loss_fnc(prediction_logits, target)
 
         # handle single item per sequence step
@@ -138,7 +138,7 @@ class BERT4RecModule(pl.LightningModule):
         # extract the relevant seq steps, where the mask was set, here only one mask per sequence steps exists
         prediction = prediction[target_mask]
 
-        loss = self._calc_loss(prediction, targets)
+        loss = self._calc_loss(prediction, targets, is_eval=True)
         self.log(LOG_KEY_TEST_LOSS if is_test else LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
         # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
