@@ -54,7 +54,7 @@ def run_model(model: str = typer.Argument(..., help="the model to run"),
 
     trainer = container.trainer()
 
-    _config_logging(container.config())
+    # _config_logging(container.config())
 
     if do_train:
         trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())

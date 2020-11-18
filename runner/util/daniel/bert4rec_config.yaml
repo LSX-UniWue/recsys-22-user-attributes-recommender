@@ -1,0 +1,134 @@
+datasets:
+  test:
+    dataset:
+      csv_file: /Users/nosebrain/Desktop/small/test.csv
+      csv_file_index: /Users/nosebrain/Desktop/small/test.idx
+      parser:
+        delimiter: "\t"
+#        additional_features:
+#          hero_id:
+#            type: int
+#            sequence: false
+#          timestamp:
+#            type: timestamp
+#            format: '%Y-%m-%dT%H:%M:%S.%f'
+#            sequence: true
+#          is_start_item:
+#            type: bool
+#            sequence: true
+        item_column_name: item_id
+        item_separator: ' + '
+      nip_index_file: /Users/nosebrain/Desktop/small/test.nip.idx
+      processors:
+        tokenizer_processor:
+          tokenize: true
+        position_processor:
+          seq_length: 51 # 5 (max length seq step) * 10 (max_length per sequence) + 1 because we add + 1 for evaluation
+    loader:
+      num_workers: 0
+      batch_size: 4
+      max_seq_length: 50
+      max_seq_step_length: 5
+  train:
+    dataset:
+      csv_file: /Users/nosebrain/Desktop/small/train.csv
+      csv_file_index: /Users/nosebrain/Desktop/small/train.idx
+      parser:
+        delimiter: "\t"
+#        additional_features:
+#          hero_id:
+#            type: int
+#            sequence: false
+#          timestamp:
+#            type: timestamp
+#            format: '%Y-%m-%dT%H:%M:%S.%f'
+#            sequence: true
+#          is_start_item:
+#            type: bool
+#            sequence: true
+        item_column_name: item_id
+        item_separator: ' + '
+      processors:
+        tokenizer_processor:
+          tokenize: true
+        position_processor:
+          seq_length: 51 # 5 (max length seq step) * 10 (max_length per sequence) + 1 because we add + 1 for evaluation
+    loader:
+      num_workers: 0
+      batch_size: 4
+      max_seq_length: 50
+      max_seq_step_length: 5
+  validation:
+    dataset:
+      csv_file: /Users/nosebrain/Desktop/small/valid.csv
+      csv_file_index: /Users/nosebrain/Desktop/small/valid.idx
+      parser:
+        delimiter: "\t"
+#        additional_features:
+#          hero_id:
+#            type: int
+#            sequence: false
+#          timestamp:
+#            type: timestamp
+#            format: '%Y-%m-%dT%H:%M:%S.%f'
+#            sequence: true
+#          is_start_item:
+#            type: bool
+#            sequence: true
+        item_column_name: item_id
+        item_separator: ' + '
+      processors:
+        tokenizer_processor:
+          tokenize: true
+        position_processor:
+          seq_length: 51 # 5 (max length seq step) * 10 (max_length per sequence) + 1 because we add + 1 for evaluation
+      nip_index_file: /Users/nosebrain/Desktop/small/valid.nip.idx
+    loader:
+      num_workers: 0
+      batch_size: 4
+      max_seq_length: 50
+      max_seq_step_length: 5
+model:
+  item_vocab_size: 250
+  max_seq_length: 50
+  num_transformer_heads: 2
+  num_transformer_layers: 2
+  transformer_hidden_size: 128
+  transformer_dropout: 0.1
+#  embedding_mode: mean
+module:
+  batch_first: true
+  mask_probability: 0.15
+  beta_1: 0.99
+  beta_2: 0.998
+  learning_rate: 0.001
+  weight_decay: 0.01
+  num_warmup_steps: 3
+  metrics:
+    precision:
+      - 1
+      - 3
+      - 5
+    recall:
+      - 1
+      - 3
+      - 5
+    f1:
+      - 1
+      - 3
+      - 5
+tokenizer:
+  special_tokens:
+    pad_token: <PAD>
+    mask_token: <MASK>
+    unk_token: <UNK>
+  vocabulary:
+    delimiter: "\t"
+    file: /Users/nosebrain/Desktop/small/items.vocab
+trainer:
+  limit_val_batches: 10
+  checkpoints:
+    monitor: f1_at_5
+    save_top_k: 3
+  gradient_clip_val: 0.5
+  max_epochs: 1

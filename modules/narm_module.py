@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.narm.narm_model import NarmModel
 from modules import LOG_KEY_VALIDATION_LOSS
-from modules.util.module_util import get_padding_mask
+from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot
 from tokenization.tokenizer import Tokenizer
 from torch import nn
 
@@ -57,10 +57,16 @@ class NarmModule(pl.LightningModule):
 
     def _calc_loss(self,
                    logits: torch.Tensor,
-                   target: torch.Tensor
+                   target_tensor: torch.Tensor
                    ) -> torch.Tensor:
-        loss = nn.CrossEntropyLoss()
-        return loss(logits, target)
+        if len(target_tensor.size()) == 1:
+            # only one item per sequence step
+            loss_fnc = nn.CrossEntropyLoss()
+            return loss_fnc(logits, target_tensor)
+
+        loss_fnc = nn.BCEWithLogitsLoss()
+        target_tensor = convert_target_to_multi_hot(target_tensor, len(self.tokenizer), self.tokenizer.pad_token_id)
+        return loss_fnc(logits, target_tensor)
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
@@ -77,8 +83,10 @@ class NarmModule(pl.LightningModule):
 
         self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
+        mask = None if len(target.size()) == 1 else ~ target.eq(self.tokenizer.pad_token_id)
+
         for name, metric in self.metrics.items():
-            step_value = metric(logits, target)
+            step_value = metric(logits, target, mask=mask)
             self.log(name, step_value, prog_bar=True)
 
     def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]) -> None:

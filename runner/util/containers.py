@@ -1,3 +1,5 @@
+from typing import Any, Dict, List
+
 from dependency_injector import containers, providers
 
 from models.bert4rec.bert4rec_model import BERT4RecModel
@@ -10,7 +12,23 @@ from modules.gru_module import GRUModule
 from modules.narm_module import NarmModule
 from runner.util.provider_utils import build_tokenizer_provider, build_session_loader_provider_factory, \
     build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, build_standard_trainer, \
-    build_metrics_provider
+    build_metrics_provider, build_processors_provider
+
+DEFAULT_PROCESSORS = {
+    'tokenizer_processor': {
+        'tokenize': True
+    }
+}
+
+CONFIG_KEY_MODULE = 'module'
+
+MODULE_ADAM_OPTIMIZER_DEFAULT_VALUES = {
+    CONFIG_KEY_MODULE: {
+        'learning_rate': 0.001,
+        'beta_1': 0.99,
+        'beta_2': 0.998,
+    }
+}
 
 
 def build_default_config() -> providers.Configuration:
@@ -24,51 +42,76 @@ def build_default_config() -> providers.Configuration:
             'default_root_dir': '/tmp/checkpoints',
             'max_epochs': 20
         },
+        'model': {
+            'embedding_mode': None
+        },
         'datasets': {
-            'train': {
-                'loader': {
-                    'num_workers': 0,
-                    'shuffle': True
-                }
-            },
-            'validation': {
-                'loader': {
-                    'num_workers': 0,
-                    'shuffle': False
-                }
-            },
-            'test': {
-                'loader': {
-                    'num_workers': 0,
-                    'shuffle': False
-                }
-            }
+            'train': _build_default_dataset_config(shuffle=True),
+            'validation': _build_default_dataset_config(shuffle=False),
+            'test': _build_default_dataset_config(shuffle=False)
         }
-
-
     })
     return config
+
+
+def _build_default_dataset_config(shuffle: bool,
+                                  processors: Dict[str, Dict[str, Any]] = None
+                                  ) -> Dict[str, Any]:
+    if processors is None:
+        processors = DEFAULT_PROCESSORS
+
+    return {
+        'dataset': {
+            'parser': {
+                'additional_features': {},
+                'item_separator': None
+            },
+            'processors': processors
+        },
+        'loader': {
+            'num_workers': 0,
+            'shuffle': shuffle,
+            'max_seq_step_length': None
+        }
+    }
+
+
+def _build_pos_neg_model_processors() -> Dict[str, Any]:
+    processors = DEFAULT_PROCESSORS.copy()
+    processors['pos_neg_sampler'] = {
+        'pos_neg_sampling': True
+    }
+    return {
+        'datasets': {
+            'train': _build_default_dataset_config(shuffle=True, processors=processors)
+        }
+    }
+
+
+# XXX: find a better way to allow
+def _kwargs_adapter(clazz, kwargs):
+    return clazz(**kwargs)
 
 
 class BERT4RecContainer(containers.DeclarativeContainer):
 
     config = build_default_config()
+    # some model specific default value
+    config.from_dict({
+        CONFIG_KEY_MODULE: {
+            'num_warmup_steps': 10000,
+            'batch_first': True,
+            'mask_probability': 0.2,
+            'weight_decay': 0.01
+        }
+    })
+    config.from_dict(MODULE_ADAM_OPTIMIZER_DEFAULT_VALUES)
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
 
-    model_config = config.model
-
     # model
-    model = providers.Singleton(
-        BERT4RecModel,
-        transformer_hidden_size=model_config.transformer_hidden_size,
-        num_transformer_heads=model_config.num_transformer_heads,
-        num_transformer_layers=model_config.num_transformer_layers,
-        item_vocab_size=model_config.item_vocab_size,
-        max_seq_length=model_config.max_seq_length,
-        dropout=model_config.dropout
-    )
+    model = providers.Singleton(_kwargs_adapter, BERT4RecModel, config.model)
 
     module_config = config.module
 
@@ -88,14 +131,21 @@ class BERT4RecContainer(containers.DeclarativeContainer):
         metrics=metrics
     )
 
+    # dataset config
     train_dataset_config = config.datasets.train
     validation_dataset_config = config.datasets.validation
     test_dataset_config = config.datasets.test
 
+    processors_objects = {'tokenizer': tokenizer}
+    train_processors = build_processors_provider(train_dataset_config.dataset.processors, processors_objects)
+    validation_processors = build_processors_provider(validation_dataset_config.dataset.processors, processors_objects)
+    test_processors = build_processors_provider(test_dataset_config.dataset.processors, processors_objects)
+
     # loaders
-    train_loader = build_session_loader_provider_factory(train_dataset_config, tokenizer)
-    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer)
-    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer)
+    train_loader = build_session_loader_provider_factory(train_dataset_config, tokenizer, train_processors)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
+                                                               validation_processors)
+    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
     # trainer
     trainer = build_standard_trainer(config)
@@ -104,25 +154,14 @@ class BERT4RecContainer(containers.DeclarativeContainer):
 class CaserContainer(containers.DeclarativeContainer):
 
     config = build_default_config()
+    # add pos neg sampler by default TODO: can we do this later?
+    config.from_dict(_build_pos_neg_model_processors())
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
 
-    model_config = config.model
-
     # model
-    model = providers.Singleton(
-        CaserModel,
-        model_config.embedding_size,
-        model_config.item_vocab_size,
-        model_config.user_vocab_size,
-        model_config.max_seq_length,
-        model_config.num_vertical_filters,
-        model_config.num_horizontal_filters,
-        model_config.conv_activation_fn,
-        model_config.fc_activation_fn,
-        model_config.dropout
-    )
+    model = providers.Singleton(_kwargs_adapter, CaserModel, config.model)
 
     module_config = config.module
 
@@ -130,21 +169,27 @@ class CaserContainer(containers.DeclarativeContainer):
 
     module = providers.Singleton(
         CaserModule,
-        model,
-        tokenizer,
-        module_config.learning_rate,
-        module_config.weight_decay,
-        metrics
+        model=model,
+        tokenizer=tokenizer,
+        learning_rate=module_config.learning_rate,
+        weight_decay=module_config.weight_decay,
+        metrics=metrics
     )
 
     train_dataset_config = config.datasets.train
     validation_dataset_config = config.datasets.validation
     test_dataset_config = config.datasets.test
 
+    processors_objects = {'tokenizer': tokenizer}
+    train_processors = build_processors_provider(train_dataset_config.dataset.processors, processors_objects)
+    validation_processors = build_processors_provider(validation_dataset_config.dataset.processors, processors_objects)
+    test_processors = build_processors_provider(test_dataset_config.dataset.processors, processors_objects)
+
     # loaders
-    train_loader = build_posneg_loader_provider_factory(train_dataset_config, tokenizer)
-    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer)
-    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer)
+    train_loader = build_posneg_loader_provider_factory(train_dataset_config, tokenizer, train_processors)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
+                                                               validation_processors)
+    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
     # trainer
     trainer = build_standard_trainer(config)
@@ -153,6 +198,8 @@ class CaserContainer(containers.DeclarativeContainer):
 class SASRecContainer(containers.DeclarativeContainer):
 
     config = build_default_config()
+    # add pos neg sampler by default
+    config.from_dict(_build_pos_neg_model_processors())
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
@@ -160,15 +207,7 @@ class SASRecContainer(containers.DeclarativeContainer):
     model_config = config.model
 
     # model
-    model = providers.Singleton(
-        SASRecModel,
-        model_config.transformer_hidden_size,
-        model_config.num_transformer_heads,
-        model_config.num_transformer_layers,
-        model_config.item_vocab_size,
-        model_config.max_seq_length,
-        model_config.dropout
-    )
+    model = providers.Singleton(_kwargs_adapter, SASRecModel, config.model)
 
     module_config = config.module
 
@@ -176,23 +215,29 @@ class SASRecContainer(containers.DeclarativeContainer):
 
     module = providers.Singleton(
         SASRecModule,
-        model,
-        module_config.learning_rate,
-        module_config.beta_1,
-        module_config.beta_2,
-        tokenizer,
-        module_config.batch_first,
-        metrics
+        model=model,
+        learning_rate=module_config.learning_rate,
+        beta_1=module_config.beta_1,
+        beta_2=module_config.beta_2,
+        tokenizer=tokenizer,
+        batch_first=module_config.batch_first,
+        metrics=metrics
     )
 
     train_dataset_config = config.datasets.train
     validation_dataset_config = config.datasets.validation
     test_dataset_config = config.datasets.test
 
+    processors_objects = {'tokenizer': tokenizer}
+    train_processors = build_processors_provider(train_dataset_config.dataset.processors, processors_objects)
+    validation_processors = build_processors_provider(validation_dataset_config.dataset.processors, processors_objects)
+    test_processors = build_processors_provider(test_dataset_config.dataset.processors, processors_objects)
+
     # loaders
-    train_loader = build_posneg_loader_provider_factory(train_dataset_config, tokenizer)
-    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer)
-    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer)
+    train_loader = build_posneg_loader_provider_factory(train_dataset_config, tokenizer, train_processors)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
+                                                               validation_processors)
+    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
     trainer = build_standard_trainer(config)
 
@@ -204,19 +249,8 @@ class NarmContainer(containers.DeclarativeContainer):
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
 
-    model_config = config.model
-
     # model
-    model = providers.Singleton(
-        NarmModel,
-        model_config.item_vocab_size,
-        model_config.item_embedding_size,
-        model_config.global_encoder_size,
-        model_config.global_encoder_num_layers,
-        model_config.embedding_dropout,
-        model_config.context_dropout,
-        model_config.batch_first
-    )
+    model = providers.Singleton(_kwargs_adapter, NarmModel, config.model)
 
     module_config = config.module
     metrics = build_metrics_provider(module_config.metrics)
@@ -237,10 +271,16 @@ class NarmContainer(containers.DeclarativeContainer):
     validation_dataset_config = config.datasets.validation
     test_dataset_config = config.datasets.test
 
+    processors_objects = {'tokenizer': tokenizer}
+    train_processors = build_processors_provider(train_dataset_config.dataset.processors, processors_objects)
+    validation_processors = build_processors_provider(validation_dataset_config.dataset.processors, processors_objects)
+    test_processors = build_processors_provider(test_dataset_config.dataset.processors, processors_objects)
+
     # loaders
-    train_loader = build_nextitem_loader_provider_factory(train_dataset_config, tokenizer)
-    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer)
-    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer)
+    train_loader = build_nextitem_loader_provider_factory(train_dataset_config, tokenizer, train_processors)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
+                                                               validation_processors)
+    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
     trainer = build_standard_trainer(config)
 
@@ -248,6 +288,7 @@ class NarmContainer(containers.DeclarativeContainer):
 class GRUContainer(containers.DeclarativeContainer):
 
     config = build_default_config()
+    config.from_dict(MODULE_ADAM_OPTIMIZER_DEFAULT_VALUES)
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
@@ -255,14 +296,7 @@ class GRUContainer(containers.DeclarativeContainer):
     model_config = config.model
 
     # model
-    model = providers.Singleton(
-        GRUSeqItemRecommenderModel,
-        model_config.num_items,
-        model_config.item_embedding_dim,
-        model_config.hidden_size,
-        model_config.num_layers,
-        model_config.dropout,
-    )
+    model = providers.Singleton(_kwargs_adapter, GRUSeqItemRecommenderModel, config.model)
 
     module_config = config.module
     metrics = build_metrics_provider(module_config.metrics)
@@ -281,9 +315,15 @@ class GRUContainer(containers.DeclarativeContainer):
     validation_dataset_config = config.datasets.validation
     test_dataset_config = config.datasets.test
 
+    processors_objects = {'tokenizer': tokenizer}
+    train_processors = build_processors_provider(train_dataset_config.dataset.processors, processors_objects)
+    validation_processors = build_processors_provider(validation_dataset_config.dataset.processors, processors_objects)
+    test_processors = build_processors_provider(test_dataset_config.dataset.processors, processors_objects)
+
     # loaders
-    train_loader = build_nextitem_loader_provider_factory(train_dataset_config, tokenizer)
-    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer)
-    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer)
+    train_loader = build_nextitem_loader_provider_factory(train_dataset_config, tokenizer, train_processors)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
+                                                               validation_processors)
+    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
     trainer = build_standard_trainer(config)

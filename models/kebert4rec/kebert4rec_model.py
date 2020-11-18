@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict
 from torch import nn
 
 import torch
@@ -44,12 +44,12 @@ class KeBERT4Rec(BERT4RecBaseModel):
                  num_transformer_layers: int,
                  item_vocab_size: int,
                  max_seq_length: int,
-                 dropout: float,
-                 additional_attributes: Dict[str, (str, Any)]):
+                 transformer_dropout: float,
+                 additional_attributes: Dict[str, (str, int)]):
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
                          num_transformer_layers=num_transformer_layers,
-                         dropout=dropout)
+                         transformer_dropout=transformer_dropout)
 
         self.item_vocab_size = item_vocab_size
         self.max_seq_length = max_seq_length + 1
@@ -73,7 +73,7 @@ class KeBERT4Rec(BERT4RecBaseModel):
         self.additional_attribute_embeddings = nn.ModuleDict(additional_attribute_embeddings)
 
         self.embedding_norm = nn.LayerNorm(self.transformer_hidden_size)
-        self.dropout_layer = nn.Dropout(p=self.dropout)
+        self.dropout_layer = nn.Dropout(p=self.transformer_dropout)
 
         # for projection
         self.projection_layer = nn.Linear(self.transformer_hidden_size, self.item_vocab_size)

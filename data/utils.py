@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import Text, List, Dict
+from typing import List, Dict
 
 import csv
 
 
-def read_csv_header(data_file_path: Path, delimiter: Text) -> List[Text]:
+def read_csv_header(data_file_path: Path, delimiter: str) -> List[str]:
     """
     Parses the first line of the file as csv.
 
@@ -18,11 +18,13 @@ def read_csv_header(data_file_path: Path, delimiter: Text) -> List[Text]:
         return next(reader)
 
 
-def create_indexed_header(header: List[Text]) -> Dict[Text, int]:
+def create_indexed_header(header: List[str]) -> Dict[str, int]:
     """
     Creates a mapping from the column names, to their column index.
 
     :param header: a list of csv headers
     :return: a mapping from column name to column index.
     """
-    return {name: idx for idx, name in enumerate(header)}
+    return {
+        name: idx for idx, name in enumerate(header)
+    }

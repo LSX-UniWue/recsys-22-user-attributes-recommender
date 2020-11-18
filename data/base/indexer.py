@@ -3,7 +3,6 @@ from io import StringIO
 from pathlib import Path
 from typing import List, Text, BinaryIO, Dict
 import sys
-from argparse import ArgumentParser
 from dataclasses import dataclass
 
 INT_BYTE_SIZE = 8
@@ -117,6 +116,3 @@ class CsvSessionIndexer:
 
     def _write_metadata(self, index_file: BinaryIO, num_session: int):
         self._write_value(index_file, num_session)
-
-
-
