@@ -22,7 +22,8 @@ class TransformerEmbedding(nn.Module):
 
         self.embedding_size = embedding_size
 
-        def _init_embedding(weights: torch.Tensor):
+        def _init_embedding(weights: torch.Tensor
+                            ) -> None:
             nn.init.trunc_normal_(weights, std=initializer_range)
 
         self.item_embedding = ItemEmbedding(item_voc_size=item_voc_size,
@@ -48,7 +49,8 @@ class TransformerEmbedding(nn.Module):
 
     def forward(self,
                 input_sequence: torch.Tensor,
-                position_ids: torch.Tensor = None):
+                position_ids: torch.Tensor = None
+                ) -> torch.Tensor:
         """
         :param input_sequence: [I x B] where I is the sequence length and B the batch size
         :param position_ids: the position ids [I x B] where I is the sequence length and B the batch size

@@ -30,14 +30,10 @@ class BERT4RecBaseModel(nn.Module):
                                                     dropout=self.transformer_dropout,
                                                     activation='gelu')
 
-        # TODO: check encoder norm?
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layers,
                                                          num_layers=self.num_transformer_heads)
 
         # for decoding the sequence into the item space again
-        # TODO: init the linear layer:
-        # kernel_initializer=modeling.create_initializer(
-        #                         bert_config.initializer_range))
         self.linear = nn.Linear(self.transformer_hidden_size, self.transformer_hidden_size)
         self.gelu = nn.GELU()
         self.layer_norm = nn.LayerNorm(self.transformer_hidden_size)
