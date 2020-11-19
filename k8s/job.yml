@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: ds4rec
+  name: ds4rec2
   labels:
     app: ds4rec
 spec:
@@ -39,10 +39,9 @@ spec:
                   name: gitlab-token
             - name: PREPARE_SCRIPT
               value: /home/ls6/dallmann/research/dota/workspace/prepare.sh
-            - name: RUN_SCRIPT
-              value: /home/ls6/dallmann/research/dota/workspace/prj1/run.sh
-          command: ["/bin/bash"]
-          args: ["-c", "/home/ls6/dallmann/research/dota/workspace/entrypoint.sh"]
+            #- name: RUN_SCRIPT
+            #  value: /home/ls6/dallmann/research/dota/workspace/prj1/run.sh
+          args: ["narm", "/home/ls6/dallmann/research/dota/workspace/prj1/narm_config.yaml"]
           volumeMounts:
             - mountPath: /home/ls6/dallmann # directory IN the container
               name: home # matches volume-name from below
