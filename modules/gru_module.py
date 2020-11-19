@@ -101,9 +101,9 @@ class GRUModule(pl.LightningModule):
 
     def _forward(self,
                  session,
-                 lengths
+                 mask
                  ):
-        return self.model(session, lengths)
+        return self.model(session, mask)
 
     def configure_optimizers(self):
         return torch.optim.Adam(

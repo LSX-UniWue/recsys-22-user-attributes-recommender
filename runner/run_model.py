@@ -4,8 +4,11 @@ import os
 from pathlib import Path
 from typing import Dict, Any
 
+import torch
 import typer
 from dependency_injector import containers
+from pytorch_lightning import LightningModule
+from pytorch_lightning.utilities import cloud_io
 
 from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, GRUContainer
 
@@ -62,6 +65,47 @@ def run_model(model: str = typer.Argument(..., help="the model to run"),
     if do_test:
         trainer.test(test_dataloader=container.test_dataloader())
 
+@app.command()
+def predict(model: str = typer.Argument(..., help="the model to run"),
+            config_file: str = typer.Argument(..., help='the path to the config file'),
+            checkpoint_file: str = typer.Argument(..., help='path to the checkpoint file')):
+
+    container = build_container(model)
+    container.config.from_yaml(config_file)
+    module = container.module()
+
+    # load checkpoint <- we don't use the PL function load_from_checkpoint because it does not work with our module class system
+    ckpt = cloud_io.load(checkpoint_file)
+
+    # acquire state_dict
+    state_dict = ckpt["state_dict"]
+
+    #TODO remove: is only here because my checkpoint is "old"
+    state_dict["model.item_embeddings.embedding.weight"] = state_dict["model.item_embeddings.weight"]
+    state_dict.pop("model.item_embeddings.weight", None)
+
+    # load parameters and freeze the model
+    module.load_state_dict(state_dict)
+    module.freeze()
+
+    # comput logits, softmax and acquire top_k values
+
+    test_loader = container.test_loader()
+    for batch in test_loader:
+        from modules.util.module_util import get_padding_mask
+        padding_mask = get_padding_mask(batch["session"], container.tokenizer(), transposed=False, inverse=True)
+
+        logits = module.model(batch["session"], padding_mask)
+        probs = torch.softmax(logits, dim=-1)
+        values, indices = probs.topk(k=20)
+
+        num_samples_in_batch = indices.size()[0]
+        num_values_in_sample = indices.size()[1]
+
+        for sample_idx in range(num_samples_in_batch):
+            print(f"Sample: {sample_idx}")
+            for value_idx in range(num_values_in_sample):
+                print(f"{sample_idx}\t{indices[sample_idx][value_idx].item()}\t{values[sample_idx][value_idx]}")
 
 if __name__ == "__main__":
     app()
