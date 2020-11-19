@@ -90,8 +90,15 @@ def predict(model: str = typer.Argument(..., help="the model to run"),
 
     # comput logits, softmax and acquire top_k values
 
+    # FIXME need to get correct sample ids through preprocessing on dataset level
     test_loader = container.test_loader()
-    for batch in test_loader:
+
+    for batch_idx, batch in enumerate(test_loader):
+        # calculate ids
+        batch_size = batch["session"].size()[0]
+        sample_start_id = batch_size * batch_idx
+        sample_ids = list(range(sample_start_id, batch_size))
+
         from modules.util.module_util import get_padding_mask
         padding_mask = get_padding_mask(batch["session"], container.tokenizer(), transposed=False, inverse=True)
 
@@ -102,10 +109,10 @@ def predict(model: str = typer.Argument(..., help="the model to run"),
         num_samples_in_batch = indices.size()[0]
         num_values_in_sample = indices.size()[1]
 
-        for sample_idx in range(num_samples_in_batch):
-            print(f"Sample: {sample_idx}")
+        for in_batch_idx in range(num_samples_in_batch):
             for value_idx in range(num_values_in_sample):
-                print(f"{sample_idx}\t{indices[sample_idx][value_idx].item()}\t{values[sample_idx][value_idx]}")
+                #FIXME get real sample idx
+                print(f"{in_batch_idx + sample_start_id}\t{indices[in_batch_idx][value_idx].item()}\t{values[in_batch_idx][value_idx]}")
 
 if __name__ == "__main__":
     app()
