@@ -64,7 +64,7 @@ class TransformerEmbedding(nn.Module):
         if position_ids is None:
             position_ids = generate_position_ids(seq_length, input_shape, device=device)
 
-        input_sequence = self.item_embedding(input_sequence) * math.sqrt(self.embedding_size)
+        input_sequence = self.item_embedding(input_sequence)
         input_sequence = input_sequence + self.position_embedding(position_ids)
         input_sequence = self.embedding_norm(input_sequence)
 
