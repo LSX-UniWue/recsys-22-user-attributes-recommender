@@ -1,0 +1,13 @@
+<PAD>	0
+<MASK>	1
+<UNK>	2
+Item 1	1
+Item 14	2
+Item 12	3
+Item 9	4
+Item 3	5
+Item 2	6
+Item 4	7
+Item 5	8
+Item 6	9
+Item 7	10
