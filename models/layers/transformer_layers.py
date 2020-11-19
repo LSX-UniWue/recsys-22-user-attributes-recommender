@@ -4,6 +4,7 @@ import torch
 from torch import nn as nn
 
 from models.layers.layers import ItemEmbedding
+from models.layers.util_layers import truncated_normal
 from utils.tensor_utils import generate_position_ids
 
 
@@ -18,14 +19,19 @@ class TransformerEmbedding(nn.Module):
                  embedding_size: int,
                  dropout: float,
                  embedding_mode: str = None,
+                 initializer_range: float = 0.02,
                  norm_embedding: bool = True):
         super().__init__()
 
         self.embedding_size = embedding_size
 
+        def _init_embedding(weights: torch.Tensor):
+            truncated_normal(weights, initializer_range)
+
         self.item_embedding = ItemEmbedding(item_voc_size=item_voc_size,
                                             embedding_size=embedding_size,
-                                            embedding_mode=embedding_mode)
+                                            embedding_mode=embedding_mode,
+                                            init_weights_fnc=_init_embedding)
         self.position_embedding = nn.Embedding(max_seq_len, self.embedding_size)
         self.embedding_norm = nn.LayerNorm(self.embedding_size) if norm_embedding else nn.Identity()
         self.dropout = nn.Dropout(p=dropout)
