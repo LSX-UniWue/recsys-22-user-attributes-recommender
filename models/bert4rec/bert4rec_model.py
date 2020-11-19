@@ -46,15 +46,16 @@ class BERT4RecBaseModel(nn.Module):
                 input_seq: torch.Tensor,
                 position_ids: torch.Tensor = None,
                 padding_mask: torch.Tensor = None,
-                **kwargs):
+                **kwargs
+                ) -> torch.Tensor:
         """
         forward pass to calculate the scores for the mask item modelling
 
         :param input_seq: the input sequence :math:`(S, N)`
         :param position_ids: (optional) positional_ids if None the position ids are generated :math:`(S, N)`
         :param padding_mask: (optional) the padding mask if the sequence is padded :math:`(N, S)`
-        :return: the scores of the predicted tokens :math:`(S, N, I)`
-        (Note: all scores for all positions are returned. For loss calculation please only use the positions of the
+        :return: the logits of the predicted tokens :math:`(S, N, I)`
+        (Note: all logits for all positions are returned. For loss calculation please only use the positions of the
         MASK tokens.)
 
         Where S is the (max) sequence length of the batch, N the batch size, and I the vocabulary size of the items.
@@ -81,12 +82,14 @@ class BERT4RecBaseModel(nn.Module):
     def _embed_input(self,
                      input_sequence: torch.Tensor,
                      position_ids: torch.Tensor,
-                     **kwargs):
+                     **kwargs
+                     ) -> torch.Tensor:
         pass
 
     @abstractmethod
     def _projection(self,
-                    dense: torch.Tensor):
+                    dense: torch.Tensor
+                    ) -> torch.Tensor:
         pass
 
 
@@ -145,11 +148,13 @@ class BERT4RecModel(BERT4RecBaseModel):
     def _embed_input(self,
                      input_sequence: torch.Tensor,
                      position_ids: torch.Tensor,
-                     **kwargs):
+                     **kwargs
+                     ) -> torch.Tensor:
         return self.embedding(input_sequence=input_sequence,
                               position_ids=position_ids)
 
     def _projection(self,
-                    dense: torch.Tensor):
+                    dense: torch.Tensor
+                    ) -> torch.Tensor:
         dense = torch.matmul(dense, self.embedding.get_item_embedding_weight().transpose(0, 1))  # (S, N, I)
         return dense + self.output_bias

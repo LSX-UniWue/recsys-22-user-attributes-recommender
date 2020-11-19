@@ -78,7 +78,11 @@ class KeBERT4Rec(BERT4RecBaseModel):
         # for projection
         self.projection_layer = nn.Linear(self.transformer_hidden_size, self.item_vocab_size)
 
-    def _embed_input(self, input_sequence: torch.Tensor, position_ids: torch.Tensor, **kwargs):
+    def _embed_input(self,
+                     input_sequence: torch.Tensor,
+                     position_ids: torch.Tensor,
+                     **kwargs
+                     ) -> torch.Tensor:
         embedding = self.embedding(input_sequence, position_ids)
         for input_key, module in self.additional_attribute_embeddings:
             embedding += module(kwargs[input_key])
@@ -86,5 +90,7 @@ class KeBERT4Rec(BERT4RecBaseModel):
         embedding = self.dropout_layer(embedding)
         return embedding
 
-    def _projection(self, dense: torch.Tensor):
+    def _projection(self,
+                    dense: torch.Tensor
+                    ) -> torch.Tensor:
         return self.projection_layer(dense)
