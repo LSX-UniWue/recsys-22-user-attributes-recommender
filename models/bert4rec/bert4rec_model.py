@@ -14,7 +14,8 @@ class BERT4RecBaseModel(nn.Module):
                  transformer_hidden_size: int,
                  num_transformer_heads: int,
                  num_transformer_layers: int,
-                 transformer_dropout: float):
+                 transformer_dropout: float,
+                 ):
         super().__init__()
 
         self.transformer_hidden_size = transformer_hidden_size
@@ -111,7 +112,9 @@ class BERT4RecModel(BERT4RecBaseModel):
                  item_vocab_size: int,
                  max_seq_length: int,
                  transformer_dropout: float,
-                 embedding_mode: str = None):
+                 initializer_range: float = 0.02,
+                 embedding_mode: str = None
+                 ):
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
                          num_transformer_layers=num_transformer_layers,
@@ -120,12 +123,15 @@ class BERT4RecModel(BERT4RecBaseModel):
         self.item_vocab_size = item_vocab_size
         self.max_seq_length = max_seq_length + 1
         self.embedding_mode = embedding_mode
+        self.initializer_range = initializer_range
 
         self.embedding = TransformerEmbedding(item_voc_size=self.item_vocab_size,
                                               max_seq_len=self.max_seq_length,
                                               embedding_size=self.transformer_hidden_size,
                                               dropout=self.transformer_dropout,
-                                              embedding_mode=self.embedding_mode)
+                                              embedding_mode=self.embedding_mode,
+                                              initializer_range=self.initializer_range
+                                              )
         # TODO: init bias
         self.output_bias = nn.Parameter(torch.rand(self.item_vocab_size))
 

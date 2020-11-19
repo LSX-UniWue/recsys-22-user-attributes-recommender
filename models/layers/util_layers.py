@@ -30,6 +30,5 @@ def truncated_normal(tensor: torch.Tensor,
     valid = (tmp < 2) & (tmp > -2)
     ind = valid.max(-1, keepdim=True)[1]
     tensor.data.copy_(tmp.gather(-1, ind).squeeze(-1))
-    tensor.data.mul_(std).add_(mean)
+    tensor.data.mul_(stddev).add_(mean)
     return tensor
-
