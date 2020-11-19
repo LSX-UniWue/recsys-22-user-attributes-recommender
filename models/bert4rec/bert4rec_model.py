@@ -1,5 +1,6 @@
 from abc import abstractmethod
 
+import math
 import torch
 
 from torch import nn
@@ -130,10 +131,16 @@ class BERT4RecModel(BERT4RecBaseModel):
                                               embedding_size=self.transformer_hidden_size,
                                               dropout=self.transformer_dropout,
                                               embedding_mode=self.embedding_mode,
-                                              initializer_range=self.initializer_range
-                                              )
-        # TODO: init bias
-        self.output_bias = nn.Parameter(torch.rand(self.item_vocab_size))
+                                              initializer_range=self.initializer_range)
+
+        self.output_bias = nn.Parameter(torch.Tensor(self.item_vocab_size))
+
+        self.init_weights()
+
+    def init_weights(self):
+        fan_in = self.embedding.get_item_embedding_weight().size(0)
+        bound = 1 / math.sqrt(fan_in)
+        nn.init.uniform_(self.output_bias, -bound, bound)
 
     def _embed_input(self,
                      input_sequence: torch.Tensor,
