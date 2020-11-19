@@ -19,7 +19,11 @@ class CsvSessionIndexer:
     def __init__(self, delimiter: Text):
         self._delimiter = delimiter
 
-    def create(self, data_file_path: Path, index_file_path: Path, session_key: List[Text]):
+    def create(self,
+               data_file_path: Path,
+               index_file_path: Path,
+               session_key: List[Text]
+               ):
         headers = self._extract_headers(data_file_path)
 
         if not self._all_session_keys_part_of_header(session_key, headers):

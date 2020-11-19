@@ -137,8 +137,7 @@ class BERT4RecModel(BERT4RecBaseModel):
         self.init_weights()
 
     def init_weights(self):
-        fan_in = self.embedding.get_item_embedding_weight().size(0)
-        bound = 1 / math.sqrt(fan_in)
+        bound = 1 / math.sqrt(self.item_vocab_size)
         nn.init.uniform_(self.output_bias, -bound, bound)
 
     def _embed_input(self,
