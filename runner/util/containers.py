@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from dependency_injector import containers, providers
 
@@ -64,7 +64,8 @@ def _build_default_dataset_config(shuffle: bool,
         'dataset': {
             'parser': {
                 'additional_features': {},
-                'item_separator': None
+                'item_separator': None,
+                'delimiter': '\t'
             },
             'processors': processors
         },

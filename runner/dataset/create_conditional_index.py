@@ -20,7 +20,7 @@ def filter_by_sequence_feature(session: Dict[str, Any],
     targets = list(filter(itemgetter(1), enumerate(feature_values)))
     target_idxs = list(map(itemgetter(0), targets))
     if 0 in target_idxs:
-        target_idxs.remove(0)  # XXX: quick hack to remove the first sequence that
+        target_idxs.remove(0)  # XXX: quick hack to remove the first position that can not be predicted by the models
     return target_idxs
 
 
@@ -33,8 +33,8 @@ def _build_target_position_extractor(target_feature: str
 
 
 @app.command()
-def run(data_file_path: Path = typer.Argument(..., help="path to the input file in CSV format"),
-        session_index_path: Path = typer.Argument(..., help="path to the session index file"),
+def run(data_file_path: Path = typer.Argument(..., exists=True, help="path to the input file in CSV format"),
+        session_index_path: Path = typer.Argument(..., exists=True, help="path to the session index file"),
         output_file_path: Path = typer.Argument(..., help="path to the output file"),
         item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
         min_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
