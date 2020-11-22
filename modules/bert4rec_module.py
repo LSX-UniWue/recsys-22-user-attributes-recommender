@@ -63,6 +63,11 @@ class BERT4RecModule(pl.LightningModule):
             if position_ids is not None:
                 position_ids = position_ids.transpose(0, 1)
 
+        # calc the padding mask
+        padding_mask = get_padding_mask(tensor=input_seq,
+                                        tokenizer=self.tokenizer,
+                                        transposed=True)
+
         # random mask some items
         # FIXME: paper quote: we also produce samples that only mask the last item
         # in the input sequences during training.
@@ -70,10 +75,6 @@ class BERT4RecModule(pl.LightningModule):
         input_seq, target = _mask_items(inputs=input_seq,
                                         tokenizer=self.tokenizer,
                                         mask_probability=self.mask_probability)
-        # calc the padding mask
-        padding_mask = get_padding_mask(tensor=input_seq,
-                                        tokenizer=self.tokenizer,
-                                        transposed=True)
 
         # call the model
         prediction_logits = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
@@ -251,7 +252,8 @@ def _add_mask_token_at_ending(input_seq: torch.Tensor,
 # TODO: implement as collate function (as a processor)
 def _mask_items(inputs: torch.Tensor,
                 tokenizer: Tokenizer,
-                mask_probability: float) -> Tuple[torch.Tensor, torch.Tensor]:
+                mask_probability: float
+                ) -> Tuple[torch.Tensor, torch.Tensor]:
     """ Prepare masked items inputs/target for masked modeling. """
 
     if tokenizer.mask_token is None:
