@@ -3,7 +3,6 @@ from io import StringIO
 from pathlib import Path
 from typing import List, Text, BinaryIO, Dict
 import sys
-from argparse import ArgumentParser
 from dataclasses import dataclass
 
 INT_BYTE_SIZE = 8
@@ -20,7 +19,11 @@ class CsvSessionIndexer:
     def __init__(self, delimiter: Text):
         self._delimiter = delimiter
 
-    def create(self, data_file_path: Path, index_file_path: Path, session_key: List[Text]):
+    def create(self,
+               data_file_path: Path,
+               index_file_path: Path,
+               session_key: List[Text]
+               ):
         headers = self._extract_headers(data_file_path)
 
         if not self._all_session_keys_part_of_header(session_key, headers):
@@ -117,6 +120,3 @@ class CsvSessionIndexer:
 
     def _write_metadata(self, index_file: BinaryIO, num_session: int):
         self._write_value(index_file, num_session)
-
-
-

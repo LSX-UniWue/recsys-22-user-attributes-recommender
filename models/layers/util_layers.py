@@ -1,5 +1,3 @@
-from abc import ABC
-
 import torch
 from torch import nn as nn
 
@@ -20,16 +18,3 @@ def get_activation_layer(activation_fn_name: str) -> nn.Module:
         'gelu': nn.GELU(),
         'glu': nn.GLU()
     }[activation_fn_name]
-
-
-class MatrixFactorizationLayer(nn.Linear, ABC):
-    """
-    a matrix factorization layer
-    """
-
-    def __init__(self,
-                 _weight: torch.Tensor,
-                 bias: bool = False
-                 ):
-        super().__init__(_weight.size(0), _weight.size(1), bias=bias)
-        self.weight = _weight

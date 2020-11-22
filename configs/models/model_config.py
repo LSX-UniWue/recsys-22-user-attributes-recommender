@@ -18,7 +18,7 @@ class ModelConfig(BaseConfig):
         return cls.MODEL_CONFIG_CONFIG_FILE
 
     # properties
-    item_voc_size: int = dataclasses.field(metadata={
+    item_vocab_size: int = dataclasses.field(metadata={
         BaseConfig.DATA_CLASS_METADATA_KEY_HELP: 'the item vocab size',
         BaseConfig.DATA_CLASS_METADATA_KEY_DEFAULT_VALUE: 32
     })

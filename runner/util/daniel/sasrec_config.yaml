@@ -14,7 +14,6 @@ datasets:
     dataset:
       csv_file: /Users/nosebrain/Desktop/small/train.csv
       csv_file_index: /Users/nosebrain/Desktop/small/train.idx
-      nip_index_file: /Users/nosebrain/Desktop/small/train.nip.idx
       parser:
         delimiter: "\t"
         item_column_name: item_id
@@ -32,40 +31,38 @@ datasets:
     loader:
       batch_size: 4
       max_seq_length: 10
-model:
-  num_items: 250
-  item_embedding_size: 32
-  global_encoder_size: 128
-  global_encoder_num_layers: 1
-  embedding_dropout: 0.25
-  context_dropout: 0.25
-  batch_first: true
-  embedding_mode: mean
-module:
-  learning_rate: 0.001
-  beta_1: 0.99
-  beta_2: 0.998
-  metrics:
-    precision:
-      - 1
-      - 3
-      - 5
-    recall:
-      - 1
-      - 3
-      - 5
 tokenizer:
   special_tokens:
     pad_token: <PAD>
-    mask_token: <MASK>
     unk_token: <UNK>
   vocabulary:
     delimiter: "\t"
     file: /Users/nosebrain/Desktop/small/items.vocab
+model:
+  transformer_hidden_size: 64
+  num_transformer_heads: 4
+  num_transformer_layers: 3
+  item_vocab_size: 250
+  max_seq_length: 100
+  dropout: 0.1
+module:
+  learning_rate: 0.001
+  beta_1: 0.99
+  beta_2: 0.998
+  batch_first: true
+  metrics:
+    recall:
+      - 1
+      - 3
+      - 5
+      - 10
+    mrr:
+      - 1
+      - 3
+      - 5
+      - 10
 trainer:
-  limit_train_batches: 10
-  limit_val_batches: 10
+  default_root_dir: /tmp/checkpoints
   checkpoints:
-    monitor: recall_at_5
+    monitor: f1_at_5
     save_top_k: 3
-  max_epochs: 1

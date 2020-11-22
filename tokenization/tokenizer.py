@@ -53,11 +53,21 @@ class Tokenizer:
     def cls_token_id(self) -> int:
         return self.convert_tokens_to_ids(self.cls_token)
 
+    def get_special_token_ids(self) -> List[int]:
+        special_token_ids = []
+        for key in SPECIAL_TOKENS_ATTRIBUTES:
+            token = getattr(self, key)
+            if token is not None:
+                token_id = self.convert_tokens_to_ids(token)
+                special_token_ids.append(token_id)
+
+        return special_token_ids
+
     def get_vocabulary(self) -> Vocabulary:
         return self.vocabulary
 
     def convert_tokens_to_ids(self,
-                              items: Union[str, List[str]]
+                              items: Union[str, List[str], List[List[str]]]
                               ) -> Union[Optional[int], List[int]]:
         if items is None:
             return None
@@ -88,7 +98,7 @@ class Tokenizer:
 
     # FIXME (AD) if the vocabulary does not contain an UNK token, this will cause an endless recursion.
     def _convert_item_to_id(self,
-                            token: str
+                            token: Union[str, List[str]]
                             ) -> Optional[int]:
         """
         Converts the token into its id. If the token is not part of the vocabulary and the unk_token property is set,
@@ -100,11 +110,20 @@ class Tokenizer:
         """
         if token is None:
             return None
-        token_id = self.vocabulary.get_id(token)
-        if token_id is None:
-            if self.unk_token is not None:
-                return self.unk_token_id
-        return token_id
+
+        if isinstance(token, str):
+            token_id = self.vocabulary.get_id(token)
+            if token_id is None:
+                if self.unk_token is not None:
+                    return self.unk_token_id
+            return token_id
+
+        # here we assume it is a list
+        ids = []
+        for item in token:
+            encoded_token = self._convert_item_to_id(item)
+            ids.append(encoded_token)
+        return ids
 
     def __len__(self):
         """ Size of the full vocabulary with the added tokens """

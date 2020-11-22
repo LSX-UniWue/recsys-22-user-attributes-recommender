@@ -6,10 +6,12 @@ datasets:
       parser:
         delimiter: "\t"
         item_column_name: item_id
+        item_separator: ' + '
       nip_index_file: /Users/nosebrain/Desktop/small/test.nip.idx
     loader:
       batch_size: 4
       max_seq_length: 10
+      max_seq_step_length: 5
   train:
     dataset:
       csv_file: /Users/nosebrain/Desktop/small/train.csv
@@ -18,9 +20,11 @@ datasets:
       parser:
         delimiter: "\t"
         item_column_name: item_id
+        item_separator: ' + '
     loader:
       batch_size: 4
       max_seq_length: 10
+      max_seq_step_length: 5
   validation:
     dataset:
       csv_file: /Users/nosebrain/Desktop/small/valid.csv
@@ -28,29 +32,30 @@ datasets:
       parser:
         delimiter: "\t"
         item_column_name: item_id
+        item_separator: ' + '
       nip_index_file: /Users/nosebrain/Desktop/small/valid.nip.idx
     loader:
       batch_size: 4
       max_seq_length: 10
+      max_seq_step_length: 5
 model:
   num_items: 250
-  item_embedding_size: 32
-  global_encoder_size: 128
-  global_encoder_num_layers: 1
-  embedding_dropout: 0.25
-  context_dropout: 0.25
-  batch_first: true
+  item_embedding_dim: 32
+  hidden_size: 128
+  num_layers: 1
+  dropout: 0.1
   embedding_mode: mean
 module:
-  learning_rate: 0.001
-  beta_1: 0.99
-  beta_2: 0.998
   metrics:
     precision:
       - 1
       - 3
       - 5
     recall:
+      - 1
+      - 3
+      - 5
+    f1:
       - 1
       - 3
       - 5
