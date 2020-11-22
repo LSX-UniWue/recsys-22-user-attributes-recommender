@@ -79,8 +79,8 @@ class NarmModule(pl.LightningModule):
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
         logits = self.model(input_seq, padding_mask)
-        loss = self._calc_loss(logits, target)
 
+        loss = self._calc_loss(logits, target)
         self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
         mask = None if len(target.size()) == 1 else ~ target.eq(self.tokenizer.pad_token_id)

@@ -62,8 +62,9 @@ class NarmModel(nn.Module):
         :param mask: a tensor masking padded sequence elements (B x N)
         :return: scores for every item (B x NI)
         """
-        embedded_session = self.item_embeddings(session)
-        embedded_session_do = self.item_embedding_dropout(embedded_session)
+        # H is the hidden size of the model
+        embedded_session = self.item_embeddings(session)  # (N, S, H)
+        embedded_session_do = self.item_embedding_dropout(embedded_session)  # (N, S, H)
 
         max_seq_length = embedded_session_do.size()[1]
         packed_embedded_session = nn.utils.rnn.pack_padded_sequence(
@@ -187,33 +188,10 @@ class BilinearDecoder(nn.Module):
             items = torch.arange(self.embedding_layer.embedding.weight.size()[0], dtype=torch.long, device=context.device)
         # items: NI <- number of items evaluated
 
-        embi = self.embedding_layer(items)  # NI x E
+        embi = self.embedding_layer(items, flatten=False)  # NI x E
         embi_b = self.B(embi)  # NI x H
         embi_b_T = embi_b.T  # H x NI
 
         similarities = torch.matmul(context, embi_b_T)  # B x NI <- a score for each item
 
         return self.activation(similarities)
-
-
-def main():
-    session = torch.as_tensor([[1, 3, 5, 4], [4, 5, 8, 0]], dtype=torch.long)
-    mask = torch.as_tensor([
-        [True, True, True, True],
-        [True, True, True, False]
-    ], dtype=torch.bool)
-
-    narm = NarmModel(
-        num_items=10,
-        item_embedding_size=8,
-        global_encoder_size=7,
-        global_encoder_num_layers=1,
-        embedding_dropout=0.25,
-        context_dropout=0.2
-    )
-
-    prediction = narm(session, mask, batch_idx=0)
-
-    print(prediction)
-if __name__ == "__main__":
-    main()
