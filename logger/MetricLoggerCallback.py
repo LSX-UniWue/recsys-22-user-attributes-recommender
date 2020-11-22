@@ -5,7 +5,7 @@ from data.datasets import TARGET_ENTRY_NAME
 
 
 def check_has_metrics(module: LightningModule):
-    return hasattr(module, 'metrics') and type(module.metrics) is dict
+    return hasattr(module, 'metrics')
 
 class MetricLoggerCallback(Callback):
 

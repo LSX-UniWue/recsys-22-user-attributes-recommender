@@ -13,7 +13,9 @@ from data.datasets.prepare import Processor, build_processors, PositiveNegativeS
 from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
-from logging.MetricLoggerCallback import MetricLoggerCallback
+from logger.GradientLoggerCallback import GradientLoggerCallback
+from logger.MetricLoggerCallback import MetricLoggerCallback
+from logger.TrainLossLoggerCallback import TrainLossLoggerCallback
 from metrics.utils.metric_utils import build_metrics
 from data.collate import padded_session_collate
 from tokenization.tokenizer import Tokenizer
@@ -339,4 +341,7 @@ def build_metrics_provider(config: providers.ConfigurationOption
     )
 
 def build_standard_logging_callbacks_provider() -> providers.List:
-    return providers.List(MetricLoggerCallback())
+    return providers.List(
+        #MetricLoggerCallback(),
+        GradientLoggerCallback(),
+        TrainLossLoggerCallback())
