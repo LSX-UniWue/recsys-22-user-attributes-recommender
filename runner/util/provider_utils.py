@@ -13,6 +13,7 @@ from data.datasets.prepare import Processor, build_processors, PositiveNegativeS
 from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
+from logging.MetricLoggerCallback import MetricLoggerCallback
 from metrics.utils.metric_utils import build_metrics
 from data.collate import padded_session_collate
 from tokenization.tokenizer import Tokenizer
@@ -304,6 +305,7 @@ def provide_nextit_loader(dataset: Dataset,
 
 def build_standard_trainer(config: providers.Configuration) -> providers.Singleton:
     checkpoint = build_standard_model_checkpoint(config)
+    logging_callbacks = build_standard_logging_callbacks_provider()
 
     trainer_config = config.trainer
     return providers.Singleton(
@@ -315,7 +317,8 @@ def build_standard_trainer(config: providers.Configuration) -> providers.Singlet
         gradient_clip_val=trainer_config.gradient_clip_val,
         gpus=trainer_config.gpus,
         max_epochs=trainer_config.max_epochs,
-        weights_summary='full'
+        weights_summary='full',
+        callbacks = logging_callbacks
     )
 
 
@@ -335,4 +338,5 @@ def build_metrics_provider(config: providers.ConfigurationOption
         config
     )
 
-
+def build_standard_logging_callbacks_provider() -> providers.List:
+    return providers.List(MetricLoggerCallback())
