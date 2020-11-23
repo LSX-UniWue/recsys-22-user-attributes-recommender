@@ -64,3 +64,4 @@ trainer:
   max_epochs: 1
   gradient_clip_val: 5
   default_root_dir: /scratch/jane-doe-framework/experiments/ml-20m/bert4rec
+  gpu: 1
