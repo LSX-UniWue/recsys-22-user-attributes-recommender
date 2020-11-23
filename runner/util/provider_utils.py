@@ -8,7 +8,8 @@ from torch.utils.data import Dataset, DataLoader
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
-from data.datasets.nextitem import NextItemDataset, NextItemIndex
+from data.datasets.nextitem import NextItemDataset
+from data.datasets.index import SessionPositionIndex
 from data.datasets.prepare import Processor, build_processors, PositiveNegativeSampler
 from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
 from data.mp import mp_worker_init_fn
@@ -233,7 +234,7 @@ def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provid
                                               item_separator=item_separator,
                                               additional_features=additional_features)
         basic_dataset = PlainSessionDataset(reader, session_parser)
-        return NextItemDataset(basic_dataset, NextItemIndex(Path(nip_index)), processors=preprocessors)
+        return NextItemDataset(basic_dataset, SessionPositionIndex(Path(nip_index)), processors=preprocessors)
 
     return build_dataset_provider_factory(provide_nextitem_dataset, tokenizer_provider, preprocessor_provider,
                                           dataset_config)
