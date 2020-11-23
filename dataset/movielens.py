@@ -37,6 +37,9 @@ def preprocess_data(dataset_dir: Path,
     ratings_df = read_csv(dataset_dir, "ratings", file_type, sep, header)
     movies_df = read_csv(dataset_dir, "movies", file_type, sep, header)
 
+    # only the ml-1m dataset has got a user info file …
+    users_df = None
+
     if name == "ml-1m":
         ratings_df.columns = ['userId', 'movieId', 'rating', 'timestamp']
         movies_df.columns = ['movieId', 'title', 'genres']
@@ -49,16 +52,20 @@ def preprocess_data(dataset_dir: Path,
         ratings_df = pd.merge(ratings_df, links_df)
 
     merged_df = pd.merge(ratings_df, movies_df).sort_values(by=["userId", "timestamp"])
+    # remove unused movie id column
+    del merged_df['movieId']
     merged_df.to_csv(dataset_dir / f"{name}.csv", sep="\t", index=False)
 
     # build vocabularies
+    # FIXME: the vocab should be build from the train set and not on the complete dataset
     build_vocabularies(movies_df, dataset_dir, "title")
     build_vocabularies(movies_df, dataset_dir, "genres", split="|")
-    # FIXME: does not work for the ml-20 dataset
-    build_vocabularies(users_df, dataset_dir, "gender")
-    build_vocabularies(users_df, dataset_dir, "age")
-    build_vocabularies(users_df, dataset_dir, "occupation")
-    build_vocabularies(users_df, dataset_dir, "zip")
+    # for the ml-1m also export the vocabularies for the attributes
+    if users_df is not None:
+        build_vocabularies(users_df, dataset_dir, "gender")
+        build_vocabularies(users_df, dataset_dir, "age")
+        build_vocabularies(users_df, dataset_dir, "occupation")
+        build_vocabularies(users_df, dataset_dir, "zip")
 
 
 def build_vocabularies(dataframe: pd.DataFrame,
