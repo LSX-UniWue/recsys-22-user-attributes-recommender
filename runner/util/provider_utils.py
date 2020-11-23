@@ -11,7 +11,7 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPL
 from data.datasets.nextitem import NextItemDataset
 from data.datasets.index import SessionPositionIndex
 from data.datasets.prepare import Processor, build_processors, PositiveNegativeSampler
-from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset, TruncatedSessionDataset
+from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
 from metrics.utils.metric_utils import build_metrics
@@ -160,7 +160,7 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
                                 item_separator: str,
                                 additional_features: Dict[str, Any],
                                 truncated_index_path: str
-                                ):
+                                ) -> Dataset:
         index = CsvDatasetIndex(Path(csv_file_index))
         csv_file = Path(csv_file)
         reader = CsvDatasetReader(csv_file, index)
@@ -173,7 +173,10 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
         basic_dataset = PlainSessionDataset(reader, session_parser)
         if truncated_index_path is not None:
             index = SessionPositionIndex(Path(truncated_index_path))
-            basic_dataset = TruncatedSessionDataset(basic_dataset, index)
+            return NextItemDataset(basic_dataset,
+                                   index=index,
+                                   processors=processors,
+                                   add_target=False)
 
         return ItemSessionDataset(basic_dataset, processors=processors)
 

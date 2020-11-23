@@ -16,7 +16,7 @@ datasets:
     dataset:
       csv_file: /scratch/jane-doe-framework/datasets/ml-20m/ml-20m.csv
       csv_file_index: /scratch/jane-doe-framework/datasets/ml-20m/ml-20m.idx
-      truncated_seq_index_file:  /scratch/jane-doe-framework/datasets/ml-20m/train.loo.idx
+      truncated_seq_index_file:  /scratch/jane-doe-framework/datasets/ml-20m/valid.loo.idx
       parser: *parser
     loader: *loader
   validation:

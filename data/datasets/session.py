@@ -133,32 +133,6 @@ class PlainSessionDataset(Dataset, MultiProcessSupport):
         pass
 
 
-class TruncatedSessionDataset(Dataset, MultiProcessSupport):
-
-    def __init__(self,
-                 dataset: PlainSessionDataset,
-                 index: SessionPositionIndex,
-                 ):
-        super().__init__()
-        self._dataset = dataset
-        self._index = index
-
-    def __getitem__(self, idx):
-        session_idx, target_pos = self._index[idx]
-        parsed_session = self._dataset[session_idx]
-        session = parsed_session[ITEM_SEQ_ENTRY_NAME]
-        truncated_session = session[:target_pos + 1]
-        parsed_session[ITEM_SEQ_ENTRY_NAME] = truncated_session
-        return parsed_session
-
-    def __len__(self):
-        return len(self._dataset)
-
-    def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
-        # nothing to do here
-        pass
-
-
 class ItemSessionDataset(Dataset, MultiProcessSupport):
 
     def __init__(self,

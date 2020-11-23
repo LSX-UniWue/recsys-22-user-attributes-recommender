@@ -133,15 +133,14 @@ def split_dataset(dataset_dir: Path,
                   ):
     # we use leave one out evaluation: the last watched movie for each users is in the test set, the second last is in
     # the valid test and the rest in the train set
+    # we generate the session position index for validation and test (for train the validation index can be used the
+    # validation index with the configuration that the target is not exposed to the model)
     index_file = dataset_dir / f'{main_file.stem}.idx'
 
     create_index_for_csv(main_file, index_file, [session_key], delimiter)
 
     additional_features = {}
 
-    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'train.loo.idx', item_header,
-                                             min_seq_length, delimiter, additional_features,
-                                             functools.partial(_get_position_with_offset, offset=3))
     create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'valid.loo.idx', item_header,
                                              min_seq_length, delimiter, additional_features,
                                              functools.partial(_get_position_with_offset, offset=2))
@@ -154,16 +153,12 @@ def split_dataset(dataset_dir: Path,
 def main(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_choices=True),
          output_dir: Path = typer.Option("./dataset/", help='directory to save data')
          ) -> None:
-
     url = DOWNLOAD_URL_MAP[dataset]
     dataset_dir = output_dir / dataset
 
     file = maybe_download(url, dataset_dir)
     unzip_file(file, output_dir, delete=False)
     main_file = preprocess_data(dataset_dir, dataset)
-
-    main_file = output_dir / dataset / f'{dataset}.csv'
-
     split_dataset(dataset_dir, main_file)
 
 
