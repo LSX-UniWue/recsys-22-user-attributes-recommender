@@ -33,33 +33,43 @@ def _build_target_position_extractor(target_feature: str
 
 
 @app.command()
-def run(data_file_path: Path = typer.Argument(..., exists=True, help="path to the input file in CSV format"),
-        session_index_path: Path = typer.Argument(..., exists=True, help="path to the session index file"),
-        output_file_path: Path = typer.Argument(..., help="path to the output file"),
-        item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
-        min_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
-        delimiter: str = typer.Option("\t", help="the delimiter used in the CSV file."),
-        target_feature: str = typer.Option(None, help="the target column name to build the targets against"
+def create_conditional_index(data_file_path: Path = typer.Argument(..., exists=True, help="path to the input file in CSV format"),
+                             session_index_path: Path = typer.Argument(..., exists=True, help="path to the session index file"),
+                             output_file_path: Path = typer.Argument(..., help="path to the output file"),
+                             item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
+                             min_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
+                             delimiter: str = typer.Option("\t", help="the delimiter used in the CSV file."),
+                             target_feature: str = typer.Option(None, help="the target column name to build the targets against"
                                                       "(default all next subsequences will be considered);"
                                                       "the target must be a boolean feature")
-        ) -> None:
+                             ) -> None:
 
     target_positions_extractor = _build_target_position_extractor(target_feature)
-
-    session_index = CsvDatasetIndex(session_index_path)
-
-    reader = CsvDatasetReader(data_file_path, session_index)
-
     additional_features = {}
     if target_feature is not None:
         additional_features[target_feature] = {'type': 'bool', 'sequence': True}
 
+    create_conditional_index_using_extractor(data_file_path, session_index_path, output_file_path, item_header_name, min_session_length, delimiter, additional_features, target_positions_extractor)
+
+
+def create_conditional_index_using_extractor(data_file_path: Path,
+                                             session_index_path: Path,
+                                             output_file_path: Path,
+                                             item_header_name: str,
+                                             min_session_length: int,
+                                             delimiter: str,
+                                             additional_features: Dict[str, Any],
+                                             target_positions_extractor: Callable[[Dict[str, Any]], Iterable[int]]
+                                             ) -> None:
     session_parser = ItemSessionParser(
         create_indexed_header(read_csv_header(data_file_path, delimiter)),
         item_header_name,
         delimiter=delimiter,
         additional_features=additional_features
     )
+
+    session_index = CsvDatasetIndex(session_index_path)
+    reader = CsvDatasetReader(data_file_path, session_index)
 
     plain_dataset = PlainSessionDataset(reader, session_parser)
     dataset = ItemSessionDataset(plain_dataset)

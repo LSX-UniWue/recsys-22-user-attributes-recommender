@@ -1,9 +1,9 @@
 import typer
 from pathlib import Path
 
-from runner.dataset.create_reader_index import run as create_index
+from runner.dataset.create_reader_index import create_index_for_csv
 from runner.dataset.create_csv_dataset_splits import run as create_splits
-from runner.dataset.create_conditional_index import run as create_conditional_index
+from runner.dataset.create_conditional_index import create_conditional_index
 
 app = typer.Typer()
 
@@ -26,7 +26,7 @@ def create_splits(dataset: str = typer.Argument(..., help="ml-1m or ml-20m"),
     split_dir_path = dataset_dir / 'splits'
     split_dir_path.mkdir(parents=True, exist_ok=True)
 
-    create_index(path_main_csv, path_main_index, session_key=[session_key])
+    create_index_for_csv(path_main_csv, path_main_index, session_key=[session_key])
 
     splits = {"train": train, "valid": valid, "test": test}
     create_splits(path_main_csv, path_main_index, split_dir_path, splits, seed)
@@ -35,7 +35,7 @@ def create_splits(dataset: str = typer.Argument(..., help="ml-1m or ml-20m"),
         split_path = split_dir_path / f'{split}.csv'
         split_path_index = split_dir_path / f'{split}.idx'
         split_path_next_index = split_dir_path / f'{split}.nip'
-        create_index(split_path, split_path_index, session_key=[session_key])
+        create_index_for_csv(split_path, split_path_index, session_key=[session_key])
         create_conditional_index(data_file_path=split_path,
                                  session_index_path=split_path_index,
                                  output_file_path=split_path_next_index,

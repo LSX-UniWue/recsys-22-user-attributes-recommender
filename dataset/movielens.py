@@ -1,8 +1,14 @@
+import functools
 from pathlib import Path
+from typing import Dict, Any, Iterable
 
+from data.datasets import ITEM_SEQ_ENTRY_NAME
 from dataset.utils import maybe_download, unzip_file
 import pandas as pd
 import typer
+
+from runner.dataset.create_conditional_index import create_conditional_index_using_extractor
+from runner.dataset.create_reader_index import create_index_for_csv
 
 app = typer.Typer()
 
@@ -14,13 +20,14 @@ DOWNLOAD_URL_MAP = {
 
 
 def preprocess_data(dataset_dir: Path,
-                    name: str
-                    ):
+                    name: str,
+                    delimiter: str = '\t'
+                    ) -> Path:
     """
     Convert raw movielens data to csv files and create vocabularies
     :param dataset_dir:
     :param name:
-    :return:
+    :return: the path to the main file
     """
     print("Convert to csv...")
 
@@ -54,7 +61,8 @@ def preprocess_data(dataset_dir: Path,
     merged_df = pd.merge(ratings_df, movies_df).sort_values(by=["userId", "timestamp"])
     # remove unused movie id column
     del merged_df['movieId']
-    merged_df.to_csv(dataset_dir / f"{name}.csv", sep="\t", index=False)
+    main_file = dataset_dir / f"{name}.csv"
+    merged_df.to_csv(main_file, sep=delimiter, index=False)
 
     # build vocabularies
     # FIXME: the vocab should be build from the train set and not on the complete dataset
@@ -66,6 +74,8 @@ def preprocess_data(dataset_dir: Path,
         build_vocabularies(users_df, dataset_dir, "age")
         build_vocabularies(users_df, dataset_dir, "occupation")
         build_vocabularies(users_df, dataset_dir, "zip")
+
+    return main_file
 
 
 def build_vocabularies(dataframe: pd.DataFrame,
@@ -107,6 +117,39 @@ def read_csv(dataset_dir: Path,
     return pd.read_csv(file_path, sep=sep, header=header, engine="python")
 
 
+def _get_position_with_offset(session: Dict[str, Any],
+                              offset: int
+                              ) -> Iterable[int]:
+    sequence = session[ITEM_SEQ_ENTRY_NAME]
+    return [len(sequence) - offset]
+
+
+def split_dataset(dataset_dir: Path,
+                  main_file: Path,
+                  session_key: str = 'userId',
+                  delimiter: str = '\t',
+                  item_header: str = 'title',
+                  min_seq_length: int = 4
+                  ):
+    # we use leave one out evaluation: the last watched movie for each users is in the test set, the second last is in
+    # the valid test and the rest in the train set
+    index_file = dataset_dir / f'{main_file.stem}.idx'
+
+    create_index_for_csv(main_file, index_file, [session_key], delimiter)
+
+    additional_features = {}
+
+    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'train.loo.idx', item_header,
+                                             min_seq_length, delimiter, additional_features,
+                                             functools.partial(_get_position_with_offset, offset=3))
+    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'valid.loo.idx', item_header,
+                                             min_seq_length, delimiter, additional_features,
+                                             functools.partial(_get_position_with_offset, offset=2))
+    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'test.loo.idx', item_header,
+                                             min_seq_length, delimiter, additional_features,
+                                             functools.partial(_get_position_with_offset, offset=1))
+
+
 @app.command()
 def main(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_choices=True),
          output_dir: Path = typer.Option("./dataset/", help='directory to save data')
@@ -117,7 +160,11 @@ def main(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_choices
 
     file = maybe_download(url, dataset_dir)
     unzip_file(file, output_dir, delete=False)
-    preprocess_data(dataset_dir, dataset)
+    main_file = preprocess_data(dataset_dir, dataset)
+
+    main_file = output_dir / dataset / f'{dataset}.csv'
+
+    split_dataset(dataset_dir, main_file)
 
 
 if __name__ == "__main__":
