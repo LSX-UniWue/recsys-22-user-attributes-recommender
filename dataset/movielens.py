@@ -54,6 +54,7 @@ def preprocess_data(dataset_dir: Path,
     # build vocabularies
     build_vocabularies(movies_df, dataset_dir, "title")
     build_vocabularies(movies_df, dataset_dir, "genres", split="|")
+    # FIXME: does not work for the ml-20 dataset
     build_vocabularies(users_df, dataset_dir, "gender")
     build_vocabularies(users_df, dataset_dir, "age")
     build_vocabularies(users_df, dataset_dir, "occupation")
@@ -69,7 +70,6 @@ def build_vocabularies(dataframe: pd.DataFrame,
     Build and write a vocabulary file
     :param dataframe: base dataframe
     :param dataset_dir: folder for saving file
-    :param dataset_name: dataset name for saving file
     :param column: column to create vocabulary for
     :param split: token to split if column need splitting
     :return:
@@ -80,12 +80,14 @@ def build_vocabularies(dataframe: pd.DataFrame,
         dataframe.columns = ['index', column]
 
     title_vocab = pd.DataFrame(dataframe[column].unique())
+    # we start with the pad token (pad token should have the id 0, so we start with the special tokens, than add
+    # the remaining data)
     special_tokens = pd.DataFrame(["<PAD>", "<MASK>", "<UNK>"])
-    title_vocab = title_vocab.append(special_tokens).reset_index(drop=True)
+    title_vocab = special_tokens.append(title_vocab).reset_index(drop=True)
     title_vocab["id"] = title_vocab.index
 
     vocab_file = dataset_dir / f'vocab_{column}.txt'
-    title_vocab.to_csv(vocab_file, index=False, sep="\t")
+    title_vocab.to_csv(vocab_file, index=False, sep="\t", header=False)
 
 
 def read_csv(dataset_dir: Path,
