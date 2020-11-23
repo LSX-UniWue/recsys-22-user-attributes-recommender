@@ -1,7 +1,7 @@
 FROM pytorch/pytorch:1.6.0-cuda10.1-cudnn7-runtime
 
 # install some basic utilities
-RUN apt update && apt -y install zsh byobu tmux curl htop vim git wget mc && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get -y install zsh byobu tmux curl htop vim git wget mc && rm -rf /var/lib/apt/lists/*
 
 # install poetry into /opt/poetry
 ENV POETRY_HOME=/opt/poetry
