@@ -17,7 +17,7 @@ ls -lh `which poetry`
 poetry install
 
 # execute the provided prepare script
-if [ ! -z "$PREPARE_SCRIPT" ]; then
+if [ -n "$PREPARE_SCRIPT" ]; then
   chmod +x "${PREPARE_SCRIPT}"
   $PREPARE_SCRIPT
 fi
