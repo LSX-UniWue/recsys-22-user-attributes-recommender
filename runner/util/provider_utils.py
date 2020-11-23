@@ -11,7 +11,7 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPL
 from data.datasets.nextitem import NextItemDataset
 from data.datasets.index import SessionPositionIndex
 from data.datasets.prepare import Processor, build_processors, PositiveNegativeSampler
-from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
+from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset, TruncatedSessionDataset
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
 from metrics.utils.metric_utils import build_metrics
@@ -158,7 +158,8 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
                                 delimiter: str,
                                 item_column_name: str,
                                 item_separator: str,
-                                additional_features: Dict[str, Any]
+                                additional_features: Dict[str, Any],
+                                truncated_index_path: str
                                 ):
         index = CsvDatasetIndex(Path(csv_file_index))
         csv_file = Path(csv_file)
@@ -168,7 +169,12 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
                                               delimiter=delimiter,
                                               item_separator=item_separator,
                                               additional_features=additional_features)
+
         basic_dataset = PlainSessionDataset(reader, session_parser)
+        if truncated_index_path is not None:
+            index = SessionPositionIndex(Path(truncated_index_path))
+            basic_dataset = TruncatedSessionDataset(basic_dataset, index)
+
         return ItemSessionDataset(basic_dataset, processors=processors)
 
     dataset_config = dataset_config.dataset
@@ -183,7 +189,8 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
         parser_config.delimiter,
         parser_config.item_column_name,
         parser_config.item_separator,
-        parser_config.additional_features
+        parser_config.additional_features,
+        dataset_config.truncated_seq_index_file
     )
 
 

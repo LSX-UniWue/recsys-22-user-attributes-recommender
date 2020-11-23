@@ -147,7 +147,7 @@ class TruncatedSessionDataset(Dataset, MultiProcessSupport):
         session_idx, target_pos = self._index[idx]
         parsed_session = self._dataset[session_idx]
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
-        truncated_session = session[:target_pos]
+        truncated_session = session[:target_pos + 1]
         parsed_session[ITEM_SEQ_ENTRY_NAME] = truncated_session
         return parsed_session
 
