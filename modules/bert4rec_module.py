@@ -166,38 +166,38 @@ class BERT4RecModule(pl.LightningModule):
         self.validation_epoch_end(outputs)
 
     def configure_optimizers(self):
-        def _filter(name: str) -> bool:
-            return name.endswith("bias") or 'norm1' in name or 'norm2' in name or 'layer_norm' in name
+        #def _filter(name: str) -> bool:
+        #    return name.endswith("bias") or 'norm1' in name or 'norm2' in name or 'layer_norm' in name
 
-        decay_exclude = [parameter for name, parameter in self.named_parameters() if _filter(name)]
-        decay_include = [parameter for name, parameter in self.named_parameters() if not _filter(name)]
+        #decay_exclude = [parameter for name, parameter in self.named_parameters() if _filter(name)]
+        #decay_include = [parameter for name, parameter in self.named_parameters() if not _filter(name)]
 
-        parameters = {'params': decay_exclude, 'weight_decay': 0.0},\
-                     {'params': decay_include, 'weight_decay': self.weight_decay}
+        #parameters = {'params': decay_exclude, 'weight_decay': 0.0},\
+        #             {'params': decay_include, 'weight_decay': self.weight_decay}
 
-        optimizer = torch.optim.Adam(parameters,
+        optimizer = torch.optim.Adam(self.parameters(),
                                      lr=self.learning_rate,
                                      betas=(self.beta_1, self.beta_2))
 
-        if self.num_warmup_steps > 0:
-            num_warmup_steps = self.num_warmup_steps
-
-            def _learning_rate_scheduler(step: int) -> float:
-                warmup_percent_done = step / num_warmup_steps
-                # the learning rate should be reduce by step/warmup-step if in warmup-steps,
-                # else the learning rate is fixed
-                return min(1.0, warmup_percent_done)
-
-            scheduler = LambdaLR(optimizer, _learning_rate_scheduler)
-
-            schedulers = [
-                {
-                    'scheduler': scheduler,
-                    'interval': 'step',
-                    'strict': True,
-                }
-            ]
-            return [optimizer], schedulers
+        # if self.num_warmup_steps > 0:
+        #     num_warmup_steps = self.num_warmup_steps
+        #
+        #     def _learning_rate_scheduler(step: int) -> float:
+        #         warmup_percent_done = step / num_warmup_steps
+        #         # the learning rate should be reduce by step/warmup-step if in warmup-steps,
+        #         # else the learning rate is fixed
+        #         return min(1.0, warmup_percent_done)
+        #
+        #     scheduler = LambdaLR(optimizer, _learning_rate_scheduler)
+        #
+        #     schedulers = [
+        #         {
+        #             'scheduler': scheduler,
+        #             'interval': 'step',
+        #             'strict': True,
+        #         }
+        #     ]
+        #     return [optimizer], schedulers
         return optimizer
 
 
