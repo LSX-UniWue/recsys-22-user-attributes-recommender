@@ -113,7 +113,7 @@ class BERT4RecContainer(containers.DeclarativeContainer):
     tokenizer = build_tokenizer_provider(config)
 
     # model
-    model = providers.Singleton(_kwargs_adapter, BERT4RecModel2, config.model)
+    model = providers.Singleton(_kwargs_adapter, BERT4RecModel, config.model)
 
     module_config = config.module
 
