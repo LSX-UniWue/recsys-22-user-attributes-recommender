@@ -14,7 +14,7 @@ class MetricLoggerCallback(Callback):
         if check_has_metrics(pl_module):
             targets = outputs[RETURN_KEY_TARGETS]
             predictions = outputs[RETURN_KEY_PREDICTIONS]
-            mask = outputs[RETURN_KEY_MASK]
+            mask = outputs[RETURN_KEY_MASK] if RETURN_KEY_MASK in outputs else None
             for name, metric in pl_module.metrics.items():
                 step_value = metric(predictions, targets, mask=mask)
                 pl_module.log(name, step_value, prog_bar=True)

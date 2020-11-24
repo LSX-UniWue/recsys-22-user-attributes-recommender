@@ -96,17 +96,12 @@ class SASRecModule(pl.LightningModule):
         prediction = self.model(input_seq, items_to_rank, padding_mask=padding_mask)
         prediction = prediction.transpose(1, 0)
 
-        for name, metric in self.metrics.items():
-            step_value = metric(prediction, targets)
-            self.log(name, step_value, prog_bar=True)
-
         return build_eval_step_return_dict(prediction, targets)
 
     def validation_epoch_end(self,
                              outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
                              ) -> None:
-        for name, metric in self.metrics.items():
-            self.log(name, metric.compute(), prog_bar=True)
+        pass
 
     def test_step(self, batch, batch_idx):
         return self.validation_step(batch, batch_idx)

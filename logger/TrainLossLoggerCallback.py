@@ -6,4 +6,4 @@ from pytorch_lightning import Callback
 class TrainLossLoggerCallback(Callback):
 
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-        pl_module.log(outputs)
+        pass

@@ -4,10 +4,12 @@ from typing import Callable, Dict, Any, List, Optional
 from dependency_injector import providers
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger
 from torch.utils.data import Dataset, DataLoader
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
-from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
+    NEGATIVE_SAMPLES_ENTRY_NAME
 from data.datasets.nextitem import NextItemDataset
 from data.datasets.index import SessionPositionIndex
 from data.datasets.prepare import Processor, build_processors, PositiveNegativeSampler
@@ -39,7 +41,6 @@ def build_session_parser(csv_file: Path,
 def build_processors_provider(dataset_config: providers.ConfigurationOption,
                               additional_objects: Dict[str, Any]
                               ) -> providers.Factory:
-
     return providers.Factory(
         build_processors,
         dataset_config,
@@ -51,7 +52,6 @@ def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider
                                           processors_provider: providers.Provider,
                                           dataset_config: providers.ConfigurationOption
                                           ) -> providers.Factory:
-
     def provide_posneg_dataset(csv_file: str,
                                csv_file_index: str,
                                nip_index: str,  # unused but necessary to match the call signature
@@ -200,12 +200,12 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
     )
 
 
-def build_dataset_provider_factory(dataset_build_fn: Callable[[str, str, str, List[Processor], Tokenizer, str, str, str, Dict[str, Any]], Dataset],
-                                   tokenizer_provider: providers.Provider,
-                                   processors_provider: providers.Provider,
-                                   dataset_config: providers.ConfigurationOption
-                                   ) -> providers.Factory:
-
+def build_dataset_provider_factory(
+        dataset_build_fn: Callable[[str, str, str, List[Processor], Tokenizer, str, str, str, Dict[str, Any]], Dataset],
+        tokenizer_provider: providers.Provider,
+        processors_provider: providers.Provider,
+        dataset_config: providers.ConfigurationOption
+        ) -> providers.Factory:
     dataset_config = dataset_config.dataset
     parser_config = dataset_config.parser
 
@@ -227,7 +227,6 @@ def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provid
                                             preprocessor_provider: providers.Provider,
                                             dataset_config: providers.ConfigurationOption
                                             ) -> providers.Factory:
-
     def provide_nextitem_dataset(csv_file: str,
                                  csv_file_index: str,
                                  nip_index: str,
@@ -318,6 +317,7 @@ def provide_nextit_loader(dataset: Dataset,
 
 def build_standard_trainer(config: providers.Configuration) -> providers.Singleton:
     checkpoint = build_standard_model_checkpoint(config)
+    logger = build_standard_tensorboard_logger_provider(config)
     logging_callbacks = build_standard_logging_callbacks_provider()
 
     trainer_config = config.trainer
@@ -331,7 +331,8 @@ def build_standard_trainer(config: providers.Configuration) -> providers.Singlet
         gpus=trainer_config.gpus,
         max_epochs=trainer_config.max_epochs,
         weights_summary='full',
-        callbacks = logging_callbacks
+        logger=logger,
+        callbacks=logging_callbacks
     )
 
 
@@ -351,8 +352,17 @@ def build_metrics_provider(config: providers.ConfigurationOption
         config
     )
 
+
+def build_standard_tensorboard_logger_provider(config: providers.Configuration) -> providers.Singleton:
+    return providers.Singleton(
+        TensorBoardLogger,
+        save_dir=config.trainer.log_dir,
+        name=config.trainer.experiment_name
+    )
+
+
 def build_standard_logging_callbacks_provider() -> providers.List:
     return providers.List(
-        #MetricLoggerCallback(),
+        MetricLoggerCallback(),
         GradientLoggerCallback(),
         TrainLossLoggerCallback())

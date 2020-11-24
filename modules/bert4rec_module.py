@@ -151,18 +151,13 @@ class BERT4RecModule(pl.LightningModule):
         # the target tensor
         mask = None if len(targets.size()) == 1 else ~ targets.eq(self.tokenizer.pad_token_id)
 
-        for name, metric in self.metrics.items():
-            step_value = metric(prediction, targets, mask=mask)
-            self.log(name, step_value, prog_bar=True)
-
         return build_eval_step_return_dict(prediction, targets, mask=mask)
 
     # FIXME: copy paste code from sas rec module
     def validation_epoch_end(self,
                              outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
                              ) -> None:
-        for name, metric in self.metrics.items():
-            self.log(name, metric.compute(), prog_bar=True)
+        pass
 
     def test_step(self, batch, batch_idx):
         return self._eval_epoch_step(batch, batch_idx, is_test=True)

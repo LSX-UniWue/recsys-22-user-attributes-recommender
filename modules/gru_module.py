@@ -76,17 +76,12 @@ class GRUModule(pl.LightningModule):
 
         mask = None if len(target.size()) == 1 else ~ target.eq(self.tokenizer.pad_token_id)
 
-        for name, metric in self.metrics.items():
-            step_value = metric(logits, target, mask=mask)
-            self.log(name, step_value, prog_bar=True)
-
         return build_eval_step_return_dict(logits, target, mask=mask)
 
     def validation_epoch_end(self,
                              outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
                              ) -> None:
-        for name, metric in self.metrics.items():
-            self.log(name, metric.compute(), prog_bar=True)
+        pass
 
     def test_step(self,
                   batch: Dict[str, torch.Tensor],
