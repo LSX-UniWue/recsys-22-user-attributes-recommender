@@ -6,6 +6,7 @@ import torch
 from data.datasets import ITEM_SEQ_ENTRY_NAME, USER_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.caser.caser_model import CaserModel
+from modules.util.module_util import build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 
 
@@ -63,7 +64,7 @@ class CaserModule(pl.LightningModule):
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
-                        ) -> None:
+                        ) -> Dict[str, torch.Tensor]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         users = CaserModule.get_users_from_batch(batch)
         targets = batch[TARGET_ENTRY_NAME]
@@ -81,6 +82,8 @@ class CaserModule(pl.LightningModule):
         for name, metric in self.metrics.items():
             step_value = metric(prediction, targets)
             self.log(name, step_value, prog_bar=True)
+
+        return build_eval_step_return_dict(prediction, targets)
 
     # FIXME: copy paste code from sas rec module
     def validation_epoch_end(self,

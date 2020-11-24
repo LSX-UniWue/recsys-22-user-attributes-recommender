@@ -9,7 +9,8 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
 from modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TEST_LOSS, LOG_KEY_TRAINING_LOSS
-from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot
+from modules.constants import RETURN_KEY_PREDICTIONS, RETURN_KEY_TARGETS, RETURN_KEY_MASK
+from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
 
@@ -82,7 +83,8 @@ class BERT4RecModule(pl.LightningModule):
         masked_lm_loss = self._calc_loss(prediction_logits, target)
         self.log(LOG_KEY_TRAINING_LOSS, masked_lm_loss, prog_bar=False)
         return {
-            'loss': masked_lm_loss
+            'loss': masked_lm_loss,
+
         }
 
     def _calc_loss(self,
@@ -106,14 +108,14 @@ class BERT4RecModule(pl.LightningModule):
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
-                        ) -> None:
-        self._eval_epoch_step(batch, batch_idx)
+                        ) -> Dict[str, torch.Tensor]:
+        return self._eval_epoch_step(batch, batch_idx)
 
     def _eval_epoch_step(self,
                          batch: Dict[str, torch.Tensor],
                          batch_idx: int,
                          is_test: bool = False
-                         ) -> None:
+                         ) -> Dict[str, torch.Tensor]:
         # shorter to allow the masking token
         input_seq = _expand_sequence(inputs=batch[ITEM_SEQ_ENTRY_NAME],
                                      tokenizer=self.tokenizer,
@@ -150,6 +152,8 @@ class BERT4RecModule(pl.LightningModule):
             step_value = metric(prediction, targets, mask=mask)
             self.log(name, step_value, prog_bar=True)
 
+        return build_eval_step_return_dict(prediction, targets, mask=mask)
+
     # FIXME: copy paste code from sas rec module
     def validation_epoch_end(self,
                              outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
@@ -158,7 +162,7 @@ class BERT4RecModule(pl.LightningModule):
             self.log(name, metric.compute(), prog_bar=True)
 
     def test_step(self, batch, batch_idx):
-        self._eval_epoch_step(batch, batch_idx, is_test=True)
+        return self._eval_epoch_step(batch, batch_idx, is_test=True)
 
     def test_epoch_end(self,
                        outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]

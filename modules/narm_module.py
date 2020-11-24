@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.narm.narm_model import NarmModel
 from modules import LOG_KEY_VALIDATION_LOSS
-from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot
+from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 from torch import nn
 
@@ -71,7 +71,7 @@ class NarmModule(pl.LightningModule):
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
-                        ) -> None:
+                        ) -> Dict[str, torch.Tensor]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
 
@@ -88,6 +88,8 @@ class NarmModule(pl.LightningModule):
         for name, metric in self.metrics.items():
             step_value = metric(logits, target, mask=mask)
             self.log(name, step_value, prog_bar=True)
+
+        return build_eval_step_return_dict(logits, target, mask=mask)
 
     def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]) -> None:
         for name, metric in self.metrics.items():

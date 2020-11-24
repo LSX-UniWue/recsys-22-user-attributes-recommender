@@ -1,6 +1,9 @@
+from typing import Dict
+
 import torch
 from torch.nn import functional as F
 
+from modules.constants import RETURN_KEY_PREDICTIONS, RETURN_KEY_TARGETS, RETURN_KEY_MASK
 from tokenization.tokenizer import Tokenizer
 
 
@@ -60,6 +63,7 @@ def convert_target_to_multi_hot(target_tensor: torch.Tensor,
                                 ) -> torch.Tensor:
     """
     generates a mulit-hot vector of the provided indices in target_tensor
+
     :param target_tensor:
     :param num_classes:
     :param pad_token_id:
@@ -74,3 +78,27 @@ def convert_target_to_multi_hot(target_tensor: torch.Tensor,
     # remove the padding for each multi-hot target
     multi_hot[..., pad_token_id] = 0
     return multi_hot
+
+
+def build_eval_step_return_dict(predictions: torch.Tensor,
+                                targets: torch.Tensor,
+                                mask: torch.Tensor = None) -> Dict[str, torch.Tensor]:
+
+    """
+    Generates a dictionary to be returned from the validation/test step which contains information to be provided to callbacks.
+
+    :param predictions: Predictions made by the model in the current step.
+    :param targets: Expected outputs from the model in the current step.
+    :param mask: Optional mask which is forwarded to metrics.
+
+    :returns: A dictionary containing the values provided to this function using the keys defined in modules/util/constants.py.
+    """
+
+    return_dict = {
+        RETURN_KEY_PREDICTIONS: predictions,
+        RETURN_KEY_TARGETS: targets,
+    }
+    if mask is not None:
+        return_dict.update({RETURN_KEY_MASK: mask})
+
+    return return_dict
