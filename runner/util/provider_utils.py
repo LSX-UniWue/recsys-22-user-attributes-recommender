@@ -8,7 +8,8 @@ from torch.utils.data import Dataset, DataLoader
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
-from data.datasets.nextitem import NextItemDataset, NextItemIndex
+from data.datasets.nextitem import NextItemDataset
+from data.datasets.index import SessionPositionIndex
 from data.datasets.prepare import Processor, build_processors, PositiveNegativeSampler
 from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
 from data.mp import mp_worker_init_fn
@@ -160,8 +161,9 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
                                 delimiter: str,
                                 item_column_name: str,
                                 item_separator: str,
-                                additional_features: Dict[str, Any]
-                                ):
+                                additional_features: Dict[str, Any],
+                                truncated_index_path: str
+                                ) -> Dataset:
         index = CsvDatasetIndex(Path(csv_file_index))
         csv_file = Path(csv_file)
         reader = CsvDatasetReader(csv_file, index)
@@ -170,7 +172,15 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
                                               delimiter=delimiter,
                                               item_separator=item_separator,
                                               additional_features=additional_features)
+
         basic_dataset = PlainSessionDataset(reader, session_parser)
+        if truncated_index_path is not None:
+            index = SessionPositionIndex(Path(truncated_index_path))
+            return NextItemDataset(basic_dataset,
+                                   index=index,
+                                   processors=processors,
+                                   add_target=False)
+
         return ItemSessionDataset(basic_dataset, processors=processors)
 
     dataset_config = dataset_config.dataset
@@ -185,7 +195,8 @@ def build_session_dataset_provider_factory(tokenizer_provider: providers.Provide
         parser_config.delimiter,
         parser_config.item_column_name,
         parser_config.item_separator,
-        parser_config.additional_features
+        parser_config.additional_features,
+        dataset_config.truncated_seq_index_file
     )
 
 
@@ -236,7 +247,7 @@ def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provid
                                               item_separator=item_separator,
                                               additional_features=additional_features)
         basic_dataset = PlainSessionDataset(reader, session_parser)
-        return NextItemDataset(basic_dataset, NextItemIndex(Path(nip_index)), processors=preprocessors)
+        return NextItemDataset(basic_dataset, SessionPositionIndex(Path(nip_index)), processors=preprocessors)
 
     return build_dataset_provider_factory(provide_nextitem_dataset, tokenizer_provider, preprocessor_provider,
                                           dataset_config)

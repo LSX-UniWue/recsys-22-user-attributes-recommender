@@ -7,6 +7,7 @@ from torch.utils.data import Dataset
 
 from data.base.reader import CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME
+from data.datasets.index import SessionPositionIndex
 from data.datasets.prepare import Processor
 from data.mp import MultiProcessSupport
 

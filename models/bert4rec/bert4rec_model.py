@@ -26,7 +26,7 @@ class BERT4RecBaseModel(nn.Module):
 
         encoder_layers = nn.TransformerEncoderLayer(d_model=self.transformer_hidden_size,
                                                     nhead=self.num_transformer_heads,
-                                                    dim_feedforward=self.transformer_hidden_size,
+                                                    dim_feedforward=self.transformer_hidden_size * 4,
                                                     dropout=self.transformer_dropout,
                                                     activation='gelu')
 

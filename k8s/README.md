@@ -17,7 +17,8 @@ purpose.
 
 ### Create kubernetes secret
 kubectl -n <namespace> create secret generic gitlab-token --from-literal=token=xxx
-## Run
+
+## Run on your local machine
 ```
 podman run -e GIT_TOKEN=S369mz5Ur1hS2KFBxiDH -e REPO_USER=ald58ab -e REPO_BRANCH=container --mount=type=bind,source=/home/dallmann/uni/research/dota/datasets/small/preprocessed/match_split,dst=/dataset --mount=type=bind,source=/home/dallmann/tmp/configs,dst=/configs recommender:latest poetry run python -m runner.run_model narm /configs/narm_config.yaml
 ```

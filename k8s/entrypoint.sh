@@ -4,14 +4,27 @@ REPO_URL="https://${REPO_USER}@gitlab2.informatik.uni-wuerzburg.de/dmir/dallmann
 #DATA_LOCAL_PATH=/cache <- set this env variable to the ssd cache path
 #PREPARE_SCRIPT=somewhere
 #RUN_SCRIPT
+# create project dir
 mkdir -p "${PROJECT_DIR}"
 cd "${PROJECT_DIR}"
+# checkout the repository
 git clone -q "${REPO_URL}"
-cd recommender
+cd recommender || exit 1
 git checkout -q "${REPO_BRANCH}"
-which poetry
+
+# update the repo if already checked out
+git pull -q
+
+# install requirements using poetry
 ls -lh `which poetry`
 poetry install
-chmod +x $PREPARE_SCRIPT
-$PREPARE_SCRIPT
+
+# execute the provided prepare script
+if [ "$PREPARE_SCRIPT" ]; then
+  echo "x${PREPARE_SCRIPT}x"
+  chmod +x "${PREPARE_SCRIPT}"
+  $PREPARE_SCRIPT
+fi
+
+# now run the configuration using poetry
 /bin/bash -c "cd ${PROJECT_DIR}/recommender && poetry run python -m runner.run_model $*"

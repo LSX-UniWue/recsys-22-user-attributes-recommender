@@ -10,8 +10,9 @@ import tarfile
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME
-from data.datasets.nextitem import NextItemIndex, NextItemIterableDataset, NextItemDataset
-from data.datasets.session import ItemSessionParser, ItemSessionDataset
+from data.datasets.nextitem import NextItemIterableDataset, NextItemDataset
+from data.datasets.index import SessionPositionIndex
+from data.datasets.session import ItemSessionDataset, ItemSessionParser
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
 from data.collate import padded_session_collate
@@ -144,7 +145,7 @@ class Dota2Small(pl.LightningDataModule):
         session_dataset = self.create_session_dataset(dataset_basename, delimiter, tokenizer)
 
         nip_index_file_path = self.local_path / f"{dataset_basename}.{Dota2Small.NEXT_ITEM_INDEX_SUFFIX}"
-        nip_index = NextItemIndex(nip_index_file_path)
+        nip_index = SessionPositionIndex(nip_index_file_path)
 
         if shuffle:
             dataset = NextItemIterableDataset(session_dataset, nip_index)

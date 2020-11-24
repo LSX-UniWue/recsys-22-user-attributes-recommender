@@ -6,7 +6,7 @@ import pytorch_lightning as pl
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
 from losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
-from modules.util.module_util import get_padding_mask
+from modules.util.module_util import get_padding_mask, build_eval_step_return_dict
 from models.sasrec.sas_rec_model import SASRecModel
 from tokenization.tokenizer import Tokenizer
 
@@ -73,7 +73,7 @@ class SASRecModule(pl.LightningModule):
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
-                        ) -> None:
+                        ) -> Dict[str, torch.Tensor]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
@@ -99,6 +99,8 @@ class SASRecModule(pl.LightningModule):
         for name, metric in self.metrics.items():
             step_value = metric(prediction, targets)
             self.log(name, step_value, prog_bar=True)
+
+        return build_eval_step_return_dict(prediction, targets)
 
     def validation_epoch_end(self,
                              outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]

@@ -1,7 +1,7 @@
 parser: &parser
   item_column_name: item_id
 loader: &loader
-  batch_size: 1
+  batch_size: 2
   max_seq_length: 5
 datasets:
   test:
@@ -29,9 +29,10 @@ model:
   max_seq_length: 5
   num_transformer_heads: 1
   num_transformer_layers: 1
-  transformer_hidden_size: 8
+  transformer_hidden_size: 2
   transformer_dropout: 0.1
 module:
+  mask_probability: 0.9
   metrics:
     mrr:
       - 1

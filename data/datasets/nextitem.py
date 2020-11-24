@@ -1,107 +1,22 @@
-import io
-from pathlib import Path
-import sys
-from typing import Dict, Any, Iterable, Callable, List
+from typing import List
 
 from numpy.random._generator import default_rng
 from torch.utils.data import Dataset, IterableDataset
-from tqdm import tqdm
 
-from data.datasets import ITEM_SEQ_ENTRY_NAME, INT_BYTE_SIZE, TARGET_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
+from data.datasets.index import SessionPositionIndex
 from data.datasets.prepare import Processor
 from data.datasets.session import ItemSessionDataset, PlainSessionDataset
 from data.mp import MultiProcessSupport
-
-
-def all_remaining_items(session: Dict[str, Any]
-                        ) -> Iterable[int]:
-    return range(1, len(session[ITEM_SEQ_ENTRY_NAME]))
-
-
-class NextItemIndexBuilder:
-    """
-    This index builder builds
-    """
-
-    def __init__(self,
-                 min_session_length: int = 2,
-                 target_positions_extractor: Callable[[Dict[str, Any]], Iterable[int]] = None
-                 ):
-        self._min_session_length = min_session_length
-        if target_positions_extractor is None:
-            target_positions_extractor = all_remaining_items
-        self._target_positions_extractor = target_positions_extractor
-
-    def build(self, dataset: ItemSessionDataset, index_path: Path):
-        if not index_path.exists():
-            index_path.parent.mkdir(parents=True, exist_ok=True)
-
-        current_idx = 0
-        with index_path.open("wb") as index_file:
-            for session_idx in tqdm(range(len(dataset)), desc="Creating Index."):
-                session = dataset[session_idx]
-                items = session[ITEM_SEQ_ENTRY_NAME]
-                # remove session with lower min session length
-                if len(items) > self._min_session_length:
-                    target_positions = self._target_positions_extractor(session)
-                    for target_pos in target_positions:
-                        self._write_entry(index_file, session_idx, target_pos)
-                        current_idx += 1
-            # write length at the end
-            index_file.write(current_idx.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
-            # write minimum length
-            index_file.write(self._min_session_length.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
-
-    @staticmethod
-    def _write_entry(index_file, session_idx: int, target_pos: int):
-        index_file.write(session_idx.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
-        index_file.write(target_pos.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
-
-
-class NextItemIndex(MultiProcessSupport):
-
-    def __init__(self,
-                 index_path: Path
-                 ):
-        super().__init__()
-        if not index_path.exists():
-            raise Exception(f"could not find file with index at: {index_path}")
-        self._index_path = index_path
-        self._init()
-
-    def _init(self):
-        self._index_file_handle = self._index_path.open("rb")
-        self._min_session_length = self._read_min_session_length()
-        self._length = self._read_length()
-
-    def _read_length(self):
-        self._index_file_handle.seek(-2 * INT_BYTE_SIZE, io.SEEK_END)
-        return int.from_bytes(self._index_file_handle.read(INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
-
-    def _read_min_session_length(self):
-        self._index_file_handle.seek(-INT_BYTE_SIZE, io.SEEK_END)
-        return int.from_bytes(self._index_file_handle.read(INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
-
-    def __len__(self):
-        return self._length
-
-    def __getitem__(self, idx):
-        self._index_file_handle.seek(idx * INT_BYTE_SIZE * 2)
-        session_idx = int.from_bytes(self._index_file_handle.read(INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
-        target_pos = int.from_bytes(self._index_file_handle.read(INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
-
-        return session_idx, target_pos
-
-    def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
-        self._init()
 
 
 class NextItemDataset(Dataset, MultiProcessSupport):
 
     def __init__(self,
                  dataset: PlainSessionDataset,
-                 index: NextItemIndex,
-                 processors: List[Processor] = None
+                 index: SessionPositionIndex,
+                 processors: List[Processor] = None,
+                 add_target: bool = True
                  ):
         super().__init__()
         self._dataset = dataset
@@ -109,6 +24,7 @@ class NextItemDataset(Dataset, MultiProcessSupport):
         if processors is None:
             processors = []
         self._processors = processors
+        self._add_target = add_target
 
     def __len__(self):
         return len(self._index)
@@ -119,7 +35,8 @@ class NextItemDataset(Dataset, MultiProcessSupport):
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
         truncated_session = session[:target_pos]
         parsed_session[ITEM_SEQ_ENTRY_NAME] = truncated_session
-        parsed_session[TARGET_ENTRY_NAME] = session[target_pos]
+        if self._add_target:
+            parsed_session[TARGET_ENTRY_NAME] = session[target_pos]
 
         for processor in self._processors:
             parsed_session = processor.process(parsed_session)
@@ -132,7 +49,7 @@ class NextItemDataset(Dataset, MultiProcessSupport):
 
 
 class NextItemIterableDataset(IterableDataset):
-    def __init__(self, dataset: ItemSessionDataset, index: NextItemIndex, seed: int = None):
+    def __init__(self, dataset: ItemSessionDataset, index: SessionPositionIndex, seed: int = None):
         self._dataset = dataset
         self._index = index
         self._seed = seed

@@ -8,8 +8,10 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
+from models.bert4rec.bert4rec_model_2 import BERT4RecModel2
 from modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TEST_LOSS, LOG_KEY_TRAINING_LOSS
-from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot
+from modules.constants import RETURN_KEY_PREDICTIONS, RETURN_KEY_TARGETS, RETURN_KEY_MASK
+from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
 
@@ -24,7 +26,7 @@ class BERT4RecModule(pl.LightningModule):
         return batch[POSITION_IDS] if POSITION_IDS in batch else None
 
     def __init__(self,
-                 model: BERT4RecModel,
+                 model: BERT4RecModel2,
                  mask_probability: float,
                  learning_rate: float,
                  beta_1: float,
@@ -56,7 +58,7 @@ class BERT4RecModule(pl.LightningModule):
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         position_ids = BERT4RecModule.get_position_ids(batch)
-        input_seq = _expand_sequence(inputs=input_seq, tokenizer=self.tokenizer, batch_first=self.batch_first)
+        input_seq = _expand_sequence(inputs=input_seq, tokenizer=self.tokenizer)
 
         if self.batch_first:
             input_seq = input_seq.transpose(0, 1)
@@ -82,7 +84,8 @@ class BERT4RecModule(pl.LightningModule):
         masked_lm_loss = self._calc_loss(prediction_logits, target)
         self.log(LOG_KEY_TRAINING_LOSS, masked_lm_loss, prog_bar=False)
         return {
-            'loss': masked_lm_loss
+            'loss': masked_lm_loss,
+
         }
 
     def _calc_loss(self,
@@ -106,18 +109,17 @@ class BERT4RecModule(pl.LightningModule):
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
-                        ) -> None:
-        self._eval_epoch_step(batch, batch_idx)
+                        ) -> Dict[str, torch.Tensor]:
+        return self._eval_epoch_step(batch, batch_idx)
 
     def _eval_epoch_step(self,
                          batch: Dict[str, torch.Tensor],
                          batch_idx: int,
                          is_test: bool = False
-                         ) -> None:
+                         ) -> Dict[str, torch.Tensor]:
         # shorter to allow the masking token
         input_seq = _expand_sequence(inputs=batch[ITEM_SEQ_ENTRY_NAME],
-                                     tokenizer=self.tokenizer,
-                                     batch_first=self.batch_first)
+                                     tokenizer=self.tokenizer)
         targets = batch[TARGET_ENTRY_NAME]
 
         position_ids = BERT4RecModule.get_position_ids(batch)
@@ -137,7 +139,7 @@ class BERT4RecModule(pl.LightningModule):
         # get predictions for all seq steps
         prediction = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
         # extract the relevant seq steps, where the mask was set, here only one mask per sequence steps exists
-        prediction = prediction[target_mask]
+        prediction = prediction[:, -1, :] # FIXME: should this not the
 
         loss = self._calc_loss(prediction, targets, is_eval=True)
         self.log(LOG_KEY_TEST_LOSS if is_test else LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
@@ -150,6 +152,8 @@ class BERT4RecModule(pl.LightningModule):
             step_value = metric(prediction, targets, mask=mask)
             self.log(name, step_value, prog_bar=True)
 
+        return build_eval_step_return_dict(prediction, targets, mask=mask)
+
     # FIXME: copy paste code from sas rec module
     def validation_epoch_end(self,
                              outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
@@ -158,7 +162,7 @@ class BERT4RecModule(pl.LightningModule):
             self.log(name, metric.compute(), prog_bar=True)
 
     def test_step(self, batch, batch_idx):
-        self._eval_epoch_step(batch, batch_idx, is_test=True)
+        return self._eval_epoch_step(batch, batch_idx, is_test=True)
 
     def test_epoch_end(self,
                        outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
@@ -166,38 +170,39 @@ class BERT4RecModule(pl.LightningModule):
         self.validation_epoch_end(outputs)
 
     def configure_optimizers(self):
-        def _filter(name: str) -> bool:
-            return name.endswith("bias") or 'norm1' in name or 'norm2' in name or 'layer_norm' in name
+        #def _filter(name: str) -> bool:
+        #    return name.endswith("bias") or 'norm1' in name or 'norm2' in name or 'layer_norm' in name
 
-        decay_exclude = [parameter for name, parameter in self.named_parameters() if _filter(name)]
-        decay_include = [parameter for name, parameter in self.named_parameters() if not _filter(name)]
+        #decay_exclude = [parameter for name, parameter in self.named_parameters() if _filter(name)]
+        #decay_include = [parameter for name, parameter in self.named_parameters() if not _filter(name)]
 
-        parameters = {'params': decay_exclude, 'weight_decay': 0.0},\
-                     {'params': decay_include, 'weight_decay': self.weight_decay}
+        #parameters = {'params': decay_exclude, 'weight_decay': 0.0},\
+        #             {'params': decay_include, 'weight_decay': self.weight_decay}
 
-        optimizer = torch.optim.Adam(parameters,
+        optimizer = torch.optim.Adam(self.parameters(),
                                      lr=self.learning_rate,
+                                     weight_decay=self.weight_decay,
                                      betas=(self.beta_1, self.beta_2))
 
-        if self.num_warmup_steps > 0:
-            num_warmup_steps = self.num_warmup_steps
-
-            def _learning_rate_scheduler(step: int) -> float:
-                warmup_percent_done = step / num_warmup_steps
-                # the learning rate should be reduce by step/warmup-step if in warmup-steps,
-                # else the learning rate is fixed
-                return min(1.0, warmup_percent_done)
-
-            scheduler = LambdaLR(optimizer, _learning_rate_scheduler)
-
-            schedulers = [
-                {
-                    'scheduler': scheduler,
-                    'interval': 'step',
-                    'strict': True,
-                }
-            ]
-            return [optimizer], schedulers
+        # if self.num_warmup_steps > 0:
+        #     num_warmup_steps = self.num_warmup_steps
+        #
+        #     def _learning_rate_scheduler(step: int) -> float:
+        #         warmup_percent_done = step / num_warmup_steps
+        #         # the learning rate should be reduce by step/warmup-step if in warmup-steps,
+        #         # else the learning rate is fixed
+        #         return min(1.0, warmup_percent_done)
+        #
+        #     scheduler = LambdaLR(optimizer, _learning_rate_scheduler)
+        #
+        #     schedulers = [
+        #         {
+        #             'scheduler': scheduler,
+        #             'interval': 'step',
+        #             'strict': True,
+        #         }
+        #     ]
+        #     return [optimizer], schedulers
         return optimizer
 
 
@@ -208,9 +213,9 @@ def _expand_sequence(inputs: torch.Tensor,
     if tokenizer.pad_token is None:
         raise ValueError("This tokenizer does not have a padding token which is required for the BERT4Rec model.")
     input_shape = inputs.shape
-    shape_addition_padding = (input_shape[0], 1)
-    if not batch_first:
-        shape_addition_padding = (1, input_shape[1])
+    shape_addition_padding = (1, input_shape[1])
+    if batch_first:
+        shape_addition_padding = (input_shape[0], 1)
 
     # generate a tensor with the addition seq step (filled with padding tokens)
     additional_padding = torch.full(shape_addition_padding, tokenizer.pad_token_id,
