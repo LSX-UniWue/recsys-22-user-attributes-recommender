@@ -8,7 +8,7 @@ import torch.nn as nn
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.gru.gru_model import GRUSeqItemRecommenderModel
 from modules import LOG_KEY_VALIDATION_LOSS
-from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot
+from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 
 
@@ -64,7 +64,7 @@ class GRUModule(pl.LightningModule):
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
-                        ) -> None:
+                        ) -> Dict[str, torch.Tensor]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
@@ -80,6 +80,8 @@ class GRUModule(pl.LightningModule):
             step_value = metric(logits, target, mask=mask)
             self.log(name, step_value, prog_bar=True)
 
+        return build_eval_step_return_dict(logits, target, mask=mask)
+
     def validation_epoch_end(self,
                              outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
                              ) -> None:
@@ -90,7 +92,7 @@ class GRUModule(pl.LightningModule):
                   batch: Dict[str, torch.Tensor],
                   batch_idx: int
                   ):
-        self.validation_step(batch, batch_idx)
+        return self.validation_step(batch, batch_idx)
 
     def test_epoch_end(self,
                        outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
