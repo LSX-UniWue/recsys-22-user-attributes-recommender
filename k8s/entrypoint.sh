@@ -12,12 +12,16 @@ git clone -q "${REPO_URL}"
 cd recommender || exit 1
 git checkout -q "${REPO_BRANCH}"
 
+# update the repo if already checked out
+git pull -q
+
 # install requirements using poetry
 ls -lh `which poetry`
 poetry install
 
 # execute the provided prepare script
-if [ -n "$PREPARE_SCRIPT" ]; then
+if [ "$PREPARE_SCRIPT" ]; then
+  echo "x${PREPARE_SCRIPT}x"
   chmod +x "${PREPARE_SCRIPT}"
   $PREPARE_SCRIPT
 fi
