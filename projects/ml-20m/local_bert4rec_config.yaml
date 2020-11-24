@@ -36,6 +36,7 @@ module:
   mask_probability: 0.2
   beta_1: 0.9
   beta_2: 0.999
+  batch_first: false
   learning_rate: 0.001
   weight_decay: 0.01
   num_warmup_steps: 100
