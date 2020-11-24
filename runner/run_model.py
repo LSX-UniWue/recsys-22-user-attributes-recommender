@@ -10,6 +10,7 @@ from dependency_injector import containers
 from pytorch_lightning import LightningModule
 from pytorch_lightning.utilities import cloud_io
 
+from data.datasets import SAMPLE_IDS
 from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, GRUContainer
 
 
@@ -88,16 +89,25 @@ def predict(model: str = typer.Argument(..., help="the model to run"),
     module.load_state_dict(state_dict)
     module.freeze()
 
-    # comput logits, softmax and acquire top_k values
+    # compute logits, softmax and acquire top_k values
 
     # FIXME need to get correct sample ids through preprocessing on dataset level
     test_loader = container.test_loader()
 
+    # default: disable input output
+    log_input = True
+
+    if log_input:
+        header = "SID\tRANK\tITEM\tPROBABILITY\tTARGET\tINPUT"
+    else:
+        header = "SID\tRANK\tITEM\tPROBABILITY\tTARGET"
+
+    print(header)
+
     for batch_idx, batch in enumerate(test_loader):
         # calculate ids
-        batch_size = batch["session"].size()[0]
-        sample_start_id = batch_size * batch_idx
-        sample_ids = list(range(sample_start_id, batch_size))
+
+        sample_ids = batch[SAMPLE_IDS]
 
         from modules.util.module_util import get_padding_mask
         padding_mask = get_padding_mask(batch["session"], container.tokenizer(), transposed=False, inverse=True)
@@ -111,8 +121,14 @@ def predict(model: str = typer.Argument(..., help="the model to run"),
 
         for in_batch_idx in range(num_samples_in_batch):
             for value_idx in range(num_values_in_sample):
-                #FIXME get real sample idx
-                print(f"{in_batch_idx + sample_start_id}\t{indices[in_batch_idx][value_idx].item()}\t{values[in_batch_idx][value_idx]}")
+                rank = value_idx + 1
+                if log_input:
+                    # TODO: remove padding tokens from input
+                    print(f"{sample_ids[in_batch_idx]}\t{rank}\t{indices[in_batch_idx][value_idx].item()}\t{values[in_batch_idx][value_idx]}\t{batch['target'][in_batch_idx]}\t{(batch['session'][in_batch_idx].tolist())}")
+                else:
+                    print(f"{sample_ids[in_batch_idx]}\t{rank}\t{indices[in_batch_idx][value_idx].item()}\t{values[in_batch_idx][value_idx]}\t{batch['target'][in_batch_idx]}")
+        return
+
 
 if __name__ == "__main__":
     app()
