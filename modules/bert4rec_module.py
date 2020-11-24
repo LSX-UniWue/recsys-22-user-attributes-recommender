@@ -139,7 +139,10 @@ class BERT4RecModule(pl.LightningModule):
         # get predictions for all seq steps
         prediction = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
         # extract the relevant seq steps, where the mask was set, here only one mask per sequence steps exists
-        prediction = prediction[:, -1, :] # FIXME: should this not the
+        if self.batch_first:
+            prediction = prediction[-1, :, :]
+        else:
+            prediction = prediction[:, -1, :] # FIXME: should this not the
 
         loss = self._calc_loss(prediction, targets, is_eval=True)
         self.log(LOG_KEY_TEST_LOSS if is_test else LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
