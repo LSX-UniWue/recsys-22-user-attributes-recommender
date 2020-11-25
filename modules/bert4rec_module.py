@@ -94,16 +94,18 @@ class BERT4RecModule(pl.LightningModule):
                    is_eval: bool = False
                    ) -> torch.Tensor:
         target_size = len(target.size())
+        vocab_size = prediction_logits.size()[-1]
         is_basket_recommendation = target_size > 1 if is_eval else target_size > 2
         if is_basket_recommendation:
-            target = convert_target_to_multi_hot(target, len(self.tokenizer), self.tokenizer.pad_token_id)
+            target = convert_target_to_multi_hot(target, vocab_size, self.tokenizer.pad_token_id)
             loss_fnc = nn.BCEWithLogitsLoss()
             return loss_fnc(prediction_logits, target)
 
         # handle single item per sequence step
         loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)
-        flatten_predictions = prediction_logits.view(-1, len(self.tokenizer))
-        flatten_targets = torch.flatten(target)
+
+        flatten_predictions = prediction_logits.view(-1, vocab_size)
+        flatten_targets = target.view(-1)
         return loss_func(flatten_predictions, flatten_targets)
 
     def validation_step(self,
