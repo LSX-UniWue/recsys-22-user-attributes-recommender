@@ -151,8 +151,8 @@ class BERT4RecModule(pl.LightningModule):
         for name, metric in self.metrics.items():
             step_value = metric(prediction, targets, mask=mask)
             self.log(name, step_value, prog_bar=True)
-
-        return build_eval_step_return_dict(prediction, targets, mask=mask)
+        # FIXME: readd, just for testing
+        # return build_eval_step_return_dict(prediction, targets, mask=mask)
 
     # FIXME: copy paste code from sas rec module
     def validation_epoch_end(self,
