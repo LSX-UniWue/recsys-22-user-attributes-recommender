@@ -14,7 +14,7 @@ spec:
           imagePullPolicy: "Always"
           resources:
             requests: &resources
-              cpu: "4"
+              cpu: "2"
               memory: "16Gi"
               nvidia.com/gpu: 1
             limits: *resources
@@ -25,6 +25,8 @@ spec:
               value: /home/ls6/zoller/seq_recommendation/project_workspace
             - name: REPO_USER
               value: daz65be
+            - name: REPO_BRANCH
+              value: bugfix/bert4rec
             - name: GIT_TOKEN
               valueFrom:
                 secretKeyRef:

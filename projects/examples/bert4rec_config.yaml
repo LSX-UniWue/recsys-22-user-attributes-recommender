@@ -33,6 +33,7 @@ model:
   transformer_dropout: 0.1
 module:
   mask_probability: 0.9
+  batch_first: false
   metrics:
     mrr:
       - 1

@@ -22,6 +22,7 @@ class BERT4RecModel2(nn.Module):
 
         self.bert = BERT(item_vocab_size, max_seq_length + 1, transformer_hidden_size, num_transformer_heads, num_transformer_layers, transformer_dropout)
         self.transform = nn.Linear(transformer_hidden_size, transformer_hidden_size)
+        self.transform2 = nn.Linear(transformer_hidden_size, item_vocab_size)
         self.out_bias = nn.Parameter(torch.Tensor(item_vocab_size))
         self.gelu = nn.GELU()
 
@@ -34,10 +35,13 @@ class BERT4RecModel2(nn.Module):
         encoded_sequence = self.bert(sequence)
 
         transformed = self.gelu(self.transform(encoded_sequence))
-        transposed_embedding = torch.transpose(self.bert.get_item_embedding().weight, 0, 1)
-        output = torch.matmul(transformed, transposed_embedding)
-        output += self.out_bias
+
+        output = self.transform2(transformed)
         return output
+        #transposed_embedding = torch.transpose(self.bert.get_item_embedding().weight, 0, 1)
+        #output = torch.matmul(transformed, transposed_embedding)
+        #output += self.out_bias
+        #return output
 
     def _init_bias(self):
         # Initialization as done for the bias in nn.Layer
