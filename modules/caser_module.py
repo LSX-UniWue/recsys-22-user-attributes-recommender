@@ -81,12 +81,6 @@ class CaserModule(pl.LightningModule):
 
         return build_eval_step_return_dict(prediction, targets)
 
-    # FIXME: copy paste code from sas rec module
-    def validation_epoch_end(self,
-                             outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
-                             ) -> None:
-       pass
-
     def configure_optimizers(self):
         return torch.optim.Adam(
             self.parameters(),

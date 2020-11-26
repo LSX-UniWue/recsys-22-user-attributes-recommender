@@ -38,11 +38,10 @@ def build_default_config() -> providers.Configuration:
     config.from_dict({
         'trainer': {
             'experiment_name': 'basic_experiment',
-            'log_dir' : '/tmp/logs',
             'limit_train_batches': 1.0,
             'limit_val_batches': 1.0,
             'gradient_clip_val': 0.0,
-            'default_root_dir': '/tmp/checkpoints',
+            'default_root_dir': '/tmp/',
             'max_epochs': 20
         },
         'model': {

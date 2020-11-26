@@ -87,14 +87,8 @@ class NarmModule(pl.LightningModule):
 
         return build_eval_step_return_dict(logits, target, mask=mask)
 
-    def validation_epoch_end(self, outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]) -> None:
-        pass
-
     def test_step(self, batch, batch_idx):
         self.validation_step(batch, batch_idx)
-
-    def test_epoch_end(self, outputs):
-        self.validation_epoch_end(outputs)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(),

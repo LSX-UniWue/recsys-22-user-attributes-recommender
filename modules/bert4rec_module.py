@@ -153,19 +153,8 @@ class BERT4RecModule(pl.LightningModule):
 
         return build_eval_step_return_dict(prediction, targets, mask=mask)
 
-    # FIXME: copy paste code from sas rec module
-    def validation_epoch_end(self,
-                             outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
-                             ) -> None:
-        pass
-
     def test_step(self, batch, batch_idx):
         return self._eval_epoch_step(batch, batch_idx, is_test=True)
-
-    def test_epoch_end(self,
-                       outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
-                       ) -> None:
-        self.validation_epoch_end(outputs)
 
     def configure_optimizers(self):
         #def _filter(name: str) -> bool:

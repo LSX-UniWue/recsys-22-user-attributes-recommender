@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Callable, Dict, Any, List, Optional
 
@@ -354,9 +355,12 @@ def build_metrics_provider(config: providers.ConfigurationOption
 
 
 def build_standard_tensorboard_logger_provider(config: providers.Configuration) -> providers.Singleton:
+    log_dir = providers.Singleton(Path,
+                                  config.trainer.default_root_dir,
+                                  "logs")
     return providers.Singleton(
         TensorBoardLogger,
-        save_dir=config.trainer.log_dir,
+        save_dir=log_dir,
         name=config.trainer.experiment_name
     )
 
