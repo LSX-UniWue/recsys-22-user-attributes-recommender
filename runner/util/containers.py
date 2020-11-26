@@ -2,6 +2,7 @@ from typing import Any, Dict
 
 from dependency_injector import containers, providers
 
+from data.collate import PadDirection
 from models.bert4rec.bert4rec_model import BERT4RecModel
 from models.bert4rec.bert4rec_model_2 import BERT4RecModel2
 from models.caser.caser_model import CaserModel
@@ -73,7 +74,8 @@ def _build_default_dataset_config(shuffle: bool,
         'loader': {
             'num_workers': 0,
             'shuffle': shuffle,
-            'max_seq_step_length': None
+            'max_seq_step_length': None,
+            'pad_direction': PadDirection.LEFT.value
         }
     }
 

@@ -1,12 +1,20 @@
+from enum import Enum
 from functools import partial
 from typing import List, Callable, Any, Union, Dict
 
 import torch
 
 
+class PadDirection(Enum):
+
+    RIGHT = 'right'
+    LEFT = 'left'
+
+
 def padded_session_collate(pad_token_id: int,
                            entries_to_pad: Dict[str, List[int]],
-                           session_length_entry: str = "session"
+                           session_length_entry: str = "session",
+                           pad_direction: PadDirection = PadDirection.RIGHT
                            ):
     """
         Pads sequences with a padding token to `max_length`.
@@ -14,25 +22,30 @@ def padded_session_collate(pad_token_id: int,
     :param pad_token_id: the id of the pad token (see Tokenizer).
     :param entries_to_pad: a list of entries in the dictionary that need to be padded.
     :param session_length_entry: the name of the entry that is used to determine individual session length.
-
+    :param pad_direction: from where to pad the entries
     :return: a collate function that can be used to collate session data.
     """
-    return partial(_padded_session_collate, pad_token_id, entries_to_pad, session_length_entry)
+    return partial(_padded_session_collate, pad_token_id, entries_to_pad, session_length_entry, pad_direction)
 
 
 def _padded_session_collate(pad_token_id: int,
                             entries_to_pad: Dict[str, List[int]],
-                            session_length_entry,
+                            session_length_entry: str,
+                            pad_direction: PadDirection,
                             batch):
     from torch.utils.data.dataloader import default_collate
 
     def pad(x: List[Any],
             generate_padding: Union[Callable[[int], Any], partial],
-            padded_length: int
+            padded_length: int,
             ) -> torch.Tensor:
         length = len(x)
-        padded_x = x + generate_padding(length)
+        padding = generate_padding(length)
+
+        padded_x = x + padding if pad_direction == PadDirection.RIGHT else padding + x
+
         # truncate if the sequence is longer
+        # FIXME: discuss: maybe truncate on the left side?
         padded_x = padded_x[:padded_length]
 
         return padded_x

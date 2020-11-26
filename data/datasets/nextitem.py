@@ -3,7 +3,7 @@ from typing import List
 from numpy.random._generator import default_rng
 from torch.utils.data import Dataset, IterableDataset
 
-from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, SAMPLE_IDS
 from data.datasets.index import SessionPositionIndex
 from data.datasets.prepare import Processor
 from data.datasets.session import ItemSessionDataset, PlainSessionDataset
@@ -32,6 +32,8 @@ class NextItemDataset(Dataset, MultiProcessSupport):
     def __getitem__(self, idx):
         session_idx, target_pos = self._index[idx]
         parsed_session = self._dataset[session_idx]
+        parsed_session[SAMPLE_IDS] = idx
+
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
         truncated_session = session[:target_pos]
         parsed_session[ITEM_SEQ_ENTRY_NAME] = truncated_session
@@ -68,7 +70,8 @@ class NextItemIterableDataset(IterableDataset):
 
             yield {
                 ITEM_SEQ_ENTRY_NAME: session[:target_idx],
-                TARGET_ENTRY_NAME: session[target_idx]
+                TARGET_ENTRY_NAME: session[target_idx],
+                SAMPLE_IDS: sample_idx
             }
 
     def __len__(self):

@@ -15,7 +15,7 @@ from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSe
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
 from metrics.utils.metric_utils import build_metrics
-from data.collate import padded_session_collate
+from data.collate import padded_session_collate, PadDirection
 from tokenization.tokenizer import Tokenizer
 from tokenization.vocabulary import VocabularyReaderWriter, Vocabulary, CSVVocabularyReaderWriter
 
@@ -96,18 +96,27 @@ def build_tokenizer_provider(config: providers.Configuration) -> providers.Singl
     return providers.Singleton(provide_tokenizer, vocabulary, config.tokenizer.special_tokens)
 
 
+def _to_pad_direction(pad_id: str
+                      ) -> PadDirection:
+    return PadDirection[pad_id.upper()]
+
+
 def build_session_loader_provider_factory(dataset_config: providers.ConfigurationOption,
                                           tokenizer_provider: providers.Provider,
                                           processors_providers: providers.Provider
                                           ) -> providers.Factory:
     dataset = build_session_dataset_provider_factory(tokenizer_provider, processors_providers, dataset_config)
     dataset_loader_config = dataset_config.loader
+
+    pad_direction = providers.Factory(_to_pad_direction, dataset_loader_config.pad_direction)
+
     return providers.Factory(
         provide_session_loader,
         dataset,
         dataset_loader_config.batch_size,
         dataset_loader_config.max_seq_length,
         dataset_loader_config.max_seq_step_length,
+        pad_direction,
         dataset_loader_config.num_workers,
         tokenizer_provider
     )
@@ -118,14 +127,19 @@ def build_nextitem_loader_provider_factory(dataset_config: providers.Configurati
                                            processors_provider: providers.Provider
                                            ) -> providers.Factory:
     dataset = build_nextitem_dataset_provider_factory(tokenizer_provider, processors_provider, dataset_config)
+    dataset_loader_config = dataset_config.loader
+
+    pad_direction = providers.Factory(_to_pad_direction, dataset_loader_config.pad_direction)
+
     return providers.Factory(
         provide_nextit_loader,
         dataset,
-        dataset_config.loader.batch_size,
-        dataset_config.loader.max_seq_length,
-        dataset_config.loader.max_seq_step_length,
-        dataset_config.loader.shuffle,
-        dataset_config.loader.num_workers,
+        dataset_loader_config.batch_size,
+        dataset_loader_config.max_seq_length,
+        dataset_loader_config.max_seq_step_length,
+        pad_direction,
+        dataset_loader_config.shuffle,
+        dataset_loader_config.num_workers,
         tokenizer_provider
     )
 
@@ -136,12 +150,16 @@ def build_posneg_loader_provider_factory(dataset_config: providers.Configuration
                                          ) -> providers.Factory:
     dataset = build_posnet_dataset_provider_factory(tokenizer_provider, processor_provider_provider, dataset_config)
     dataset_loader_config = dataset_config.loader
+
+    pad_direction = providers.Factory(_to_pad_direction, dataset_loader_config.pad_direction)
+
     return providers.Factory(
         provide_session_loader,
         dataset,
         dataset_loader_config.batch_size,
         dataset_loader_config.max_seq_length,
         dataset_loader_config.max_seq_step_length,
+        pad_direction,
         dataset_loader_config.num_workers,
         tokenizer_provider
     )
@@ -271,6 +289,7 @@ def provide_session_loader(dataset: Dataset,
                            batch_size: int,
                            max_seq_length: int,
                            max_seq_step_length: int,
+                           pad_direction: PadDirection,
                            num_workers: int,
                            tokenizer: Tokenizer
                            ) -> DataLoader:
@@ -283,7 +302,8 @@ def provide_session_loader(dataset: Dataset,
         collate_fn=padded_session_collate(
             pad_token_id=tokenizer.pad_token_id,
             entries_to_pad=_build_entries_to_pad(max_seq_length, max_seq_step_length),
-            session_length_entry="session"
+            session_length_entry=ITEM_SEQ_ENTRY_NAME,
+            pad_direction=pad_direction
         ),
         num_workers=num_workers,
         worker_init_fn=init_worker_fn
@@ -294,6 +314,7 @@ def provide_nextit_loader(dataset: Dataset,
                           batch_size: int,
                           max_seq_length: int,
                           max_seq_step_length: int,
+                          pad_direction: PadDirection,
                           shuffle: bool,
                           num_workers: int,
                           tokenizer: Tokenizer
@@ -306,7 +327,8 @@ def provide_nextit_loader(dataset: Dataset,
         collate_fn=padded_session_collate(
             pad_token_id=tokenizer.pad_token_id,
             entries_to_pad=_build_entries_to_pad(max_seq_length, max_seq_step_length),
-            session_length_entry=ITEM_SEQ_ENTRY_NAME
+            session_length_entry=ITEM_SEQ_ENTRY_NAME,
+            pad_direction=pad_direction
         ),
         num_workers=num_workers,
         worker_init_fn=init_worker_fn
