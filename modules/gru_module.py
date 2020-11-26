@@ -4,6 +4,7 @@ import torch
 
 import pytorch_lightning as pl
 import torch.nn as nn
+from pytorch_lightning.core.decorators import auto_move_data
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from models.gru.gru_model import GRUSeqItemRecommenderModel
@@ -36,11 +37,24 @@ class GRUModule(pl.LightningModule):
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
-        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        target = batch[TARGET_ENTRY_NAME]
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
+        """
+        Performs a training step on a batch of sequences and returns the overall loss.
 
-        logits = self._forward(input_seq, padding_mask)
+        `batch` must be a dictionary containing the following entries:
+            * `data.datasets.ITEM_SEQ_ENTRY_NAME`: a tensor of size [BS x S] with the input sequences.
+            * `data.datasets.TARGET_ENTRY_NAME`: a tensor of size [BS] with the target items.
+
+        A padding mask will be calculated on the fly, based on the `self.tokenizer` of the module.
+
+        :param batch: a batch.
+        :param batch_idx: the batch number.
+
+        :return: A dictionary containing a single entry `loss` with the overall loss for this batch.
+        """
+
+        logits = self(batch, batch_idx)
+        target = batch[TARGET_ENTRY_NAME]
+
         loss = self._calc_loss(logits, target)
 
         return {
@@ -65,11 +79,23 @@ class GRUModule(pl.LightningModule):
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
                         ) -> Dict[str, torch.Tensor]:
-        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        target = batch[TARGET_ENTRY_NAME]
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
+        """
+        Performs a validation step on a batch of sequences and returns the overall loss.
 
-        logits = self._forward(input_seq, padding_mask)
+        `batch` must be a dictionary containing the following entries:
+            * `data.datasets.ITEM_SEQ_ENTRY_NAME`: a tensor of size [BS x S] with the input sequences.
+            * `data.datasets.TARGET_ENTRY_NAME`: a tensor of size [BS] with the target items.
+
+        A padding mask will be calculated on the fly, based on the `self.tokenizer` of the module.
+
+        :param batch: a batch.
+        :param batch_idx: the batch number.
+
+        :return: A dictionary with entries according to `build_eval_step_return_dict`.
+        """
+
+        logits = self(batch, batch_idx)
+        target = batch[TARGET_ENTRY_NAME]
 
         loss = self._calc_loss(logits, target)
         self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
@@ -99,11 +125,25 @@ class GRUModule(pl.LightningModule):
                        ):
         self.validation_epoch_end(outputs)
 
-    def _forward(self,
-                 session,
-                 mask
-                 ):
-        return self.model(session, mask)
+    @auto_move_data
+    def forward(self, batch, batch_idx):
+        """
+        Applies the GRU model on a batch of sequences and returns logits for every sample in the batch.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size [BS x S]
+
+        A padding mask will be calculated on the fly, based on the `self.tokenizer` of the module.
+
+        :param batch: a batch.
+        :param batch_idx: the batch number.
+
+        :return: a tensor with logits for every batch [BS x |I|]
+        """
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
+
+        return self.model(input_seq, padding_mask)
 
     def configure_optimizers(self):
         return torch.optim.Adam(

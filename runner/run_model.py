@@ -2,15 +2,17 @@ import logging
 import logging.handlers
 import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 import torch
 import typer
 from dependency_injector import containers
-from pytorch_lightning import LightningModule
+from pytorch_lightning import LightningModule, Callback, Trainer
 from pytorch_lightning.utilities import cloud_io
 
 from data.datasets import SAMPLE_IDS
+from modules.constants import RETURN_KEY_PREDICTIONS
+from runner.util.callbacks import PredictionLoggerCallback
 from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, GRUContainer
 
 
@@ -41,11 +43,11 @@ def _config_logging(config: Dict[str, Any]
 
 
 @app.command()
-def run_model(model: str = typer.Argument(..., help="the model to run"),
-              config_file: str = typer.Argument(..., help='the path to the config file'),
-              do_train: bool = typer.Option(True, help='flag iff the model should be trained'),
-              do_test: bool = typer.Option(False, help='flag iff the model should be tested (after training)')
-              ) -> None:
+def train(model: str = typer.Argument(..., help="the model to run"),
+          config_file: str = typer.Argument(..., help='the path to the config file'),
+          do_train: bool = typer.Option(True, help='flag iff the model should be trained'),
+          do_test: bool = typer.Option(False, help='flag iff the model should be tested (after training)')
+          ) -> None:
     # XXX: because the dependency injector does not provide a error message when the config file does not exists,
     # we manually check if the config file exists
     if not os.path.isfile(config_file):
@@ -66,68 +68,49 @@ def run_model(model: str = typer.Argument(..., help="the model to run"),
     if do_test:
         trainer.test(test_dataloader=container.test_dataloader())
 
+
+
 @app.command()
 def predict(model: str = typer.Argument(..., help="the model to run"),
             config_file: str = typer.Argument(..., help='the path to the config file'),
-            checkpoint_file: str = typer.Argument(..., help='path to the checkpoint file')):
+            checkpoint_file: str = typer.Argument(..., help='path to the checkpoint file'),
+            output_file: Path = typer.Argument(..., help='path where output is written'),
+            gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
+            overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
+            log_input: Optional[bool] = typer.Option(default=False, help='enable input logging.'),
+            strip_pad_token: Optional[bool] = typer.Option(default=True, help='strip pad token, if input is logged.')
+            ):
+
+    if not overwrite and output_file.exists():
+        print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
+        exit(-1)
 
     container = build_container(model)
     container.config.from_yaml(config_file)
     module = container.module()
 
-    # load checkpoint <- we don't use the PL function load_from_checkpoint because it does not work with our module class system
+    # FIXME: try to use load_from_checkpoint later
+    # load checkpoint <- we don't use the PL function load_from_checkpoint because it does
+    # not work with our module class system
     ckpt = cloud_io.load(checkpoint_file)
 
     # acquire state_dict
     state_dict = ckpt["state_dict"]
 
-    #TODO remove: is only here because my checkpoint is "old"
-    state_dict["model.item_embeddings.embedding.weight"] = state_dict["model.item_embeddings.weight"]
-    state_dict.pop("model.item_embeddings.weight", None)
-
     # load parameters and freeze the model
     module.load_state_dict(state_dict)
     module.freeze()
 
-    # compute logits, softmax and acquire top_k values
-
-    # FIXME need to get correct sample ids through preprocessing on dataset level
     test_loader = container.test_loader()
 
-    # default: disable input output
-    log_input = True
-
-    if log_input:
-        header = "SID\tRANK\tITEM\tPROBABILITY\tTARGET\tINPUT"
-    else:
-        header = "SID\tRANK\tITEM\tPROBABILITY\tTARGET"
-
-    print(header)
-
-    for batch_idx, batch in enumerate(test_loader):
-        # calculate ids
-
-        sample_ids = batch[SAMPLE_IDS]
-
-        from modules.util.module_util import get_padding_mask
-        padding_mask = get_padding_mask(batch["session"], container.tokenizer(), transposed=False, inverse=True)
-
-        logits = module.model(batch["session"], padding_mask)
-        probs = torch.softmax(logits, dim=-1)
-        values, indices = probs.topk(k=20)
-
-        num_samples_in_batch = indices.size()[0]
-        num_values_in_sample = indices.size()[1]
-
-        for in_batch_idx in range(num_samples_in_batch):
-            for value_idx in range(num_values_in_sample):
-                rank = value_idx + 1
-                if log_input:
-                    # TODO: remove padding tokens from input
-                    print(f"{sample_ids[in_batch_idx]}\t{rank}\t{indices[in_batch_idx][value_idx].item()}\t{values[in_batch_idx][value_idx]}\t{batch['target'][in_batch_idx]}\t{(batch['session'][in_batch_idx].tolist())}")
-                else:
-                    print(f"{sample_ids[in_batch_idx]}\t{rank}\t{indices[in_batch_idx][value_idx].item()}\t{values[in_batch_idx][value_idx]}\t{batch['target'][in_batch_idx]}")
-        return
+    callbacks = [
+        PredictionLoggerCallback(output_file_path=output_file,
+                                 log_input=log_input,
+                                 tokenizer=container.tokenizer(),
+                                 strip_padding_tokens=strip_pad_token)
+    ]
+    trainer = Trainer(callbacks=callbacks, gpus=gpu)
+    trainer.test(module, test_dataloaders=test_loader)
 
 
 if __name__ == "__main__":
