@@ -4,6 +4,7 @@ loader: &loader
   batch_size: 64
   max_seq_length: 200
   num_workers: 4
+  pad_direction: left
 datasets:
   test:
     dataset:
