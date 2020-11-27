@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 from typing import Tuple, List, Union, Dict, Optional
 
 from torch import nn
-from torch.optim.lr_scheduler import LambdaLR
+from torch.optim.lr_scheduler import LambdaLR, StepLR
 
 from data.collate import PadDirection
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
@@ -186,6 +186,8 @@ class BERT4RecModule(pl.LightningModule):
                                      weight_decay=self.weight_decay,
                                      betas=(self.beta_1, self.beta_2))
 
+        scheduler = StepLR(optimizer, step_size=25, gamma=1.0)
+
         # if self.num_warmup_steps > 0:
         #     num_warmup_steps = self.num_warmup_steps
         #
@@ -205,7 +207,7 @@ class BERT4RecModule(pl.LightningModule):
         #         }
         #     ]
         #     return [optimizer], schedulers
-        return optimizer
+        return [optimizer], [scheduler]
 
 
 def _expand_sequence(inputs: torch.Tensor,
