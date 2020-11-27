@@ -1,16 +1,15 @@
 import torch
 import pytorch_lightning as pl
-import torch.nn.functional as F
 
 from typing import Tuple, List, Union, Dict, Optional
 
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
+from data.collate import PadDirection
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
 from models.bert4rec.bert4rec_model_2 import BERT4RecModel2
 from modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TEST_LOSS, LOG_KEY_TRAINING_LOSS
-from modules.constants import RETURN_KEY_PREDICTIONS, RETURN_KEY_TARGETS, RETURN_KEY_MASK
 from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
@@ -35,6 +34,7 @@ class BERT4RecModule(pl.LightningModule):
                  num_warmup_steps: int,
                  tokenizer: Tokenizer,
                  batch_first: bool,
+                 pad_direction: PadDirection,
                  metrics: torch.nn.ModuleDict
                  ):
         super().__init__()
@@ -50,6 +50,7 @@ class BERT4RecModule(pl.LightningModule):
 
         self.tokenizer = tokenizer
         self.batch_first = batch_first
+        self.pad_direction = pad_direction
         self.metrics = metrics
 
     def training_step(self,
@@ -58,7 +59,7 @@ class BERT4RecModule(pl.LightningModule):
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         position_ids = BERT4RecModule.get_position_ids(batch)
-        input_seq = _expand_sequence(inputs=input_seq, tokenizer=self.tokenizer)
+        input_seq = _expand_sequence(inputs=input_seq, tokenizer=self.tokenizer, pad_direction=self.pad_direction)
 
         if self.batch_first:
             input_seq = input_seq.transpose(0, 1)
@@ -119,15 +120,14 @@ class BERT4RecModule(pl.LightningModule):
                          batch_idx: int,
                          is_test: bool = False
                          ) -> Dict[str, torch.Tensor]:
-        # shorter to allow the masking token
-        input_seq = _expand_sequence(inputs=batch[ITEM_SEQ_ENTRY_NAME],
-                                     tokenizer=self.tokenizer)
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
         position_ids = BERT4RecModule.get_position_ids(batch)
 
         # set the last non padding token to the mask token
-        input_seq, target_mask = _add_mask_token_at_ending(input_seq, self.tokenizer)
+        input_seq = _add_mask_token_at_ending(input_seq, self.tokenizer, pad_direction=self.pad_direction)
+        target_mask = input_seq.eq(self.tokenizer.mask_token_id)
 
         if self.batch_first:
             input_seq = input_seq.transpose(1, 0)
@@ -210,7 +210,8 @@ class BERT4RecModule(pl.LightningModule):
 
 def _expand_sequence(inputs: torch.Tensor,
                      tokenizer: Tokenizer,
-                     batch_first: bool = True
+                     batch_first: bool = True,
+                     pad_direction: PadDirection = PadDirection.RIGHT
                      ) -> torch.Tensor:
     if tokenizer.pad_token is None:
         raise ValueError("This tokenizer does not have a padding token which is required for the BERT4Rec model.")
@@ -226,34 +227,44 @@ def _expand_sequence(inputs: torch.Tensor,
     if len(input_shape) > 2:
         additional_padding = additional_padding.repeat(1, input_shape[2]).unsqueeze(1)
 
-    return torch.cat([inputs, additional_padding], dim=1 if batch_first else 0)
+    tensors_to_cat = [inputs, additional_padding] if pad_direction == PadDirection.RIGHT else [additional_padding, inputs]
+    return torch.cat(tensors_to_cat, dim=1 if batch_first else 0)
 
 
 def _add_mask_token_at_ending(input_seq: torch.Tensor,
                               tokenizer: Tokenizer,
-                              ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """ This methods adds the masking token at the position of the first padding token
-        :return: the input_seq with the masking token,
+                              pad_direction: PadDirection = PadDirection.RIGHT
+                              ) -> torch.Tensor:
     """
-    input_seq = input_seq.clone()
+    This methods adds the masking token at the position of the first padding token
+    :param input_seq: a batch first tensor of sequences
+    :param tokenizer: the tokenizer to use
+    :param pad_direction: the pad direction of the sequence
+    :return: the input_seq with the masking token
+    """
+
+    if pad_direction == PadDirection.LEFT:
+        mask_tokens = torch.full([input_seq.size()[0], 1], tokenizer.mask_token_id,
+                                 dtype=input_seq.dtype,
+                                 device=input_seq.device)
+        expanded_input_seq = torch.cat([input_seq, mask_tokens], dim=0)
+        return expanded_input_seq
+
+    input_seq = _expand_sequence(inputs=input_seq, tokenizer=tokenizer, pad_direction=pad_direction)
     input_shape = input_seq.size()
     padding_input_to_use = input_seq
     if len(input_shape) > 2:
         padding_input_to_use = input_seq.max(dim=2).values
     padding_mask = get_padding_mask(padding_input_to_use, tokenizer, transposed=False)
 
-    batch_size = input_shape[0]
-    max_seq_length = input_shape[1]
+    # using torch.max(...).indices, because torch.argmax(...) is not supported for bool on cpu
+    first_padding_indices = torch.max(padding_mask, dim=1).indices.unsqueeze(1)
 
-    inverse_indices = torch.arange(start=max_seq_length,
-                                   end=0,
-                                   step=-1,
-                                   device=input_seq.device).repeat([batch_size, 1])
-    inverse_padding_positions = padding_mask * inverse_indices
-    first_index = max_seq_length - inverse_padding_positions.max(dim=1).values
-    target_mask = F.one_hot(first_index, max_seq_length).bool()
+    target_mask = torch.zeros_like(padding_mask, dtype=torch.bool, device=input_seq.device)
+    target_mask.scatter_(-1, first_padding_indices, True)
+
     input_seq[target_mask] = tokenizer.mask_token_id
-    return input_seq, target_mask
+    return input_seq
 
 
 # TODO: implement as collate function (as a processor)
