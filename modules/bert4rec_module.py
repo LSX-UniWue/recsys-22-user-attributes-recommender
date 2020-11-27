@@ -257,12 +257,19 @@ def _add_mask_token_at_ending(input_seq: torch.Tensor,
     padding_input_to_use = input_seq
     if len(input_shape) > 2:
         padding_input_to_use = input_seq.max(dim=2).values
+    # first we calc the padding mask
     padding_mask = get_padding_mask(padding_input_to_use, tokenizer, transposed=False)
+    # then we build a list of indices ranging from 0 to max_seq_length
+    positions = torch.arange(input_seq.size()[1], device=padding_mask.device)
+    max_position = torch.max(positions) + 1
+    positions = positions.unsqueeze(0).repeat(input_seq.size()[0], 1)
 
-    # using torch.max(...).indices, because torch.argmax(...) is not supported for bool on cpu
-    first_padding_indices = torch.max(padding_mask, dim=1).indices.unsqueeze(1)
+    # we zero all indices where there is no padding
+    # the result tensor contains 0 where a normal token and the index where the sequence is padded
+    indices = padding_mask * positions
+    indices[indices.eq(0)] = max_position
 
-    print(first_padding_indices)
+    first_padding_indices = torch.min(indices, dim=1).indices.unsqueeze(1)
 
     target_mask = torch.zeros_like(padding_mask, dtype=torch.bool, device=input_seq.device)
     target_mask.scatter_(-1, first_padding_indices, True)
