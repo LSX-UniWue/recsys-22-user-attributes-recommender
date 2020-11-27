@@ -1,9 +1,10 @@
 import functools
+import os
 from pathlib import Path
 from typing import Dict, Any, Iterable
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME
-from dataset.utils import maybe_download, unzip_file
+from dataset.utils import download_dataset, unzip_file
 import pandas as pd
 import typer
 
@@ -20,11 +21,14 @@ DOWNLOAD_URL_MAP = {
 
 
 def preprocess_data(dataset_dir: Path,
+                    output_dir: Path,
                     name: str,
                     delimiter: str = '\t'
                     ) -> Path:
     """
     Convert raw movielens data to csv files and create vocabularies
+    :param delimiter:
+    :param output_dir:
     :param dataset_dir:
     :param name:
     :return: the path to the main file
@@ -61,19 +65,22 @@ def preprocess_data(dataset_dir: Path,
     merged_df = pd.merge(ratings_df, movies_df).sort_values(by=["userId", "timestamp"])
     # remove unused movie id column
     del merged_df['movieId']
-    main_file = dataset_dir / f"{name}.csv"
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    main_file = output_dir / f"{name}.csv"
     merged_df.to_csv(main_file, sep=delimiter, index=False)
 
     # build vocabularies
     # FIXME: the vocab should be build from the train set and not on the complete dataset
-    build_vocabularies(movies_df, dataset_dir, "title")
-    build_vocabularies(movies_df, dataset_dir, "genres", split="|")
+    build_vocabularies(movies_df, output_dir, "title")
+    build_vocabularies(movies_df, output_dir, "genres", split="|")
     # for the ml-1m also export the vocabularies for the attributes
     if users_df is not None:
-        build_vocabularies(users_df, dataset_dir, "gender")
-        build_vocabularies(users_df, dataset_dir, "age")
-        build_vocabularies(users_df, dataset_dir, "occupation")
-        build_vocabularies(users_df, dataset_dir, "zip")
+        build_vocabularies(users_df, output_dir, "gender")
+        build_vocabularies(users_df, output_dir, "age")
+        build_vocabularies(users_df, output_dir, "occupation")
+        build_vocabularies(users_df, output_dir, "zip")
 
     return main_file
 
@@ -151,15 +158,20 @@ def split_dataset(dataset_dir: Path,
 
 @app.command()
 def main(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_choices=True),
-         output_dir: Path = typer.Option("./dataset/", help='directory to save data')
+         output_dir: Path = typer.Option("./dataset/", help='directory to save data'),
+         min_seq_length: int = typer.Option(5, help='the minimum feedback the user must have')
          ) -> None:
     url = DOWNLOAD_URL_MAP[dataset]
-    dataset_dir = output_dir / dataset
+    dataset_dir = output_dir / f'{dataset}_{min_seq_length}'
+    download_dir = output_dir / dataset
 
-    file = maybe_download(url, dataset_dir)
-    unzip_file(file, output_dir, delete=False)
-    main_file = preprocess_data(dataset_dir, dataset)
-    split_dataset(dataset_dir, main_file)
+    downloaded_file = download_dataset(url, download_dir)
+
+    extract_dir = download_dir / 'raw'
+
+    unzip_file(downloaded_file, extract_dir, delete=False)
+    main_file = preprocess_data(extract_dir, dataset_dir, dataset)
+    split_dataset(dataset_dir, main_file, min_seq_length=min_seq_length)
 
 
 if __name__ == "__main__":
