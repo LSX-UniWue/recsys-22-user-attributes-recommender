@@ -32,7 +32,7 @@ spec:
                 secretKeyRef:
                   key: token
                   name: gitlab-token
-          args: ["bert4rec", "/home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/bert4rec_config.yaml"]
+          args: ["train", "bert4rec", "/home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/bert4rec_config.yaml"]
           volumeMounts:
             - mountPath: /home/ls6/zoller
               name: home
