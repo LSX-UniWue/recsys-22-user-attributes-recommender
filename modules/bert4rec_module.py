@@ -247,7 +247,7 @@ def _add_mask_token_at_ending(input_seq: torch.Tensor,
         mask_tokens = torch.full([input_seq.size()[0], 1], tokenizer.mask_token_id,
                                  dtype=input_seq.dtype,
                                  device=input_seq.device)
-        expanded_input_seq = torch.cat([input_seq, mask_tokens], dim=0)
+        expanded_input_seq = torch.cat([input_seq, mask_tokens], dim=1)
         return expanded_input_seq
 
     input_seq = _expand_sequence(inputs=input_seq, tokenizer=tokenizer, pad_direction=pad_direction)
