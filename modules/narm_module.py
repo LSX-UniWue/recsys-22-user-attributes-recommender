@@ -22,7 +22,6 @@ class NarmModule(pl.LightningModule):
                  beta_2: float,
                  tokenizer: Tokenizer,
                  batch_first: bool,
-                 metrics: torch.nn.ModuleDict
                  ):
         """
         Initializes the Narm Module.
@@ -36,8 +35,6 @@ class NarmModule(pl.LightningModule):
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.tokenizer = tokenizer
-
-        self.metrics = metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],

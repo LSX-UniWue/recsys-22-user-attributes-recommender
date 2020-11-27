@@ -35,7 +35,6 @@ class BERT4RecModule(pl.LightningModule):
                  num_warmup_steps: int,
                  tokenizer: Tokenizer,
                  batch_first: bool,
-                 metrics: torch.nn.ModuleDict
                  ):
         super().__init__()
         self.model = model
@@ -50,7 +49,6 @@ class BERT4RecModule(pl.LightningModule):
 
         self.tokenizer = tokenizer
         self.batch_first = batch_first
-        self.metrics = metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],

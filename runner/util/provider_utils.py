@@ -319,7 +319,7 @@ def provide_nextit_loader(dataset: Dataset,
 def build_standard_trainer(config: providers.Configuration) -> providers.Singleton:
     checkpoint = build_standard_model_checkpoint(config)
     logger = build_standard_tensorboard_logger_provider(config)
-    logging_callbacks = build_standard_logging_callbacks_provider()
+    logging_callbacks = build_standard_logging_callbacks_provider(config.module.metrics)
 
     trainer_config = config.trainer
     return providers.Singleton(
@@ -365,8 +365,17 @@ def build_standard_tensorboard_logger_provider(config: providers.Configuration) 
     )
 
 
-def build_standard_logging_callbacks_provider() -> providers.List:
+def build_standard_logging_callbacks_provider(config) -> providers.List:
+
     return providers.List(
-        MetricLoggerCallback(),
+        build_metric_logger_provider(config),
         GradientLoggerCallback(),
         TrainLossLoggerCallback())
+
+
+def build_metric_logger_provider(config: providers.ConfigurationOption) -> providers.Singleton:
+    metric_provider = build_metrics_provider(config)
+    return providers.Singleton(
+        MetricLoggerCallback,
+        metrics=metric_provider
+    )

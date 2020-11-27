@@ -20,7 +20,6 @@ class SASRecModule(pl.LightningModule):
                  beta_2: float,
                  tokenizer: Tokenizer,
                  batch_first: bool,
-                 metrics: torch.nn.ModuleDict
                  ):
         """
         inits the SASRec module
@@ -40,8 +39,6 @@ class SASRecModule(pl.LightningModule):
         self.beta_2 = beta_2
         self.tokenizer = tokenizer
         self.batch_first = batch_first
-
-        self.metrics = metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],

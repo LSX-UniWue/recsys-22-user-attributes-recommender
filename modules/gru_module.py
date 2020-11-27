@@ -20,7 +20,6 @@ class GRUModule(pl.LightningModule):
                  beta_1: float,
                  beta_2: float,
                  tokenizer: Tokenizer,
-                 metrics: torch.nn.ModuleDict
                  ):
 
         super(GRUModule, self).__init__()
@@ -30,7 +29,6 @@ class GRUModule(pl.LightningModule):
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.tokenizer = tokenizer
-        self.metrics = metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
