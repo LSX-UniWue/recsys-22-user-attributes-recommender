@@ -96,8 +96,8 @@ def build_tokenizer_provider(config: providers.Configuration) -> providers.Singl
     return providers.Singleton(provide_tokenizer, vocabulary, config.tokenizer.special_tokens)
 
 
-def _to_pad_direction(pad_id: str
-                      ) -> PadDirection:
+def to_pad_direction(pad_id: str
+                     ) -> PadDirection:
     return PadDirection[pad_id.upper()]
 
 
@@ -108,7 +108,7 @@ def build_session_loader_provider_factory(dataset_config: providers.Configuratio
     dataset = build_session_dataset_provider_factory(tokenizer_provider, processors_providers, dataset_config)
     dataset_loader_config = dataset_config.loader
 
-    pad_direction = providers.Factory(_to_pad_direction, dataset_loader_config.pad_direction)
+    pad_direction = providers.Factory(to_pad_direction, dataset_loader_config.pad_direction)
 
     return providers.Factory(
         provide_session_loader,
@@ -129,7 +129,7 @@ def build_nextitem_loader_provider_factory(dataset_config: providers.Configurati
     dataset = build_nextitem_dataset_provider_factory(tokenizer_provider, processors_provider, dataset_config)
     dataset_loader_config = dataset_config.loader
 
-    pad_direction = providers.Factory(_to_pad_direction, dataset_loader_config.pad_direction)
+    pad_direction = providers.Factory(to_pad_direction, dataset_loader_config.pad_direction)
 
     return providers.Factory(
         provide_nextit_loader,
@@ -151,7 +151,7 @@ def build_posneg_loader_provider_factory(dataset_config: providers.Configuration
     dataset = build_posnet_dataset_provider_factory(tokenizer_provider, processor_provider_provider, dataset_config)
     dataset_loader_config = dataset_config.loader
 
-    pad_direction = providers.Factory(_to_pad_direction, dataset_loader_config.pad_direction)
+    pad_direction = providers.Factory(to_pad_direction, dataset_loader_config.pad_direction)
 
     return providers.Factory(
         provide_session_loader,

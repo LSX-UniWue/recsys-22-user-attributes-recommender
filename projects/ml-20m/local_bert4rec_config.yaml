@@ -3,26 +3,27 @@ parser: &parser
 loader: &loader
   batch_size: 4
   max_seq_length: 200
+  pad_direction: left
 datasets:
   test:
     dataset:
-      csv_file: ../dataset/dataset/ml-20m/ml-20m.csv
-      csv_file_index: ../dataset/dataset/ml-20m/ml-20m.idx
+      csv_file: ../dataset/dataset/ml-20m_5/ml-20m.csv
+      csv_file_index: ../dataset/dataset/ml-20m_5/ml-20m.idx
       parser: *parser
-      nip_index_file: ../dataset/dataset/ml-20m/test.loo.idx
+      nip_index_file: ../dataset/dataset/ml-20m_5/test.loo.idx
     loader: *loader
   train:
     dataset:
-      csv_file: ../dataset/dataset/ml-20m/ml-20m.csv
-      csv_file_index: ../dataset/dataset/ml-20m/ml-20m.idx
-      truncated_seq_index_file: ../dataset/dataset/ml-20m/valid.loo.idx
+      csv_file: ../dataset/dataset/ml-20m_5/ml-20m.csv
+      csv_file_index: ../dataset/dataset/ml-20m_5/ml-20m.idx
+      truncated_seq_index_file: ../dataset/dataset/ml-20m_5/valid.loo.idx
       parser: *parser
     loader: *loader
   validation:
     dataset:
-      csv_file: ../dataset/dataset/ml-20m/ml-20m.csv
-      csv_file_index: ../dataset/dataset/ml-20m/ml-20m.idx
-      nip_index_file: ../dataset/dataset/ml-20m/valid.loo.idx
+      csv_file: ../dataset/dataset/ml-20m_5/ml-20m.csv
+      csv_file_index: ../dataset/dataset/ml-20m_5/ml-20m.idx
+      nip_index_file: ../dataset/dataset/ml-20m_5/valid.loo.idx
       parser: *parser
     loader: *loader
 model:
@@ -36,10 +37,11 @@ module:
   mask_probability: 0.2
   beta_1: 0.9
   beta_2: 0.999
-  batch_first: false
   learning_rate: 0.001
   weight_decay: 0.01
   num_warmup_steps: 100
+  batch_first: false
+  pad_direction: left
   metrics:
     mrr:
       - 1
@@ -56,8 +58,9 @@ tokenizer:
     unk_token: <UNK>
   vocabulary:
     delimiter: "\t"
-    file: ../dataset/dataset/ml-20m/vocab_title.txt
+    file: ../dataset/dataset/ml-20m_5/vocab_title.txt
 trainer:
+  limit_train_batches: 1000
   checkpoints:
     monitor: recall_at_5
     save_top_k: 3

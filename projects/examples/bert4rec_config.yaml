@@ -35,6 +35,7 @@ model:
 module:
   mask_probability: 0.9
   batch_first: false
+  pad_direction: left
   metrics:
     mrr:
       - 1

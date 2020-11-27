@@ -14,7 +14,7 @@ from modules.gru_module import GRUModule
 from modules.narm_module import NarmModule
 from runner.util.provider_utils import build_tokenizer_provider, build_session_loader_provider_factory, \
     build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, build_standard_trainer, \
-    build_metrics_provider, build_processors_provider
+    build_metrics_provider, build_processors_provider, to_pad_direction
 
 DEFAULT_PROCESSORS = {
     'tokenizer_processor': {
@@ -75,7 +75,7 @@ def _build_default_dataset_config(shuffle: bool,
             'num_workers': 0,
             'shuffle': shuffle,
             'max_seq_step_length': None,
-            'pad_direction': PadDirection.LEFT.value
+            'pad_direction': PadDirection.RIGHT.value
         }
     }
 
@@ -105,6 +105,7 @@ class BERT4RecContainer(containers.DeclarativeContainer):
         CONFIG_KEY_MODULE: {
             'num_warmup_steps': 10000,
             'batch_first': True,
+            'pad_direction': PadDirection.RIGHT.value,
             'mask_probability': 0.2,
             'weight_decay': 0.01
         }
@@ -121,6 +122,8 @@ class BERT4RecContainer(containers.DeclarativeContainer):
 
     metrics = build_metrics_provider(module_config.metrics)
 
+    pad_direction = providers.Factory(to_pad_direction, module_config.pad_direction)
+
     module = providers.Singleton(
         BERT4RecModule,
         model=model,
@@ -132,6 +135,7 @@ class BERT4RecContainer(containers.DeclarativeContainer):
         num_warmup_steps=module_config.num_warmup_steps,
         tokenizer=tokenizer,
         batch_first=module_config.batch_first,
+        pad_direction=pad_direction,
         metrics=metrics
     )
 
