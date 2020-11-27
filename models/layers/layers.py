@@ -1,6 +1,5 @@
 from abc import ABC
 from functools import partial
-from typing import Callable
 
 import torch
 from torch import nn as nn
@@ -15,8 +14,7 @@ class ItemEmbedding(nn.Module):
     def __init__(self,
                  item_voc_size: int,
                  embedding_size: int,
-                 embedding_mode: str = None,
-                 init_weights_fnc: Callable[[torch.Tensor], None] = None
+                 embedding_mode: str = None
                  ):
         super().__init__()
         self.embedding_size = embedding_size
@@ -29,15 +27,6 @@ class ItemEmbedding(nn.Module):
             'sum': partial(torch.sum, dim=-2),
             'mean': partial(torch.mean, dim=-2)
         }[self.embedding_mode]
-
-        self.init_weights(init_weights_fnc)
-
-    def init_weights(self, init_weights_fnc: Callable[[torch.Tensor], None]):
-        if init_weights_fnc is None:
-            initrange = 0.1
-            self.embedding.weight.data.uniform_(- initrange, initrange)
-        else:
-            init_weights_fnc(self.embedding.weight)
 
     def forward(self,
                 items: torch.Tensor,

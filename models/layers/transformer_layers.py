@@ -16,20 +16,14 @@ class TransformerEmbedding(nn.Module):
                  embedding_size: int,
                  dropout: float,
                  embedding_mode: str = None,
-                 initializer_range: float = 0.02,
                  norm_embedding: bool = True):
         super().__init__()
 
         self.embedding_size = embedding_size
 
-        def _init_embedding(weights: torch.Tensor
-                            ) -> None:
-            nn.init.trunc_normal_(weights, std=initializer_range)
-
         self.item_embedding = ItemEmbedding(item_voc_size=item_voc_size,
                                             embedding_size=embedding_size,
-                                            embedding_mode=embedding_mode,
-                                            init_weights_fnc=_init_embedding)
+                                            embedding_mode=embedding_mode)
         self.position_embedding = nn.Embedding(max_seq_len, self.embedding_size)
         self.embedding_norm = nn.LayerNorm(self.embedding_size) if norm_embedding else nn.Identity()
         self.dropout = nn.Dropout(p=dropout)
