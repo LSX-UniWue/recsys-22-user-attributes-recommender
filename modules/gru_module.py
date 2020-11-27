@@ -21,7 +21,6 @@ class GRUModule(pl.LightningModule):
                  beta_1: float,
                  beta_2: float,
                  tokenizer: Tokenizer,
-                 metrics: torch.nn.ModuleDict
                  ):
 
         super(GRUModule, self).__init__()
@@ -31,28 +30,12 @@ class GRUModule(pl.LightningModule):
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.tokenizer = tokenizer
-        self.metrics = metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
-        """
-        Performs a training step on a batch of sequences and returns the overall loss.
-
-        `batch` must be a dictionary containing the following entries:
-            * `data.datasets.ITEM_SEQ_ENTRY_NAME`: a tensor of size [BS x S] with the input sequences.
-            * `data.datasets.TARGET_ENTRY_NAME`: a tensor of size [BS] with the target items.
-
-        A padding mask will be calculated on the fly, based on the `self.tokenizer` of the module.
-
-        :param batch: a batch.
-        :param batch_idx: the batch number.
-
-        :return: A dictionary containing a single entry `loss` with the overall loss for this batch.
-        """
-
-        logits = self(batch, batch_idx)
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
 
         loss = self._calc_loss(logits, target)
@@ -102,17 +85,7 @@ class GRUModule(pl.LightningModule):
 
         mask = None if len(target.size()) == 1 else ~ target.eq(self.tokenizer.pad_token_id)
 
-        for name, metric in self.metrics.items():
-            step_value = metric(logits, target, mask=mask)
-            self.log(name, step_value, prog_bar=True)
-
         return build_eval_step_return_dict(logits, target, mask=mask)
-
-    def validation_epoch_end(self,
-                             outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
-                             ) -> None:
-        for name, metric in self.metrics.items():
-            self.log(name, metric.compute(), prog_bar=True)
 
     def test_step(self,
                   batch: Dict[str, torch.Tensor],
