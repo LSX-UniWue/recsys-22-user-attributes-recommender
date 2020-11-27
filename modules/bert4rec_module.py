@@ -260,6 +260,8 @@ def _add_mask_token_at_ending(input_seq: torch.Tensor,
     # using torch.max(...).indices, because torch.argmax(...) is not supported for bool on cpu
     first_padding_indices = torch.max(padding_mask, dim=1).indices.unsqueeze(1)
 
+    print(first_padding_indices)
+
     target_mask = torch.zeros_like(padding_mask, dtype=torch.bool, device=input_seq.device)
     target_mask.scatter_(-1, first_padding_indices, True)
 
