@@ -1,4 +1,5 @@
 import functools
+import os
 from pathlib import Path
 from typing import Dict, Any, Iterable
 
@@ -64,7 +65,10 @@ def preprocess_data(dataset_dir: Path,
     merged_df = pd.merge(ratings_df, movies_df).sort_values(by=["userId", "timestamp"])
     # remove unused movie id column
     del merged_df['movieId']
-    main_file = dataset_dir / f"{name}.csv"
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    main_file = output_dir / f"{name}.csv"
     merged_df.to_csv(main_file, sep=delimiter, index=False)
 
     # build vocabularies
@@ -158,7 +162,7 @@ def main(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_choices
          min_seq_length: int = typer.Option(5, help='the minimum feedback the user must have')
          ) -> None:
     url = DOWNLOAD_URL_MAP[dataset]
-    dataset_dir = output_dir / f'f{dataset}_{min_seq_length}'
+    dataset_dir = output_dir / f'{dataset}_{min_seq_length}'
     download_dir = output_dir / dataset
 
     downloaded_file = download_dataset(url, download_dir)
