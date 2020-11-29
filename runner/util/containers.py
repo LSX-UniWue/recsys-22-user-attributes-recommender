@@ -4,17 +4,16 @@ from dependency_injector import containers, providers
 
 from data.collate import PadDirection
 from models.bert4rec.bert4rec_model import BERT4RecModel
-from models.bert4rec.bert4rec_model_2 import BERT4RecModel2
 from models.caser.caser_model import CaserModel
-from models.gru.gru_model import GRUSeqItemRecommenderModel
 from models.narm.narm_model import NarmModel
+from models.rnn.rnn_model import RNNSeqItemRecommenderModel
 from models.sasrec.sas_rec_model import SASRecModel
 from modules import BERT4RecModule, CaserModule, SASRecModule
-from modules.gru_module import GRUModule
+from modules.rnn_module import GRUModule
 from modules.narm_module import NarmModule
 from runner.util.provider_utils import build_tokenizer_provider, build_session_loader_provider_factory, \
     build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, build_standard_trainer, \
-    build_metrics_provider, build_processors_provider
+    build_processors_provider
 
 DEFAULT_PROCESSORS = {
     'tokenizer_processor': {
@@ -76,7 +75,7 @@ def _build_default_dataset_config(shuffle: bool,
             'num_workers': 0,
             'shuffle': shuffle,
             'max_seq_step_length': None,
-            'pad_direction': PadDirection.LEFT.value
+            'pad_direction': PadDirection.RIGHT.value
         }
     }
 
@@ -280,7 +279,7 @@ class NarmContainer(containers.DeclarativeContainer):
     trainer = build_standard_trainer(config)
 
 
-class GRUContainer(containers.DeclarativeContainer):
+class RNNContainer(containers.DeclarativeContainer):
 
     config = build_default_config()
     config.from_dict(MODULE_ADAM_OPTIMIZER_DEFAULT_VALUES)
@@ -291,7 +290,7 @@ class GRUContainer(containers.DeclarativeContainer):
     model_config = config.model
 
     # model
-    model = providers.Singleton(_kwargs_adapter, GRUSeqItemRecommenderModel, config.model)
+    model = providers.Singleton(_kwargs_adapter, RNNSeqItemRecommenderModel, config.model)
 
     module_config = config.module
 
