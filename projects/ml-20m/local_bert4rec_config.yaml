@@ -3,7 +3,7 @@ parser: &parser
 loader: &loader
   batch_size: 4
   max_seq_length: 200
-  pad_direction: left
+  pad_direction: right
 datasets:
   test:
     dataset:
@@ -41,7 +41,7 @@ module:
   weight_decay: 0.01
   num_warmup_steps: 100
   batch_first: false
-  pad_direction: left
+  pad_direction: right
   metrics:
     mrr:
       - 1

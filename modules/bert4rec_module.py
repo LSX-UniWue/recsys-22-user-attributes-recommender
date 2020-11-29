@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 import pytorch_lightning as pl
 
 from typing import Tuple, List, Union, Dict, Optional
@@ -245,6 +246,12 @@ def _add_mask_token_at_ending(input_seq: torch.Tensor,
     :return: the input_seq with the masking token
     """
 
+    if tokenizer.mask_token is None:
+        raise ValueError(
+            "This tokenizer does not have a mask item which is necessary for masked modeling."
+        )
+
+    # if the pad direction in left, we only have to add the mask token at the end of each sequence / batch
     if pad_direction == PadDirection.LEFT:
         mask_tokens = torch.full([input_seq.size()[0], 1], tokenizer.mask_token_id,
                                  dtype=input_seq.dtype,
@@ -252,29 +259,23 @@ def _add_mask_token_at_ending(input_seq: torch.Tensor,
         expanded_input_seq = torch.cat([input_seq, mask_tokens], dim=1)
         return expanded_input_seq
 
+    # if the pad direction is right, we first expand the sequence with a padding token
     input_seq = _expand_sequence(inputs=input_seq, tokenizer=tokenizer, pad_direction=pad_direction)
+
+    # then we have to find the first index of the padding token
     input_shape = input_seq.size()
     padding_input_to_use = input_seq
     if len(input_shape) > 2:
         padding_input_to_use = input_seq.max(dim=2).values
-    # first we calc the padding mask
-    padding_mask = get_padding_mask(padding_input_to_use, tokenizer, transposed=False)
-    # then we build a list of indices ranging from 0 to max_seq_length
-    positions = torch.arange(input_seq.size()[1], device=padding_mask.device)
-    max_position = torch.max(positions) + 1
-    positions = positions.unsqueeze(0).repeat(input_seq.size()[0], 1)
-
-    # we zero all indices where there is no padding
-    # the result tensor contains 0 where a normal token and the index where the sequence is padded
-    indices = padding_mask * positions
-    indices[indices.eq(0)] = max_position
-
-    first_padding_indices = torch.min(indices, dim=1).indices.unsqueeze(1)
-
-    target_mask = torch.zeros_like(padding_mask, dtype=torch.bool, device=input_seq.device)
-    target_mask.scatter_(-1, first_padding_indices, True)
-
+    # here we calculate the token mask (inverted padding mask)
+    token_mask = ~ get_padding_mask(padding_input_to_use, tokenizer, transposed=False)
+    # we calculate the length of the sequence, which is also the index of the first padding token
+    first_padded_indices = token_mask.sum(dim=1)
+    # convert the first_padding_indices to a boolean one hot vector
+    target_mask = F.one_hot(first_padded_indices, num_classes=input_shape[1]).to(dtype=torch.bool)
+    # set the first padding token to the mask token
     input_seq[target_mask] = tokenizer.mask_token_id
+
     return input_seq
 
 
