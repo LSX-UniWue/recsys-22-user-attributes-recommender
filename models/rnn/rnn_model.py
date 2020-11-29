@@ -11,13 +11,21 @@ def _build_rnn_cell(cell_type: str,
                     item_embedding_size: int,
                     hidden_size: int,
                     num_layers: int,
+                    bidirectional: bool,
                     dropout: float
                     ) -> nn.Module:
     if cell_type == 'gru':
-        return nn.GRU(item_embedding_size, hidden_size, dropout=dropout, num_layers=num_layers, batch_first=True)
+        return nn.GRU(item_embedding_size, hidden_size,
+                      bidirectional=bidirectional,
+                      dropout=dropout,
+                      num_layers=num_layers,
+                      batch_first=True)
 
     if cell_type == 'lstm':
-        return LSTMSeqItemRecommenderModule(item_embedding_size, hidden_size, dropout=dropout, num_layers=num_layers)
+        return LSTMSeqItemRecommenderModule(item_embedding_size, hidden_size,
+                                            bidirectional=bidirectional,
+                                            dropout=dropout,
+                                            num_layers=num_layers)
 
     raise ValueError(f'cell type "{cell_type}" not supported')
 
@@ -28,11 +36,16 @@ class LSTMSeqItemRecommenderModule(nn.Module):
                  item_embedding_size: int,
                  hidden_size: int,
                  num_layers: int,
+                 bidirectional: bool,
                  dropout: float
                  ):
         super().__init__()
 
-        self.lstm = nn.LSTM(item_embedding_size, hidden_size, dropout=dropout, num_layers=num_layers, batch_first=True)
+        self.lstm = nn.LSTM(item_embedding_size, hidden_size,
+                            bidirectional=bidirectional,
+                            dropout=dropout,
+                            num_layers=num_layers,
+                            batch_first=True)
 
     def forward(self,
                 packed_embedded_session: torch.Tensor
@@ -53,6 +66,7 @@ class RNNSeqItemRecommenderModel(nn.Module):
                  hidden_size: int,
                  num_layers: int,
                  dropout: float,
+                 bidirectional: bool = False,
                  embedding_mode: str = None):
         super().__init__()
         self.embedding_mode = embedding_mode
@@ -64,10 +78,10 @@ class RNNSeqItemRecommenderModel(nn.Module):
         # FIXME: maybe this should not be done here
         if num_layers == 1 and dropout > 0:
             print("setting the dropout to 0 because the number of layers is 1")
-            dropout = 0
+            dropout = 0.0
 
-        self.rnn = _build_rnn_cell(cell_type, item_embedding_dim, hidden_size, num_layers, dropout)
-        self.pooling = RNNPooler(hidden_size, item_vocab_size)
+        self.rnn = _build_rnn_cell(cell_type, item_embedding_dim, hidden_size, num_layers, bidirectional, dropout)
+        self.pooling = RNNPooler(hidden_size, item_vocab_size, bidirectional=bidirectional)
 
         self.dropout = nn.Dropout2d(p=dropout)
 
@@ -111,13 +125,27 @@ class RNNPooler(RNNStatePooler):
 
     def __init__(self,
                  hidden_size: int,
-                 num_items: int
+                 num_items: int,
+                 bidirectional: bool = False
                  ):
         super().__init__()
 
-        self.fcn = nn.Linear(hidden_size, num_items, bias=True)
+        self.directions = 2 if bidirectional else 1
+
+        self.fcn = nn.Linear(self.directions * hidden_size, num_items, bias=True)
 
     def _pool(self, outputs: torch.Tensor, hidden_representation: torch.Tensor) -> torch.Tensor:
-        # we "pool" the model by simply taking the hidden state of the last layer
-        representation = hidden_representation[-1, :, :]
+        if self.directions == 1:
+            # we "pool" the model by simply taking the hidden state of the last layer
+            # of an unidirectional model
+            representation = hidden_representation[-1, :, :]
+            return self.fcn(representation)
+        # FIXME: discuss this representation (state of last layer, both directions)
+        layer_direction, batch_size, hidden_size = hidden_representation.size()
+        layers = int(layer_direction / self.directions)
+
+        hidden_representation = hidden_representation.view(layers, self.directions, batch_size, hidden_size)
+
+        last_layer_representation = hidden_representation[-1]
+        representation = torch.cat([last_layer_representation[0], last_layer_representation[1]], dim=1)
         return self.fcn(representation)
