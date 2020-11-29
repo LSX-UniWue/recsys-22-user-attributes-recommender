@@ -22,7 +22,6 @@ class CaserModule(pl.LightningModule):
                  tokenizer: Tokenizer,
                  learning_rate: float,
                  weight_decay: float,
-                 metrics: torch.nn.ModuleDict
                  ):
         super().__init__()
 
@@ -32,8 +31,6 @@ class CaserModule(pl.LightningModule):
 
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
-
-        self.metrics = metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
@@ -79,18 +76,7 @@ class CaserModule(pl.LightningModule):
 
         prediction = self.model(input_seq, users, items_to_rank)
 
-        for name, metric in self.metrics.items():
-            step_value = metric(prediction, targets)
-            self.log(name, step_value, prog_bar=True)
-
         return build_eval_step_return_dict(prediction, targets)
-
-    # FIXME: copy paste code from sas rec module
-    def validation_epoch_end(self,
-                             outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
-                             ) -> None:
-        for name, metric in self.metrics.items():
-            self.log(name, metric.compute(), prog_bar=True)
 
     def configure_optimizers(self):
         return torch.optim.Adam(

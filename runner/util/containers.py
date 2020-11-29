@@ -38,10 +38,11 @@ def build_default_config() -> providers.Configuration:
     # init some default values
     config.from_dict({
         'trainer': {
+            'experiment_name': 'basic_experiment',
             'limit_train_batches': 1.0,
             'limit_val_batches': 1.0,
             'gradient_clip_val': 0.0,
-            'default_root_dir': '/tmp/checkpoints',
+            'default_root_dir': '/tmp/',
             'max_epochs': 20
         },
         'model': {
@@ -135,8 +136,7 @@ class BERT4RecContainer(containers.DeclarativeContainer):
         num_warmup_steps=module_config.num_warmup_steps,
         tokenizer=tokenizer,
         batch_first=module_config.batch_first,
-        pad_direction=pad_direction,
-        metrics=metrics
+        pad_direction=pad_direction
     )
 
     # dataset config
@@ -173,7 +173,6 @@ class CaserContainer(containers.DeclarativeContainer):
 
     module_config = config.module
 
-    metrics = build_metrics_provider(module_config.metrics)
 
     module = providers.Singleton(
         CaserModule,
@@ -181,7 +180,6 @@ class CaserContainer(containers.DeclarativeContainer):
         tokenizer=tokenizer,
         learning_rate=module_config.learning_rate,
         weight_decay=module_config.weight_decay,
-        metrics=metrics
     )
 
     train_dataset_config = config.datasets.train
@@ -219,8 +217,6 @@ class SASRecContainer(containers.DeclarativeContainer):
 
     module_config = config.module
 
-    metrics = build_metrics_provider(module_config.metrics)
-
     module = providers.Singleton(
         SASRecModule,
         model=model,
@@ -229,7 +225,6 @@ class SASRecContainer(containers.DeclarativeContainer):
         beta_2=module_config.beta_2,
         tokenizer=tokenizer,
         batch_first=module_config.batch_first,
-        metrics=metrics
     )
 
     train_dataset_config = config.datasets.train
@@ -261,7 +256,6 @@ class NarmContainer(containers.DeclarativeContainer):
     model = providers.Singleton(_kwargs_adapter, NarmModel, config.model)
 
     module_config = config.module
-    metrics = build_metrics_provider(module_config.metrics)
 
     module = providers.Singleton(
         NarmModule,
@@ -272,7 +266,6 @@ class NarmContainer(containers.DeclarativeContainer):
         module_config.beta_2,
         tokenizer,
         module_config.batch_first,
-        metrics
     )
 
     train_dataset_config = config.datasets.train
@@ -307,7 +300,6 @@ class GRUContainer(containers.DeclarativeContainer):
     model = providers.Singleton(_kwargs_adapter, GRUSeqItemRecommenderModel, config.model)
 
     module_config = config.module
-    metrics = build_metrics_provider(module_config.metrics)
 
     module = providers.Singleton(
         GRUModule,
@@ -316,7 +308,6 @@ class GRUContainer(containers.DeclarativeContainer):
         module_config.beta_1,
         module_config.beta_2,
         tokenizer,
-        metrics
     )
 
     train_dataset_config = config.datasets.train

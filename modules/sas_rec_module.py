@@ -20,7 +20,6 @@ class SASRecModule(pl.LightningModule):
                  beta_2: float,
                  tokenizer: Tokenizer,
                  batch_first: bool,
-                 metrics: torch.nn.ModuleDict
                  ):
         """
         inits the SASRec module
@@ -40,8 +39,6 @@ class SASRecModule(pl.LightningModule):
         self.beta_2 = beta_2
         self.tokenizer = tokenizer
         self.batch_first = batch_first
-
-        self.metrics = metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
@@ -96,23 +93,10 @@ class SASRecModule(pl.LightningModule):
         prediction = self.model(input_seq, items_to_rank, padding_mask=padding_mask)
         prediction = prediction.transpose(1, 0)
 
-        for name, metric in self.metrics.items():
-            step_value = metric(prediction, targets)
-            self.log(name, step_value, prog_bar=True)
-
         return build_eval_step_return_dict(prediction, targets)
-
-    def validation_epoch_end(self,
-                             outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
-                             ) -> None:
-        for name, metric in self.metrics.items():
-            self.log(name, metric.compute(), prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         return self.validation_step(batch, batch_idx)
-
-    def test_epoch_end(self, outputs):
-        self.validation_epoch_end(outputs)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(),
