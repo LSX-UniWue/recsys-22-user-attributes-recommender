@@ -4,16 +4,13 @@ import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-import torch
 import typer
 from dependency_injector import containers
-from pytorch_lightning import LightningModule, Callback, Trainer
+from pytorch_lightning import Trainer
 from pytorch_lightning.utilities import cloud_io
 
-from data.datasets import SAMPLE_IDS
-from modules.constants import RETURN_KEY_PREDICTIONS
 from runner.util.callbacks import PredictionLoggerCallback
-from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, GRUContainer
+from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer
 
 
 app = typer.Typer()
@@ -26,7 +23,7 @@ def build_container(model_id) -> containers.DeclarativeContainer:
         'sasrec': SASRecContainer(),
         'caser': CaserContainer(),
         "narm": NarmContainer(),
-        "gru": GRUContainer()
+        "rnn": RNNContainer()
     }[model_id]
 
 
@@ -66,8 +63,7 @@ def train(model: str = typer.Argument(..., help="the model to run"),
         trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
 
     if do_test:
-        trainer.test(test_dataloader=container.test_dataloader())
-
+        trainer.test(test_dataloader=container.test_loader())
 
 
 @app.command()
