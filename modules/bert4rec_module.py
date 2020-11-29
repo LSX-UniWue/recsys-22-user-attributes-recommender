@@ -86,8 +86,7 @@ class BERT4RecModule(pl.LightningModule):
         masked_lm_loss = self._calc_loss(prediction_logits, target)
         self.log(LOG_KEY_TRAINING_LOSS, masked_lm_loss, prog_bar=False)
         return {
-            'loss': masked_lm_loss,
-
+            'loss': masked_lm_loss
         }
 
     def _calc_loss(self,
@@ -150,12 +149,7 @@ class BERT4RecModule(pl.LightningModule):
         # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
         # the target tensor
         mask = None if len(targets.size()) == 1 else ~ targets.eq(self.tokenizer.pad_token_id)
-
-        for name, metric in self.metrics.items():
-            step_value = metric(prediction, targets, mask=mask)
-            self.log(name, step_value, prog_bar=True)
-        # FIXME: readd, just for testing
-        # return build_eval_step_return_dict(prediction, targets, mask=mask)
+        return build_eval_step_return_dict(prediction, targets, mask=mask)
 
     # FIXME: copy paste code from sas rec module
     def validation_epoch_end(self,
