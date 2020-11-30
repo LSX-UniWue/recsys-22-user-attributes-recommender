@@ -35,14 +35,14 @@ model:
   transformer_hidden_size: 64
   transformer_dropout: 0.2
 module:
-  mask_probability: 0.2
-  beta_1: 0.9
-  beta_2: 0.999
-  learning_rate: 0.0001
-  weight_decay: 0
-  num_warmup_steps: 100
-  pad_direction: left
   batch_first: false
+  mask_probability: 0.2
+  beta_1: 0.99
+  beta_2: 0.998
+  learning_rate: 0.0001
+  weight_decay: 0.00
+  num_warmup_steps: 3
+  pad_direction: left
   metrics:
     mrr:
       - 1
@@ -50,7 +50,7 @@ module:
       - 10
     recall:
       - 1
-      - 5
+      - 3
       - 10
 tokenizer:
   special_tokens:
