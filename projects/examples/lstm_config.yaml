@@ -3,19 +3,19 @@ parser: &parser
 loader: &loader
   batch_size: 2
   max_seq_length: 5
-  pad_direction: left
 datasets:
   test:
     dataset:
       csv_file: ../tests/example_dataset/train.csv
       csv_file_index: ../tests/example_dataset/train.idx
-      parser: *parser
       nip_index_file: ../tests/example_dataset/train.nip.idx
+      parser: *parser
     loader: *loader
   train:
     dataset:
       csv_file: ../tests/example_dataset/train.csv
       csv_file_index: ../tests/example_dataset/train.idx
+      nip_index_file: ../tests/example_dataset/train.nip.idx
       parser: *parser
     loader: *loader
   validation:
@@ -26,16 +26,13 @@ datasets:
       parser: *parser
     loader: *loader
 model:
+  cell_type: lstm
   item_vocab_size: 13
-  max_seq_length: 5
-  num_transformer_heads: 1
-  num_transformer_layers: 1
-  transformer_hidden_size: 2
-  transformer_dropout: 0.1
+  item_embedding_dim: 4
+  hidden_size: 4
+  num_layers: 1
+  dropout: 0.0
 module:
-  mask_probability: 0.9
-  batch_first: false
-  pad_direction: left
   metrics:
     mrr:
       - 1

@@ -7,7 +7,7 @@ import torch.nn as nn
 from pytorch_lightning.core.decorators import auto_move_data
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
-from models.gru.gru_model import GRUSeqItemRecommenderModel
+from models.rnn.rnn_model import RNNSeqItemRecommenderModel
 from modules import LOG_KEY_VALIDATION_LOSS
 from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
@@ -16,14 +16,13 @@ from tokenization.tokenizer import Tokenizer
 class GRUModule(pl.LightningModule):
 
     def __init__(self,
-                 model: GRUSeqItemRecommenderModel,
+                 model: RNNSeqItemRecommenderModel,
                  lr: float,
                  beta_1: float,
                  beta_2: float,
                  tokenizer: Tokenizer,
                  ):
-
-        super(GRUModule, self).__init__()
+        super().__init__()
 
         self.model = model
         self.lr = lr
@@ -35,9 +34,9 @@ class GRUModule(pl.LightningModule):
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
-        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        target = batch[TARGET_ENTRY_NAME]
+        logits = self.forward(batch, batch_idx)
 
+        target = batch[TARGET_ENTRY_NAME]
         loss = self._calc_loss(logits, target)
 
         return {
@@ -99,9 +98,12 @@ class GRUModule(pl.LightningModule):
         self.validation_epoch_end(outputs)
 
     @auto_move_data
-    def forward(self, batch, batch_idx):
+    def forward(self,
+                batch: Dict[str, torch.Tensor],
+                batch_idx: int
+                ) -> torch.Tensor:
         """
-        Applies the GRU model on a batch of sequences and returns logits for every sample in the batch.
+        Applies the RNN model on a batch of sequences and returns logits for every sample in the batch.
 
         `batch` must be a dictionary containing the following entries:
             * `ITEM_SEQ_ENTRY_NAME`: a tensor of size [BS x S]
