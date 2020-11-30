@@ -14,7 +14,7 @@ spec:
           imagePullPolicy: "Always"
           resources:
             requests: &resources
-              cpu: "2"
+              cpu: "4"
               memory: "16Gi"
               nvidia.com/gpu: 1
             limits: *resources
