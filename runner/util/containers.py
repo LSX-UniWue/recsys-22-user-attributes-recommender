@@ -4,6 +4,7 @@ from dependency_injector import containers, providers
 
 from data.collate import PadDirection
 from models.bert4rec.bert4rec_model import BERT4RecModel
+from models.bert4rec.bert4rec_model_2 import BERT4RecModel2
 from models.caser.caser_model import CaserModel
 from models.narm.narm_model import NarmModel
 from models.rnn.rnn_model import RNNSeqItemRecommenderModel
@@ -119,8 +120,6 @@ class BERT4RecContainer(containers.DeclarativeContainer):
     model = providers.Singleton(_kwargs_adapter, BERT4RecModel2, config.model)
 
     module_config = config.module
-
-    metrics = build_metrics_provider(module_config.metrics)
 
     pad_direction = providers.Factory(to_pad_direction, module_config.pad_direction)
 
