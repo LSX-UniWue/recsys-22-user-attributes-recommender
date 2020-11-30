@@ -61,6 +61,9 @@ datasets:
       batch_size: 128
       max_seq_length: 100
 trainer:
+  logger:
+    type: mlflow
+    tracking_uri: file:/tmp/mlflow
   default_root_dir: /tmp/checkpoints
   checkpoint:
     filepath: "/tmp/checkpoints/{epoch}-{recall_at_5:.4f}"
