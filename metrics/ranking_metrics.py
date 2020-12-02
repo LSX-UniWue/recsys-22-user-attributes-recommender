@@ -188,7 +188,7 @@ class MRRAtMetric(RecommendationMetric):
 
         rank = torch.topk((sorted_indices.eq(target) * torch.arange(1, self._k + 1, dtype=torch.float, device=target.device)), k=1).values
 
-        # mrr will contain 'inf' values if target is not in topk scores -> setting to 0
+        # mrr will contain 'inf' values if target is not in top k scores -> setting it to 0
         mrr = 1 / rank
         mrr[mrr == float('inf')] = 0
 
@@ -197,3 +197,65 @@ class MRRAtMetric(RecommendationMetric):
 
     def compute(self):
         return self.mrr / self.count
+
+
+class RecallAtNegativeSamples(RecommendationMetric):
+
+    def __init__(self,
+                 k: int,
+                 dist_sync_on_step: bool = False):
+
+        super().__init__(dist_sync_on_step=dist_sync_on_step)
+        self._k = k
+        self._num_negative_samples = 100
+
+        self.add_state("recall", torch.tensor(0.), dist_reduce_fx="sum")
+        self.add_state('count', torch.tensor(0.), dist_reduce_fx="sum")
+
+    def _update(self,
+                predictions: torch.Tensor,
+                target: torch.Tensor,
+                mask: torch.Tensor
+                ) -> None:
+        if mask is not None:
+            raise ValueError('masking currently not supported')
+
+        weight = torch.ones_like(predictions)
+        weight[:, target] = 0.
+
+        # FIXME: do not generate the samples here, we also sample items that are in the sequence
+        sampled_negatives = torch.multinomial(weight, num_samples=self._num_negative_samples)
+        target_batched = target.unsqueeze(1)
+        sampled_items = torch.cat([target_batched, sampled_negatives], dim=1)
+
+        positive_item_mask = sampled_items.eq(target_batched).to(dtype=predictions.dtype)
+        sampled_predicitons = predictions.gather(1, sampled_items)
+
+        self._update_sample(sampled_predicitons, positive_item_mask)
+
+    def _update_sample(self,
+                       prediction: torch.Tensor,
+                       positive_item_mask: torch.Tensor
+                       ) -> None:
+        """
+
+        :param prediction: the logits for I items :math`(N, I)`
+        :param positive_item_mask: a mask where a 1 indices that the item at this index is relevant :math`(N, I)`
+        :return:
+        """
+        # get the indices of the top k predictions
+        predicted_id = torch.argsort(prediction, descending=True)
+        # limit the prediction to the top k
+        predicted_id = predicted_id[:, :self._k]
+
+        # select the mask for each of the indices, this is than the tp
+        tp = positive_item_mask.gather(1, predicted_id)
+        tp = tp.sum(1) # get the total number of positive items
+
+        all_relevant_items = positive_item_mask.sum(1)
+        recall = tp / all_relevant_items
+        self.recall += recall.sum()
+        self.count += prediction.size()[0]
+
+    def compute(self):
+        return self.recall / self.count

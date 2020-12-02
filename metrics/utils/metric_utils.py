@@ -4,12 +4,13 @@ from typing import List, Dict, Union
 
 import torch
 
-from metrics.ranking_metrics import PrecisionAtMetric, RecallAtMetric, F1AtMetric, MRRAtMetric
+from metrics.ranking_metrics import PrecisionAtMetric, RecallAtMetric, F1AtMetric, MRRAtMetric, RecallAtNegativeSamples
 
 
 def _build_metric(metric_id: str
                   , k: int) -> pl.metrics.Metric:
     return {
+        'recall_sampled': RecallAtNegativeSamples(k),
         'recall': RecallAtMetric(k),
         'precision': PrecisionAtMetric(k),
         'f1': F1AtMetric(k),

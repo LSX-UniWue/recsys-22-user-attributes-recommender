@@ -44,6 +44,10 @@ module:
   num_warmup_steps: 3
   pad_direction: left
   metrics:
+    recall_sample:
+      - 1
+      - 5
+      - 10
     mrr:
       - 1
       - 5

@@ -1,5 +1,9 @@
 parser: &parser
   item_column_name: title
+  additional_features:
+    userId:
+      type: int
+      sequence: false
 loader: &loader
   batch_size: 4
   max_seq_length: 200
@@ -43,11 +47,7 @@ module:
   batch_first: false
   pad_direction: right
   metrics:
-    mrr:
-      - 1
-      - 5
-      - 10
-    recall:
+    recall_sampled:
       - 1
       - 5
       - 10
