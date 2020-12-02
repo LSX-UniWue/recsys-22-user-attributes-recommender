@@ -42,7 +42,12 @@ def build_default_config() -> providers.Configuration:
             'limit_val_batches': 1.0,
             'gradient_clip_val': 0.0,
             'default_root_dir': '/tmp/',
-            'max_epochs': 20
+            'max_epochs': 20,
+            'checkpoint': {
+                'filepath': "/tmp/checkpoints/{epoch}-{val_loss:.3f}",
+                'monitor': 'val_loss',
+                'save_top_k': 3
+            }
         },
         'model': {
             'embedding_mode': None

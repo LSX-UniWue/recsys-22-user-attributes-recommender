@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional
 
 import typer
 from dependency_injector import containers
-from pytorch_lightning import Trainer
+from pytorch_lightning import Trainer, LightningModule
 from pytorch_lightning.utilities import cloud_io
 
 from runner.util.callbacks import PredictionLoggerCallback
@@ -107,6 +107,22 @@ def predict(model: str = typer.Argument(..., help="the model to run"),
     ]
     trainer = Trainer(callbacks=callbacks, gpus=gpu)
     trainer.test(module, test_dataloaders=test_loader)
+
+@app.command()
+def resume(model: str = typer.Argument(..., help="the model to run."),
+           config_file: str = typer.Argument(..., help='the path to the config file'),
+           checkpoint_file: str = typer.Argument(..., help="path to the checkpoint file.")):
+    container = build_container(model)
+    container.config.from_yaml(config_file)
+    module: LightningModule = container.module()
+
+    train_loader = container.train_loader()
+    validation_loader = container.validation_loader()
+
+    trainer: Trainer = container.trainer()
+    trainer.model = module
+    trainer.checkpoint_connector.restore(checkpoint_file, on_gpu=trainer.on_gpu)
+    trainer.fit(module, train_dataloader=train_loader, val_dataloaders=validation_loader)
 
 
 if __name__ == "__main__":
