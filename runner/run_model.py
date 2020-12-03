@@ -13,7 +13,8 @@ from pytorch_lightning.utilities import cloud_io
 
 from runner.util.callbacks import PredictionLoggerCallback
 from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer
-
+from search.processor import ConfigTemplateProcessor
+from search.resolver import OptunaParameterResolver
 
 app = typer.Typer()
 
@@ -72,15 +73,14 @@ def train(model: str = typer.Argument(..., help="the model to run"),
 
 def config_from_template(template_file: Path, config_file_handle, trial):
     import yaml
+    resolver = OptunaParameterResolver(trial)
+    processor = ConfigTemplateProcessor(resolver)
+
     with template_file.open("r") as f:
-        config = yaml.load(f)
+        template = yaml.load(f)
+        resolved_config = processor.process(template)
 
-        hyper_parameter = config["model"]["item_embedding_dim"]["optuna"]
-        if hyper_parameter["type"] == "suggest_int":
-            config["model"]["item_embedding_dim"] = trial.suggest_int("item_embedding_dim", hyper_parameter["low"], hyper_parameter["high"], hyper_parameter["step"], hyper_parameter["log"])
-
-
-        yaml.dump(config, config_file_handle)
+        yaml.dump(resolved_config, config_file_handle)
         config_file_handle.flush()
 
 
@@ -95,7 +95,6 @@ def search(model: str = typer.Argument(..., help="the model to run"),
         exit(-1)
 
     def objective(trial):
-
         with NamedTemporaryFile(mode='wt') as tmp_config_file:
             container = build_container(model)
             config_from_template(template_file, tmp_config_file, trial)
