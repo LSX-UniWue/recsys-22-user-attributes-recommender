@@ -69,30 +69,30 @@ def train(model: str = typer.Argument(..., help="the model to run"),
         trainer.test(test_dataloader=container.test_loader())
 
 
-### integrating optuna ###
-
-def config_from_template(template_file: Path, config_file_handle, trial):
-    import yaml
-    resolver = OptunaParameterResolver(trial)
-    processor = ConfigTemplateProcessor(resolver)
-
-    with template_file.open("r") as f:
-        template = yaml.load(f)
-        resolved_config = processor.process(template)
-
-        yaml.dump(resolved_config, config_file_handle)
-        config_file_handle.flush()
-
-
 @app.command()
 def search(model: str = typer.Argument(..., help="the model to run"),
            template_file: Path = typer.Argument(..., help='the path to the config file'),
+           study_name: str = typer.Argument(..., help='the optuna study name'),
+           study_storage: str = typer.Argument(..., help='the connection string for the study storage'),
+           objective_metric: str = typer.Argument(..., help='the name of the metric to watch during the study (e.g. rec_at_5).')
           ) -> None:
     # XXX: because the dependency injector does not provide a error message when the config file does not exists,
     # we manually check if the config file exists
     if not os.path.isfile(template_file):
         print(f"the config file cannot be found. Please check the path '{template_file}'!")
         exit(-1)
+
+    def config_from_template(template_file: Path, config_file_handle, trial):
+        import yaml
+        resolver = OptunaParameterResolver(trial)
+        processor = ConfigTemplateProcessor(resolver)
+
+        with template_file.open("r") as f:
+            template = yaml.load(f)
+            resolved_config = processor.process(template)
+
+            yaml.dump(resolved_config, config_file_handle)
+            config_file_handle.flush()
 
     def objective(trial):
         with NamedTemporaryFile(mode='wt') as tmp_config_file:
@@ -106,12 +106,10 @@ def search(model: str = typer.Argument(..., help="the model to run"),
             trainer = container.trainer()
             trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
 
-            return trainer.callback_metrics["rec_at_5"]
+            # TODO (AD) We need a way to determine the metrics value for the best checkpoint
+            return trainer.callback_metrics[objective_metric]
 
-    # we need to call load_study in the worker
-    #study = optuna.load_study(study_name="DEV", storage='sqlite:///optuna.db')
-    study = optuna.create_study(study_name="DEV", storage='sqlite:////tmp/optuna.db', load_if_exists=True)
-
+    study = optuna.load_study(study_name=study_name, storage=study_storage)
     study.optimize(objective, n_trials=20)
 
 
