@@ -44,7 +44,7 @@ module:
   num_warmup_steps: 3
   pad_direction: left
   metrics:
-    recall_sample:
+    recall_sampled:
       - 1
       - 5
       - 10
