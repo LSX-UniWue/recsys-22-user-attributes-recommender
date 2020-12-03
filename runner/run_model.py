@@ -2,11 +2,13 @@ import logging
 import logging.handlers
 import os
 from pathlib import Path
+from tempfile import TemporaryFile, NamedTemporaryFile
 from typing import Dict, Any, Optional
 
+import optuna
 import typer
 from dependency_injector import containers
-from pytorch_lightning import Trainer
+from pytorch_lightning import Trainer, Callback
 from pytorch_lightning.utilities import cloud_io
 
 from runner.util.callbacks import PredictionLoggerCallback
@@ -64,6 +66,54 @@ def train(model: str = typer.Argument(..., help="the model to run"),
 
     if do_test:
         trainer.test(test_dataloader=container.test_loader())
+
+
+### integrating optuna ###
+
+def config_from_template(template_file: Path, config_file_handle, trial):
+    import yaml
+    with template_file.open("r") as f:
+        config = yaml.load(f)
+
+        hyper_parameter = config["model"]["item_embedding_dim"]["optuna"]
+        if hyper_parameter["type"] == "suggest_int":
+            config["model"]["item_embedding_dim"] = trial.suggest_int("item_embedding_dim", hyper_parameter["low"], hyper_parameter["high"], hyper_parameter["step"], hyper_parameter["log"])
+
+
+        yaml.dump(config, config_file_handle)
+        config_file_handle.flush()
+
+
+@app.command()
+def search(model: str = typer.Argument(..., help="the model to run"),
+           template_file: Path = typer.Argument(..., help='the path to the config file'),
+          ) -> None:
+    # XXX: because the dependency injector does not provide a error message when the config file does not exists,
+    # we manually check if the config file exists
+    if not os.path.isfile(template_file):
+        print(f"the config file cannot be found. Please check the path '{template_file}'!")
+        exit(-1)
+
+    def objective(trial):
+
+        with NamedTemporaryFile(mode='wt') as tmp_config_file:
+            container = build_container(model)
+            config_from_template(template_file, tmp_config_file, trial)
+
+            container.config.from_yaml(tmp_config_file.name)
+
+            module = container.module()
+
+            trainer = container.trainer()
+            trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
+
+            return trainer.callback_metrics["rec_at_5"]
+
+    # we need to call load_study in the worker
+    #study = optuna.load_study(study_name="DEV", storage='sqlite:///optuna.db')
+    study = optuna.create_study(study_name="DEV", storage='sqlite:////tmp/optuna.db', load_if_exists=True)
+
+    study.optimize(objective, n_trials=20)
 
 
 @app.command()
