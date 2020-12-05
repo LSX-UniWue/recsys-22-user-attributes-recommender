@@ -35,7 +35,7 @@ model:
   transformer_hidden_size: 64
   transformer_dropout: 0.2
 module:
-  batch_first: false
+  batch_first: true
   mask_probability: 0.2
   beta_1: 0.99
   beta_2: 0.998
