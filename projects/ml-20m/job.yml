@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: ml-20m-bert4rec
+  name: ml-20m-bert4rec-new
   labels:
     app: ds4rec
 spec:
@@ -22,7 +22,7 @@ spec:
             - name: HOME
               value: /home/ls6/zoller
             - name: PROJECT_DIR
-              value: /home/ls6/zoller/seq_recommendation/project_workspace
+              value: /home/ls6/zoller/seq_recommendation/project_workspace_2
             - name: REPO_USER
               value: daz65be
             - name: REPO_BRANCH

@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
 
-from typing import Tuple, List, Union, Dict, Optional
+from typing import Tuple, Union, Dict, Optional
 
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR, StepLR
@@ -26,7 +26,7 @@ class BERT4RecModule(pl.LightningModule):
         return batch[POSITION_IDS] if POSITION_IDS in batch else None
 
     def __init__(self,
-                 model: BERT4RecModel2,
+                 model: BERT4RecModel,
                  mask_probability: float,
                  learning_rate: float,
                  beta_1: float,

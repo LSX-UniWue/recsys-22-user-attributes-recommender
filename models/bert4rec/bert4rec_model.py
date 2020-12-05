@@ -129,8 +129,7 @@ class BERT4RecModel(BERT4RecBaseModel):
                                               max_seq_len=self.max_seq_length,
                                               embedding_size=self.transformer_hidden_size,
                                               dropout=self.transformer_dropout,
-                                              embedding_mode=self.embedding_mode,
-                                              initializer_range=self.initializer_range)
+                                              embedding_mode=self.embedding_mode)
 
         self.output_bias = nn.Parameter(torch.Tensor(self.item_vocab_size))
 
