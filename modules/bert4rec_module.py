@@ -104,7 +104,7 @@ class BERT4RecModule(pl.LightningModule):
         loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)
 
         flatten_predictions = prediction_logits.view(-1, vocab_size)
-        flatten_targets = target.view(-1)
+        flatten_targets = torch.flatten(target)
         return loss_func(flatten_predictions, flatten_targets)
 
     def validation_step(self,
