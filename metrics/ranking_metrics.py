@@ -199,7 +199,23 @@ class MRRAtMetric(RecommendationMetric):
         return self.mrr / self.count
 
 
-class RecallAtNegativeSamples(RecommendationMetric):
+class RecommendationSampleMetric(pl.metrics.Metric):
+
+    def update(self,
+               predictions: torch.Tensor,
+               positive_item_mask: torch.Tensor
+               ) -> None:
+        self._update(predictions, positive_item_mask)
+
+    @abstractmethod
+    def _update(self,
+                predictions: torch.Tensor,
+                positive_item_mask: torch.Tensor
+                ) -> None:
+        pass
+
+
+class RecallAtNegativeSamples(RecommendationSampleMetric):
 
     def __init__(self,
                  k: int,
@@ -213,30 +229,9 @@ class RecallAtNegativeSamples(RecommendationMetric):
         self.add_state('count', torch.tensor(0.), dist_reduce_fx="sum")
 
     def _update(self,
-                predictions: torch.Tensor,
-                target: torch.Tensor,
-                mask: torch.Tensor
+                prediction: torch.Tensor,
+                positive_item_mask: torch.Tensor
                 ) -> None:
-        if mask is not None:
-            raise ValueError('masking currently not supported')
-
-        weight = torch.ones_like(predictions)
-        weight[:, target] = 0.
-
-        # FIXME: do not generate the samples here, we also sample items that are in the sequence
-        sampled_negatives = torch.multinomial(weight, num_samples=self._num_negative_samples)
-        target_batched = target.unsqueeze(1)
-        sampled_items = torch.cat([target_batched, sampled_negatives], dim=1)
-
-        positive_item_mask = sampled_items.eq(target_batched).to(dtype=predictions.dtype)
-        sampled_predicitons = predictions.gather(1, sampled_items)
-
-        self._update_sample(sampled_predicitons, positive_item_mask)
-
-    def _update_sample(self,
-                       prediction: torch.Tensor,
-                       positive_item_mask: torch.Tensor
-                       ) -> None:
         """
 
         :param prediction: the logits for I items :math`(N, I)`

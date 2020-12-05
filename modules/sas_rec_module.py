@@ -1,4 +1,4 @@
-from typing import List, Union, Dict, Optional
+from typing import Union, Dict, Optional
 
 import torch
 
@@ -93,7 +93,7 @@ class SASRecModule(pl.LightningModule):
         prediction = self.model(input_seq, items_to_rank, padding_mask=padding_mask)
         prediction = prediction.transpose(1, 0)
 
-        return build_eval_step_return_dict(prediction, targets)
+        return build_eval_step_return_dict(input_seq, prediction, targets)
 
     def test_step(self, batch, batch_idx):
         return self.validation_step(batch, batch_idx)

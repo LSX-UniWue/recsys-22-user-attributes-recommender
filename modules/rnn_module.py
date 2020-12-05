@@ -76,6 +76,8 @@ class GRUModule(pl.LightningModule):
         :return: A dictionary with entries according to `build_eval_step_return_dict`.
         """
 
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+
         logits = self(batch, batch_idx)
         target = batch[TARGET_ENTRY_NAME]
 
@@ -84,7 +86,7 @@ class GRUModule(pl.LightningModule):
 
         mask = None if len(target.size()) == 1 else ~ target.eq(self.tokenizer.pad_token_id)
 
-        return build_eval_step_return_dict(logits, target, mask=mask)
+        return build_eval_step_return_dict(input_seq, logits, target, mask=mask)
 
     def test_step(self,
                   batch: Dict[str, torch.Tensor],

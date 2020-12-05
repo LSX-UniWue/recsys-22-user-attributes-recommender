@@ -118,13 +118,13 @@ class BERT4RecModule(pl.LightningModule):
                          batch_idx: int,
                          is_test: bool = False
                          ) -> Dict[str, torch.Tensor]:
-        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        original_input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
         position_ids = BERT4RecModule.get_position_ids(batch)
 
         # set the last non padding token to the mask token
-        input_seq = _add_mask_token_at_ending(input_seq, self.tokenizer, pad_direction=self.pad_direction)
+        input_seq = _add_mask_token_at_ending(original_input_seq, self.tokenizer, pad_direction=self.pad_direction)
         target_mask = input_seq.eq(self.tokenizer.mask_token_id)
 
         if self.batch_first:
@@ -147,7 +147,7 @@ class BERT4RecModule(pl.LightningModule):
         # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
         # the target tensor
         mask = None if len(targets.size()) == 1 else ~ targets.eq(self.tokenizer.pad_token_id)
-        return build_eval_step_return_dict(prediction, targets, mask=mask)
+        return build_eval_step_return_dict(original_input_seq, prediction, targets, mask=mask)
 
     def test_step(self, batch, batch_idx):
         return self._eval_epoch_step(batch, batch_idx, is_test=True)

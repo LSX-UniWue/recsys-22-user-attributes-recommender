@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Callable, Dict, Any, List, Optional
 
@@ -17,10 +16,11 @@ from data.datasets.prepare import Processor, build_processors, PositiveNegativeS
 from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
+from logger.SampledMetricLoggerCallback import SampledMetricLoggerCallback
 from logger.GradientLoggerCallback import GradientLoggerCallback
 from logger.MetricLoggerCallback import MetricLoggerCallback
 from logger.TrainLossLoggerCallback import TrainLossLoggerCallback
-from metrics.utils.metric_utils import build_metrics
+from metrics.utils.metric_utils import build_metrics, build_sampled_metrics
 from data.collate import padded_session_collate, PadDirection
 from tokenization.tokenizer import Tokenizer
 from tokenization.vocabulary import VocabularyReaderWriter, Vocabulary, CSVVocabularyReaderWriter
@@ -341,7 +341,7 @@ def provide_nextit_loader(dataset: Dataset,
 def build_standard_trainer(config: providers.Configuration) -> providers.Singleton:
     checkpoint = build_standard_model_checkpoint(config)
     logger = build_standard_tensorboard_logger_provider(config)
-    logging_callbacks = build_standard_logging_callbacks_provider(config.module.metrics)
+    logging_callbacks = build_standard_logging_callbacks_provider(config.module)
 
     trainer_config = config.trainer
     return providers.Singleton(
@@ -376,6 +376,14 @@ def build_metrics_provider(config: providers.ConfigurationOption
     )
 
 
+def build_sampled_metrics_provider(config: providers.ConfigurationOption
+                                   ) -> providers.Singleton:
+    return providers.Singleton(
+        build_sampled_metrics,
+        config
+    )
+
+
 def build_standard_tensorboard_logger_provider(config: providers.Configuration) -> providers.Singleton:
     log_dir = providers.Singleton(Path,
                                   config.trainer.default_root_dir,
@@ -388,9 +396,9 @@ def build_standard_tensorboard_logger_provider(config: providers.Configuration) 
 
 
 def build_standard_logging_callbacks_provider(config) -> providers.List:
-
     return providers.List(
-        build_metric_logger_provider(config),
+        build_metric_logger_provider(config.metrics),
+        build_sampled_metric_logger_provider(config.sampled_metrics),
         GradientLoggerCallback(),
         TrainLossLoggerCallback())
 
@@ -401,3 +409,23 @@ def build_metric_logger_provider(config: providers.ConfigurationOption) -> provi
         MetricLoggerCallback,
         metrics=metric_provider
     )
+
+
+def build_sampled_metric_logger_provider(config: providers.ConfigurationOption) -> providers.Singleton:
+    metric_provider = build_sampled_metrics_provider(config.metrics)
+    item_probabilities = providers.Singleton(convert_prob_file, config.sample_probability_file)
+    return providers.Singleton(
+        SampledMetricLoggerCallback,
+        metrics=metric_provider,
+        item_probabilities=item_probabilities,
+        num_negative_samples=config.num_negative_samples
+    )
+
+
+def convert_prob_file(path: str) -> List[float]:
+    probs = []
+    with open(path) as prob_file:
+        for line in prob_file.readlines():
+            probs.append(float(line))
+
+    return probs

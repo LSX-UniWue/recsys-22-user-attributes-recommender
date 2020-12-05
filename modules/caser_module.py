@@ -76,7 +76,7 @@ class CaserModule(pl.LightningModule):
 
         prediction = self.model(input_seq, users, items_to_rank)
 
-        return build_eval_step_return_dict(prediction, targets)
+        return build_eval_step_return_dict(input_seq, prediction, targets)
 
     def configure_optimizers(self):
         return torch.optim.Adam(

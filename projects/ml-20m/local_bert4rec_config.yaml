@@ -46,11 +46,14 @@ module:
   num_warmup_steps: 100
   batch_first: false
   pad_direction: right
-  metrics:
-    recall_sampled:
-      - 1
-      - 5
-      - 10
+  sampled_metrics:
+    sample_probability_file: ../dataset/dataset/ml-20m_5/popularity.txt
+    num_negative_samples: 100
+    metrics:
+      recall:
+        - 1
+        - 5
+        - 10
 tokenizer:
   special_tokens:
     pad_token: <PAD>
