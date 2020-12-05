@@ -44,7 +44,7 @@ module:
   num_warmup_steps: 3
   pad_direction: left
   sampled_metrics:
-    sample_probability_file: ../dataset/dataset/ml-20m_5/popularity.txt
+    sample_probability_file: /scratch/jane-doe-framework/datasets/ml-20m/popularity.txt
     num_negative_samples: 100
     metrics:
       recall:
