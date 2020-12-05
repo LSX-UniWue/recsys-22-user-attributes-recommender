@@ -37,11 +37,11 @@ class SampledMetricLoggerCallback(Callback):
 
         positive_item_mask = sampled_items.eq(target_batched).to(dtype=predictions.dtype)
         # FIXME: fix positive_item_mask with mask
-        sampled_predicitons = predictions.gather(1, sampled_items)
+        sampled_predictions = predictions.gather(1, sampled_items)
 
         for name, metric in self.metrics.items():
-            step_value = metric(sampled_predicitons, positive_item_mask)
-            pl_module.log(f"{name} (sampled)", step_value, prog_bar=True)
+            step_value = metric(sampled_predictions, positive_item_mask)
+            pl_module.log(f"{name}_(sampled)", step_value, prog_bar=True)
 
     def on_validation_epoch_end(self, trainer, pl_module):
         for name, metric in self.metrics.items():
