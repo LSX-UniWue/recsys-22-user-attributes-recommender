@@ -22,6 +22,7 @@ from logger.MetricLoggerCallback import MetricLoggerCallback
 from logger.TrainLossLoggerCallback import TrainLossLoggerCallback
 from metrics.utils.metric_utils import build_metrics
 from data.collate import padded_session_collate, PadDirection
+from runner.util.trainer_builder import TrainerBuilder
 from tokenization.tokenizer import Tokenizer
 from tokenization.vocabulary import VocabularyReaderWriter, Vocabulary, CSVVocabularyReaderWriter
 
@@ -338,25 +339,19 @@ def provide_nextit_loader(dataset: Dataset,
     )
 
 
-def build_standard_trainer(config: providers.Configuration) -> providers.Singleton:
+def trainer_factory(config: providers.Configuration) -> Trainer:
     checkpoint = build_standard_model_checkpoint(config)
     logger = select_and_build_logger_provider(config)
     logging_callbacks = build_standard_logging_callbacks_provider(config.module.metrics)
 
     trainer_config = config.trainer
-    return providers.Singleton(
-        Trainer,
-        limit_train_batches=trainer_config.limit_train_batches,
-        limit_val_batches=trainer_config.limit_val_batches,
-        default_root_dir=trainer_config.default_root_dir,
-        checkpoint_callback=checkpoint,
-        gradient_clip_val=trainer_config.gradient_clip_val,
-        gpus=trainer_config.gpus,
-        max_epochs=trainer_config.max_epochs,
-        weights_summary='full',
-        logger=logger,
-        callbacks=logging_callbacks
-    )
+    trainer_builder = TrainerBuilder().from_config(trainer_config())
+    trainer_builder.set_kw(logger=logger(), checkpoint_callback=checkpoint()).add_callbacks(logging_callbacks())
+    return trainer_builder.build()
+
+
+def build_standard_trainer(config: providers.Configuration) -> providers.Factory:
+    return providers.Factory(trainer_factory, config=config.provider)
 
 
 def build_standard_model_checkpoint(config: providers.Configuration) -> providers.Singleton:
