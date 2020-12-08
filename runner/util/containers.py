@@ -151,7 +151,6 @@ class BERT4RecContainer(containers.DeclarativeContainer):
     # trainer
     trainer = build_standard_trainer(config)
 
-
 class CaserContainer(containers.DeclarativeContainer):
 
     config = build_default_config()
