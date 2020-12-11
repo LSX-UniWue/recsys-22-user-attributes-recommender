@@ -70,6 +70,9 @@ tokenizer:
     delimiter: "\t"
     file: /Users/nosebrain/Desktop/small/items.vocab
 trainer:
+  logger:
+    type: mlflow
+    tracking_uri: file:/tmp/mlflow
   checkpoints:
     monitor: recall_at_5
     save_top_k: 3

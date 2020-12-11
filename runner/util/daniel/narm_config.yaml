@@ -63,6 +63,9 @@ tokenizer:
     delimiter: "\t"
     file: /Users/nosebrain/Desktop/small/items.vocab
 trainer:
+  logger:
+    type: mlflow
+    tracking_uri: file:/tmp/mlflow
   limit_train_batches: 10
   limit_val_batches: 10
   checkpoints:

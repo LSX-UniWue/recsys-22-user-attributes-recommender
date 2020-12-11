@@ -62,6 +62,9 @@ module:
       - 5
       - 10
 trainer:
+  logger:
+    type: mlflow
+    tracking_uri: file:/tmp/mlflow
   default_root_dir: /tmp/checkpoints
   checkpoints:
     monitor: f1_at_5

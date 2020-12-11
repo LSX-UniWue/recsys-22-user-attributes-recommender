@@ -20,6 +20,7 @@ torchvision = "^0.7.0"
 pytorch-lightning = "^1.0.5"
 dependency-injector = "^3.44.0"
 typer = "^0.3.2"
+mlflow = "^1.12.1"
 
 [tool.poetry.dev-dependencies]
 
