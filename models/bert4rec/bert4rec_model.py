@@ -16,6 +16,7 @@ class BERT4RecBaseModel(nn.Module):
                  num_transformer_heads: int,
                  num_transformer_layers: int,
                  transformer_dropout: float,
+                 init_range: float
                  ):
         super().__init__()
 
@@ -37,6 +38,19 @@ class BERT4RecBaseModel(nn.Module):
         self.linear = nn.Linear(self.transformer_hidden_size, self.transformer_hidden_size)
         self.gelu = nn.GELU()
         self.layer_norm = nn.LayerNorm(self.transformer_hidden_size)
+
+        self.model_init_range = init_range
+        self._init_weights()
+
+    def _init_weights(self):
+        for module in self.modules():
+            if isinstance(module, (nn.Linear, nn.Embedding)):
+                module.weight.data.normal_(mean=0.0, std=self.model_init_range)
+            elif isinstance(module, nn.LayerNorm):
+                module.bias.data.zero_()
+                module.weight.data.fill_(1.0)
+            if isinstance(module, nn.Linear) and module.bias is not None:
+                module.bias.data.zero_()
 
     def forward(self,
                 input_seq: torch.Tensor,

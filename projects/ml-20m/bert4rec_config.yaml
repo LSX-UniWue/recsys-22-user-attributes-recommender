@@ -34,6 +34,7 @@ model:
   num_transformer_layers: 2
   transformer_hidden_size: 64
   transformer_dropout: 0.2
+  init_range: 0.02
 module:
   batch_first: true
   mask_probability: 0.2
