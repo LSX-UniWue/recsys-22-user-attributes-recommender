@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: ml-20m-bert4rec-init_range
+  name: ml-20m-bert4rec-linear-layer
   labels:
     app: ds4rec
 spec:

@@ -147,13 +147,15 @@ class BERT4RecModel(BERT4RecBaseModel):
                                               dropout=self.transformer_dropout,
                                               embedding_mode=self.embedding_mode)
 
-        self.output_bias = nn.Parameter(torch.Tensor(self.item_vocab_size))
+        self.projection_layer = nn.Linear(transformer_hidden_size, item_vocab_size)
 
-        self.init_weights()
+        # self.output_bias = nn.Parameter(torch.Tensor(self.item_vocab_size))
 
-    def init_weights(self):
-        bound = 1 / math.sqrt(self.item_vocab_size)
-        nn.init.uniform_(self.output_bias, -bound, bound)
+        self._init_weights()
+
+    # def init_weights(self):
+    #     bound = 1 / math.sqrt(self.item_vocab_size)
+    #     nn.init.uniform_(self.output_bias, -bound, bound)
 
     def _embed_input(self,
                      input_sequence: torch.Tensor,
@@ -166,5 +168,7 @@ class BERT4RecModel(BERT4RecBaseModel):
     def _projection(self,
                     dense: torch.Tensor
                     ) -> torch.Tensor:
-        dense = torch.matmul(dense, self.embedding.get_item_embedding_weight().transpose(0, 1))  # (S, N, I)
-        return dense + self.output_bias
+        return self.projection_layer(dense)
+
+        # dense = torch.matmul(dense, self.embedding.get_item_embedding_weight().transpose(0, 1))  # (S, N, I)
+        # return dense + self.output_bias
