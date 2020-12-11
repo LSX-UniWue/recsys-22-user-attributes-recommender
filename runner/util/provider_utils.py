@@ -341,7 +341,7 @@ def provide_nextit_loader(dataset: Dataset,
 def build_standard_trainer(config: providers.Configuration) -> providers.Singleton:
     checkpoint = build_standard_model_checkpoint(config)
     logger = select_and_build_logger_provider(config)
-    logging_callbacks = build_standard_logging_callbacks_provider(config.module.metrics)
+    logging_callbacks = build_standard_logging_callbacks_provider(config.module)
 
     trainer_config = config.trainer
     return providers.Singleton(
