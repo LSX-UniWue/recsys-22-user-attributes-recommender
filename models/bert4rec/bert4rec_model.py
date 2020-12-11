@@ -126,13 +126,15 @@ class BERT4RecModel(BERT4RecBaseModel):
                  item_vocab_size: int,
                  max_seq_length: int,
                  transformer_dropout: float,
+                 init_range: float = 0.02,
                  initializer_range: float = 0.02,
                  embedding_mode: str = None
                  ):
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
                          num_transformer_layers=num_transformer_layers,
-                         transformer_dropout=transformer_dropout)
+                         transformer_dropout=transformer_dropout,
+                         init_range=init_range)
 
         self.item_vocab_size = item_vocab_size
         self.max_seq_length = max_seq_length + 1
