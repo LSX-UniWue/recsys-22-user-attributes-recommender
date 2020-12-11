@@ -338,7 +338,8 @@ def provide_nextit_loader(dataset: Dataset,
     )
 
 
-def build_standard_trainer(config: providers.Configuration) -> providers.Singleton:
+def build_standard_trainer(config: providers.Configuration
+                           ) -> providers.Singleton:
     checkpoint = build_standard_model_checkpoint(config)
     logger = select_and_build_logger_provider(config)
     logging_callbacks = build_standard_logging_callbacks_provider(config.module)
@@ -359,7 +360,8 @@ def build_standard_trainer(config: providers.Configuration) -> providers.Singlet
     )
 
 
-def build_standard_model_checkpoint(config: providers.Configuration) -> providers.Singleton:
+def build_standard_model_checkpoint(config: providers.Configuration
+                                    ) -> providers.Singleton:
     return providers.Singleton(
         ModelCheckpoint,
         filepath=config.trainer.checkpoint.filepath,
@@ -384,7 +386,8 @@ def build_sampled_metrics_provider(config: providers.ConfigurationOption
     )
 
 
-def select_and_build_logger_provider(config: providers.Configuration) -> providers.Singleton:
+def select_and_build_logger_provider(config: providers.Configuration
+                                     ) -> providers.Singleton:
     def build_provider(logger_type: str, config: Dict[str, Any]):
         # for now default to tensorboard
         if logger_type == "mlflow":
@@ -407,7 +410,8 @@ def build_mlflow_logger_provider(config: Dict[str, Any]) -> MLFlowLogger:
     return MLFlowLogger(experiment_name=experiment_name, tracking_uri=tracking_uri)
 
 
-def build_standard_logging_callbacks_provider(config) -> providers.List:
+def build_standard_logging_callbacks_provider(config: providers.Configuration
+                                              ) -> providers.List:
     return providers.List(
         build_metric_logger_provider(config.metrics),
         build_sampled_metric_logger_provider(config.sampled_metrics),
