@@ -120,8 +120,6 @@ def resume(model: str = typer.Argument(..., help="the model to run."),
     validation_loader = container.validation_loader()
 
     trainer: Trainer = container.trainer()
-    trainer.model = module
-    trainer.checkpoint_connector.restore(checkpoint_file, on_gpu=trainer.on_gpu)
     trainer.fit(module, train_dataloader=train_loader, val_dataloaders=validation_loader)
 
 
