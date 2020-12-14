@@ -1,5 +1,5 @@
 import torch
-from pytorch_lightning.metrics.functional.reduction import reduce
+from pytorch_lightning.metrics.utils import reduce
 from torch import nn
 
 DEFAULT_REDUCTION = 'elementwise_mean'
