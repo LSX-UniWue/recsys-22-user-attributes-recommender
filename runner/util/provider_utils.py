@@ -355,7 +355,8 @@ def build_standard_trainer(config: providers.Configuration) -> providers.Singlet
         max_epochs=trainer_config.max_epochs,
         weights_summary='full',
         logger=logger,
-        callbacks=logging_callbacks
+        callbacks=logging_callbacks,
+        track_grad_norm=trainer_config.track_grad_norm
     )
 
 

@@ -42,7 +42,8 @@ def build_default_config() -> providers.Configuration:
             'limit_val_batches': 1.0,
             'gradient_clip_val': 0.0,
             'default_root_dir': '/tmp/',
-            'max_epochs': 20
+            'max_epochs': 20,
+            'track_grad_norm': 2
         },
         'model': {
             'embedding_mode': None
