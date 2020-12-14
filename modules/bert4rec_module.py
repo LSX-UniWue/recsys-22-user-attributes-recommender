@@ -83,7 +83,6 @@ class BERT4RecModule(pl.LightningModule):
         self.log(LOG_KEY_TRAINING_LOSS, masked_lm_loss, prog_bar=False)
         return {
             'loss': masked_lm_loss,
-
         }
 
     def _calc_loss(self,
