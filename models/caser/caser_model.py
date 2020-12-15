@@ -62,8 +62,7 @@ class CaserModel(nn.Module):
             self.user_embedding = nn.Embedding(self.user_vocab_size, embedding_dim=self.embedding_size)
         self.item_embedding = ItemEmbedding(item_voc_size=self.item_vocab_size,
                                             embedding_size=self.embedding_size,
-                                            embedding_mode=self.embedding_mode,
-                                            init_weights_fnc=lambda weight: weight.data.normal_(0, 1.0 / embedding_size))
+                                            embedding_mode=self.embedding_mode)
 
         # vertical conv layer
         self.conv_vertical = nn.Conv2d(1, self.num_vertical_filters, (self.max_seq_length, 1))
