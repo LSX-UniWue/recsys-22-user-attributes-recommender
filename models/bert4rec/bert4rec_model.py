@@ -40,7 +40,7 @@ class BERT4RecBaseModel(nn.Module):
         self.layer_norm = nn.LayerNorm(self.transformer_hidden_size)
 
         self.model_init_range = init_range
-        self._init_weights()
+        #self._init_weights()
 
     def _init_weights(self):
         for module in self.modules():
@@ -151,7 +151,7 @@ class BERT4RecModel(BERT4RecBaseModel):
 
         # self.output_bias = nn.Parameter(torch.Tensor(self.item_vocab_size))
 
-        self._init_weights()
+        # self._init_weights()
 
     # def init_weights(self):
     #     bound = 1 / math.sqrt(self.item_vocab_size)
