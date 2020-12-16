@@ -6,12 +6,10 @@ from typing import Dict, Any, Optional
 
 import typer
 from dependency_injector import containers
-from pytorch_lightning import Trainer
 from pytorch_lightning.utilities import cloud_io
 
-from runner.util.callbacks import PredictionLoggerCallback
+from runner.util.builder import TrainerBuilder, LoggerBuilder, CallbackBuilder
 from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer
-from runner.util.trainer_builder import TrainerBuilder
 
 app = typer.Typer()
 
@@ -34,7 +32,7 @@ def _config_logging(config: Dict[str, Any]
                     ) -> None:
     logger = logging.getLogger("lightning")
     handler = logging.handlers.RotatingFileHandler(
-        Path(config['trainer']['default_root_dir']) / 'run.log', maxBytes=(1048576*5), backupCount=7
+        Path(config['trainer']['default_root_dir']) / 'run.log', maxBytes=(1048576 * 5), backupCount=7
     )
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
@@ -53,12 +51,17 @@ def train(model: str = typer.Argument(..., help="the model to run"),
         print(f"the config file cannot be found. Please check the path '{config_file}'!")
         exit(-1)
 
-    container = build_container(model)
+    container = build_container(model, config_file)
     module = container.module()
 
-    trainer = TrainerBuilder(container).build()
+    config = container.config
+    trainer_builder = TrainerBuilder(config.trainer())
+    trainer_builder = trainer_builder.add_checkpoint_callback(config.trainer.checkpoints())
+    trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.logger()).build())
+    trainer_builder = trainer_builder.add_callback(
+        CallbackBuilder(name="metric_logger", parameters=config.module.metrics()).build())
 
-    # _config_logging(container.config())
+    trainer = trainer_builder.build()
 
     if do_train:
         trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
@@ -77,12 +80,11 @@ def predict(model: str = typer.Argument(..., help="the model to run"),
             log_input: Optional[bool] = typer.Option(default=False, help='enable input logging.'),
             strip_pad_token: Optional[bool] = typer.Option(default=True, help='strip pad token, if input is logged.')
             ):
-
     if not overwrite and output_file.exists():
         print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
         exit(-1)
 
-    container = build_container(model)
+    container = build_container(model, config_file)
     module = container.module()
 
     # FIXME: try to use load_from_checkpoint later
@@ -99,13 +101,18 @@ def predict(model: str = typer.Argument(..., help="the model to run"),
 
     test_loader = container.test_loader()
 
-    callbacks = [
-        PredictionLoggerCallback(output_file_path=output_file,
-                                 log_input=log_input,
-                                 tokenizer=container.tokenizer(),
-                                 strip_padding_tokens=strip_pad_token)
-    ]
-    trainer = Trainer(callbacks=callbacks, gpus=gpu)
+    callback_params = {
+        "output_file_path": output_file,
+        "log_input": log_input,
+        "tokenizer": container.tokenizer(),
+        "strip_padding_tokens": strip_pad_token
+    }
+    config = container.config
+    trainer_builder = TrainerBuilder(config.trainer())
+    trainer_builder = trainer_builder.add_callback(CallbackBuilder("prediction_logger", callback_params).build())
+    trainer_builder = trainer_builder.set("gpus", gpu)
+    trainer = trainer_builder.build()
+
     trainer.test(module, test_dataloaders=test_loader)
 
 

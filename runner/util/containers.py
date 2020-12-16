@@ -37,12 +37,16 @@ def build_default_config() -> providers.Configuration:
     # init some default values
     config.from_dict({
         'trainer': {
-            'experiment_name': 'basic_experiment',
             'limit_train_batches': 1.0,
             'limit_val_batches': 1.0,
             'gradient_clip_val': 0.0,
             'default_root_dir': '/tmp/',
-            'max_epochs': 20
+            'max_epochs': 20,
+        },
+        'logger' : {
+            'name': "tensorboard",
+            'experiment_name': 'basic_experiment',
+            'log_dir': '/tmp/logs'
         },
         'model': {
             'embedding_mode': None
