@@ -339,21 +339,6 @@ def provide_nextit_loader(dataset: Dataset,
     )
 
 
-def trainer_factory(config: providers.Configuration) -> Trainer:
-    checkpoint = build_standard_model_checkpoint(config)
-    logger = select_and_build_logger_provider(config)
-    logging_callbacks = build_standard_logging_callbacks_provider(config.module.metrics)
-
-    trainer_config = config.trainer
-    trainer_builder = TrainerBuilder().from_config(trainer_config())
-    trainer_builder.set_kw(logger=logger(), checkpoint_callback=checkpoint()).add_callbacks(logging_callbacks())
-    return trainer_builder.build()
-
-
-def build_standard_trainer(config: providers.Configuration) -> providers.Factory:
-    return providers.Factory(trainer_factory, config=config.provider)
-
-
 def build_standard_model_checkpoint(config: providers.Configuration) -> providers.Singleton:
     return providers.Singleton(
         ModelCheckpoint,

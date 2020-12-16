@@ -11,20 +11,22 @@ from pytorch_lightning.utilities import cloud_io
 
 from runner.util.callbacks import PredictionLoggerCallback
 from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer
-
+from runner.util.trainer_builder import TrainerBuilder
 
 app = typer.Typer()
 
 
 # TODO: introduce a subclass for all container configurations?
-def build_container(model_id) -> containers.DeclarativeContainer:
-    return {
+def build_container(model_id: str, config_file: str) -> containers.DeclarativeContainer:
+    container = {
         'bert4rec': BERT4RecContainer(),
         'sasrec': SASRecContainer(),
         'caser': CaserContainer(),
         "narm": NarmContainer(),
         "rnn": RNNContainer()
     }[model_id]
+    container.config.from_yaml(config_file)
+    return container
 
 
 # FIXME: progress bar is not logged :(
@@ -52,10 +54,9 @@ def train(model: str = typer.Argument(..., help="the model to run"),
         exit(-1)
 
     container = build_container(model)
-    container.config.from_yaml(config_file)
     module = container.module()
 
-    trainer = container.trainer()
+    trainer = TrainerBuilder(container).build()
 
     # _config_logging(container.config())
 
@@ -82,7 +83,6 @@ def predict(model: str = typer.Argument(..., help="the model to run"),
         exit(-1)
 
     container = build_container(model)
-    container.config.from_yaml(config_file)
     module = container.module()
 
     # FIXME: try to use load_from_checkpoint later

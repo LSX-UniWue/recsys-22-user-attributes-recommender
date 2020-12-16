@@ -12,7 +12,7 @@ from modules import BERT4RecModule, CaserModule, SASRecModule
 from modules.rnn_module import GRUModule
 from modules.narm_module import NarmModule
 from runner.util.provider_utils import build_tokenizer_provider, build_session_loader_provider_factory, \
-    build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, build_standard_trainer, \
+    build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, \
     build_processors_provider
 
 DEFAULT_PROCESSORS = {
@@ -148,8 +148,6 @@ class BERT4RecContainer(containers.DeclarativeContainer):
                                                                validation_processors)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
-    # trainer
-    trainer = build_standard_trainer(config)
 
 class CaserContainer(containers.DeclarativeContainer):
 
@@ -188,9 +186,6 @@ class CaserContainer(containers.DeclarativeContainer):
     validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
                                                                validation_processors)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
-
-    # trainer
-    trainer = build_standard_trainer(config)
 
 
 class SASRecContainer(containers.DeclarativeContainer):
@@ -234,8 +229,6 @@ class SASRecContainer(containers.DeclarativeContainer):
                                                                validation_processors)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
-    trainer = build_standard_trainer(config)
-
 
 class NarmContainer(containers.DeclarativeContainer):
 
@@ -274,8 +267,6 @@ class NarmContainer(containers.DeclarativeContainer):
     validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
                                                                validation_processors)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
-
-    trainer = build_standard_trainer(config)
 
 
 class RNNContainer(containers.DeclarativeContainer):
@@ -316,5 +307,3 @@ class RNNContainer(containers.DeclarativeContainer):
     validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
                                                                validation_processors)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
-
-    trainer = build_standard_trainer(config)
