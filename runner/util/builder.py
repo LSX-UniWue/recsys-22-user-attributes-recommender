@@ -10,57 +10,57 @@ from metrics.utils.metric_utils import build_metrics
 from runner.util.callbacks import PredictionLoggerCallback
 
 TRAINER_INIT_KEYS = ['logger',
-        'checkpoint_callback',
-        'callbacks',
-        'default_root_dir',
-        'gradient_clip_val',
-        'process_position',
-        'num_nodes',
-        'num_processes',
-        'gpus',
-        'auto_select_gpus',
-        'tpu_cores',
-        'log_gpu_memory',
-        'progress_bar_refresh_rate',
-        'overfit_batches',
-        'track_grad_norm',
-        'check_val_every_n_epoch',
-        'fast_dev_run',
-        'accumulate_grad_batches',
-        'max_epochs',
-        'min_epochs',
-        'max_steps',
-        'min_steps',
-        'limit_train_batches',
-        'limit_val_batches',
-        'limit_test_batches',
-        'val_check_interval',
-        'flush_logs_every_n_steps',
-        'log_every_n_steps',
-        'accelerator',
-        'sync_batchnorm',
-        'precision',
-        'weights_summary',
-        'weights_save_path',
-        'num_sanity_val_steps',
-        'truncated_bptt_steps',
-        'resume_from_checkpoint',
-        'profiler',
-        'benchmark',
-        'deterministic',
-        'reload_dataloaders_every_epoch',
-        'auto_lr_find',
-        'replace_sampler_ddp',
-        'terminate_on_nan',
-        'auto_scale_batch_size',
-        'prepare_data_per_node',
-        'plugins',
-        'amp_backend',
-        'amp_level',
-        'distributed_backend',
-        'automatic_optimization',
-        'move_metrics_to_cpu',
-        'enable_pl_optimizer']
+                     'checkpoint_callback',
+                     'callbacks',
+                     'default_root_dir',
+                     'gradient_clip_val',
+                     'process_position',
+                     'num_nodes',
+                     'num_processes',
+                     'gpus',
+                     'auto_select_gpus',
+                     'tpu_cores',
+                     'log_gpu_memory',
+                     'progress_bar_refresh_rate',
+                     'overfit_batches',
+                     'track_grad_norm',
+                     'check_val_every_n_epoch',
+                     'fast_dev_run',
+                     'accumulate_grad_batches',
+                     'max_epochs',
+                     'min_epochs',
+                     'max_steps',
+                     'min_steps',
+                     'limit_train_batches',
+                     'limit_val_batches',
+                     'limit_test_batches',
+                     'val_check_interval',
+                     'flush_logs_every_n_steps',
+                     'log_every_n_steps',
+                     'accelerator',
+                     'sync_batchnorm',
+                     'precision',
+                     'weights_summary',
+                     'weights_save_path',
+                     'num_sanity_val_steps',
+                     'truncated_bptt_steps',
+                     'resume_from_checkpoint',
+                     'profiler',
+                     'benchmark',
+                     'deterministic',
+                     'reload_dataloaders_every_epoch',
+                     'auto_lr_find',
+                     'replace_sampler_ddp',
+                     'terminate_on_nan',
+                     'auto_scale_batch_size',
+                     'prepare_data_per_node',
+                     'plugins',
+                     'amp_backend',
+                     'amp_level',
+                     'distributed_backend',
+                     'automatic_optimization',
+                     'move_metrics_to_cpu',
+                     'enable_pl_optimizer']
 
 
 class TrainerBuilder:
@@ -70,7 +70,7 @@ class TrainerBuilder:
         self.callbacks = []
         self.loggers = []
         self.strict = strict
-        
+
         if trainer_parameters is not None:
             self.load_dict(trainer_parameters)
 
@@ -132,7 +132,7 @@ LOGGER_REGISTRY = {
 
 class LoggerBuilder:
 
-    def __init__(self,name: str = None, parameters: Dict[str, Any] = None):
+    def __init__(self, name: str = None, parameters: Dict[str, Any] = None):
         self.parameters = parameters if parameters is not None else {}
         self.name = name
 
@@ -170,10 +170,12 @@ def _build_prediction_logger_callback(parameters: Dict[str, Any]) -> Callback:
         strip_padding_tokens=parameters["strip_padding_tokens"]
     )
 
+
 CALLBACK_REGISTRY = {
     "metric_logger": _build_metric_logger_callback,
     "prediction_logger": _build_prediction_logger_callback
 }
+
 
 class CallbackBuilder:
 
