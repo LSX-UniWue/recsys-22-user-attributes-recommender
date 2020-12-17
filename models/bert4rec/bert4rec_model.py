@@ -1,12 +1,71 @@
+import math
 from abc import abstractmethod
 
-import math
 import torch
-
 from torch import nn
 
-from configs.models.bert4rec.bert4rec_config import BERT4RecConfig
-from models.layers.transformer_layers import TransformerEmbedding
+import torch.nn.functional as F
+
+
+BERT4REC_PROJECT_TYPE_LINEAR = 'linear'
+
+
+class BERT4RecProjectionLayer(nn.Module):
+
+    @abstractmethod
+    def forward(self, dense: torch.Tensor) -> torch.Tensor:
+        pass
+
+
+def _build_projection_layer(project_type: str,
+                            transformer_hidden_size: int,
+                            item_voc_size: int,
+                            embedding: nn.Embedding
+                            ) -> BERT4RecProjectionLayer:
+    if project_type == BERT4REC_PROJECT_TYPE_LINEAR:
+        return BERT4RecLinearProjectionLayer(transformer_hidden_size, item_voc_size)
+
+    if project_type == 'transpose_embedding':
+        return BERT4RecItemEmbeddingProjectionLayer(item_voc_size, embedding)
+
+    raise KeyError(f'{project_type} invalid projection layer')
+
+
+class BERT4RecLinearProjectionLayer(BERT4RecProjectionLayer):
+
+    def __init__(self,
+                 transformer_hidden_size: int,
+                 item_vocab_size: int):
+        super().__init__()
+
+        self.linear = nn.Linear(transformer_hidden_size, item_vocab_size)
+
+    def forward(self, dense: torch.Tensor) -> torch.Tensor:
+        return self.linear(dense)
+
+
+class BERT4RecItemEmbeddingProjectionLayer(BERT4RecProjectionLayer):
+
+    def __init__(self,
+                 item_vocab_size: int,
+                 embedding: nn.Embedding
+                 ):
+        super().__init__()
+
+        self.item_vocab_size = item_vocab_size
+
+        self.embedding = embedding
+        self.output_bias = nn.Parameter(torch.Tensor(self.item_vocab_size))
+
+        self.init_weights()
+
+    def init_weights(self):
+        bound = 1 / math.sqrt(self.item_vocab_size)
+        nn.init.uniform_(self.output_bias, -bound, bound)
+
+    def forward(self, dense: torch.Tensor) -> torch.Tensor:
+        dense = torch.matmul(dense, self.embedding.weight.transpose(0, 1))  # (S, N, I)
+        return dense + self.output_bias
 
 
 class BERT4RecBaseModel(nn.Module):
@@ -15,109 +74,53 @@ class BERT4RecBaseModel(nn.Module):
                  transformer_hidden_size: int,
                  num_transformer_heads: int,
                  num_transformer_layers: int,
+                 item_vocab_size: int,
+                 max_seq_length: int,
                  transformer_dropout: float,
-                 init_range: float
+                 project_layer_type: str = 'transpose_embedding',
+                 embedding_mode: str = None
                  ):
         super().__init__()
 
-        self.transformer_hidden_size = transformer_hidden_size
-        self.num_transformer_heads = num_transformer_heads
-        self.num_transformer_layers = num_transformer_layers
-        self.transformer_dropout = transformer_dropout
+        max_seq_length = max_seq_length + 1
 
-        encoder_layers = nn.TransformerEncoderLayer(d_model=self.transformer_hidden_size,
-                                                    nhead=self.num_transformer_heads,
-                                                    dim_feedforward=self.transformer_hidden_size * 4,
-                                                    dropout=self.transformer_dropout,
-                                                    activation='gelu')
+        self.embedding = BERTEmbedding(vocab_size=item_vocab_size, embed_size=transformer_hidden_size,
+                                       max_len=max_seq_length, dropout=transformer_dropout)
 
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layers,
-                                                         num_layers=self.num_transformer_heads)
+        # multi-layers transformer blocks, deep network
+        self.transformer_blocks = nn.ModuleList(
+            [TransformerBlock(transformer_hidden_size, num_transformer_heads, transformer_hidden_size * 4, transformer_dropout) for _ in range(num_transformer_layers)])
 
-        # for decoding the sequence into the item space again
-        self.linear = nn.Linear(self.transformer_hidden_size, self.transformer_hidden_size)
+        self.transform = nn.Linear(transformer_hidden_size, transformer_hidden_size)
+
         self.gelu = nn.GELU()
-        self.layer_norm = nn.LayerNorm(self.transformer_hidden_size)
 
-        self.model_init_range = init_range
-        #self._init_weights()
-
-    def _init_weights(self):
-        for module in self.modules():
-            if isinstance(module, (nn.Linear, nn.Embedding)):
-                module.weight.data.normal_(mean=0.0, std=self.model_init_range)
-            elif isinstance(module, nn.LayerNorm):
-                module.bias.data.zero_()
-                module.weight.data.fill_(1.0)
-            if isinstance(module, nn.Linear) and module.bias is not None:
-                module.bias.data.zero_()
+        self.projection_layer = _build_projection_layer(project_layer_type, transformer_hidden_size, item_vocab_size,
+                                                        self.embedding.token)
 
     def forward(self,
-                input_seq: torch.Tensor,
+                sequence: torch.Tensor,
                 position_ids: torch.Tensor = None,
                 padding_mask: torch.Tensor = None,
                 **kwargs
                 ) -> torch.Tensor:
-        """
-        forward pass to calculate the scores for the mask item modelling
 
-        :param input_seq: the input sequence :math:`(S, N)`
-        :param position_ids: (optional) positional_ids if None the position ids are generated :math:`(S, N)`
-        :param padding_mask: (optional) the padding mask if the sequence is padded :math:`(N, S)`
-        :return: the logits of the predicted tokens :math:`(S, N, I)`
-        (Note: all logits for all positions are returned. For loss calculation please only use the positions of the
-        MASK tokens.)
+        # embedding the indexed sequence to sequence of vectors
+        encoded_sequence = self.embedding(sequence)
 
-        Where S is the (max) sequence length of the batch, N the batch size, and I the vocabulary size of the items.
-        """
-        # H is the transformer hidden size
-        # embed the input
-        input_seq = self._embed_input(input_sequence=input_seq,
-                                      position_ids=position_ids,
-                                      kwargs=kwargs)  # (S, N, H)
+        if padding_mask is not None:
+            padding_mask = padding_mask.unsqueeze(1).repeat(1, sequence.size(1), 1).unsqueeze(1)
 
-        # use the bidirectional transformer
-        input_seq = self.transformer_encoder(src=input_seq,
-                                             src_key_padding_mask=padding_mask)  # (S, N, H)
+        # running over multiple transformer blocks
+        for transformer in self.transformer_blocks:
+            encoded_sequence = transformer.forward(encoded_sequence, padding_mask)
 
-        # decode the hidden representation
-        dense = self.gelu(self.linear(input_seq))  # (S, N, H)
+        transformed = self.gelu(self.transform(encoded_sequence))
 
-        # norm the output
-        dense = self.layer_norm(dense)  # (S, N, H)
-
-        return self._projection(dense)
-
-    @abstractmethod
-    def _embed_input(self,
-                     input_sequence: torch.Tensor,
-                     position_ids: torch.Tensor,
-                     **kwargs
-                     ) -> torch.Tensor:
-        pass
-
-    @abstractmethod
-    def _projection(self,
-                    dense: torch.Tensor
-                    ) -> torch.Tensor:
-        pass
+        return self.projection_layer(transformed)
 
 
 class BERT4RecModel(BERT4RecBaseModel):
-    """
-        implementation of the paper "BERT4Rec: Sequential Recommendation with Bidirectional Encoder Representations
-        from Transformer"
-        see https://doi.org/10.1145%2f3357384.3357895 for more details.
-    """
-
-    @classmethod
-    def from_config(cls, config: BERT4RecConfig):
-        return cls(transformer_hidden_size=config.transformer_hidden_size,
-                   num_transformer_heads=config.num_transformer_heads,
-                   num_transformer_layers=config.num_transformer_layers,
-                   item_vocab_size=config.item_vocab_size,
-                   max_seq_length=config.max_seq_length,
-                   transformer_dropout=config.transformer_dropout)
 
     def __init__(self,
                  transformer_hidden_size: int,
@@ -126,49 +129,187 @@ class BERT4RecModel(BERT4RecBaseModel):
                  item_vocab_size: int,
                  max_seq_length: int,
                  transformer_dropout: float,
-                 init_range: float = 0.02,
-                 initializer_range: float = 0.02,
+                 project_layer_type: str = 'transpose_embedding',
                  embedding_mode: str = None
                  ):
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
                          num_transformer_layers=num_transformer_layers,
+                         item_vocab_size=item_vocab_size,
+                         max_seq_length=max_seq_length,
                          transformer_dropout=transformer_dropout,
-                         init_range=init_range)
+                         project_layer_type=project_layer_type,
+                         embedding_mode=embedding_mode)
 
-        self.item_vocab_size = item_vocab_size
-        self.max_seq_length = max_seq_length + 1
-        self.embedding_mode = embedding_mode
-        self.initializer_range = initializer_range
 
-        self.embedding = TransformerEmbedding(item_voc_size=self.item_vocab_size,
-                                              max_seq_len=self.max_seq_length,
-                                              embedding_size=self.transformer_hidden_size,
-                                              dropout=self.transformer_dropout,
-                                              embedding_mode=self.embedding_mode)
+class BERTEmbedding(nn.Module):
+    """
+    BERT Embedding which is consisted with under features
+        1. TokenEmbedding : normal embedding matrix
+        2. PositionalEmbedding : adding positional information using sin, cos
+        2. SegmentEmbedding : adding sentence segment info, (sent_A:1, sent_B:2)
 
-        self.projection_layer = nn.Linear(transformer_hidden_size, item_vocab_size)
+        sum of all these features are output of BERTEmbedding
+    """
 
-        # self.output_bias = nn.Parameter(torch.Tensor(self.item_vocab_size))
+    def __init__(self, vocab_size, embed_size, max_len, dropout=0.1):
+        """
+        :param vocab_size: total vocab size
+        :param embed_size: embedding size of token embedding
+        :param dropout: dropout rate
+        """
+        super().__init__()
+        self.token = nn.Embedding(vocab_size, embed_size)
+        self.position = nn.Embedding(max_len, embed_size)
+        self.dropout = nn.Dropout(p=dropout)
+        self.embed_size = embed_size
 
-        # self._init_weights()
+    def forward(self, sequence):
+        batch_size = sequence.size(0)
+        position_embedding = self.position.weight.unsqueeze(0).repeat(batch_size, 1, 1)
 
-    # def init_weights(self):
-    #     bound = 1 / math.sqrt(self.item_vocab_size)
-    #     nn.init.uniform_(self.output_bias, -bound, bound)
+        x = self.token(sequence) + position_embedding
+        return self.dropout(x)
 
-    def _embed_input(self,
-                     input_sequence: torch.Tensor,
-                     position_ids: torch.Tensor,
-                     **kwargs
-                     ) -> torch.Tensor:
-        return self.embedding(input_sequence=input_sequence,
-                              position_ids=position_ids)
 
-    def _projection(self,
-                    dense: torch.Tensor
-                    ) -> torch.Tensor:
-        return self.projection_layer(dense)
+class LayerNorm(nn.Module):
+    """
+        Construct a layernorm module (See citation for details)."
+    """
 
-        # dense = torch.matmul(dense, self.embedding.get_item_embedding_weight().transpose(0, 1))  # (S, N, I)
-        # return dense + self.output_bias
+    def __init__(self, features, eps=1e-6):
+        super(LayerNorm, self).__init__()
+        self.a_2 = nn.Parameter(torch.ones(features))
+        self.b_2 = nn.Parameter(torch.zeros(features))
+        self.eps = eps
+
+    def forward(self, x):
+        mean = x.mean(-1, keepdim=True)
+        std = x.std(-1, keepdim=True)
+        return self.a_2 * (x - mean) / (std + self.eps) + self.b_2
+
+
+class SublayerConnection(nn.Module):
+    """
+    A residual connection followed by a layer norm.
+    Note for code simplicity the norm is first as opposed to last.
+    """
+
+    def __init__(self, size, dropout):
+        super(SublayerConnection, self).__init__()
+        self.norm = LayerNorm(size)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, sublayer):
+        "Apply residual connection to any sublayer with the same size."
+        return x + self.dropout(sublayer(self.norm(x)))
+
+
+class Attention(nn.Module):
+    """
+    Compute 'Scaled Dot Product Attention
+    """
+
+    def forward(self, query, key, value, mask=None, dropout=None):
+        scores = torch.matmul(query, key.transpose(-2, -1)) \
+                 / math.sqrt(query.size(-1))
+
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, -1e9)
+
+        p_attn = F.softmax(scores, dim=-1)
+
+        if dropout is not None:
+            p_attn = dropout(p_attn)
+
+        return torch.matmul(p_attn, value), p_attn
+
+
+class MultiHeadedAttention(nn.Module):
+    """
+    Take in model size and number of heads.
+    """
+
+    def __init__(self,
+                 h,
+                 d_model,
+                 dropout: float=0.1
+                 ):
+        super().__init__()
+        assert d_model % h == 0
+
+        # We assume d_v always equals d_k
+        self.d_k = d_model // h
+        self.h = h
+
+        self.linear_layers = nn.ModuleList([nn.Linear(d_model, d_model) for _ in range(3)])
+        self.output_linear = nn.Linear(d_model, d_model)
+        self.attention = Attention()
+
+        self.dropout = nn.Dropout(p=dropout)
+
+    def forward(self,
+                query: torch.Tensor,
+                key: torch.Tensor,
+                value: torch.Tensor,
+                mask: torch.Tensor=None
+                ) -> torch.Tensor:
+        batch_size = query.size(0)
+
+        # 1) Do all the linear projections in batch from d_model => h x d_k
+        query, key, value = [l(x).view(batch_size, -1, self.h, self.d_k).transpose(1, 2)
+                             for l, x in zip(self.linear_layers, (query, key, value))]
+
+        # 2) Apply attention on all the projected vectors in batch.
+        x, attn = self.attention(query, key, value, mask=mask, dropout=self.dropout)
+
+        # 3) "Concat" using a view and apply a final linear.
+        x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
+
+        return self.output_linear(x)
+
+
+class PositionwiseFeedForward(nn.Module):
+    "Implements FFN equation."
+
+    def __init__(self, d_model, d_ff, dropout=0.1):
+        super(PositionwiseFeedForward, self).__init__()
+        self.w_1 = nn.Linear(d_model, d_ff)
+        self.w_2 = nn.Linear(d_ff, d_model)
+        self.dropout = nn.Dropout(dropout)
+        self.activation = nn.GELU()
+
+    def forward(self,
+                x: torch.Tensor
+                ) -> torch.Tensor:
+        return self.w_2(self.dropout(self.activation(self.w_1(x))))
+
+
+class TransformerBlock(nn.Module):
+    """
+    Bidirectional Encoder = Transformer (self-attention)
+    Transformer = MultiHead_Attention + Feed_Forward with sublayer connection
+    """
+
+    def __init__(self, hidden, attn_heads, feed_forward_hidden, dropout):
+        """
+        :param hidden: hidden size of transformer
+        :param attn_heads: head sizes of multi-head attention
+        :param feed_forward_hidden: feed_forward_hidden, usually 4*hidden_size
+        :param dropout: dropout rate
+        """
+
+        super().__init__()
+        self.attention = MultiHeadedAttention(h=attn_heads, d_model=hidden, dropout=dropout)
+        self.feed_forward = PositionwiseFeedForward(d_model=hidden, d_ff=feed_forward_hidden, dropout=dropout)
+        self.input_sublayer = SublayerConnection(size=hidden, dropout=dropout)
+        self.output_sublayer = SublayerConnection(size=hidden, dropout=dropout)
+        self.dropout = nn.Dropout(p=dropout)
+
+    def forward(self,
+                input_sequence: torch.Tensor,
+                mask: torch.Tensor
+                ) -> torch.Tensor:
+        input_sequence = self.input_sublayer(input_sequence, lambda _x: self.attention.forward(_x, _x, _x, mask=mask))
+        input_sequence = self.output_sublayer(input_sequence, self.feed_forward)
+        return self.dropout(input_sequence)

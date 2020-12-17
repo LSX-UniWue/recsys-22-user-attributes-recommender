@@ -3,7 +3,7 @@ from torch import nn
 
 import torch
 
-from models.bert4rec.bert4rec_model import BERT4RecBaseModel
+from models.bert4rec.bert4rec_model import BERT4RecBaseModel, BERT4REC_PROJECT_TYPE_LINEAR
 from models.layers.transformer_layers import TransformerEmbedding
 
 
@@ -45,11 +45,16 @@ class KeBERT4Rec(BERT4RecBaseModel):
                  item_vocab_size: int,
                  max_seq_length: int,
                  transformer_dropout: float,
-                 additional_attributes: Dict[str, (str, int)]):
+                 additional_attributes: Dict[str, (str, int)],
+                 embedding_mode: str = None):
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
                          num_transformer_layers=num_transformer_layers,
-                         transformer_dropout=transformer_dropout)
+                         transformer_dropout=transformer_dropout,
+                         item_vocab_size=item_vocab_size,
+                         max_seq_length=max_seq_length,
+                         project_layer_type=BERT4REC_PROJECT_TYPE_LINEAR,
+                         embedding_mode=embedding_mode)
 
         self.item_vocab_size = item_vocab_size
         self.max_seq_length = max_seq_length + 1
@@ -89,8 +94,3 @@ class KeBERT4Rec(BERT4RecBaseModel):
         embedding = self.layer_norm(embedding)
         embedding = self.dropout_layer(embedding)
         return embedding
-
-    def _projection(self,
-                    dense: torch.Tensor
-                    ) -> torch.Tensor:
-        return self.projection_layer(dense)

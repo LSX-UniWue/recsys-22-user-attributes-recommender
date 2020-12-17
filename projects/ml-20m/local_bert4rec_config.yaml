@@ -7,7 +7,6 @@ parser: &parser
 loader: &loader
   batch_size: 4
   max_seq_length: 200
-  pad_direction: right
 datasets:
   test:
     dataset:
@@ -37,7 +36,7 @@ model:
   num_transformer_layers: 2
   transformer_hidden_size: 64
   transformer_dropout: 0.1
-  init_range: 0.02
+  project_layer_type: linear
 module:
   mask_probability: 0.2
   beta_1: 0.9
@@ -45,8 +44,6 @@ module:
   learning_rate: 0.001
   weight_decay: 0.01
   num_warmup_steps: 100
-  batch_first: false
-  pad_direction: right
   sampled_metrics:
     sample_probability_file: ../dataset/dataset/ml-20m_5/popularity.txt
     num_negative_samples: 100

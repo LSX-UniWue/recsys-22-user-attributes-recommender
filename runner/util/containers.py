@@ -4,7 +4,6 @@ from dependency_injector import containers, providers
 
 from data.collate import PadDirection
 from models.bert4rec.bert4rec_model import BERT4RecModel
-from models.bert4rec.bert4rec_model_2 import BERT4RecModel2
 from models.caser.caser_model import CaserModel
 from models.narm.narm_model import NarmModel
 from models.rnn.rnn_model import RNNSeqItemRecommenderModel
@@ -105,10 +104,9 @@ class BERT4RecContainer(containers.DeclarativeContainer):
     config.from_dict({
         CONFIG_KEY_MODULE: {
             'num_warmup_steps': 10000,
-            'batch_first': True,
             'pad_direction': PadDirection.RIGHT.value,
             'mask_probability': 0.2,
-            'weight_decay': 0.01
+            'weight_decay': 0.001
         }
     })
     config.from_dict(MODULE_ADAM_OPTIMIZER_DEFAULT_VALUES)
@@ -133,7 +131,6 @@ class BERT4RecContainer(containers.DeclarativeContainer):
         weight_decay=module_config.weight_decay,
         num_warmup_steps=module_config.num_warmup_steps,
         tokenizer=tokenizer,
-        batch_first=module_config.batch_first,
         pad_direction=pad_direction
     )
 
@@ -170,7 +167,6 @@ class CaserContainer(containers.DeclarativeContainer):
     model = providers.Singleton(_kwargs_adapter, CaserModel, config.model)
 
     module_config = config.module
-
 
     module = providers.Singleton(
         CaserModule,

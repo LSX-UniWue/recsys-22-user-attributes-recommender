@@ -4,7 +4,6 @@ loader: &loader
   batch_size: 64
   max_seq_length: 200
   num_workers: 4
-  pad_direction: left
 datasets:
   test:
     dataset:
@@ -34,16 +33,14 @@ model:
   num_transformer_layers: 2
   transformer_hidden_size: 64
   transformer_dropout: 0.2
-  init_range: 0.02
+  project_layer_type: linear
 module:
-  batch_first: true
   mask_probability: 0.2
   beta_1: 0.99
   beta_2: 0.998
   learning_rate: 0.0001
   weight_decay: 0.00
   num_warmup_steps: 100
-  pad_direction: left
   sampled_metrics:
     sample_probability_file: /scratch/jane-doe-framework/datasets/ml-20m/popularity.txt
     num_negative_samples: 100

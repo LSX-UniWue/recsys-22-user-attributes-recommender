@@ -5,11 +5,10 @@ import pytorch_lightning as pl
 from typing import Tuple, Union, Dict, Optional
 
 from torch import nn
-from torch.optim.lr_scheduler import LambdaLR, StepLR
+from torch.optim.lr_scheduler import LambdaLR
 
 from data.collate import PadDirection
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
-from models.bert4rec.bert4rec_model_2 import BERT4RecModel2
 from modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TEST_LOSS, LOG_KEY_TRAINING_LOSS
 from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
@@ -34,7 +33,6 @@ class BERT4RecModule(pl.LightningModule):
                  weight_decay: float,
                  num_warmup_steps: int,
                  tokenizer: Tokenizer,
-                 batch_first: bool,
                  pad_direction: PadDirection
                  ):
         super().__init__()
@@ -49,7 +47,6 @@ class BERT4RecModule(pl.LightningModule):
         self.num_warmup_steps = num_warmup_steps
 
         self.tokenizer = tokenizer
-        self.batch_first = batch_first
         self.pad_direction = pad_direction
 
     def training_step(self,
@@ -60,15 +57,11 @@ class BERT4RecModule(pl.LightningModule):
         position_ids = BERT4RecModule.get_position_ids(batch)
         input_seq = _expand_sequence(inputs=input_seq, tokenizer=self.tokenizer, pad_direction=self.pad_direction)
 
-        if self.batch_first:
-            input_seq = input_seq.transpose(0, 1)
-            if position_ids is not None:
-                position_ids = position_ids.transpose(0, 1)
-
         # calc the padding mask
         padding_mask = get_padding_mask(tensor=input_seq,
                                         tokenizer=self.tokenizer,
-                                        transposed=True)
+                                        transposed=False,
+                                        inverse=True)
 
         # random mask some items
         # FIXME: paper quote: we also produce samples that only mask the last item
@@ -104,11 +97,7 @@ class BERT4RecModule(pl.LightningModule):
         loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)
 
         flatten_predictions = prediction_logits.view(-1, vocab_size)
-
-        if self.batch_first and len(target.size()) > 1:
-            flatten_targets = target.transpose(0, 1).view(-1)
-        else:
-            flatten_targets = target.view(-1)
+        flatten_targets = target.view(-1)
         return loss_func(flatten_predictions, flatten_targets)
 
     def validation_step(self,
@@ -131,14 +120,8 @@ class BERT4RecModule(pl.LightningModule):
         input_seq = _add_mask_token_at_ending(original_input_seq, self.tokenizer, pad_direction=self.pad_direction)
         target_mask = input_seq.eq(self.tokenizer.mask_token_id)
 
-        if self.batch_first:
-            input_seq = input_seq.transpose(1, 0)
-            target_mask = target_mask.transpose(1, 0)
-            if position_ids is not None:
-                position_ids = position_ids.transpose(1, 0)
-
         # after adding the mask token we can calculate the padding mask
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=True)
+        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
         # get predictions for all seq steps
         prediction = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
@@ -194,15 +177,12 @@ class BERT4RecModule(pl.LightningModule):
 
 def _expand_sequence(inputs: torch.Tensor,
                      tokenizer: Tokenizer,
-                     batch_first: bool = True,
                      pad_direction: PadDirection = PadDirection.RIGHT
                      ) -> torch.Tensor:
     if tokenizer.pad_token is None:
         raise ValueError("This tokenizer does not have a padding token which is required for the BERT4Rec model.")
     input_shape = inputs.shape
-    shape_addition_padding = (1, input_shape[1])
-    if batch_first:
-        shape_addition_padding = (input_shape[0], 1)
+    shape_addition_padding = (input_shape[0], 1)
 
     # generate a tensor with the addition seq step (filled with padding tokens)
     additional_padding = torch.full(shape_addition_padding, tokenizer.pad_token_id,
@@ -212,7 +192,7 @@ def _expand_sequence(inputs: torch.Tensor,
         additional_padding = additional_padding.repeat(1, input_shape[2]).unsqueeze(1)
 
     tensors_to_cat = [inputs, additional_padding] if pad_direction == PadDirection.RIGHT else [additional_padding, inputs]
-    return torch.cat(tensors_to_cat, dim=1 if batch_first else 0)
+    return torch.cat(tensors_to_cat, dim=1)
 
 
 def _add_mask_token_at_ending(input_seq: torch.Tensor,
