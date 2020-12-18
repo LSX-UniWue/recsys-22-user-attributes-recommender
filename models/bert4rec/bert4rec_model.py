@@ -4,9 +4,7 @@ from abc import abstractmethod
 import torch
 from torch import nn
 
-import torch.nn.functional as F
-
-from models.layers.transformer_layers import TransformerEmbedding
+from models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
 
 BERT4REC_PROJECT_TYPE_LINEAR = 'linear'
 
@@ -14,7 +12,9 @@ BERT4REC_PROJECT_TYPE_LINEAR = 'linear'
 class BERT4RecProjectionLayer(nn.Module):
 
     @abstractmethod
-    def forward(self, dense: torch.Tensor) -> torch.Tensor:
+    def forward(self,
+                dense: torch.Tensor
+                ) -> torch.Tensor:
         pass
 
 
@@ -83,9 +83,9 @@ class BERT4RecBaseModel(nn.Module):
                  ):
         super().__init__()
 
-        # multi-layers transformer blocks, deep network
-        self.transformer_blocks = nn.ModuleList(
-            [TransformerBlock(transformer_hidden_size, num_transformer_heads, transformer_hidden_size * 4, transformer_dropout) for _ in range(num_transformer_layers)])
+        self.transformer_encoder = TransformerLayer(transformer_hidden_size, num_transformer_heads,
+                                                    num_transformer_layers, transformer_hidden_size * 4,
+                                                    transformer_dropout)
 
         self.transform = nn.Linear(transformer_hidden_size, transformer_hidden_size)
         self.gelu = nn.GELU()
@@ -120,16 +120,23 @@ class BERT4RecBaseModel(nn.Module):
                 padding_mask: torch.Tensor = None,
                 **kwargs
                 ) -> torch.Tensor:
+        """
+        forward pass to calculate the scores for the mask item modelling
+
+        :param sequence: the input sequence :math:`(N, S)`
+        :param position_ids: (optional) positional_ids if None the position ids are generated :math:`(N, S)`
+        :param padding_mask: (optional) the padding mask if the sequence is padded :math:`(N, S)`
+        :return: the logits of the predicted tokens :math:`(N, S, I)`
+        (Note: all logits for all positions are returned. For loss calculation please only use the positions of the
+        MASK tokens.)
+
+        Where N the batch size, S is the (max) sequence length of the batch, and I the vocabulary size of the items.
+        """
 
         # embedding the indexed sequence to sequence of vectors
-        encoded_sequence = self.embedding(sequence, position_ids=position_ids)
+        embedded_sequence = self.embedding(sequence, position_ids=position_ids)
 
-        if padding_mask is not None:
-            padding_mask = padding_mask.unsqueeze(1).repeat(1, sequence.size(1), 1).unsqueeze(1)
-
-        # running over multiple transformer blocks
-        for transformer in self.transformer_blocks:
-            encoded_sequence = transformer.forward(encoded_sequence, padding_mask)
+        encoded_sequence = self.transformer_encoder(embedded_sequence, padding_mask=padding_mask)
 
         transformed = self.gelu(self.transform(encoded_sequence))
 
@@ -145,6 +152,12 @@ class BERT4RecBaseModel(nn.Module):
 
 
 class BERT4RecModel(BERT4RecBaseModel):
+    """
+        implementation of the paper "BERT4Rec: Sequential Recommendation with Bidirectional Encoder Representations
+        from Transformer"
+        see https://doi.org/10.1145%2f3357384.3357895 for more details.
+        Using own transformer implementation to be able to pass batch first tensors to the model
+    """
 
     def __init__(self,
                  transformer_hidden_size: int,
@@ -192,185 +205,3 @@ class BERT4RecModel(BERT4RecBaseModel):
                      **kwargs
                      ) -> torch.Tensor:
         return self.embedding(sequence, position_ids=position_ids)
-
-
-
-class BERTEmbedding(nn.Module):
-    """
-    BERT Embedding which is consisted with under features
-        1. TokenEmbedding : normal embedding matrix
-        2. PositionalEmbedding : adding positional information using sin, cos
-        2. SegmentEmbedding : adding sentence segment info, (sent_A:1, sent_B:2)
-
-        sum of all these features are output of BERTEmbedding
-    """
-
-    def __init__(self, vocab_size, embed_size, max_len, dropout=0.1):
-        """
-        :param vocab_size: total vocab size
-        :param embed_size: embedding size of token embedding
-        :param dropout: dropout rate
-        """
-        super().__init__()
-        self.token = nn.Embedding(vocab_size, embed_size)
-        self.position = nn.Embedding(max_len, embed_size)
-        self.dropout = nn.Dropout(p=dropout)
-        self.embed_size = embed_size
-
-    def forward(self, sequence):
-        batch_size = sequence.size(0)
-        position_embedding = self.position.weight.unsqueeze(0).repeat(batch_size, 1, 1)
-
-        x = self.token(sequence) + position_embedding
-        return self.dropout(x)
-
-
-class LayerNorm(nn.Module):
-    """
-        Construct a layernorm module (See citation for details)."
-    """
-
-    def __init__(self, features, eps=1e-6):
-        super().__init__()
-        self.a_2 = nn.Parameter(torch.ones(features))
-        self.b_2 = nn.Parameter(torch.zeros(features))
-        self.eps = eps
-
-    def forward(self, x):
-        mean = x.mean(-1, keepdim=True)
-        std = x.std(-1, keepdim=True)
-        return self.a_2 * (x - mean) / (std + self.eps) + self.b_2
-
-
-class SublayerConnection(nn.Module):
-    """
-    A residual connection followed by a layer norm.
-    Note for code simplicity the norm is first as opposed to last.
-    """
-
-    def __init__(self, size, dropout):
-        super().__init__()
-        self.norm = LayerNorm(size)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, x, sublayer):
-        "Apply residual connection to any sublayer with the same size."
-        return x + self.dropout(sublayer(self.norm(x)))
-
-
-class Attention(nn.Module):
-    """
-    Computes 'Scaled Dot Product Attention
-    """
-    def forward(self, query, key, value, mask=None, dropout=None):
-        scores = torch.matmul(query, key.transpose(-2, -1)) \
-                 / math.sqrt(query.size(-1))
-
-        if mask is not None:
-            scores = scores.masked_fill(mask == 0, -1e9)
-
-        p_attn = F.softmax(scores, dim=-1)
-
-        if dropout is not None:
-            p_attn = dropout(p_attn)
-
-        return torch.matmul(p_attn, value), p_attn
-
-
-class MultiHeadedAttention(nn.Module):
-    """
-    Take in model size and number of heads.
-    """
-
-    def __init__(self,
-                 h: int,
-                 d_model: int,
-                 dropout: float = 0.1
-                 ):
-        super().__init__()
-        assert d_model % h == 0
-
-        # we assume d_v always equals d_k
-        self.d_k = d_model // h
-        self.h = h
-
-        self.linear_layers = nn.ModuleList([nn.Linear(d_model, d_model) for _ in range(3)])
-        self.output_linear = nn.Linear(d_model, d_model)
-        self.attention = Attention()
-
-        self.dropout = nn.Dropout(p=dropout)
-
-    def forward(self,
-                query: torch.Tensor,
-                key: torch.Tensor,
-                value: torch.Tensor,
-                mask: torch.Tensor = None
-                ) -> torch.Tensor:
-        batch_size = query.size(0)
-
-        # 1) Do all the linear projections in batch from d_model => h x d_k
-        query, key, value = [l(x).view(batch_size, -1, self.h, self.d_k).transpose(1, 2)
-                             for l, x in zip(self.linear_layers, (query, key, value))]
-
-        # 2) Apply attention on all the projected vectors in batch.
-        x, attn = self.attention(query, key, value, mask=mask, dropout=self.dropout)
-
-        # 3) "Concat" using a view and apply a final linear.
-        x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.h * self.d_k)
-
-        return self.output_linear(x)
-
-
-class PositionwiseFeedForward(nn.Module):
-    """
-    Implements FFN equation.
-    """
-
-    def __init__(self,
-                 d_model: int,
-                 d_ff: int,
-                 dropout: float = 0.1):
-        super(PositionwiseFeedForward, self).__init__()
-        self.w_1 = nn.Linear(d_model, d_ff)
-        self.w_2 = nn.Linear(d_ff, d_model)
-        self.dropout = nn.Dropout(dropout)
-        self.activation = nn.GELU()
-
-    def forward(self,
-                x: torch.Tensor
-                ) -> torch.Tensor:
-        return self.w_2(self.dropout(self.activation(self.w_1(x))))
-
-
-class TransformerBlock(nn.Module):
-    """
-    Bidirectional Encoder = Transformer (self-attention)
-    Transformer = MultiHead_Attention + Feed_Forward with sublayer connection
-    """
-
-    def __init__(self,
-                 hidden: int,
-                 attn_heads: int,
-                 feed_forward_hidden: int,
-                 dropout: float):
-        """
-        :param hidden: hidden size of transformer
-        :param attn_heads: head sizes of multi-head attention
-        :param feed_forward_hidden: feed_forward_hidden, usually 4*hidden_size
-        :param dropout: dropout rate
-        """
-
-        super().__init__()
-        self.attention = MultiHeadedAttention(h=attn_heads, d_model=hidden, dropout=dropout)
-        self.feed_forward = PositionwiseFeedForward(d_model=hidden, d_ff=feed_forward_hidden, dropout=dropout)
-        self.input_sublayer = SublayerConnection(size=hidden, dropout=dropout)
-        self.output_sublayer = SublayerConnection(size=hidden, dropout=dropout)
-        self.dropout = nn.Dropout(p=dropout)
-
-    def forward(self,
-                input_sequence: torch.Tensor,
-                mask: torch.Tensor
-                ) -> torch.Tensor:
-        input_sequence = self.input_sublayer(input_sequence, lambda _x: self.attention.forward(_x, _x, _x, mask=mask))
-        input_sequence = self.output_sublayer(input_sequence, self.feed_forward)
-        return self.dropout(input_sequence)
