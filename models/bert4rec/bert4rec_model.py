@@ -88,11 +88,31 @@ class BERT4RecBaseModel(nn.Module):
             [TransformerBlock(transformer_hidden_size, num_transformer_heads, transformer_hidden_size * 4, transformer_dropout) for _ in range(num_transformer_layers)])
 
         self.transform = nn.Linear(transformer_hidden_size, transformer_hidden_size)
-
         self.gelu = nn.GELU()
 
-        self.projection_layer = _build_projection_layer(project_layer_type, transformer_hidden_size, item_vocab_size,
-                                                        self.embedding)
+        self._init_internal(transformer_hidden_size, num_transformer_heads, num_transformer_layers, item_vocab_size,
+                            max_seq_length, transformer_dropout, embedding_mode)
+
+        self.projection_layer = self._build_projection_layer(project_layer_type, transformer_hidden_size,
+                                                             item_vocab_size)
+
+    def _init_internal(self,
+                       transformer_hidden_size: int,
+                       num_transformer_heads: int,
+                       num_transformer_layers: int,
+                       item_vocab_size: int,
+                       max_seq_length: int,
+                       transformer_dropout: float,
+                       embedding_mode: str = None):
+        pass
+
+    @abstractmethod
+    def _build_projection_layer(self,
+                                project_layer_type: str,
+                                transformer_hidden_size: int,
+                                item_vocab_size: int
+                                ) -> nn.Module:
+        pass
 
     def forward(self,
                 sequence: torch.Tensor,
@@ -145,11 +165,26 @@ class BERT4RecModel(BERT4RecBaseModel):
                          project_layer_type=project_layer_type,
                          embedding_mode=embedding_mode)
 
+    def _init_internal(self,
+                       transformer_hidden_size: int,
+                       num_transformer_heads: int,
+                       num_transformer_layers: int,
+                       item_vocab_size: int,
+                       max_seq_length: int,
+                       transformer_dropout: float,
+                       embedding_mode: str = None):
         max_seq_length = max_seq_length + 1
-
         self.embedding = TransformerEmbedding(item_voc_size=item_vocab_size, max_seq_len=max_seq_length,
                                               embedding_size=transformer_hidden_size, dropout=transformer_dropout,
                                               embedding_mode=embedding_mode, norm_embedding=False)
+
+    def _build_projection_layer(self,
+                                project_layer_type: str,
+                                transformer_hidden_size: int,
+                                item_vocab_size: int
+                                ) -> nn.Module:
+        return _build_projection_layer(project_layer_type, transformer_hidden_size, item_vocab_size,
+                                       self.embedding)
 
     def _embed_input(self,
                      sequence: torch.Tensor,
