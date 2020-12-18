@@ -46,7 +46,7 @@ class SASRecModel(nn.Module):
 
         encoder_layer = nn.TransformerEncoderLayer(d_model=self.transformer_hidden_size,
                                                    nhead=self.num_transformer_heads,
-                                                   dim_feedforward=self.transformer_hidden_size,
+                                                   dim_feedforward=self.transformer_hidden_size * 4,
                                                    dropout=self.dropout)
         encoder_norm = nn.LayerNorm(self.transformer_hidden_size)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layer,
