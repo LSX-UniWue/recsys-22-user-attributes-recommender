@@ -6,6 +6,7 @@ from torch import nn
 
 import torch.nn.functional as F
 
+from models.layers.transformer_layers import TransformerEmbedding
 
 BERT4REC_PROJECT_TYPE_LINEAR = 'linear'
 
@@ -20,7 +21,7 @@ class BERT4RecProjectionLayer(nn.Module):
 def _build_projection_layer(project_type: str,
                             transformer_hidden_size: int,
                             item_voc_size: int,
-                            embedding: nn.Embedding
+                            embedding: TransformerEmbedding
                             ) -> BERT4RecProjectionLayer:
     if project_type == BERT4REC_PROJECT_TYPE_LINEAR:
         return BERT4RecLinearProjectionLayer(transformer_hidden_size, item_voc_size)
@@ -48,7 +49,7 @@ class BERT4RecItemEmbeddingProjectionLayer(BERT4RecProjectionLayer):
 
     def __init__(self,
                  item_vocab_size: int,
-                 embedding: nn.Embedding
+                 embedding: TransformerEmbedding
                  ):
         super().__init__()
 
@@ -64,7 +65,7 @@ class BERT4RecItemEmbeddingProjectionLayer(BERT4RecProjectionLayer):
         nn.init.uniform_(self.output_bias, -bound, bound)
 
     def forward(self, dense: torch.Tensor) -> torch.Tensor:
-        dense = torch.matmul(dense, self.embedding.weight.transpose(0, 1))  # (S, N, I)
+        dense = torch.matmul(dense, self.embedding.get_item_embedding_weight().transpose(0, 1))  # (S, N, I)
         return dense + self.output_bias
 
 
@@ -82,11 +83,6 @@ class BERT4RecBaseModel(nn.Module):
                  ):
         super().__init__()
 
-        max_seq_length = max_seq_length + 1
-
-        self.embedding = BERTEmbedding(vocab_size=item_vocab_size, embed_size=transformer_hidden_size,
-                                       max_len=max_seq_length, dropout=transformer_dropout)
-
         # multi-layers transformer blocks, deep network
         self.transformer_blocks = nn.ModuleList(
             [TransformerBlock(transformer_hidden_size, num_transformer_heads, transformer_hidden_size * 4, transformer_dropout) for _ in range(num_transformer_layers)])
@@ -96,7 +92,7 @@ class BERT4RecBaseModel(nn.Module):
         self.gelu = nn.GELU()
 
         self.projection_layer = _build_projection_layer(project_layer_type, transformer_hidden_size, item_vocab_size,
-                                                        self.embedding.token)
+                                                        self.embedding)
 
     def forward(self,
                 sequence: torch.Tensor,
@@ -106,7 +102,7 @@ class BERT4RecBaseModel(nn.Module):
                 ) -> torch.Tensor:
 
         # embedding the indexed sequence to sequence of vectors
-        encoded_sequence = self.embedding(sequence)
+        encoded_sequence = self.embedding(sequence, position_ids=position_ids)
 
         if padding_mask is not None:
             padding_mask = padding_mask.unsqueeze(1).repeat(1, sequence.size(1), 1).unsqueeze(1)
@@ -118,6 +114,14 @@ class BERT4RecBaseModel(nn.Module):
         transformed = self.gelu(self.transform(encoded_sequence))
 
         return self.projection_layer(transformed)
+
+    @abstractmethod
+    def _embed_input(self,
+                     sequence: torch.Tensor,
+                     position_ids: torch.Tensor,
+                     **kwargs
+                     ) -> torch.Tensor:
+        pass
 
 
 class BERT4RecModel(BERT4RecBaseModel):
@@ -140,6 +144,20 @@ class BERT4RecModel(BERT4RecBaseModel):
                          transformer_dropout=transformer_dropout,
                          project_layer_type=project_layer_type,
                          embedding_mode=embedding_mode)
+
+        max_seq_length = max_seq_length + 1
+
+        self.embedding = TransformerEmbedding(item_voc_size=item_vocab_size, max_seq_len=max_seq_length,
+                                              embedding_size=transformer_hidden_size, dropout=transformer_dropout,
+                                              embedding_mode=embedding_mode, norm_embedding=False)
+
+    def _embed_input(self,
+                     sequence: torch.Tensor,
+                     position_ids: torch.Tensor,
+                     **kwargs
+                     ) -> torch.Tensor:
+        return self.embedding(sequence, position_ids=position_ids)
+
 
 
 class BERTEmbedding(nn.Module):
@@ -178,7 +196,7 @@ class LayerNorm(nn.Module):
     """
 
     def __init__(self, features, eps=1e-6):
-        super(LayerNorm, self).__init__()
+        super().__init__()
         self.a_2 = nn.Parameter(torch.ones(features))
         self.b_2 = nn.Parameter(torch.zeros(features))
         self.eps = eps
@@ -196,7 +214,7 @@ class SublayerConnection(nn.Module):
     """
 
     def __init__(self, size, dropout):
-        super(SublayerConnection, self).__init__()
+        super().__init__()
         self.norm = LayerNorm(size)
         self.dropout = nn.Dropout(dropout)
 
@@ -207,9 +225,8 @@ class SublayerConnection(nn.Module):
 
 class Attention(nn.Module):
     """
-    Compute 'Scaled Dot Product Attention
+    Computes 'Scaled Dot Product Attention
     """
-
     def forward(self, query, key, value, mask=None, dropout=None):
         scores = torch.matmul(query, key.transpose(-2, -1)) \
                  / math.sqrt(query.size(-1))
@@ -231,14 +248,14 @@ class MultiHeadedAttention(nn.Module):
     """
 
     def __init__(self,
-                 h,
-                 d_model,
-                 dropout: float=0.1
+                 h: int,
+                 d_model: int,
+                 dropout: float = 0.1
                  ):
         super().__init__()
         assert d_model % h == 0
 
-        # We assume d_v always equals d_k
+        # we assume d_v always equals d_k
         self.d_k = d_model // h
         self.h = h
 
@@ -252,7 +269,7 @@ class MultiHeadedAttention(nn.Module):
                 query: torch.Tensor,
                 key: torch.Tensor,
                 value: torch.Tensor,
-                mask: torch.Tensor=None
+                mask: torch.Tensor = None
                 ) -> torch.Tensor:
         batch_size = query.size(0)
 
@@ -270,9 +287,14 @@ class MultiHeadedAttention(nn.Module):
 
 
 class PositionwiseFeedForward(nn.Module):
-    "Implements FFN equation."
+    """
+    Implements FFN equation.
+    """
 
-    def __init__(self, d_model, d_ff, dropout=0.1):
+    def __init__(self,
+                 d_model: int,
+                 d_ff: int,
+                 dropout: float = 0.1):
         super(PositionwiseFeedForward, self).__init__()
         self.w_1 = nn.Linear(d_model, d_ff)
         self.w_2 = nn.Linear(d_ff, d_model)
@@ -291,7 +313,11 @@ class TransformerBlock(nn.Module):
     Transformer = MultiHead_Attention + Feed_Forward with sublayer connection
     """
 
-    def __init__(self, hidden, attn_heads, feed_forward_hidden, dropout):
+    def __init__(self,
+                 hidden: int,
+                 attn_heads: int,
+                 feed_forward_hidden: int,
+                 dropout: float):
         """
         :param hidden: hidden size of transformer
         :param attn_heads: head sizes of multi-head attention

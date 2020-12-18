@@ -30,8 +30,7 @@ class LinearUpscaler(nn.Module):
         # the input is a sequence of content ids without any order
         # so we convert them into a multi-hot encoding
         multi_hot = torch.nn.functional.one_hot(content_input, self.vocab_size).sum(2).float()
-        # 0 is the padding category, so zero it out#
-        # FIXME: not batch first
+        # 0 is the padding category, so zero it out
         multi_hot[:, :, 0] = 0
         return self.linear(multi_hot)
 
@@ -80,9 +79,6 @@ class KeBERT4Rec(BERT4RecBaseModel):
         self.embedding_norm = nn.LayerNorm(self.transformer_hidden_size)
         self.dropout_layer = nn.Dropout(p=self.transformer_dropout)
 
-        # for projection
-        self.projection_layer = nn.Linear(self.transformer_hidden_size, self.item_vocab_size)
-
     def _embed_input(self,
                      input_sequence: torch.Tensor,
                      position_ids: torch.Tensor,
@@ -91,6 +87,5 @@ class KeBERT4Rec(BERT4RecBaseModel):
         embedding = self.embedding(input_sequence, position_ids)
         for input_key, module in self.additional_attribute_embeddings:
             embedding += module(kwargs[input_key])
-        embedding = self.layer_norm(embedding)
         embedding = self.dropout_layer(embedding)
         return embedding
