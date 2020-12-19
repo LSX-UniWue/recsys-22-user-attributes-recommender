@@ -229,7 +229,7 @@ def _add_mask_token_at_ending(input_seq: torch.Tensor,
     if len(input_shape) > 2:
         padding_input_to_use = input_seq.max(dim=2).values
     # here we calculate the token mask (inverted padding mask)
-    token_mask = ~ get_padding_mask(padding_input_to_use, tokenizer, transposed=False)
+    token_mask = get_padding_mask(padding_input_to_use, tokenizer, transposed=False, inverse=True)
     # we calculate the length of the sequence, which is also the index of the first padding token
     first_padded_indices = token_mask.sum(dim=1)
     # convert the first_padding_indices to a boolean one hot vector

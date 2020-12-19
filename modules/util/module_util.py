@@ -10,7 +10,8 @@ from tokenization.tokenizer import Tokenizer
 def get_padding_mask(tensor: torch.Tensor,
                      tokenizer: Tokenizer,
                      transposed: bool = True,
-                     inverse: bool = False) -> torch.Tensor:
+                     inverse: bool = False
+                     ) -> torch.Tensor:
     """
     generates the padding mask based on the tokenizer (by default batch first)
     :param tensor:
