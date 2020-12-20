@@ -53,6 +53,21 @@ class BERT4RecModule(pl.LightningModule):
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
+        """
+        Performs a training step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
+        Optional entries are:
+            * `POSITION_IDS` a tensor of size (N, S) containing the position ids for the provided sequence
+
+        A padding mask will be generated on the fly, and also the masking of items
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return:
+        """
+
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         position_ids = BERT4RecModule.get_position_ids(batch)
         input_seq = _expand_sequence(inputs=input_seq, tokenizer=self.tokenizer, pad_direction=self.pad_direction)
@@ -104,6 +119,22 @@ class BERT4RecModule(pl.LightningModule):
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
                         ) -> Dict[str, torch.Tensor]:
+        """
+        Performs a validatio step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
+            * `TARGET_ENTRY_NAME`: a tensor of size (N) with the target items,
+        Optional entries are:
+            * `POSITION_IDS` a tensor of size (N, S) containing the position ids for the provided sequence
+
+        A padding mask will be generated on the fly, and also the masking of items
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return:
+        """
+
         return self._eval_epoch_step(batch, batch_idx)
 
     def _eval_epoch_step(self,
