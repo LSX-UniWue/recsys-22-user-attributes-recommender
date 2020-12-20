@@ -12,7 +12,8 @@ def _build_rnn_cell(cell_type: str,
                     hidden_size: int,
                     num_layers: int,
                     bidirectional: bool,
-                    dropout: float
+                    dropout: float,
+                    nonlinearity: str  # only for Elman RNN
                     ) -> nn.Module:
     if cell_type == 'gru':
         return nn.GRU(item_embedding_size, hidden_size,
@@ -26,6 +27,13 @@ def _build_rnn_cell(cell_type: str,
                                             bidirectional=bidirectional,
                                             dropout=dropout,
                                             num_layers=num_layers)
+
+    if cell_type == 'rnn':
+        return nn.RNN(item_embedding_size, hidden_size,
+                      bidirectional=bidirectional,
+                      dropout=dropout,
+                      num_layers=num_layers,
+                      nonlinearity=nonlinearity)
 
     raise ValueError(f'cell type "{cell_type}" not supported')
 
@@ -67,6 +75,7 @@ class RNNSeqItemRecommenderModel(nn.Module):
                  num_layers: int,
                  dropout: float,
                  bidirectional: bool = False,
+                 nonlinearity: str = None,  # for Elman RNN
                  embedding_pooling_type: str = None):
         super().__init__()
         self.embedding_pooling_type = embedding_pooling_type
@@ -80,7 +89,8 @@ class RNNSeqItemRecommenderModel(nn.Module):
             print("setting the dropout to 0 because the number of layers is 1")
             dropout = 0.0
 
-        self.rnn = _build_rnn_cell(cell_type, item_embedding_dim, hidden_size, num_layers, bidirectional, dropout)
+        self.rnn = _build_rnn_cell(cell_type, item_embedding_dim, hidden_size, num_layers, bidirectional, dropout,
+                                   nonlinearity)
         self.pooling = RNNPooler(hidden_size, item_vocab_size, bidirectional=bidirectional)
 
         self.dropout = nn.Dropout2d(p=dropout)
