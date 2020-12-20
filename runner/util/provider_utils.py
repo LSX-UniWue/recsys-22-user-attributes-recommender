@@ -223,7 +223,7 @@ def build_dataset_provider_factory(
         tokenizer_provider: providers.Provider,
         processors_provider: providers.Provider,
         dataset_config: providers.ConfigurationOption
-        ) -> providers.Factory:
+) -> providers.Factory:
     dataset_config = dataset_config.dataset
     parser_config = dataset_config.parser
 
@@ -341,6 +341,11 @@ def build_standard_trainer(config: providers.Configuration
                            ) -> providers.Singleton:
     checkpoint = build_standard_model_checkpoint(config)
     logger = select_and_build_logger_provider(config)
+
+    def _debug(config_dict):
+        print(config_dict)
+        return None
+
     logging_callbacks = build_standard_logging_callbacks_provider(config.module)
 
     trainer_config = config.trainer
@@ -398,26 +403,52 @@ def select_and_build_logger_provider(config: providers.Configuration
     return providers.Singleton(build_provider, config.trainer.logger.type, config)
 
 
-def build_standard_tensorboard_logger_provider(config: Dict[str, Any]) -> TensorBoardLogger:
+def build_standard_tensorboard_logger_provider(config: Dict[str, Any]
+                                               ) -> TensorBoardLogger:
     log_dir = Path(config["trainer"]["default_root_dir"], "logs")
     return TensorBoardLogger(save_dir=log_dir, name=config["trainer"]["experiment_name"])
 
 
-def build_mlflow_logger_provider(config: Dict[str, Any]) -> MLFlowLogger:
+def build_mlflow_logger_provider(config: Dict[str, Any]
+                                 ) -> MLFlowLogger:
     experiment_name = config["trainer"]["experiment_name"]
     tracking_uri = config["trainer"]["logger"]["tracking_uri"]
 
     return MLFlowLogger(experiment_name=experiment_name, tracking_uri=tracking_uri)
 
 
-def build_standard_logging_callbacks_provider(config: providers.Configuration
-                                              ) -> providers.List:
-    return providers.List(
-        build_metric_logger_provider(config.metrics),
-        build_sampled_metric_logger_provider(config.sampled_metrics)
-    )
+def _get_metrics_loggers_to_build(config_dict: Dict[str, Any]) -> str:
+    metrics = 'metrics' in config_dict
+    sampled_metrics = 'sampled_metrics' in config_dict
 
-def build_metric_logger_provider(config: providers.ConfigurationOption) -> providers.Singleton:
+    if metrics and sampled_metrics:
+        return 'all'
+
+    if metrics:
+        return 'metrics'
+
+    return 'sampled_metrics'
+
+
+def build_standard_logging_callbacks_provider(config: providers.Configuration
+                                              ) -> providers.Selector:
+    # FIXME: is there a better way to build the loggers based on the config?
+    selector = providers.Singleton(_get_metrics_loggers_to_build, config)
+    return providers.Selector(selector,
+                              all=providers.List(
+                                  build_metric_logger_provider(config.metrics),
+                                  build_sampled_metric_logger_provider(config.sampled_metrics)
+                              ),
+                              metrics=providers.List(
+                                  build_metric_logger_provider(config.metrics)
+                              ),
+                              sampled_metrics=providers.List(
+                                  build_sampled_metric_logger_provider(config.sampled_metrics)
+                              ))
+
+
+def build_metric_logger_provider(config: providers.ConfigurationOption
+                                 ) -> providers.Singleton:
     metric_provider = build_metrics_provider(config)
     return providers.Singleton(
         MetricLoggerCallback,
@@ -425,7 +456,8 @@ def build_metric_logger_provider(config: providers.ConfigurationOption) -> provi
     )
 
 
-def build_sampled_metric_logger_provider(config: providers.ConfigurationOption) -> providers.Singleton:
+def build_sampled_metric_logger_provider(config: providers.ConfigurationOption
+                                         ) -> providers.Singleton:
     metric_provider = build_sampled_metrics_provider(config.metrics)
     item_probabilities = providers.Singleton(convert_prob_file, config.sample_probability_file)
     return providers.Singleton(
