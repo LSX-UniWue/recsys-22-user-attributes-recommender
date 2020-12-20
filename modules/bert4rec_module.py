@@ -120,6 +120,10 @@ class BERT4RecModule(pl.LightningModule):
         input_seq = _add_mask_token_at_ending(original_input_seq, self.tokenizer, pad_direction=self.pad_direction)
         target_mask = input_seq.eq(self.tokenizer.mask_token_id)
 
+        # handle basket training and evaluation
+        if len(target_mask.size()) > 2:
+            target_mask = target_mask.max(dim=-1)[0]
+
         # after adding the mask token we can calculate the padding mask
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
 
