@@ -3,7 +3,6 @@ parser: &parser
 loader: &loader
   batch_size: 2
   max_seq_length: 5
-  pad_direction: left
 datasets:
   test:
     dataset:
@@ -34,7 +33,6 @@ model:
   transformer_dropout: 0.1
 module:
   mask_probability: 0.9
-  pad_direction: left
   metrics:
     mrr:
       - 1
