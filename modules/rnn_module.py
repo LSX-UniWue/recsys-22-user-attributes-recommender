@@ -13,7 +13,7 @@ from modules.util.module_util import get_padding_mask, convert_target_to_multi_h
 from tokenization.tokenizer import Tokenizer
 
 
-class GRUModule(pl.LightningModule):
+class RNNModule(pl.LightningModule):
 
     def __init__(self,
                  model: RNNSeqItemRecommenderModel,

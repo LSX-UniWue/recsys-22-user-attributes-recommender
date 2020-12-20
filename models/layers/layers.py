@@ -5,25 +5,31 @@ import torch
 from torch import nn as nn
 
 
+def _max_pooling(tensor: torch.Tensor
+                 ) -> torch.Tensor:
+    return tensor.max(dim=-2)[0]
+
+
 class ItemEmbedding(nn.Module):
     """
     embedding to use for the items
-    handles multiple items per sequence step, by averaging or summing the single embeddings
+    handles multiple items per sequence step, by averaging, summing or max the single embeddings
     """
 
     def __init__(self,
                  item_voc_size: int,
                  embedding_size: int,
-                 embedding_mode: str = None
+                 embedding_pooling_type: str = None
                  ):
         super().__init__()
         self.embedding_size = embedding_size
-        self.embedding_mode = embedding_mode
+        self.embedding_mode = embedding_pooling_type
         self.embedding = nn.Embedding(num_embeddings=item_voc_size,
                                       embedding_dim=self.embedding_size)
 
         self.embedding_flatten = {
             None: lambda x: x,
+            'max': partial(_max_pooling),
             'sum': partial(torch.sum, dim=-2),
             'mean': partial(torch.mean, dim=-2)
         }[self.embedding_mode]

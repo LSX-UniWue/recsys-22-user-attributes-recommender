@@ -45,7 +45,7 @@ class KeBERT4Rec(BERT4RecBaseModel):
                  max_seq_length: int,
                  transformer_dropout: float,
                  additional_attributes: Dict[str, (str, int)],
-                 embedding_mode: str = None):
+                 embedding_pooling_type: str = None):
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
                          num_transformer_layers=num_transformer_layers,
@@ -53,7 +53,7 @@ class KeBERT4Rec(BERT4RecBaseModel):
                          item_vocab_size=item_vocab_size,
                          max_seq_length=max_seq_length,
                          project_layer_type=BERT4REC_PROJECT_TYPE_LINEAR,
-                         embedding_mode=embedding_mode)
+                         embedding_pooling_type=embedding_pooling_type)
 
         self.item_vocab_size = item_vocab_size
         self.max_seq_length = max_seq_length + 1

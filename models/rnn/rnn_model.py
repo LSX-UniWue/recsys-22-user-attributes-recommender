@@ -67,13 +67,13 @@ class RNNSeqItemRecommenderModel(nn.Module):
                  num_layers: int,
                  dropout: float,
                  bidirectional: bool = False,
-                 embedding_mode: str = None):
+                 embedding_pooling_type: str = None):
         super().__init__()
-        self.embedding_mode = embedding_mode
+        self.embedding_pooling_type = embedding_pooling_type
 
         self.item_embeddings = ItemEmbedding(item_voc_size=item_vocab_size,
                                              embedding_size=item_embedding_dim,
-                                             embedding_mode=self.embedding_mode)
+                                             embedding_pooling_type=self.embedding_pooling_type)
 
         # FIXME: maybe this should not be done here
         if num_layers == 1 and dropout > 0:
@@ -107,17 +107,11 @@ class RNNStatePooler(nn.Module):
     def __init__(self):
         super().__init__()
 
+    @abstractmethod
     def forward(self,
                 outputs: torch.Tensor,
                 hidden_representation: torch.Tensor
                 ) -> torch.Tensor:
-        return self._pool(outputs, hidden_representation)
-
-    @abstractmethod
-    def _pool(self,
-              outputs: torch.Tensor,
-              hidden_representation: torch.Tensor
-              ) -> torch.Tensor:
         pass
 
 
@@ -134,7 +128,10 @@ class RNNPooler(RNNStatePooler):
 
         self.fcn = nn.Linear(self.directions * hidden_size, num_items, bias=True)
 
-    def _pool(self, outputs: torch.Tensor, hidden_representation: torch.Tensor) -> torch.Tensor:
+    def forward(self,
+                outputs: torch.Tensor,
+                hidden_representation: torch.Tensor
+                ) -> torch.Tensor:
         if self.directions == 1:
             # we "pool" the model by simply taking the hidden state of the last layer
             # of an unidirectional model

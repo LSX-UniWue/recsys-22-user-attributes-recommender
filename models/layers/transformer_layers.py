@@ -19,7 +19,7 @@ class TransformerEmbedding(nn.Module):
                  max_seq_len: int,
                  embedding_size: int,
                  dropout: float,
-                 embedding_mode: str = None,
+                 embedding_pooling_type: str = None,
                  norm_embedding: bool = True):
         super().__init__()
 
@@ -27,7 +27,7 @@ class TransformerEmbedding(nn.Module):
 
         self.item_embedding = ItemEmbedding(item_voc_size=item_voc_size,
                                             embedding_size=embedding_size,
-                                            embedding_mode=embedding_mode)
+                                            embedding_pooling_type=embedding_pooling_type)
         self.position_embedding = nn.Embedding(max_seq_len, self.embedding_size)
         self.embedding_norm = nn.LayerNorm(self.embedding_size) if norm_embedding else nn.Identity()
         self.dropout = nn.Dropout(p=dropout)

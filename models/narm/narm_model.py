@@ -26,7 +26,7 @@ class NarmModel(nn.Module):
                  embedding_dropout: float,
                  context_dropout: float,
                  batch_first: bool = True,
-                 embedding_mode: str = None):
+                 embedding_pooling_type: str = None):
 
         """
         :param num_items: number of items (NI)
@@ -36,13 +36,13 @@ class NarmModel(nn.Module):
         :param embedding_dropout: dropout applied after embedding the items
         :param context_dropout: dropout applied on the full context representation
         :param batch_first: whether data is batch first.
-        :param embedding_mode: the embedding mode to use if multiple items per
+        :param embedding_pooling_type: the embedding mode to use if multiple items per
         """
         super(NarmModel, self).__init__()
         self.batch_first = batch_first
         self.item_embeddings = ItemEmbedding(item_voc_size=num_items,
                                              embedding_size=item_embedding_size,
-                                             embedding_mode=embedding_mode)
+                                             embedding_pooling_type=embedding_pooling_type)
         self.item_embedding_dropout = nn.Dropout(embedding_dropout)
         self.global_encoder = nn.GRU(item_embedding_size, global_encoder_size,
                                      num_layers=global_encoder_num_layers,

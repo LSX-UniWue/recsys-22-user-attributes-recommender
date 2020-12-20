@@ -9,7 +9,7 @@ from models.narm.narm_model import NarmModel
 from models.rnn.rnn_model import RNNSeqItemRecommenderModel
 from models.sasrec.sas_rec_model import SASRecModel
 from modules import BERT4RecModule, CaserModule, SASRecModule
-from modules.rnn_module import GRUModule
+from modules.rnn_module import RNNModule
 from modules.narm_module import NarmModule
 from runner.util.provider_utils import build_tokenizer_provider, build_session_loader_provider_factory, \
     build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, build_standard_trainer, \
@@ -296,7 +296,7 @@ class RNNContainer(containers.DeclarativeContainer):
     module_config = config.module
 
     module = providers.Singleton(
-        GRUModule,
+        RNNModule,
         model,
         module_config.learning_rate,
         module_config.beta_1,
