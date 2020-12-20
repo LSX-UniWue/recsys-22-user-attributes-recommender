@@ -46,7 +46,7 @@ def build_default_config() -> providers.Configuration:
             'track_grad_norm': 2
         },
         'model': {
-            'embedding_mode': None
+            'embedding_pooling_type': None
         },
         'datasets': {
             'train': _build_default_dataset_config(shuffle=True),
