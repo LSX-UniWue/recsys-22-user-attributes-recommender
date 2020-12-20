@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from models.layers.transformer_layers import TransformerEmbedding
-from utils.tensor_utils import generate_square_subsequent_mask
+from models.layers.tensor_utils import generate_square_subsequent_mask
 
 
 class SASRecModel(nn.Module):

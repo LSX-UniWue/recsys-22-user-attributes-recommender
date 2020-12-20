@@ -6,7 +6,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from models.layers.layers import ItemEmbedding
-from utils.tensor_utils import generate_position_ids
+from models.layers.tensor_utils import generate_position_ids
 
 
 class TransformerEmbedding(nn.Module):
