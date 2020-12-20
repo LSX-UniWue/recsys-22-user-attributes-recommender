@@ -19,6 +19,10 @@ CROSS_ENTROPY_IGNORE_INDEX = -100
 
 class BERT4RecModule(pl.LightningModule):
 
+    """
+    BERT4Rec module for the BERT4Rec model
+    """
+
     @staticmethod
     def get_position_ids(batch: Dict[str, torch.Tensor]
                          ) -> Optional[torch.Tensor]:
@@ -61,11 +65,13 @@ class BERT4RecModule(pl.LightningModule):
         Optional entries are:
             * `POSITION_IDS` a tensor of size (N, S) containing the position ids for the provided sequence
 
+        Where N is the batch size and S the max sequence length.
+
         A padding mask will be generated on the fly, and also the masking of items
 
         :param batch: the batch
         :param batch_idx: the batch number.
-        :return:
+        :return: the total loss
         """
 
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
@@ -120,7 +126,7 @@ class BERT4RecModule(pl.LightningModule):
                         batch_idx: int
                         ) -> Dict[str, torch.Tensor]:
         """
-        Performs a validatio step on a batch of sequences and returns the overall loss.
+        Performs a validation step on a batch of sequences and returns the overall loss.
 
         `batch` must be a dictionary containing the following entries:
             * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
@@ -132,7 +138,7 @@ class BERT4RecModule(pl.LightningModule):
 
         :param batch: the batch
         :param batch_idx: the batch number.
-        :return:
+        :return: A dictionary with entries according to `build_eval_step_return_dict`.
         """
 
         return self._eval_epoch_step(batch, batch_idx)

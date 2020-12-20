@@ -36,6 +36,22 @@ class CaserModule(pl.LightningModule):
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
+        """
+        Performs a training step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
+            * `POSITIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N) containing the next sequence items (pos examples)
+            * `NEGATIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N) containing a negative item (sampled)
+        Optional entries are:
+            * `USER_ENTRY_NAME` a tensor of size (N) containing the user id for the provided sequences
+
+        Where N is the batch size and S the max sequence length.
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return: the total loss
+        """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         users = CaserModule.get_users_from_batch(batch)
         pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]
@@ -62,6 +78,23 @@ class CaserModule(pl.LightningModule):
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
                         ) -> Dict[str, torch.Tensor]:
+        """
+        Performs a validation step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
+            * `TARGET_ENTRY_NAME`: a tensor of size (N) with the target items,
+        Optional entries are:
+            * `USER_ENTRY_NAME` a tensor of size (N) containing the user id for the provided sequences
+
+        A padding mask will be generated on the fly, and also the masking of items
+
+        Where N is the batch size and S the max sequence length.
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return: A dictionary with entries according to `build_eval_step_return_dict`.
+        """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         users = CaserModule.get_users_from_batch(batch)
         targets = batch[TARGET_ENTRY_NAME]

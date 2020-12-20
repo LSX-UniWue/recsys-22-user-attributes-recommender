@@ -12,6 +12,9 @@ from tokenization.tokenizer import Tokenizer
 
 
 class SASRecModule(pl.LightningModule):
+    """
+    the module for the SASRec model
+    """
 
     def __init__(self,
                  model: SASRecModel,
@@ -23,13 +26,12 @@ class SASRecModule(pl.LightningModule):
                  ):
         """
         inits the SASRec module
-        :param model: the model to learn
+        :param model: the model to train
         :param learning_rate: the learning rate
         :param beta_1: the beta1 of the adam optimizer
         :param beta_2: the beta2 of the adam optimizer
         :param tokenizer: the tokenizer
         :param batch_first: True iff the dataloader returns batch_first tensors
-        :param metrics: the metrics to use for evaluation
         """
         super().__init__()
         self.model = model
@@ -44,6 +46,23 @@ class SASRecModule(pl.LightningModule):
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
+        """
+        Performs a training step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
+            * `POSITIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N) containing the next sequence items (pos examples),
+            * `NEGATIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N) containing a negative item (sampled)
+
+        Where N is the batch size and S the max sequence length.
+
+        A padding mask will be generated on the fly, and also the masking of items
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return: the total loss
+        """
+
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         pos = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
@@ -71,6 +90,21 @@ class SASRecModule(pl.LightningModule):
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
                         ) -> Dict[str, torch.Tensor]:
+        """
+        Performs a validation step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
+            * `TARGET_ENTRY_NAME`: a tensor of size (N) containing the next item of the provided sequence
+
+        Where N is the batch size and S the max sequence length.
+
+        A padding mask will be generated on the fly, and also the masking of items
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return: A dictionary with entries according to `build_eval_step_return_dict`.
+        """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
