@@ -17,9 +17,8 @@ from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSe
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
 from logger.SampledMetricLoggerCallback import SampledMetricLoggerCallback
-from logger.GradientLoggerCallback import GradientLoggerCallback
 from logger.MetricLoggerCallback import MetricLoggerCallback
-from logger.TrainLossLoggerCallback import TrainLossLoggerCallback
+from logger.LossLoggerCallback import LossLoggerCallback
 from metrics.utils.metric_utils import build_metrics, build_sampled_metrics
 from data.collate import padded_session_collate, PadDirection
 from tokenization.tokenizer import Tokenizer
@@ -356,7 +355,8 @@ def build_standard_trainer(config: providers.Configuration
         max_epochs=trainer_config.max_epochs,
         weights_summary='full',
         logger=logger,
-        callbacks=logging_callbacks
+        callbacks=logging_callbacks,
+        track_grad_norm=trainer_config.track_grad_norm
     )
 
 
@@ -414,10 +414,8 @@ def build_standard_logging_callbacks_provider(config: providers.Configuration
                                               ) -> providers.List:
     return providers.List(
         build_metric_logger_provider(config.metrics),
-        build_sampled_metric_logger_provider(config.sampled_metrics),
-        GradientLoggerCallback(),
-        TrainLossLoggerCallback())
-
+        build_sampled_metric_logger_provider(config.sampled_metrics)
+    )
 
 def build_metric_logger_provider(config: providers.ConfigurationOption) -> providers.Singleton:
     metric_provider = build_metrics_provider(config)
