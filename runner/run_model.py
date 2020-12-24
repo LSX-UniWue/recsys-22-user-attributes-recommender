@@ -42,6 +42,16 @@ def _config_logging(config: Dict[str, Any]
     logger.addHandler(handler)
 
 
+def get_training_trainer_builder(config) -> TrainerBuilder:
+    trainer_builder = TrainerBuilder(config.trainer())
+    trainer_builder = trainer_builder.add_checkpoint_callback(config.trainer.checkpoints())
+    trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.logger()).build())
+    trainer_builder = trainer_builder.add_callback(
+        CallbackBuilder(name="metric_logger", parameters=config.module.metrics()).build())
+
+    return trainer_builder
+
+
 @app.command()
 def train(model: str = typer.Argument(..., help="the model to run"),
           config_file: str = typer.Argument(..., help='the path to the config file'),
@@ -58,19 +68,13 @@ def train(model: str = typer.Argument(..., help="the model to run"),
     module = container.module()
 
     config = container.config
-    trainer_builder = TrainerBuilder(config.trainer())
-    trainer_builder = trainer_builder.add_checkpoint_callback(config.trainer.checkpoints())
-    trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.logger()).build())
-    trainer_builder = trainer_builder.add_callback(
-        CallbackBuilder(name="metric_logger", parameters=config.module.metrics()).build())
-
-    trainer = trainer_builder.build()
+    trainer = get_training_trainer_builder(config).build()
 
     if do_train:
         trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
 
     if do_test:
-        trainer.test(test_dataloader=container.test_loader())
+        trainer.test(test_dataloaders=container.test_loader())
 
 
 @app.command()
@@ -123,14 +127,15 @@ def predict(model: str = typer.Argument(..., help="the model to run"),
 def resume(model: str = typer.Argument(..., help="the model to run."),
            config_file: str = typer.Argument(..., help='the path to the config file'),
            checkpoint_file: str = typer.Argument(..., help="path to the checkpoint file.")):
-    container = build_container(model)
-    container.config.from_yaml(config_file)
+    container = build_container(model, config_file)
     module: LightningModule = container.module()
+
+    config = container.config
+    trainer = get_training_trainer_builder(config).from_checkpoint(checkpoint_file).build()
 
     train_loader = container.train_loader()
     validation_loader = container.validation_loader()
 
-    trainer: Trainer = container.trainer()
     trainer.fit(module, train_dataloader=train_loader, val_dataloaders=validation_loader)
 
 
