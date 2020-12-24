@@ -9,6 +9,7 @@ from dependency_injector import containers
 from pytorch_lightning import Trainer, LightningModule
 from pytorch_lightning.utilities import cloud_io
 
+from runner.util.builder import TrainerBuilder, CallbackBuilder, LoggerBuilder
 from runner.util.callbacks import PredictionLoggerCallback
 from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer
 
@@ -17,14 +18,16 @@ app = typer.Typer()
 
 
 # TODO: introduce a subclass for all container configurations?
-def build_container(model_id) -> containers.DeclarativeContainer:
-    return {
+def build_container(model_id: str, config_file: str) -> containers.DeclarativeContainer:
+    container = {
         'bert4rec': BERT4RecContainer(),
         'sasrec': SASRecContainer(),
         'caser': CaserContainer(),
         "narm": NarmContainer(),
         "rnn": RNNContainer()
     }[model_id]
+    container.config.from_yaml(config_file)
+    return container
 
 
 # FIXME: progress bar is not logged :(
@@ -32,7 +35,7 @@ def _config_logging(config: Dict[str, Any]
                     ) -> None:
     logger = logging.getLogger("lightning")
     handler = logging.handlers.RotatingFileHandler(
-        Path(config['trainer']['default_root_dir']) / 'run.log', maxBytes=(1048576*5), backupCount=7
+        Path(config['trainer']['default_root_dir']) / 'run.log', maxBytes=(1048576 * 5), backupCount=7
     )
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
@@ -51,13 +54,17 @@ def train(model: str = typer.Argument(..., help="the model to run"),
         print(f"the config file cannot be found. Please check the path '{config_file}'!")
         exit(-1)
 
-    container = build_container(model)
-    container.config.from_yaml(config_file)
+    container = build_container(model, config_file)
     module = container.module()
 
-    trainer = container.trainer()
+    config = container.config
+    trainer_builder = TrainerBuilder(config.trainer())
+    trainer_builder = trainer_builder.add_checkpoint_callback(config.trainer.checkpoints())
+    trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.logger()).build())
+    trainer_builder = trainer_builder.add_callback(
+        CallbackBuilder(name="metric_logger", parameters=config.module.metrics()).build())
 
-    # _config_logging(container.config())
+    trainer = trainer_builder.build()
 
     if do_train:
         trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
@@ -81,8 +88,7 @@ def predict(model: str = typer.Argument(..., help="the model to run"),
         print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
         exit(-1)
 
-    container = build_container(model)
-    container.config.from_yaml(config_file)
+    container = build_container(model, config_file)
     module = container.module()
 
     # FIXME: try to use load_from_checkpoint later
@@ -99,13 +105,18 @@ def predict(model: str = typer.Argument(..., help="the model to run"),
 
     test_loader = container.test_loader()
 
-    callbacks = [
-        PredictionLoggerCallback(output_file_path=output_file,
-                                 log_input=log_input,
-                                 tokenizer=container.tokenizer(),
-                                 strip_padding_tokens=strip_pad_token)
-    ]
-    trainer = Trainer(callbacks=callbacks, gpus=gpu)
+    callback_params = {
+        "output_file_path": output_file,
+        "log_input": log_input,
+        "tokenizer": container.tokenizer(),
+        "strip_padding_tokens": strip_pad_token
+    }
+    config = container.config
+    trainer_builder = TrainerBuilder(config.trainer())
+    trainer_builder = trainer_builder.add_callback(CallbackBuilder("prediction_logger", callback_params).build())
+    trainer_builder = trainer_builder.set("gpus", gpu)
+    trainer = trainer_builder.build()
+
     trainer.test(module, test_dataloaders=test_loader)
 
 @app.command()

@@ -22,7 +22,7 @@ from logger.MetricLoggerCallback import MetricLoggerCallback
 from logger.TrainLossLoggerCallback import TrainLossLoggerCallback
 from metrics.utils.metric_utils import build_metrics
 from data.collate import padded_session_collate, PadDirection
-from runner.util.trainer_builder import TrainerBuilder
+from runner.util.builder import TrainerBuilder
 from tokenization.tokenizer import Tokenizer
 from tokenization.vocabulary import VocabularyReaderWriter, Vocabulary, CSVVocabularyReaderWriter
 
@@ -339,21 +339,6 @@ def provide_nextit_loader(dataset: Dataset,
     )
 
 
-def trainer_factory(config: providers.Configuration) -> Trainer:
-    checkpoint = build_standard_model_checkpoint(config)
-    logger = select_and_build_logger_provider(config)
-    logging_callbacks = build_standard_logging_callbacks_provider(config.module.metrics)
-
-    trainer_config = config.trainer
-    trainer_builder = TrainerBuilder().from_config(trainer_config())
-    trainer_builder.set_kw(logger=logger(), checkpoint_callback=checkpoint()).add_callbacks(logging_callbacks())
-    return trainer_builder.build()
-
-
-def build_standard_trainer(config: providers.Configuration) -> providers.Factory:
-    return providers.Factory(trainer_factory, config=config.provider)
-
-
 def build_standard_model_checkpoint(config: providers.Configuration) -> providers.Singleton:
     return providers.Singleton(
         ModelCheckpoint,
@@ -362,49 +347,3 @@ def build_standard_model_checkpoint(config: providers.Configuration) -> provider
         save_top_k=config.trainer.checkpoint.save_top_k,
     )
 
-
-def build_metrics_provider(config: providers.ConfigurationOption
-                           ) -> providers.Singleton:
-    return providers.Singleton(
-        build_metrics,
-        config
-    )
-
-
-def select_and_build_logger_provider(config: providers.Configuration) -> providers.Singleton:
-    def build_provider(logger_type: str, config: Dict[str, Any]):
-        # for now default to tensorboard
-        if logger_type == "mlflow":
-            return build_mlflow_logger_provider(config)
-        else:
-            return build_standard_tensorboard_logger_provider(config)
-
-    return providers.Singleton(build_provider, config.trainer.logger.type, config)
-
-
-def build_standard_tensorboard_logger_provider(config: Dict[str, Any]) -> TensorBoardLogger:
-    log_dir = Path(config["trainer"]["default_root_dir"], "logs")
-    return TensorBoardLogger(save_dir=log_dir, name=config["trainer"]["experiment_name"])
-
-
-def build_mlflow_logger_provider(config: Dict[str, Any]) -> MLFlowLogger:
-    experiment_name = config["trainer"]["experiment_name"]
-    tracking_uri = config["trainer"]["logger"]["tracking_uri"]
-
-    return MLFlowLogger(experiment_name=experiment_name, tracking_uri=tracking_uri)
-
-
-def build_standard_logging_callbacks_provider(config) -> providers.List:
-
-    return providers.List(
-        build_metric_logger_provider(config),
-        GradientLoggerCallback(),
-        TrainLossLoggerCallback())
-
-
-def build_metric_logger_provider(config: providers.ConfigurationOption) -> providers.Singleton:
-    metric_provider = build_metrics_provider(config)
-    return providers.Singleton(
-        MetricLoggerCallback,
-        metrics=metric_provider
-    )
