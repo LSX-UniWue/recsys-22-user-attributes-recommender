@@ -12,6 +12,7 @@ from tokenization.vocabulary import CSVVocabularyReaderWriter
 
 app = typer.Typer()
 
+
 @app.command()
 def create_conditional_index(data_file_path: Path = typer.Argument(..., exists=True, help="path to the input file in CSV format"),
                              session_index_path: Path = typer.Argument(..., exists=True, help="path to the session index file"),
