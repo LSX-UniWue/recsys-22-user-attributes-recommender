@@ -10,7 +10,8 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.utilities import cloud_io
 
 from runner.util.callbacks import PredictionLoggerCallback
-from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer
+from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer,\
+    DreamContainer
 
 
 app = typer.Typer()
@@ -23,7 +24,8 @@ def build_container(model_id) -> containers.DeclarativeContainer:
         'sasrec': SASRecContainer(),
         'caser': CaserContainer(),
         "narm": NarmContainer(),
-        "rnn": RNNContainer()
+        "rnn": RNNContainer(),
+        'dream': DreamContainer()
     }[model_id]
 
 

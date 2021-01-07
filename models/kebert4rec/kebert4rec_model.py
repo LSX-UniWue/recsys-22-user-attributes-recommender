@@ -3,7 +3,8 @@ from torch import nn
 
 import torch
 
-from models.bert4rec.bert4rec_model import BERT4RecBaseModel, BERT4REC_PROJECT_TYPE_LINEAR
+from models.bert4rec.bert4rec_model import BERT4RecBaseModel
+from models.layers.layers import PROJECT_TYPE_LINEAR
 from models.layers.transformer_layers import TransformerEmbedding
 
 
@@ -52,7 +53,7 @@ class KeBERT4Rec(BERT4RecBaseModel):
                          transformer_dropout=transformer_dropout,
                          item_vocab_size=item_vocab_size,
                          max_seq_length=max_seq_length,
-                         project_layer_type=BERT4REC_PROJECT_TYPE_LINEAR,
+                         project_layer_type=PROJECT_TYPE_LINEAR,
                          embedding_pooling_type=embedding_pooling_type)
 
         self.item_vocab_size = item_vocab_size

@@ -1,72 +1,10 @@
-import math
 from abc import abstractmethod
 
 import torch
 from torch import nn
 
+from models.layers.layers import build_projection_layer
 from models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
-
-BERT4REC_PROJECT_TYPE_LINEAR = 'linear'
-
-
-class BERT4RecProjectionLayer(nn.Module):
-
-    @abstractmethod
-    def forward(self,
-                dense: torch.Tensor
-                ) -> torch.Tensor:
-        pass
-
-
-def _build_projection_layer(project_type: str,
-                            transformer_hidden_size: int,
-                            item_voc_size: int,
-                            embedding: TransformerEmbedding
-                            ) -> BERT4RecProjectionLayer:
-    if project_type == BERT4REC_PROJECT_TYPE_LINEAR:
-        return BERT4RecLinearProjectionLayer(transformer_hidden_size, item_voc_size)
-
-    if project_type == 'transpose_embedding':
-        return BERT4RecItemEmbeddingProjectionLayer(item_voc_size, embedding)
-
-    raise KeyError(f'{project_type} invalid projection layer')
-
-
-class BERT4RecLinearProjectionLayer(BERT4RecProjectionLayer):
-
-    def __init__(self,
-                 transformer_hidden_size: int,
-                 item_vocab_size: int):
-        super().__init__()
-
-        self.linear = nn.Linear(transformer_hidden_size, item_vocab_size)
-
-    def forward(self, dense: torch.Tensor) -> torch.Tensor:
-        return self.linear(dense)
-
-
-class BERT4RecItemEmbeddingProjectionLayer(BERT4RecProjectionLayer):
-
-    def __init__(self,
-                 item_vocab_size: int,
-                 embedding: TransformerEmbedding
-                 ):
-        super().__init__()
-
-        self.item_vocab_size = item_vocab_size
-
-        self.embedding = embedding
-        self.output_bias = nn.Parameter(torch.Tensor(self.item_vocab_size))
-
-        self.init_weights()
-
-    def init_weights(self):
-        bound = 1 / math.sqrt(self.item_vocab_size)
-        nn.init.uniform_(self.output_bias, -bound, bound)
-
-    def forward(self, dense: torch.Tensor) -> torch.Tensor:
-        dense = torch.matmul(dense, self.embedding.get_item_embedding_weight().transpose(0, 1))  # (S, N, I)
-        return dense + self.output_bias
 
 
 class BERT4RecBaseModel(nn.Module):
@@ -196,8 +134,8 @@ class BERT4RecModel(BERT4RecBaseModel):
                                 transformer_hidden_size: int,
                                 item_vocab_size: int
                                 ) -> nn.Module:
-        return _build_projection_layer(project_layer_type, transformer_hidden_size, item_vocab_size,
-                                       self.embedding)
+        return build_projection_layer(project_layer_type, transformer_hidden_size, item_vocab_size,
+                                      self.embedding.item_embedding.embedding)
 
     def _embed_input(self,
                      sequence: torch.Tensor,

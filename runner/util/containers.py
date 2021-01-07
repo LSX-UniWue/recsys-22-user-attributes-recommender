@@ -9,6 +9,7 @@ from models.narm.narm_model import NarmModel
 from models.rnn.rnn_model import RNNSeqItemRecommenderModel
 from models.sasrec.sas_rec_model import SASRecModel
 from modules import BERT4RecModule, CaserModule, SASRecModule
+from modules.basket.dream_module import DreamModule
 from modules.rnn_module import RNNModule
 from modules.narm_module import NarmModule
 from runner.util.provider_utils import build_tokenizer_provider, build_session_loader_provider_factory, \
@@ -320,4 +321,45 @@ class RNNContainer(containers.DeclarativeContainer):
                                                                validation_processors)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
+    trainer = build_standard_trainer(config)
+
+
+class DreamContainer(containers.DeclarativeContainer):
+
+    config = build_default_config()
+    # add pos neg sampler by default TODO: can we do this later?
+    config.from_dict(_build_pos_neg_model_processors())
+
+    # tokenizer
+    tokenizer = build_tokenizer_provider(config)
+
+    # model
+    model = providers.Singleton(_kwargs_adapter, RNNSeqItemRecommenderModel, config.model)
+
+    module_config = config.module
+
+    module = providers.Singleton(
+        DreamModule,
+        model=model,
+        tokenizer=tokenizer,
+        learning_rate=module_config.learning_rate,
+        weight_decay=module_config.weight_decay,
+    )
+
+    train_dataset_config = config.datasets.train
+    validation_dataset_config = config.datasets.validation
+    test_dataset_config = config.datasets.test
+
+    processors_objects = {'tokenizer': tokenizer}
+    train_processors = build_processors_provider(train_dataset_config.dataset.processors, processors_objects)
+    validation_processors = build_processors_provider(validation_dataset_config.dataset.processors, processors_objects)
+    test_processors = build_processors_provider(test_dataset_config.dataset.processors, processors_objects)
+
+    # loaders
+    train_loader = build_posneg_loader_provider_factory(train_dataset_config, tokenizer, train_processors)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
+                                                               validation_processors)
+    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
+
+    # trainer
     trainer = build_standard_trainer(config)
