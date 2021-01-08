@@ -14,14 +14,17 @@ app = typer.Typer()
 
 
 @app.command()
-def create_conditional_index(data_file_path: Path = typer.Argument(..., exists=True, help="path to the input file in CSV format"),
-                             session_index_path: Path = typer.Argument(..., exists=True, help="path to the session index file"),
-                             vocabulary_file_path: Path = typer.Argument(..., exists=True, help='path to the vocab file'),
-                             output_file_path: Path = typer.Argument(..., help="path to the output file"),
-                             item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
-                             min_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
-                             delimiter: str = typer.Option("\t", help="the delimiter used in the CSV file."),
-                             ) -> None:
+def build_popularity_stats(data_file_path: Path = typer.Argument(..., exists=True,
+                                                                 help="path to the input file in CSV format"),
+                           session_index_path: Path = typer.Argument(..., exists=True,
+                                                                     help="path to the session index file"),
+                           vocabulary_file_path: Path = typer.Argument(..., exists=True, help='path to the vocab file'),
+                           output_file_path: Path = typer.Argument(..., help="path to the output file"),
+                           item_header_name: str = typer.Argument(...,
+                                                                  help="name of the column that contains the item id"),
+                           min_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
+                           delimiter: str = typer.Option("\t", help="the delimiter used in the CSV file."),
+                           ) -> None:
     session_parser = ItemSessionParser(
         create_indexed_header(read_csv_header(data_file_path, delimiter)),
         item_header_name,
