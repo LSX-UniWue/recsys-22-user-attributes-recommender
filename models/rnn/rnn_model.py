@@ -107,9 +107,10 @@ class RNNSeqItemRecommenderModel(nn.Module):
                 ) -> torch.Tensor:
         embedded_session = self.item_embedding(session)
         embedded_session = self.dropout(embedded_session)
+        lengths = torch.sum(mask, dim=-1).cpu()  # required by torch >= 1.7, no cuda tensor allowed
         packed_embedded_session = nn.utils.rnn.pack_padded_sequence(
             embedded_session,
-            torch.sum(mask, dim=-1),
+            lengths,
             batch_first=True,
             enforce_sorted=False
         )
