@@ -80,7 +80,8 @@ def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider
             raise ValueError('please configure a pos neg sampler')
 
         if nip_index is not None:
-            return NextItemDataset(basic_dataset, SessionPositionIndex(Path(nip_index)), processors)
+            return NextItemDataset(basic_dataset, SessionPositionIndex(Path(nip_index)), processors, add_target=False,
+                                   include_target_pos=True)
         return ItemSessionDataset(basic_dataset, processors)
 
     return build_dataset_provider_factory(provide_posneg_dataset, tokenizer_provider, processors_provider,

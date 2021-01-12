@@ -16,7 +16,8 @@ class NextItemDataset(Dataset, MultiProcessSupport):
                  dataset: PlainSessionDataset,
                  index: SessionPositionIndex,
                  processors: List[Processor] = None,
-                 add_target: bool = True
+                 add_target: bool = True,
+                 include_target_pos: bool = False
                  ):
         super().__init__()
         self._dataset = dataset
@@ -25,6 +26,7 @@ class NextItemDataset(Dataset, MultiProcessSupport):
             processors = []
         self._processors = processors
         self._add_target = add_target
+        self._include_target_pos = include_target_pos
 
     def __len__(self):
         return len(self._index)
@@ -36,7 +38,7 @@ class NextItemDataset(Dataset, MultiProcessSupport):
         parsed_session['pos'] = target_pos
 
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
-        truncated_session = session[:target_pos]
+        truncated_session = session[:target_pos] if not self._include_target_pos else session[:target_pos + 1]
         parsed_session[ITEM_SEQ_ENTRY_NAME] = truncated_session
         if self._add_target:
             parsed_session[TARGET_ENTRY_NAME] = session[target_pos]
