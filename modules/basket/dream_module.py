@@ -68,7 +68,7 @@ class DreamModule(pl.LightningModule):
                    neg_items: torch.Tensor
                    ) -> torch.Tensor:
         # bpr FIXME: check
-        logit = logit.unsqueeze(1).repeat(1, pos_items.size()[-1], 1)
+        logit = logit.unsqueeze(1).repeat(1, pos_items.size()[1], 1)
         pos_logits = logit.gather(2, pos_items)
         neg_logits = logit.gather(2, neg_items)
 
