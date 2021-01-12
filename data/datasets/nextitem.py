@@ -32,9 +32,8 @@ class NextItemDataset(Dataset, MultiProcessSupport):
     def __getitem__(self, idx):
         session_idx, target_pos = self._index[idx]
         parsed_session = self._dataset[session_idx]
-        parsed_session[SAMPLE_IDS] = idx
-
-        parsed_session[LOADER_INFO] = f'{session_idx}:{target_pos}'
+        parsed_session[SAMPLE_IDS] = session_idx
+        parsed_session['pos'] = target_pos
 
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
         truncated_session = session[:target_pos]

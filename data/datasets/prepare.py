@@ -153,6 +153,7 @@ class PositiveNegativeSampler(Processor):
 
         if len(session) == 1:
             print(parsed_session[LOADER_INFO])
+            print(parsed_session['pos'])
             raise AssertionError
 
         x = session[:-1]
