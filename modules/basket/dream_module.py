@@ -39,11 +39,11 @@ class DreamModule(pl.LightningModule):
         Performs a training step on a batch of sequences and returns the overall loss.
 
         `batch` must be a dictionary containing the following entries:
-            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
-            * `POSITIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N) containing the next sequence items (pos examples)
-            * `NEGATIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N) containing a negative item (sampled)
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S, M),
+            * `POSITIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N, M) containing the next sequence items (pos examples)
+            * `NEGATIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N, M) containing a negative item (sampled)
 
-        Where N is the batch size and S the max sequence length.
+        Where N is the batch size, S the max sequence length and M the max items per sequence step.
 
         :param batch: the batch
         :param batch_idx: the batch number.
@@ -88,12 +88,12 @@ class DreamModule(pl.LightningModule):
         Performs a validation step on a batch of sequences and returns the overall loss.
 
         `batch` must be a dictionary containing the following entries:
-            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
-            * `TARGET_ENTRY_NAME`: a tensor of size (N) with the target items,
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S, M),
+            * `TARGET_ENTRY_NAME`: a tensor of size (N, M) with the target items,
 
         A padding mask will be generated on the fly, and also the masking of items
 
-        Where N is the batch size and S the max sequence length.
+        Where N is the batch size, S the max sequence length and M the max items per sequence step.
 
         :param batch: the batch
         :param batch_idx: the batch number.
