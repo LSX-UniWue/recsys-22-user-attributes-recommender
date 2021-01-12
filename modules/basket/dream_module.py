@@ -20,7 +20,7 @@ class DreamModule(pl.LightningModule):
                  model: RNNSeqItemRecommenderModel,
                  tokenizer: Tokenizer,
                  learning_rate: float,
-                 weight_decay: float,
+                 weight_decay: float
                  ):
         super().__init__()
 
@@ -68,9 +68,14 @@ class DreamModule(pl.LightningModule):
                    neg_items: torch.Tensor
                    ) -> torch.Tensor:
         # bpr FIXME: check
-        logit = logit.unsqueeze(1).repeat(1, pos_items.size()[1], 1)
-        pos_logits = logit.gather(2, pos_items)
-        neg_logits = logit.gather(2, neg_items)
+        # we only use the last position as target, because the rnn only encodes the complete sequence
+        padding_mask = (~ pos_items.eq(self.tokenizer.pad_token_id)).sum(-1).sum(-1) - 1
+        target_mask = F.one_hot(padding_mask, num_classes=pos_items.size()[1]).to(torch.bool)
+
+        pos_items = pos_items[target_mask]
+        neg_items = neg_items[target_mask]
+        pos_logits = logit.gather(1, pos_items)
+        neg_logits = logit.gather(1, neg_items)
 
         mask = ~ pos_items.eq(self.tokenizer.pad_token_id)
         num_items = mask.sum()
