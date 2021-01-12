@@ -16,7 +16,10 @@ purpose.
 4. Save the final token, because it won't be accessible afterwards
 
 ### Create kubernetes secret
+
+```
 kubectl -n <namespace> create secret generic gitlab-token --from-literal=token=xxx
+```
 
 ## Run on your local machine
 ```
