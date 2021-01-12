@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Union, Set
 from numpy.random._generator import default_rng
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, POSITION_IDS, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
-    NEGATIVE_SAMPLES_ENTRY_NAME, LOADER_INFO
+    NEGATIVE_SAMPLES_ENTRY_NAME, SAMPLE_IDS
 from tokenization.tokenizer import Tokenizer
 
 
@@ -152,7 +152,7 @@ class PositiveNegativeSampler(Processor):
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
 
         if len(session) == 1:
-            print(parsed_session[LOADER_INFO])
+            print(parsed_session[SAMPLE_IDS])
             print(parsed_session['pos'])
             raise AssertionError
 
