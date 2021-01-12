@@ -69,7 +69,7 @@ class DreamModule(pl.LightningModule):
                    ) -> torch.Tensor:
         # bpr FIXME: check
         # we only use the last position as target, because the rnn only encodes the complete sequence
-        padding_mask = (~ pos_items.eq(self.tokenizer.pad_token_id)).sum(-1).sum(-1) - 1
+        padding_mask = (~ pos_items.eq(self.tokenizer.pad_token_id)).max(-1).values.sum(-1) - 1
         target_mask = F.one_hot(padding_mask, num_classes=pos_items.size()[1]).to(torch.bool)
 
         pos_items = pos_items[target_mask]
