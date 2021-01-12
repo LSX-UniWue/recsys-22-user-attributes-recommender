@@ -18,7 +18,6 @@ from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
 from logger.SampledMetricLoggerCallback import SampledMetricLoggerCallback
 from logger.MetricLoggerCallback import MetricLoggerCallback
-from logger.LossLoggerCallback import LossLoggerCallback
 from metrics.utils.metric_utils import build_metrics, build_sampled_metrics
 from data.collate import padded_session_collate, PadDirection
 from tokenization.tokenizer import Tokenizer
@@ -79,6 +78,9 @@ def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider
                 has_pos_neg_sampler_processor = True
         if not has_pos_neg_sampler_processor:
             raise ValueError('please configure a pos neg sampler')
+
+        if nip_index is not None:
+            return NextItemDataset(basic_dataset, SessionPositionIndex(Path(nip_index)), processors)
         return ItemSessionDataset(basic_dataset, processors)
 
     return build_dataset_provider_factory(provide_posneg_dataset, tokenizer_provider, processors_provider,
@@ -341,10 +343,6 @@ def build_standard_trainer(config: providers.Configuration
                            ) -> providers.Singleton:
     checkpoint = build_standard_model_checkpoint(config)
     logger = select_and_build_logger_provider(config)
-
-    def _debug(config_dict):
-        print(config_dict)
-        return None
 
     logging_callbacks = build_standard_logging_callbacks_provider(config.module)
 

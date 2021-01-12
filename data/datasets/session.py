@@ -6,7 +6,7 @@ import csv
 from torch.utils.data import Dataset
 
 from data.base.reader import CsvDatasetReader
-from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS
+from data.datasets import ITEM_SEQ_ENTRY_NAME, LOADER_INFO
 from data.datasets.prepare import Processor
 from data.mp import MultiProcessSupport
 
@@ -122,7 +122,7 @@ class PlainSessionDataset(Dataset, MultiProcessSupport):
         session = self._reader.get_session(idx)
         parsed_session = self._parser.parse(session)
 
-        parsed_session[SAMPLE_IDS] = idx
+        parsed_session[LOADER_INFO] = idx
 
         return parsed_session
 
