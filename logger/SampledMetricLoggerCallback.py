@@ -8,7 +8,7 @@ from modules.constants import RETURN_KEY_PREDICTIONS, RETURN_KEY_TARGETS, RETURN
 
 
 class SampledMetricLoggerCallback(Callback):
-
+    # FIXME Add comments as to what this class achieves
     def __init__(self,
                  metrics: ModuleDict,
                  item_probabilities: List[float],

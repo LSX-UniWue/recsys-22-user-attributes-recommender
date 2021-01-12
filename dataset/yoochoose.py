@@ -104,11 +104,6 @@ def sequential_split(data: pd.DataFrame, session_id_key: str, output_dir: str) -
     validation_indices: List[int] = []
     testing_indices: List[int] = []
     # FIXME only use sessions where last two items exist in training part of any session
-    # Get Trainings indices first to create training item set
-    # for session_number, session_indices in sessions.items():
-    #     session_indices = session_indices.tolist()
-    #     training_indices += session_indices[:-2]
-    # training_items = data.loc[training_indices].ItemId.unique()
     for session_number, session_indices in sessions.items():
         session_indices = session_indices.tolist()
         training_indices += session_indices[:-2]
@@ -166,7 +161,7 @@ def main(input_dir: str = typer.Option("./yoochoose-data", help='directory path 
         print("Perform pre-processing...")
         preprocessed_data = pre_process_yoochoose_dataset(Path(input_dir))
         # Check if a valid split is specified
-        print("Split data into train, validation and testing sets...")
+        print("Split data (%s)into train, validation and testing sets...", split)
         if split == "chronological":
             split_data, output_dir = chronological_split(data=preprocessed_data, output_dir=output_dir)
         elif split == "sequential":
