@@ -27,7 +27,7 @@ datasets:
       parser: *parser
     loader: *loader
 model:
-work  item_vocab_size: 18339
+  item_vocab_size: 18340
   max_seq_length: 200
   num_transformer_heads: 2
   num_transformer_layers: 2
