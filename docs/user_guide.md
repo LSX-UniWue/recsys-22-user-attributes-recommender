@@ -33,5 +33,6 @@ Pre-Requisites:
 * Downloaded the [yoochoose data set](https://www.kaggle.com/chadgostopp/recsys-challenge-2015/download)
 
 ## Training implemented Models ##
-
+[comment]: <ToDo>
 ## Executing Trained Models ##
+[comment]: <ToDo>

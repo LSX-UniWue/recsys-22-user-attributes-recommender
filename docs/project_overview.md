@@ -13,7 +13,7 @@ Additionally popular baseline models like SasRec and Bert4Rec are implemented an
 
 ## Techstack ##
 This project uses:
-* [Pytorch Lightning](https://www.pytorchlightning.ai/)for deep-learning model implementation and training
+* [Pytorch Lightning](https://www.pytorchlightning.ai/) for deep-learning model implementation and training
 * [Typer](https://typer.tiangolo.com/) for executing python code as a CLI
 * [Poetry](https://python-poetry.org/docs/#installation) for dependency management
  
