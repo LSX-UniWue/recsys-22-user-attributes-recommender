@@ -168,6 +168,8 @@ def main(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_choices
     downloaded_file = download_dataset(url, download_dir)
 
     extract_dir = download_dir / 'raw'
+    if not os.path.exists(extract_dir):
+        extract_dir.mkdir(parents=True, exist_ok=True)
 
     unzip_file(downloaded_file, extract_dir, delete=False)
     main_file = preprocess_data(extract_dir, dataset_dir, dataset)
