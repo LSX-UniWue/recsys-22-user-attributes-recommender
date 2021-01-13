@@ -45,4 +45,4 @@ class SampledMetricLoggerCallback(Callback):
 
     def on_validation_epoch_end(self, trainer, pl_module):
         for name, metric in self.metrics.items():
-            pl_module.log(name, metric.compute(), prog_bar=True)
+            pl_module.log(f"{name}_(sampled)", metric.compute(), prog_bar=True)
