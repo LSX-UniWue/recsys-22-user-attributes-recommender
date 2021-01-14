@@ -27,14 +27,13 @@ datasets:
       parser: *parser
     loader: *loader
 model:
-  item_vocab_size: 27265
+  item_vocab_size: 18340
   max_seq_length: 200
   num_transformer_heads: 2
   num_transformer_layers: 2
   transformer_hidden_size: 64
   transformer_dropout: 0.2
 module:
-  mask_probability: 0.2
   beta_1: 0.99
   beta_2: 0.998
   learning_rate: 0.0001
