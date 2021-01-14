@@ -8,6 +8,8 @@ from typing import Dict, List
 from tqdm import tqdm
 
 from data.base.indexer import CsvSessionIndexer
+from dataset.app.utils import build_vocabularies
+from dataset.app.pre_process_command import app
 
 FULL_TRAIN_SET = "full_training_set"
 TRAIN_SET = "training_set"
@@ -16,8 +18,6 @@ TEST_SET = "test_set"
 
 SESSION_ID_KEY = "SessionId"
 CLICKS_FILE_NAME = "yoochoose-clicks.dat"
-
-app = typer.Typer()
 
 
 def pre_process_yoochoose_dataset(path_to_original_data: Path) -> pd.DataFrame:
@@ -43,6 +43,52 @@ def pre_process_yoochoose_dataset(path_to_original_data: Path) -> pd.DataFrame:
     session_lengths = data.groupby('SessionId').size()
     data = data[np.in1d(data.SessionId, session_lengths[session_lengths >= 2].index)]
     return data
+
+
+@app.command()
+def yoochoose(input_dir: str = typer.Option("./yoochoose-data", help='directory path to the raw yoochoose data set'),
+         output_dir: str = typer.Option("./yoochoose-processed/", help='directory to save data'),
+         split: str = typer.Option("chronological", help='sequential or chronological')) -> None:
+    """
+    FixMe this is not complete
+    Typer CLI function which wraps handling of pre-processing, splitting, storing and indexing of the yoochoose
+    data set. As a prerequisite the yoochoose data set has to have been downloaded and stored at the input_dir.
+
+    :param input_dir: Directory under which the yoochoose data set files are stored.
+    :param output_dir: Directory under which the processed data is stored after successful execution.
+    :param split:
+    :return:
+    """
+    # Check if input dir contains the correct data path and that the yoochoose dataset is downloaded
+    input_dir = Path(input_dir)
+    if not os.path.isdir(input_dir):
+        print("Directory", input_dir,
+              "does not exist.\nPlease specify the correct directory under which",
+              CLICKS_FILE_NAME, "can be found.")
+        print("See --help for more information.")
+    elif not os.path.isfile(input_dir / CLICKS_FILE_NAME):
+        print(input_dir / CLICKS_FILE_NAME,
+              "does not exist. Please download the yoochoose data set and move it into",
+              input_dir, ".")
+        print("See --help for more information.")
+    else:
+        # Pre-process yoochoose data
+        print("Perform pre-processing...")
+        preprocessed_data = pre_process_yoochoose_dataset(Path(input_dir))
+        # ToDo test the building of vocabulary
+        build_vocabularies(preprocessed_data, input_dir, SESSION_ID_KEY)
+        # Check if a valid split is specified
+        # ToDo write main Index
+        print("Split data into train, validation and testing sets...")
+        # ToDo write splits
+        # ToDo write index for splits
+
+
+"""
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+DEPRECATED
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+"""
 
 
 def chronological_split(data: pd.DataFrame, output_dir: str) -> (Dict[str, pd.DataFrame], Path):
@@ -126,13 +172,7 @@ def write_splits_as_csv_and_create_index(split_data: Dict[str, pd.DataFrame], pr
         index.create(csv_path, index_path, [SESSION_ID_KEY])
 
 
-# TODO: Write stuff that has to do with the vocabulary
-def write_vocab():
-    pass
-
-
-@app.command()
-def main(input_dir: str = typer.Option("./yoochoose-data", help='directory path to the raw yoochoose data set'),
+def _yoochoose_old(input_dir: str = typer.Option("./yoochoose-data", help='directory path to the raw yoochoose data set'),
          output_dir: str = typer.Option("./yoochoose-processed/", help='directory to save data'),
          split: str = typer.Option("chronological", help='sequential or chronological')) -> None:
     """
@@ -160,6 +200,8 @@ def main(input_dir: str = typer.Option("./yoochoose-data", help='directory path 
         # Pre-process yoochoose data
         print("Perform pre-processing...")
         preprocessed_data = pre_process_yoochoose_dataset(Path(input_dir))
+        # ToDo test the building of vocabulary
+        build_vocabularies(preprocessed_data, input_dir, SESSION_ID_KEY)
         # Check if a valid split is specified
         print("Split data (%s)into train, validation and testing sets...", split)
         if split == "chronological":
@@ -179,12 +221,3 @@ def main(input_dir: str = typer.Option("./yoochoose-data", help='directory path 
                 output_dir.mkdir(parents=True, exist_ok=True)
             # write the split data as .csv files and create respective indices
             write_splits_as_csv_and_create_index(split_data=split_data, processed_data_dir_path=output_dir)
-
-
-def get_app() -> typer.Typer:
-    return app
-
-
-# Python main function to make Typer-App available as CLI.
-if __name__ == "__main__":
-    app()
