@@ -21,7 +21,7 @@ class SASRecModel(nn.Module):
                  num_transformer_layers: int,
                  item_vocab_size: int,
                  max_seq_length: int,
-                 dropout: float,
+                 transformer_dropout: float,
                  embedding_pooling_type: str,
                  ):
         """
@@ -31,12 +31,12 @@ class SASRecModel(nn.Module):
         :param num_transformer_layers: the number of layers of the transformer
         :param item_vocab_size: the item vocab size
         :param max_seq_length: the max sequence length
-        :param dropout: the dropout of the model
+        :param transformer_dropout: the dropout of the model
         :param embedding_pooling_type: the pooling to use for basket recommendation
         """
         super().__init__()
 
-        self.dropout = dropout
+        self.transformer_dropout = transformer_dropout
         self.max_seq_length = max_seq_length
         self.transformer_hidden_size = transformer_hidden_size
         self.num_transformer_heads = num_transformer_heads
