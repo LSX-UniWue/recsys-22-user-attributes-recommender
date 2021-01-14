@@ -127,6 +127,8 @@ class SASRecModule(pl.LightningModule):
         prediction = self.model(input_seq, items_to_rank, padding_mask=padding_mask)
         prediction = prediction.transpose(1, 0)
 
+        if self.batch_first:
+            input_seq = input_seq.transpose(1, 0)
         return build_eval_step_return_dict(input_seq, prediction, targets)
 
     def test_step(self, batch, batch_idx):
