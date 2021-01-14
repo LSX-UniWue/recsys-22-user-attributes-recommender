@@ -30,13 +30,12 @@ datasets:
       parser: *parser
     loader: *loader
 model:
-  item_vocab_size: 18339
+  item_vocab_size: 18340
   max_seq_length: 200
   num_transformer_heads: 2
   num_transformer_layers: 2
   transformer_hidden_size: 64
   transformer_dropout: 0.1
-  project_layer_type: linear
 module:
   mask_probability: 0.2
   beta_1: 0.9
@@ -44,6 +43,7 @@ module:
   learning_rate: 0.001
   weight_decay: 0.01
   num_warmup_steps: 100
+  batch_first: true
   sampled_metrics:
     sample_probability_file: ../dataset/dataset/ml-20m_3_5_5/popularity.txt
     num_negative_samples: 100
