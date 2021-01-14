@@ -47,13 +47,13 @@ class SASRecModel(nn.Module):
         self.embedding = TransformerEmbedding(item_voc_size=self.item_vocab_size,
                                               max_seq_len=self.max_seq_length,
                                               embedding_size=self.transformer_hidden_size,
-                                              dropout=self.dropout,
+                                              dropout=self.transformer_dropout,
                                               embedding_pooling_type=self.embedding_mode)
 
         encoder_layer = nn.TransformerEncoderLayer(d_model=self.transformer_hidden_size,
                                                    nhead=self.num_transformer_heads,
                                                    dim_feedforward=self.transformer_hidden_size * 4,
-                                                   dropout=self.dropout)
+                                                   dropout=self.transformer_dropout)
         encoder_norm = nn.LayerNorm(self.transformer_hidden_size)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layer,
                                                          num_layers=self.num_transformer_layers,
