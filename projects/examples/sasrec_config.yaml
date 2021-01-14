@@ -30,7 +30,7 @@ model:
   num_transformer_layers: 1
   item_vocab_size: 13
   max_seq_length: 5
-  dropout: 0.1
+  transformer_dropout: 0.1
 module:
   learning_rate: 0.001
   beta_1: 0.99
