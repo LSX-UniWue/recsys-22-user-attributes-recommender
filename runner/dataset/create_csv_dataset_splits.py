@@ -1,3 +1,8 @@
+"""
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+DEPRECATED
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+"""
 import math
 from argparse import ArgumentParser
 from pathlib import Path

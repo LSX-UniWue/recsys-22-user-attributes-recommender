@@ -19,8 +19,8 @@ The project is structured into 14 folders:
     metrics and data sets.
 * [runner](./../runner): Also contains Typer-CLI implementation for indexing data sets, but also the Typer-CLI
     implementation for training a model and performing predictions with it, as well as necessary support-code
-* [tests](./../tests): Contains unit tests for the project. Also contains an example data set as well as the respective vocabulary.
-    and index file
+* [tests](./../tests): Contains unit tests for the project. Also contains an example data set as well as the respective
+    vocabulary and index file
 * [tokenization](./../tokenization): Contains code concerning the tokenization of session items and the building of a 
     vocabulary for data sets.
 
@@ -52,13 +52,18 @@ In order to add a new model multiple things need to be implemented:
 This section lists areas of the project that are not documented/need code comments:
 * What is the purpose of the kubernetes job in [k8s](./../k8s)
 * Contents of the "support-code" in [runner/util](./../runner/util)
+* Most methods, classes, and modules
 
 ## Refactor proposals ##
 * The predition logger callback for pytorch lightning is contained in [runner/util](./../runner/util)
     (I [AL] would expect this to be at [logger](./../logger))
 * The code in [runner/util](./../runner/util) is quite extensive and should probably be moved into multiple separate
-modules (e.g. [runner/util/containers](./../runner/util/containers.py) could be a directory)
+directories (e.g. [runner/util/containers](./../runner/util/containers.py) could be a directory)
 * Every directory deserves its own little README.md describing its purpose, contents, and implementation hints 
     in a few sentences
-* If this project aims to become a CLI one day the directories should be structured into commands
-
+* If this project aims to become a CLI one day the project structure should represent that by:
+    + Either: directories should be structured into commands
+    + Or: An app directory should be created in which commands are defined and registered at one central file
+* If a class is defined in a file the file should have the same name as the class (e.g., 
+    [indexer.py](./../data/base/indexer.py) defines the CsvSessionIndexer class)
+* If a file defines multiple classes make it a directory.

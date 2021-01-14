@@ -20,11 +20,9 @@ For all data sets a CLI is provided via [Typer](https://typer.tiangolo.com/).
 To download and pre-process the MovieLens data set use the following commands:
 ````bash
 python -m dataset.movielens ml-1m
-python -m runner.dataset.create_reader_index ./dataset/ml-1m/ml-1m.csv ./dataset/ml-1m/index.csv --session_key userId
-python -m runner.dataset.create_csv_dataset_splits ./dataset/ml-1m/ml-1m.csv ./dataset/ml-1m/index.csv \
-        ./dataset/ml-1m/splits/ "train;0.9" "valid;0.05" "test;0.05"
-python -m runner.dataset.create_next_item_index ./dataset/ml-1m/splits/test.csv ./dataset/ml-1m/index.csv \
-        ./dataset/ml-1m/splits/test.nip.csv movieId
+python -m runner.dataset.create_reader_index ./dataset/ml-1m_5/ml-1m.csv ./dataset/ml-1m_5/index.csv --session_key userId
+python -m runner.dataset.create_csv_dataset_splits ./dataset/ml-1m_5/ml-1m.csv ./dataset/ml-1m_5/index.csv ./dataset/ml-1m_5/splits/ "train;0.9" "valid;0.05" "test;0.05"
+python -m runner.dataset.create_next_item_index ./dataset/ml-1m_5/splits/test.csv ./dataset/ml-1m_5/index.csv ./dataset/ml-1m_5/splits/test.nip.csv movieId
 ````
 This downloads the MovieLens data set and prepares the data split for next item recommendation.
 

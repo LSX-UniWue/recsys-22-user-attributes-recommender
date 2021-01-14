@@ -1,3 +1,8 @@
+"""
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+DEPRECATED
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+"""
 import functools
 from operator import itemgetter
 from pathlib import Path

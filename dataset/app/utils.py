@@ -1,8 +1,3 @@
-"""
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-DEPRECATED
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-"""
 import os
 import shutil
 from pathlib import Path
@@ -10,6 +5,7 @@ from pathlib import Path
 import requests
 from tqdm import tqdm
 import zipfile
+import pandas as pd
 
 
 def download_dataset(url: str,
@@ -78,3 +74,32 @@ def unzip_file(src_file: Path,
 
     if delete:
         os.remove(src_file)
+
+
+def build_vocabularies(dataframe: pd.DataFrame,
+                       dataset_dir: Path,
+                       column: str,
+                       split: str = ""
+                       ) -> None:
+    """
+    Build and write a vocabulary file
+    :param dataframe: base dataframe
+    :param dataset_dir: folder for saving file
+    :param column: column to create vocabulary for
+    :param split: token to split if column need splitting
+    :return:
+    """
+    if split != "":
+        dataframe = pd.concat([pd.Series(row[column].split(split))
+                               for _, row in dataframe.iterrows()]).reset_index()
+        dataframe.columns = ['index', column]
+
+    title_vocab = pd.DataFrame(dataframe[column].unique())
+    # we start with the pad token (pad token should have the id 0, so we start with the special tokens, than add
+    # the remaining data)
+    special_tokens = pd.DataFrame(["<PAD>", "<MASK>", "<UNK>"])
+    title_vocab = special_tokens.append(title_vocab).reset_index(drop=True)
+    title_vocab["id"] = title_vocab.index
+
+    vocab_file = dataset_dir / f'vocab_{column}.txt'
+    title_vocab.to_csv(vocab_file, index=False, sep="\t", header=False)
