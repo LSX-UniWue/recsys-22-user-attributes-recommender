@@ -4,7 +4,8 @@ from typing import List, Dict, Union, Callable
 
 import torch
 
-from metrics.ranking_metrics import PrecisionAtMetric, RecallAtMetric, F1AtMetric, MRRAtMetric, RecallAtNegativeSamples
+from metrics.ranking_metrics import PrecisionAtMetric, RecallAtMetric, F1AtMetric, MRRAtMetric, RecallAtNegativeSamples, \
+    DiscountedCumulativeGain, NormalizedDiscountedCumulativeGain
 
 
 def _build_metric(metric_id: str
@@ -14,7 +15,9 @@ def _build_metric(metric_id: str
         'recall': RecallAtMetric(k),
         'precision': PrecisionAtMetric(k),
         'f1': F1AtMetric(k),
-        'mrr': MRRAtMetric(k)
+        'mrr': MRRAtMetric(k),
+        'dcg': DiscountedCumulativeGain(k),
+        'ndcg': NormalizedDiscountedCumulativeGain(k),
     }[metric_id]
 
 
