@@ -21,3 +21,9 @@ class MetricLoggerCallback(Callback):
     def on_validation_epoch_end(self, trainer, pl_module):
         for name, metric in self.metrics.items():
             pl_module.log(name, metric.compute(), prog_bar=True)
+
+    def on_test_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
+        return self.on_validation_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
+
+    def on_test_epoch_end(self, trainer, pl_module):
+        return self.on_validation_epoch_end(trainer, pl_module)
