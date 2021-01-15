@@ -10,7 +10,7 @@ def generate_position_ids(length: int,
 
 def generate_square_subsequent_mask(size: int):
     """
-    returns a mask for only considering the previous items in the
+    returns a mask for only considering the previous items in the sequence
     :param size:
     :return:
     """

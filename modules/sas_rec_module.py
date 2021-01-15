@@ -3,9 +3,9 @@ from typing import Union, Dict, Optional
 import torch
 
 import pytorch_lightning as pl
+from torch import nn
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
-from losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
 from modules.util.module_util import get_padding_mask, build_eval_step_return_dict
 from models.sasrec.sas_rec_model import SASRecModel
 from tokenization.tokenizer import Tokenizer
@@ -67,21 +67,16 @@ class SASRecModule(pl.LightningModule):
         pos = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
 
-        if self.batch_first:
-            input_seq = input_seq.transpose(1, 0)
-            pos = pos.transpose(1, 0)
-            neg = neg.transpose(1, 0)
-
-        padding_mask = get_padding_mask(input_seq, self.tokenizer)
+        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False)
 
         pos_logits, neg_logits = self.model(input_seq, pos, neg_items=neg, padding_mask=padding_mask)
 
-        loss_func = SASRecBinaryCrossEntropyLoss()
-        loss = loss_func(pos_logits, neg_logits, mask=padding_mask.transpose(0, 1))
-        # TODO: check: the original code
-        # (https://github.com/kang205/SASRec/blob/641c378fcfac265ea8d1e5fe51d4d53eb892d1b4/model.py#L92)
-        # adds regularization losses, but they are empty, as far as I can see (dzo)
+        loss_func = nn.BCEWithLogitsLoss()
 
+        pos_logits = pos_logits[padding_mask]
+        neg_logits = neg_logits[padding_mask]
+
+        loss = loss_func(pos_logits, neg_logits)
         return {
             "loss": loss
         }
@@ -108,27 +103,20 @@ class SASRecModule(pl.LightningModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
-        if self.batch_first:
-            input_seq = input_seq.transpose(1, 0)
-            batch_size = input_seq.size()[1]
-        else:
-            batch_size = input_seq.size()[0]
+        batch_size = input_seq.size()[0]
 
         # calc the padding mask
-        padding_mask = get_padding_mask(input_seq, self.tokenizer)
+        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False)
 
         # provide items that the target item will be ranked against
         # TODO (AD) refactor this into a composable class to allow different strategies for item selection
         device = input_seq.device
         items_to_rank = torch.as_tensor(self.tokenizer.get_vocabulary().ids(), dtype=torch.long, device=device)
         items_to_rank = items_to_rank.repeat([batch_size, 1])
-        items_to_rank = items_to_rank.transpose(1, 0)
 
         prediction = self.model(input_seq, items_to_rank, padding_mask=padding_mask)
-        prediction = prediction.transpose(1, 0)
+        prediction = prediction
 
-        if self.batch_first:
-            input_seq = input_seq.transpose(1, 0)
         return build_eval_step_return_dict(input_seq, prediction, targets)
 
     def test_step(self, batch, batch_idx):
