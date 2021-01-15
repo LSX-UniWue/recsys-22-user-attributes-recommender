@@ -72,7 +72,7 @@ class SASRecModel(nn.Module):
                                               dropout=self.transformer_dropout,
                                               embedding_pooling_type=self.embedding_mode)
 
-        self.attention_layernorms = torch.nn.ModuleList() # to be Q for self-attention
+        self.attention_layernorms = torch.nn.ModuleList()
         self.attention_layers = torch.nn.ModuleList()
         self.forward_layernorms = torch.nn.ModuleList()
         self.forward_layers = torch.nn.ModuleList()
@@ -80,19 +80,19 @@ class SASRecModel(nn.Module):
         self.last_layernorm = torch.nn.LayerNorm(self.transformer_hidden_size, eps=1e-8)
 
         for _ in range(self.num_transformer_layers):
-            new_attn_layernorm = torch.nn.LayerNorm(self.transformer_hidden_size, eps=1e-8)
-            self.attention_layernorms.append(new_attn_layernorm)
+            attn_layernorm = torch.nn.LayerNorm(self.transformer_hidden_size, eps=1e-8)
+            self.attention_layernorms.append(attn_layernorm)
 
-            new_attn_layer = nn.MultiheadAttention(self.transformer_hidden_size,
-                                                   self.num_transformer_heads,
-                                                   self.transformer_dropout)
-            self.attention_layers.append(new_attn_layer)
+            attn_layer = nn.MultiheadAttention(self.transformer_hidden_size,
+                                               self.num_transformer_heads,
+                                               self.transformer_dropout)
+            self.attention_layers.append(attn_layer)
 
-            new_fwd_layernorm = torch.nn.LayerNorm(self.transformer_hidden_size, eps=1e-8)
-            self.forward_layernorms.append(new_fwd_layernorm)
+            fwd_layernorm = torch.nn.LayerNorm(self.transformer_hidden_size, eps=1e-8)
+            self.forward_layernorms.append(fwd_layernorm)
 
-            new_fwd_layer = PointWiseFeedForward(self.transformer_hidden_size, self.transformer_dropout)
-            self.forward_layers.append(new_fwd_layer)
+            fwd_layer = PointWiseFeedForward(self.transformer_hidden_size, self.transformer_dropout)
+            self.forward_layers.append(fwd_layer)
 
         self.input_sequence_mask = None
 

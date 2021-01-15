@@ -22,7 +22,6 @@ class SASRecModule(pl.LightningModule):
                  beta_1: float,
                  beta_2: float,
                  tokenizer: Tokenizer,
-                 batch_first: bool,
                  ):
         """
         inits the SASRec module
@@ -31,7 +30,6 @@ class SASRecModule(pl.LightningModule):
         :param beta_1: the beta1 of the adam optimizer
         :param beta_2: the beta2 of the adam optimizer
         :param tokenizer: the tokenizer
-        :param batch_first: True iff the dataloader returns batch_first tensors
         """
         super().__init__()
         self.model = model
@@ -40,7 +38,6 @@ class SASRecModule(pl.LightningModule):
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.tokenizer = tokenizer
-        self.batch_first = batch_first
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
