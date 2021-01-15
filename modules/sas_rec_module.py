@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 from torch import nn
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
+from losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
 from modules.util.module_util import get_padding_mask, build_eval_step_return_dict
 from models.sasrec.sas_rec_model import SASRecModel
 from tokenization.tokenizer import Tokenizer
@@ -68,12 +69,12 @@ class SASRecModule(pl.LightningModule):
 
         pos_logits, neg_logits = self.model(input_seq, pos, neg_items=neg, padding_mask=padding_mask)
 
-        loss_func = nn.BCEWithLogitsLoss()
+        loss_func = SASRecBinaryCrossEntropyLoss()
+        loss = loss_func(pos_logits, neg_logits, mask=padding_mask)
+        # TODO: check: the original code
+        # (https://github.com/kang205/SASRec/blob/641c378fcfac265ea8d1e5fe51d4d53eb892d1b4/model.py#L92)
+        # adds regularization losses, but they are empty, as far as I can see (dzo)
 
-        pos_logits = pos_logits[padding_mask]
-        neg_logits = neg_logits[padding_mask]
-
-        loss = loss_func(pos_logits, neg_logits)
         return {
             "loss": loss
         }

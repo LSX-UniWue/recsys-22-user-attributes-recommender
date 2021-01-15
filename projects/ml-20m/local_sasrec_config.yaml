@@ -43,7 +43,6 @@ module:
   learning_rate: 0.001
   weight_decay: 0.01
   num_warmup_steps: 100
-  batch_first: true
   sampled_metrics:
     sample_probability_file: ../dataset/dataset/ml-20m_3_5_5/popularity.txt
     num_negative_samples: 100

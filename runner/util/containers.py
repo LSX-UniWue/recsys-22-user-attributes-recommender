@@ -219,8 +219,7 @@ class SASRecContainer(containers.DeclarativeContainer):
         learning_rate=module_config.learning_rate,
         beta_1=module_config.beta_1,
         beta_2=module_config.beta_2,
-        tokenizer=tokenizer,
-        batch_first=module_config.batch_first,
+        tokenizer=tokenizer
     )
 
     train_dataset_config = config.datasets.train
