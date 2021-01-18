@@ -361,6 +361,7 @@ def build_standard_trainer(config: providers.Configuration
         logger=logger,
         callbacks=logging_callbacks,
         track_grad_norm=trainer_config.track_grad_norm
+        #accelerator="ddp_cpu" # TODO remove after debugging multi-gpu training
     )
 
 

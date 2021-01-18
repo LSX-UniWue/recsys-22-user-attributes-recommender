@@ -18,25 +18,26 @@ class SessionPositionIndex(MultiProcessSupport):
         self._init()
 
     def _init(self):
-        self._index_file_handle = self._index_path.open("rb")
-        self._min_session_length = self._read_min_session_length()
-        self._length = self._read_length()
+        with self._index_path.open("rb") as file_handle:
+            self._min_session_length = self._read_min_session_length(file_handle)
+            self._length = self._read_length(file_handle)
 
-    def _read_length(self):
-        self._index_file_handle.seek(-2 * INT_BYTE_SIZE, io.SEEK_END)
-        return int.from_bytes(self._index_file_handle.read(INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
+    def _read_length(self, file_handle):
+        file_handle.seek(-2 * INT_BYTE_SIZE, io.SEEK_END)
+        return int.from_bytes(file_handle.read(INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
 
-    def _read_min_session_length(self):
-        self._index_file_handle.seek(-INT_BYTE_SIZE, io.SEEK_END)
-        return int.from_bytes(self._index_file_handle.read(INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
+    def _read_min_session_length(self, file_handle):
+        file_handle.seek(-INT_BYTE_SIZE, io.SEEK_END)
+        return int.from_bytes(file_handle.read(INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
 
     def __len__(self):
         return self._length
 
     def __getitem__(self, idx):
-        self._index_file_handle.seek(idx * INT_BYTE_SIZE * 2)
-        session_idx = int.from_bytes(self._index_file_handle.read(INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
-        target_pos = int.from_bytes(self._index_file_handle.read(INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
+        with self._index_path.open("rb") as file_handle:
+            file_handle.seek(idx * INT_BYTE_SIZE * 2)
+            session_idx = int.from_bytes(file_handle.read(INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
+            target_pos = int.from_bytes(file_handle.read(INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
 
         return session_idx, target_pos
 
