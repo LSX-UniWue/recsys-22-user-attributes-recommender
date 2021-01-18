@@ -27,9 +27,6 @@ class SampledMetricLoggerCallback(Callback):
         weight = torch.Tensor(self.item_probabilities)
         weight = weight.unsqueeze(0).repeat(input_seq.size()[0], 1)
 
-        # FIXME (BUG): this does not work as expected. It sets the all targets in a batch across all weights to 0..
-        #  Same for input_seq. In consequence more and more items are set to 0 with increasing batch size :-D
-
         # never sample targets
         weight[:, targets] = 0.
 
@@ -52,7 +49,7 @@ class SampledMetricLoggerCallback(Callback):
 
         for name, metric in self.metrics.items():
             step_value = metric(sampled_predictions, positive_item_mask)
-            pl_module.log(f"{name}_(sampled)", step_value, prog_bar=True)
+            pl_module.log(f"{name}_(sampled,{self.num_negative_samples})", step_value, prog_bar=True)
 
     def on_validation_epoch_end(self, trainer, pl_module):
         for name, metric in self.metrics.items():
