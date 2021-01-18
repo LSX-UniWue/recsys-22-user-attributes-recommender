@@ -9,12 +9,10 @@ from dependency_injector import containers
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.utilities import cloud_io
 
-from logger.SampledMetricLoggerCallback import SampledMetricLoggerCallback
-from metrics.utils.metric_utils import build_sampled_metrics
 from runner.util.callbacks import PredictionLoggerCallback
 from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer,\
     DreamContainer
-from runner.util.provider_utils import convert_prob_file, build_standard_logging_callbacks_provider
+from runner.util.provider_utils import build_standard_logging_callbacks_provider
 
 app = typer.Typer()
 
