@@ -10,7 +10,7 @@ spec:
     spec:
       containers:
         - name: ds4rec
-          image: gitlab2.informatik.uni-wuerzburg.de:4567/dmir/dallmann/recommender/jane-doe-gpu:latest
+          image: gitlab2.informatik.uni-wuerzburg.de:4567/dmir/dallmann/recommender/jane-doe-gpu:latest-a100
           imagePullPolicy: "Always"
           resources:
             requests: &resources
