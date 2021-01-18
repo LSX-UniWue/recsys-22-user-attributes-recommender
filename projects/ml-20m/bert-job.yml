@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: ml-20m-bert4rec-linear-layer
+  name: ml-20m-bert4rec-a100
   labels:
     app: ds4rec
 spec:
@@ -14,9 +14,9 @@ spec:
           imagePullPolicy: "Always"
           resources:
             requests: &resources
-              cpu: "4"
+              cpu: "16"
               memory: "64Gi"
-              nvidia.com/gpu: 1
+              nvidia.com/gpu: 8
             limits: *resources
           env:
             - name: HOME
@@ -40,6 +40,12 @@ spec:
               name: scratch
           ports:
             - containerPort: 8888
+      tolerations:
+        - effect: NoSchedule
+          key: A100
+          operator: Exists
+      nodeSelector:
+        gputype: "a100"
       imagePullSecrets:
         - name: regcred
       restartPolicy: "Never"
