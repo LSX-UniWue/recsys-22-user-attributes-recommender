@@ -18,6 +18,9 @@ class SampledMetricLoggerCallback(Callback):
         self.item_probabilities = item_probabilities
         self.num_negative_samples = num_negative_samples
 
+    def on_sanity_check_start(self, trainer, pl_module):
+        self.metrics.to(device=pl_module.device)
+
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
         targets = outputs[RETURN_KEY_TARGETS]
         input_seq = outputs[RETURN_KEY_SEQUENCE]
