@@ -3,12 +3,16 @@ from abc import ABC, abstractmethod
 from functools import partial
 
 import torch
-from torch import nn as nn, nn
+from torch import nn
 
 
 def _max_pooling(tensor: torch.Tensor
                  ) -> torch.Tensor:
     return tensor.max(dim=-2)[0]
+
+
+def _identity(tensor: torch.Tensor) -> torch.Tensor:
+    return tensor
 
 
 class ItemEmbedding(nn.Module):
@@ -29,8 +33,8 @@ class ItemEmbedding(nn.Module):
                                       embedding_dim=self.embedding_size)
 
         self.embedding_flatten = {
-            None: lambda x: x,
-            'max': partial(_max_pooling),
+            None: _identity,
+            'max': _max_pooling,
             'sum': partial(torch.sum, dim=-2),
             'mean': partial(torch.mean, dim=-2)
         }[self.embedding_mode]
