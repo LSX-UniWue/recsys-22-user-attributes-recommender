@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: ml-20m-bert4rec-a100
+  name: ml-20m-bert4rec
   labels:
     app: ds4rec
 spec:
@@ -10,11 +10,11 @@ spec:
     spec:
       containers:
         - name: ds4rec
-          image: gitlab2.informatik.uni-wuerzburg.de:4567/dmir/dallmann/recommender/jane-doe-gpu:latest-a100
+          image: gitlab2.informatik.uni-wuerzburg.de:4567/dmir/dallmann/recommender/jane-doe-gpu:latest
           imagePullPolicy: "Always"
           resources:
             requests: &resources
-              cpu: "16"
+              cpu: "24"
               memory: "64Gi"
               nvidia.com/gpu: 8
             limits: *resources
@@ -38,14 +38,16 @@ spec:
               name: home
             - mountPath: /scratch
               name: scratch
+            - mountPath: /dev/shm
+              name: dshm
           ports:
             - containerPort: 8888
       tolerations:
         - effect: NoSchedule
-          key: A100
+          key: network
           operator: Exists
       nodeSelector:
-        gputype: "a100"
+        gputype: "2080ti"
       imagePullSecrets:
         - name: regcred
       restartPolicy: "Never"
@@ -66,3 +68,8 @@ spec:
             path: "/scratch"
             secretRef:
               name: ceph-secret-zoller
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "4Gi"
+
