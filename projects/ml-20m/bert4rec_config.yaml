@@ -3,7 +3,7 @@ parser: &parser
 loader: &loader
   batch_size: 64
   max_seq_length: 200
-  num_workers: 16
+  num_workers: 4
 datasets:
   test:
     dataset:
@@ -68,3 +68,4 @@ trainer:
   default_root_dir: /scratch/jane-doe-framework/experiments/ml-20m/bert4rec
   gpus: 8
   max_epochs: 800
+  accelerator: "ddp"
