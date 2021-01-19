@@ -45,13 +45,13 @@ spec:
             - mountPath: /ssd
               name: cache
           ports:
-            - containerPort: 8888
-      #tolerations:
-      #  - effect: NoSchedule
-      #    key: network
-      #    operator: Exists
-      #nodeSelector:
-      #  gputype: "2080ti"
+            - containerPort: 8880
+      tolerations:
+        - effect: NoSchedule
+          key: network
+          operator: Exists
+      nodeSelector:
+        gputype: "2080ti"
       imagePullSecrets:
         - name: regcred
       restartPolicy: "Never"
