@@ -44,7 +44,8 @@ def build_default_config() -> providers.Configuration:
             'gradient_clip_val': 0.0,
             'default_root_dir': '/tmp/',
             'max_epochs': 20,
-            'track_grad_norm': 2
+            'track_grad_norm': 2,
+            'check_val_every_n_epoch': 1
         },
         'model': {
             'embedding_pooling_type': None

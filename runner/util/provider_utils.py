@@ -360,7 +360,8 @@ def build_standard_trainer(config: providers.Configuration
         logger=logger,
         callbacks=callbacks,
         track_grad_norm=trainer_config.track_grad_norm,
-        accelerator=trainer_config.accelerator
+        accelerator=trainer_config.accelerator,
+        check_val_every_n_epoch=trainer_config.check_val_every_n_epoch
     )
 
 
