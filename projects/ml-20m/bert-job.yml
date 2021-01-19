@@ -42,12 +42,12 @@ spec:
               name: dshm
           ports:
             - containerPort: 8888
-      tolerations:
-        - effect: NoSchedule
-          key: network
-          operator: Exists
-      nodeSelector:
-        gputype: "2080ti"
+      #tolerations:
+      #  - effect: NoSchedule
+      #    key: network
+      #    operator: Exists
+      #nodeSelector:
+      #  gputype: "2080ti"
       imagePullSecrets:
         - name: regcred
       restartPolicy: "Never"
