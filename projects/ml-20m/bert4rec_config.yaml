@@ -25,7 +25,10 @@ datasets:
       csv_file_index: /ssd/ml-20m/ml-20m.idx
       nip_index_file: /ssd/ml-20m/valid.loo.idx
       parser: *parser
-    loader: *loader
+    loader:
+      batch_size: 256
+      max_seq_length: 200
+      num_workers: 4
 model:
   item_vocab_size: 18340
   max_seq_length: 200
