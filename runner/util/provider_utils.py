@@ -368,8 +368,10 @@ def build_standard_model_checkpoint(config: providers.Configuration
                                     ) -> providers.Singleton:
     return providers.Singleton(
         ModelCheckpoint,
-        filepath=config.trainer.checkpoint.filepath,
+        #dirpath=config.trainer.checkpoint.dirpath,
+        #filename=config.trainer.checkpoint.filename,
         monitor=config.trainer.checkpoint.monitor,
+        mode=config.trainer.checkpoint.mode,
         save_top_k=config.trainer.checkpoint.save_top_k,
     )
 
