@@ -27,8 +27,8 @@ spec:
               value: daz65be
             - name: REPO_BRANCH
               value: bugfix/bert4rec
-            #- name: PREPARE_SCRIPT
-            #  value: /home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/copy_to_cache.sh
+            - name: PREPARE_SCRIPT
+              value: /home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/copy_to_cache.sh
             - name: GIT_TOKEN
               valueFrom:
                 secretKeyRef:
