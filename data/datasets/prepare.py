@@ -1,6 +1,5 @@
 import random
 from abc import abstractmethod
-from collections import OrderedDict
 from typing import Dict, Any, List, Union, Set
 
 from numpy.random._generator import default_rng
@@ -8,7 +7,6 @@ from numpy.random._generator import default_rng
 from data.datasets import ITEM_SEQ_ENTRY_NAME, POSITION_IDS, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME, SAMPLE_IDS
 from tokenization.tokenizer import Tokenizer
-from tokenization.vocabulary import Vocabulary
 
 
 class Processor:
