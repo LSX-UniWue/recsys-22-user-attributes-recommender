@@ -36,13 +36,13 @@ model:
   num_transformer_layers: 2
   transformer_hidden_size: 64
   transformer_dropout: 0.2
-  project_layer_type: linear
+  project_layer_type: transpose_embedding
 module:
   mask_probability: 0.2
   beta_1: 0.99
   beta_2: 0.998
   learning_rate: 0.0001
-  weight_decay: 0.00
+  weight_decay: 0.02
   num_warmup_steps: 100
   sampled_metrics:
     sample_probability_file: /ssd/ml-20m/popularity.txt

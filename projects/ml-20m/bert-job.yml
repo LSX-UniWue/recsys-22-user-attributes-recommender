@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: ml-20m-bert4rec
+  name: ml-20m-bert4rec-bugfix
   labels:
     app: ds4rec
 spec:
@@ -22,13 +22,13 @@ spec:
             - name: HOME
               value: /home/ls6/zoller
             - name: PROJECT_DIR
-              value: /home/ls6/zoller/seq_recommendation/project_master
+              value: /home/ls6/zoller/seq_recommendation/project_bugfixbert4rec
             - name: REPO_USER
               value: daz65be
             - name: REPO_BRANCH
-              value: master
-            - name: PREPARE_SCRIPT
-              value: /home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/copy_to_cache.sh
+              value: bugfix/bert4rec
+            #- name: PREPARE_SCRIPT
+            #  value: /home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/copy_to_cache.sh
             - name: GIT_TOKEN
               valueFrom:
                 secretKeyRef:
