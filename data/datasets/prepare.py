@@ -210,7 +210,7 @@ class MaskProcessor(Processor):
                     if prob < 0.8:
                         session[index] = self.tokenizer.mask_token_id
                     elif prob < 0.9:
-                        session[index] = self.random.randint(0, len(self.tokenizer))
+                        session[index] = self.random.randint(0, len(self.tokenizer) - 1)
                 else:
                     # we use the padding token as masking the cross entropy loss
                     target[index] = self.tokenizer.pad_token_id
