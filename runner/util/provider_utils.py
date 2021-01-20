@@ -279,7 +279,8 @@ def _build_entries_to_pad(max_seq_length: int,
     entries_to_pad = {
         ITEM_SEQ_ENTRY_NAME: [max_seq_length],
         POSITIVE_SAMPLES_ENTRY_NAME: [max_seq_length],
-        NEGATIVE_SAMPLES_ENTRY_NAME: [max_seq_length]
+        NEGATIVE_SAMPLES_ENTRY_NAME: [max_seq_length],
+        TARGET_ENTRY_NAME: [max_seq_length]
     }
 
     if max_seq_step_length is not None:

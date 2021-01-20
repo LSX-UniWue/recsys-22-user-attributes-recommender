@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from dependency_injector import containers, providers
 
@@ -16,11 +16,11 @@ from runner.util.provider_utils import build_tokenizer_provider, build_session_l
     build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, build_standard_trainer, \
     build_processors_provider, to_pad_direction
 
-DEFAULT_PROCESSORS = {
-    'tokenizer_processor': {
-        'tokenize': True
+DEFAULT_PROCESSORS = [
+    {
+        'tokenizer_processor': {}
     }
-}
+]
 
 CONFIG_KEY_MODULE = 'module'
 
@@ -60,7 +60,7 @@ def build_default_config() -> providers.Configuration:
 
 
 def _build_default_dataset_config(shuffle: bool,
-                                  processors: Dict[str, Dict[str, Any]] = None
+                                  processors: List[Dict[str, Dict[str, Any]]] = None
                                   ) -> Dict[str, Any]:
     if processors is None:
         processors = DEFAULT_PROCESSORS
@@ -84,10 +84,31 @@ def _build_default_dataset_config(shuffle: bool,
 
 
 def _build_pos_neg_model_processors() -> Dict[str, Any]:
-    processors = DEFAULT_PROCESSORS.copy()
-    processors['pos_neg_sampler'] = {
-        'pos_neg_sampling': True
+    processors = [
+        {
+            'pos_neg_sampler': {
+                                    'pos_neg_sampling': True
+                                }
+        }
+    ]
+    processors.extend(DEFAULT_PROCESSORS)
+    return {
+        'datasets': {
+            'train': _build_default_dataset_config(shuffle=True, processors=processors)
+        }
     }
+
+
+def _build_mask_processor() -> Dict[str, Any]:
+    processors = DEFAULT_PROCESSORS.copy()
+    processors.append({
+        'mask_processor': {
+            'seed': 42,
+            'mask_prob': 0.2,
+            'last_item_mask_prob': 0.1
+        }
+    })
+
     return {
         'datasets': {
             'train': _build_default_dataset_config(shuffle=True, processors=processors)
@@ -113,6 +134,7 @@ class BERT4RecContainer(containers.DeclarativeContainer):
         }
     })
     config.from_dict(MODULE_ADAM_OPTIMIZER_DEFAULT_VALUES)
+    config.from_dict(_build_mask_processor())
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)

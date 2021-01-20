@@ -1,4 +1,6 @@
+import random
 from abc import abstractmethod
+from collections import OrderedDict
 from typing import Dict, Any, List, Union, Set
 
 from numpy.random._generator import default_rng
@@ -6,6 +8,7 @@ from numpy.random._generator import default_rng
 from data.datasets import ITEM_SEQ_ENTRY_NAME, POSITION_IDS, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME, SAMPLE_IDS
 from tokenization.tokenizer import Tokenizer
+from tokenization.vocabulary import Vocabulary
 
 
 class Processor:
@@ -21,10 +24,12 @@ def build_processors(processors_config: Dict[str, Any],
                      ) -> List[Processor]:
 
     processors = []
-    for key, config in processors_config.items():
-        complete_args = {**kwargs, **config}
-        preprocessor = build_processor(key, **complete_args)
-        processors.append(preprocessor)
+
+    for processor_config in processors_config:
+        for key, config in processor_config.items():
+            complete_args = {**kwargs, **config}
+            preprocessor = build_processor(key, **complete_args)
+            processors.append(preprocessor)
     return processors
 
 
@@ -39,6 +44,11 @@ def build_processor(processor_id: str,
 
     if processor_id == 'pos_neg_sampler':
         return PositiveNegativeSampler(kwargs.get('tokenizer'), seed=kwargs.get('seed'))
+
+    if processor_id == 'mask_processor':
+        return MaskProcessor(kwargs.get('tokenizer'), mask_prob=kwargs.get('mask_prob'),
+                             only_last_item_mask_prob=kwargs.get('last_item_mask_prob'),
+                             seed=kwargs.get('seed'))
 
     raise KeyError(f"unknown preprocessor {processor_id}")
 
@@ -162,3 +172,56 @@ class PositiveNegativeSampler(Processor):
         parsed_session[POSITIVE_SAMPLES_ENTRY_NAME] = pos
         parsed_session[NEGATIVE_SAMPLES_ENTRY_NAME] = neg
         return parsed_session
+
+
+class MaskProcessor(Processor):
+
+    def __init__(self,
+                 tokenizer: Tokenizer,
+                 mask_prob: float,
+                 only_last_item_mask_prob: float,
+                 seed: int
+                 ):
+        super().__init__()
+
+        self.tokenizer = tokenizer
+
+        self.mask_prob = mask_prob
+        self.only_last_item_mask_prob = only_last_item_mask_prob
+
+        self.random = random.Random(seed)
+
+    def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
+        session = parsed_session[ITEM_SEQ_ENTRY_NAME]
+        target = session.copy()
+
+        # first we decide if we only mask the last item
+        mask_last_item_prob = self.random.random()
+        if mask_last_item_prob <= self.only_last_item_mask_prob:
+            last_item = len(session) - 1
+            session[last_item] = self.tokenizer.mask_token_id
+            target[:last_item] = [self.tokenizer.pad_token_id] * last_item
+        else:
+            for index in range(0, len(session)):
+                prob = self.random.random()
+                if prob < self.mask_prob:
+                    prob = prob / self.mask_prob
+
+                    if prob < 0.8:
+                        session[index] = self.tokenizer.mask_token_id
+                    elif prob < 0.9:
+                        session[index] = self.random.randint(0, len(self.tokenizer))
+                else:
+                    # we use the padding token as masking the cross entropy loss
+                    target[index] = self.tokenizer.pad_token_id
+
+        parsed_session[TARGET_ENTRY_NAME] = target
+        return parsed_session
+
+
+if __name__ == '__main__':
+    voc = Vocabulary(OrderedDict({'<PAD>': 0, '<MASK>': 1}))
+    tokenizer = Tokenizer(voc, mask_token='<MASK>')
+    mask = MaskProcessor(tokenizer, 0.2, 0.1, 42)
+
+    mask.process({'session': [1, 2, 3]})
