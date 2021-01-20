@@ -217,11 +217,3 @@ class MaskProcessor(Processor):
 
         parsed_session[TARGET_ENTRY_NAME] = target
         return parsed_session
-
-
-if __name__ == '__main__':
-    voc = Vocabulary(OrderedDict({'<PAD>': 0, '<MASK>': 1}))
-    tokenizer = Tokenizer(voc, mask_token='<MASK>')
-    mask = MaskProcessor(tokenizer, 0.2, 0.1, 42)
-
-    mask.process({'session': [1, 2, 3]})
