@@ -39,7 +39,7 @@ module:
   beta_1: 0.99
   beta_2: 0.998
   learning_rate: 0.0001
-  weight_decay: 0.02
+  weight_decay: 0.00
   num_warmup_steps: 100
   sampled_metrics:
     sample_probability_file: /ssd/ml-20m/popularity.txt
@@ -70,4 +70,4 @@ trainer:
   gpus: 8
   max_epochs: 800
   accelerator: "ddp"
-  check_val_every_n_epoch: 50
+  check_val_every_n_epoch: 100

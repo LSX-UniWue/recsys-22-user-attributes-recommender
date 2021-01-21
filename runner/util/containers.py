@@ -134,7 +134,7 @@ class BERT4RecContainer(containers.DeclarativeContainer):
         }
     })
     config.from_dict(MODULE_ADAM_OPTIMIZER_DEFAULT_VALUES)
-    # TODO config.from_dict(_build_mask_processor())
+    config.from_dict(_build_mask_processor())
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)
