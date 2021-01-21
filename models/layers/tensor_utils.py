@@ -1,11 +1,10 @@
 import torch
 
 
-def generate_position_ids(length: int,
-                          shape,
+def generate_position_ids(shape,
                           device: torch.device = None):
-    position_ids = torch.arange(length, dtype=torch.long, device=device)
-    return position_ids.unsqueeze(0).transpose(0, 1).expand(shape[0:2])
+    position_ids = torch.arange(shape[1], dtype=torch.long, device=device)
+    return position_ids.unsqueeze(0).repeat(shape[0], 1)
 
 
 def generate_square_subsequent_mask(size: int):

@@ -50,16 +50,17 @@ class TransformerEmbedding(nn.Module):
                 position_ids: torch.Tensor = None
                 ) -> torch.Tensor:
         """
-        :param input_sequence: [I x B] where I is the sequence length and B the batch size
-        :param position_ids: the position ids [I x B] where I is the sequence length and B the batch size
+        :param input_sequence: (N, S)
+        :param position_ids: the position ids (N, S) optional, will be generated if not provided
+
+         where S is the sequence length and N the batch size
         :return:
         """
         # generate the position ids if not provided
-        input_shape = input_sequence.shape
-        seq_length = input_shape[0]
+        input_shape = input_sequence.size()
         device = input_sequence.device
         if position_ids is None:
-            position_ids = generate_position_ids(seq_length, input_shape, device=device)
+            position_ids = generate_position_ids(input_shape, device=device)
 
         input_sequence = self.item_embedding(input_sequence)
         input_sequence = input_sequence + self.position_embedding(position_ids)
