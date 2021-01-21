@@ -14,8 +14,6 @@ from modules.util.module_util import get_padding_mask, convert_target_to_multi_h
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
 
-CROSS_ENTROPY_IGNORE_INDEX = -100
-
 
 class BERT4RecModule(pl.LightningModule):
 
@@ -111,7 +109,7 @@ class BERT4RecModule(pl.LightningModule):
             return loss_fnc(prediction_logits, target)
 
         # handle single item per sequence step
-        loss_func = nn.CrossEntropyLoss(ignore_index=CROSS_ENTROPY_IGNORE_INDEX)
+        loss_func = nn.CrossEntropyLoss(ignore_index=self.tokenizer.pad_token_id)
 
         flatten_predictions = prediction_logits.view(-1, vocab_size)
         flatten_targets = target.view(-1)
