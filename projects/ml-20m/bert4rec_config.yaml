@@ -70,4 +70,4 @@ trainer:
   gpus: 8
   max_epochs: 800
   accelerator: "ddp"
-  check_val_every_n_epoch: 10
+  check_val_every_n_epoch: 50
