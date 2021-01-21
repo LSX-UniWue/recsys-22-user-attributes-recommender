@@ -25,10 +25,7 @@ datasets:
       csv_file_index: /ssd/ml-20m/ml-20m.idx
       nip_index_file: /ssd/ml-20m/valid.loo.idx
       parser: *parser
-    loader:
-      batch_size: 128
-      max_seq_length: 200
-      num_workers: 4
+    loader: *loader
 model:
   item_vocab_size: 18340
   max_seq_length: 200
@@ -36,7 +33,7 @@ model:
   num_transformer_layers: 2
   transformer_hidden_size: 64
   transformer_dropout: 0.2
-  project_layer_type: transpose_embedding
+  project_layer_type: linear
 module:
   mask_probability: 0.2
   beta_1: 0.99
