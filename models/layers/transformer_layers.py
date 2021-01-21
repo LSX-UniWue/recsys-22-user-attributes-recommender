@@ -57,10 +57,8 @@ class TransformerEmbedding(nn.Module):
         :return:
         """
         # generate the position ids if not provided
-        input_shape = input_sequence.size()
-        device = input_sequence.device
         if position_ids is None:
-            position_ids = generate_position_ids(input_shape, device=device)
+            position_ids = generate_position_ids(input_sequence.size(), device=input_sequence.device)
 
         input_sequence = self.item_embedding(input_sequence)
         input_sequence = input_sequence + self.position_embedding(position_ids)
