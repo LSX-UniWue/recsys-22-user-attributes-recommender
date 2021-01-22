@@ -25,7 +25,6 @@ datasets:
       nip_index_file: /scratch/jane-doe-framework/datasets/ml-1m/valid.loo.idx
       parser: *parser
     loader: *loader
-generator: random
 model:
   item_vocab_size: 3886
   cell_type: gru
@@ -65,3 +64,4 @@ trainer:
     save_top_k: 3
   max_epochs: 100
   default_root_dir: /scratch/jane-doe-framework/experiments/ml-1m/gru
+  gpu: 1
