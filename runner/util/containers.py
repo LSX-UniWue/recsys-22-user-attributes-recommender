@@ -84,14 +84,12 @@ def _build_default_dataset_config(shuffle: bool,
 
 
 def _build_pos_neg_model_processors() -> Dict[str, Any]:
-    processors = [
+    processors = DEFAULT_PROCESSORS.copy()
+    processors.append(
         {
-            'pos_neg_sampler': {
-                                    'pos_neg_sampling': True
-                                }
-        }
-    ]
-    processors.extend(DEFAULT_PROCESSORS)
+            'pos_neg_sampler': {}
+        })
+
     return {
         'datasets': {
             'train': _build_default_dataset_config(shuffle=True, processors=processors)
