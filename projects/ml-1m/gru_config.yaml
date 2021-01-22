@@ -64,4 +64,4 @@ trainer:
     save_top_k: 3
   max_epochs: 100
   default_root_dir: /scratch/jane-doe-framework/experiments/ml-1m/gru
-  gpu: 1
+  gpus: 1
