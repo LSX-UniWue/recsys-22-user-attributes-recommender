@@ -1,7 +1,7 @@
 parser: &parser
   item_column_name: title
 loader: &loader
-  batch_size: 8
+  batch_size: 128
   max_seq_length: 50
 datasets:
   test:
