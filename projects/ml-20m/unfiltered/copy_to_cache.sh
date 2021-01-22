@@ -2,7 +2,7 @@
 
 
 echo "copying data to cache"
-cp -r /scratch/jane-doe-framework/datasets/ml-20m_3_5_5/ /ssd/ml-20m
+cp -r /scratch/jane-doe-framework/datasets/ml-20m_3_0_0/ /ssd/ml-20m
 
 echo "done copying data to cache"
 ls -la /ssd
