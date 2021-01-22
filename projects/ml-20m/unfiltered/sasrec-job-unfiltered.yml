@@ -34,7 +34,7 @@ spec:
                 secretKeyRef:
                   key: token
                   name: gitlab-token
-          args: ["train", "sasrec", "/home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/unfiltered/sasrec_config.yaml"]
+          args: ["train", "sasrec", "/home/ls6/zoller/seq_recommendation/recommender_sas_rec/projects/ml-20m/unfiltered/sasrec_config.yaml"]
           volumeMounts:
             - mountPath: /home/ls6/zoller
               name: home
