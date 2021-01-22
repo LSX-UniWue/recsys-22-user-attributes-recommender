@@ -3,6 +3,7 @@ parser: &parser
 loader: &loader
   batch_size: 128
   max_seq_length: 50
+  num_workers: 4
 datasets:
   test:
     dataset:
