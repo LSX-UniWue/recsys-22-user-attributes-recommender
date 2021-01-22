@@ -116,6 +116,20 @@ def _build_mask_processor() -> Dict[str, Any]:
     }
 
 
+def _build_eval_mask_processor() -> Dict[str, Any]:
+    processors = DEFAULT_PROCESSORS.copy()
+    processors.append({
+        'mask_eval_processor': {}
+    })
+
+    return {
+        'datasets': {
+            'validation': _build_default_dataset_config(shuffle=False, processors=processors),
+            'test': _build_default_dataset_config(shuffle=False, processors=processors)
+        }
+    }
+
+
 # XXX: find a better way to allow
 def _kwargs_adapter(clazz, kwargs):
     return clazz(**kwargs)
@@ -135,6 +149,7 @@ class BERT4RecContainer(containers.DeclarativeContainer):
     })
     config.from_dict(MODULE_ADAM_OPTIMIZER_DEFAULT_VALUES)
     config.from_dict(_build_mask_processor())
+    config.from_dict(_build_eval_mask_processor())
 
     # tokenizer
     tokenizer = build_tokenizer_provider(config)

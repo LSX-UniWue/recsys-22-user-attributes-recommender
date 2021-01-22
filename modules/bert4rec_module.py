@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 import pytorch_lightning as pl
 
 from typing import Union, Dict, Optional
@@ -75,10 +74,6 @@ class BERT4RecModule(pl.LightningModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
         position_ids = BERT4RecModule.get_position_ids(batch)
-        input_seq = _expand_sequence(inputs=input_seq, padding_to_use=self.tokenizer.pad_token_id,
-                                     pad_direction=self.pad_direction)
-        target = _expand_sequence(inputs=target, padding_to_use=self.tokenizer.pad_token_id,
-                                  pad_direction=self.pad_direction)
 
         # calc the padding mask
         padding_mask = get_padding_mask(tensor=input_seq,
@@ -142,13 +137,10 @@ class BERT4RecModule(pl.LightningModule):
                          batch_idx: int,
                          is_test: bool = False
                          ) -> Dict[str, torch.Tensor]:
-        original_input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
         position_ids = BERT4RecModule.get_position_ids(batch)
-
-        # set the last non padding token to the mask token
-        input_seq = _add_mask_token_at_ending(original_input_seq, self.tokenizer, pad_direction=self.pad_direction)
         target_mask = input_seq.eq(self.tokenizer.mask_token_id)
 
         # handle basket training and evaluation
@@ -169,22 +161,13 @@ class BERT4RecModule(pl.LightningModule):
         # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
         # the target tensor
         mask = None if len(targets.size()) == 1 else ~ targets.eq(self.tokenizer.pad_token_id)
-        return build_eval_step_return_dict(original_input_seq, prediction, targets, mask=mask)
+        return build_eval_step_return_dict(input_seq, prediction, targets, mask=mask)
 
     def test_step(self, batch, batch_idx):
         return self._eval_epoch_step(batch, batch_idx, is_test=True)
 
     def configure_optimizers(self):
-        def _filter(name: str) -> bool:
-            return name.endswith("bias") or 'norm1' in name or 'norm2' in name or 'layer_norm' in name
-
-        decay_exclude = [parameter for name, parameter in self.named_parameters() if _filter(name)]
-        decay_include = [parameter for name, parameter in self.named_parameters() if not _filter(name)]
-
-        parameters = {'params': decay_exclude, 'weight_decay': 0.0},\
-                     {'params': decay_include, 'weight_decay': self.weight_decay}
-
-        optimizer = torch.optim.Adam(parameters,
+        optimizer = torch.optim.Adam(self.parameters(),
                                      lr=self.learning_rate,
                                      betas=(self.beta_1, self.beta_2))
 
@@ -208,66 +191,3 @@ class BERT4RecModule(pl.LightningModule):
             ]
             return [optimizer], schedulers
         return [optimizer]
-
-
-def _expand_sequence(inputs: torch.Tensor,
-                     padding_to_use: int,
-                     pad_direction: PadDirection = PadDirection.RIGHT
-                     ) -> torch.Tensor:
-    input_shape = inputs.shape
-    shape_addition_padding = (input_shape[0], 1)
-
-    # generate a tensor with the addition seq step (filled with padding tokens)
-    additional_padding = torch.full(shape_addition_padding, padding_to_use,
-                                    dtype=inputs.dtype,
-                                    device=inputs.device)
-    if len(input_shape) > 2:
-        additional_padding = additional_padding.repeat(1, input_shape[2]).unsqueeze(1)
-
-    tensors_to_cat = [inputs, additional_padding] if pad_direction == PadDirection.RIGHT else [additional_padding, inputs]
-    return torch.cat(tensors_to_cat, dim=1)
-
-
-def _add_mask_token_at_ending(input_seq: torch.Tensor,
-                              tokenizer: Tokenizer,
-                              pad_direction: PadDirection = PadDirection.RIGHT
-                              ) -> torch.Tensor:
-    """
-    This methods adds the masking token at the position of the first padding token
-    :param input_seq: a batch first tensor of sequences
-    :param tokenizer: the tokenizer to use
-    :param pad_direction: the pad direction of the sequence
-    :return: the input_seq with the masking token
-    """
-
-    if tokenizer.mask_token is None:
-        raise ValueError(
-            "This tokenizer does not have a mask item which is necessary for masked modeling."
-        )
-
-    # if the pad direction in left, we only have to add the mask token at the end of each sequence / batch
-    if pad_direction == PadDirection.LEFT:
-        mask_tokens = torch.full([input_seq.size()[0], 1], tokenizer.mask_token_id,
-                                 dtype=input_seq.dtype,
-                                 device=input_seq.device)
-        expanded_input_seq = torch.cat([input_seq, mask_tokens], dim=1)
-        return expanded_input_seq
-
-    # if the pad direction is right, we first expand the sequence with a padding token
-    input_seq = _expand_sequence(inputs=input_seq, padding_to_use=tokenizer.pad_token_id, pad_direction=pad_direction)
-
-    # then we have to find the first index of the padding token
-    input_shape = input_seq.size()
-    padding_input_to_use = input_seq
-    if len(input_shape) > 2:
-        padding_input_to_use = input_seq.max(dim=2).values
-    # here we calculate the token mask (inverted padding mask)
-    token_mask = get_padding_mask(padding_input_to_use, tokenizer, transposed=False, inverse=True)
-    # we calculate the length of the sequence, which is also the index of the first padding token
-    first_padded_indices = token_mask.sum(dim=1)
-    # convert the first_padding_indices to a boolean one hot vector
-    target_mask = F.one_hot(first_padded_indices, num_classes=input_shape[1]).to(dtype=torch.bool)
-    # set the first padding token to the mask token
-    input_seq[target_mask] = tokenizer.mask_token_id
-
-    return input_seq
