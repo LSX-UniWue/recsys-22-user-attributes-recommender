@@ -46,6 +46,12 @@ spec:
             - containerPort: 8888
       imagePullSecrets:
         - name: regcred
+      tolerations:
+        - effect: NoSchedule
+          key: network
+          operator: Exists
+      nodeSelector:
+        gputype: "2080ti"
       restartPolicy: "Never"
       volumes:
         - name: home
