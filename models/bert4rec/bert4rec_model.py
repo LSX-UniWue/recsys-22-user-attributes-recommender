@@ -124,7 +124,6 @@ class BERT4RecModel(BERT4RecBaseModel):
                        max_seq_length: int,
                        transformer_dropout: float,
                        embedding_mode: str = None):
-        max_seq_length = max_seq_length + 1
         self.embedding = TransformerEmbedding(item_voc_size=item_vocab_size, max_seq_len=max_seq_length,
                                               embedding_size=transformer_hidden_size, dropout=transformer_dropout,
                                               embedding_pooling_type=embedding_mode, norm_embedding=False)

@@ -39,14 +39,12 @@ def _padded_session_collate(pad_token_id: int,
             generate_padding: Union[Callable[[int], Any], partial],
             padded_length: int,
             ) -> torch.Tensor:
-        length = len(x)
-        padding = generate_padding(length)
+        # truncate the session to the left to keep the last interactions
+        x = x[-padded_length:]
+
+        padding = generate_padding(len(x))
 
         padded_x = x + padding if pad_direction == PadDirection.RIGHT else padding + x
-
-        # truncate if the sequence is longer
-        # FIXME: discuss: maybe truncate on the left side?
-        padded_x = padded_x[:padded_length]
 
         return padded_x
 

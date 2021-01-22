@@ -279,7 +279,8 @@ def _build_entries_to_pad(max_seq_length: int,
     entries_to_pad = {
         ITEM_SEQ_ENTRY_NAME: [max_seq_length],
         POSITIVE_SAMPLES_ENTRY_NAME: [max_seq_length],
-        NEGATIVE_SAMPLES_ENTRY_NAME: [max_seq_length]
+        NEGATIVE_SAMPLES_ENTRY_NAME: [max_seq_length],
+        TARGET_ENTRY_NAME: [max_seq_length]
     }
 
     if max_seq_step_length is not None:
@@ -342,10 +343,10 @@ def provide_nextit_loader(dataset: Dataset,
 
 def build_standard_trainer(config: providers.Configuration
                            ) -> providers.Singleton:
-    checkpoint = build_standard_model_checkpoint(config)
+    checkpoint_callback = build_standard_model_checkpoint(config)
     logger = select_and_build_logger_provider(config)
 
-    logging_callbacks = build_standard_logging_callbacks_provider(config.module)
+    callbacks = build_standard_logging_callbacks_provider(config.module, checkpoint_callback)
 
     trainer_config = config.trainer
     return providers.Singleton(
@@ -353,14 +354,15 @@ def build_standard_trainer(config: providers.Configuration
         limit_train_batches=trainer_config.limit_train_batches,
         limit_val_batches=trainer_config.limit_val_batches,
         default_root_dir=trainer_config.default_root_dir,
-        checkpoint_callback=checkpoint,
         gradient_clip_val=trainer_config.gradient_clip_val,
         gpus=trainer_config.gpus,
         max_epochs=trainer_config.max_epochs,
         weights_summary='full',
         logger=logger,
-        callbacks=logging_callbacks,
-        track_grad_norm=trainer_config.track_grad_norm
+        callbacks=callbacks,
+        track_grad_norm=trainer_config.track_grad_norm,
+        accelerator=trainer_config.accelerator,
+        check_val_every_n_epoch=trainer_config.check_val_every_n_epoch
     )
 
 
@@ -368,8 +370,10 @@ def build_standard_model_checkpoint(config: providers.Configuration
                                     ) -> providers.Singleton:
     return providers.Singleton(
         ModelCheckpoint,
-        filepath=config.trainer.checkpoint.filepath,
+        #dirpath=config.trainer.checkpoint.dirpath,
+        #filename=config.trainer.checkpoint.filename,
         monitor=config.trainer.checkpoint.monitor,
+        mode=config.trainer.checkpoint.mode,
         save_top_k=config.trainer.checkpoint.save_top_k,
     )
 
@@ -429,20 +433,24 @@ def _get_metrics_loggers_to_build(config_dict: Dict[str, Any]) -> str:
     return 'sampled_metrics'
 
 
-def build_standard_logging_callbacks_provider(config: providers.Configuration
+# FIXME adding the checkpoint provider here is not a good solution, but I don't have any idea how to fix this otherwise
+def build_standard_logging_callbacks_provider(config: providers.Configuration, checkpoint_provider
                                               ) -> providers.Selector:
     # FIXME: is there a better way to build the loggers based on the config?
     selector = providers.Singleton(_get_metrics_loggers_to_build, config)
     return providers.Selector(selector,
                               all=providers.List(
                                   build_metric_logger_provider(config.metrics),
-                                  build_sampled_metric_logger_provider(config.sampled_metrics)
+                                  build_sampled_metric_logger_provider(config.sampled_metrics),
+                                  checkpoint_provider
                               ),
                               metrics=providers.List(
-                                  build_metric_logger_provider(config.metrics)
+                                  build_metric_logger_provider(config.metrics),
+                                  checkpoint_provider
                               ),
                               sampled_metrics=providers.List(
-                                  build_sampled_metric_logger_provider(config.sampled_metrics)
+                                  build_sampled_metric_logger_provider(config.sampled_metrics),
+                                  checkpoint_provider
                               ))
 
 

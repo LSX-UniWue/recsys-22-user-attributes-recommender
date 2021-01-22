@@ -1,7 +1,7 @@
 ## Build
 ```
 export BUILDAH_LAYERS=true
-buildah bud --format docker -f Dockerfile -t lsx-harbor.informatik.uni-wuerzburg.de/dallmann/recommender:latest -t recommender:latest .
+buildah bud --format docker -f Dockerfile -t lsx-harbor.informatik.uni-wuerzburg.de/dallmann/recommender/jane-doe-gpu:latest -t recommender:latest .
 ```
 
 ## Usage
