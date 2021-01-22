@@ -40,6 +40,8 @@ spec:
               name: home
             - mountPath: /scratch
               name: scratch
+            - mountPath: /dev/shm
+              name: dshm
             - mountPath: /ssd
               name: cache
           ports:
@@ -70,6 +72,10 @@ spec:
             path: "/scratch"
             secretRef:
               name: ceph-secret-zoller
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "4Gi"
         - name: cache
           emptyDir:
             medium: Memory
