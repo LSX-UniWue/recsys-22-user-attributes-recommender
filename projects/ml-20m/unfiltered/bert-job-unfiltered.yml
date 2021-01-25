@@ -15,7 +15,7 @@ spec:
           resources:
             requests: &resources
               cpu: "24"
-              memory: "64Gi"
+              memory: "128Gi"
               nvidia.com/gpu: 8
             limits: *resources
           env:

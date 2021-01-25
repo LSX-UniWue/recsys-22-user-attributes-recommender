@@ -25,9 +25,12 @@ class BERT4RecBaseModel(nn.Module):
         self.transformer_encoder = TransformerLayer(transformer_hidden_size, num_transformer_heads,
                                                     num_transformer_layers, transformer_hidden_size * 4,
                                                     transformer_dropout)
-        # TODO: removed for testing
-        # self.transform = nn.Linear(transformer_hidden_size, transformer_hidden_size)
-        # self.gelu = nn.GELU()
+
+        self.transform = nn.Sequential(
+            nn.Linear(transformer_hidden_size, transformer_hidden_size),
+            nn.GELU(),
+            nn.LayerNorm(transformer_hidden_size)
+        )
 
         self._init_internal(transformer_hidden_size, num_transformer_heads, num_transformer_layers, item_vocab_size,
                             max_seq_length, transformer_dropout, embedding_pooling_type)
@@ -37,13 +40,15 @@ class BERT4RecBaseModel(nn.Module):
         self.apply(self._init_weights)
 
     def _init_weights(self, module):
-        """ Initialize the weights """
-        if isinstance(module, (nn.Linear, nn.Embedding)):
+        """ Initializes the weights of the layers """
+        is_linear_layer = isinstance(module, nn.Linear)
+        is_embedding_layer = isinstance(module, nn.Embedding)
+        if is_linear_layer or is_embedding_layer:
             module.weight.data.normal_(mean=0.0, std=self.initializer_range)
         elif isinstance(module, nn.LayerNorm):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
-        if isinstance(module, nn.Linear) and module.bias is not None:
+        if is_linear_layer and module.bias is not None:
             module.bias.data.zero_()
 
     def _init_internal(self,
@@ -88,7 +93,7 @@ class BERT4RecBaseModel(nn.Module):
 
         encoded_sequence = self.transformer_encoder(embedded_sequence, padding_mask=padding_mask)
 
-        transformed = encoded_sequence  # self.gelu(self.transform(encoded_sequence))
+        transformed = self.transform(encoded_sequence)
 
         return self.projection_layer(transformed)
 
