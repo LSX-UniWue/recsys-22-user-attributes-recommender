@@ -17,22 +17,34 @@ class BERT4RecBaseModel(nn.Module):
                  max_seq_length: int,
                  transformer_dropout: float,
                  project_layer_type: str = 'transpose_embedding',
-                 embedding_pooling_type: str = None
+                 embedding_pooling_type: str = None,
+                 initializer_range: float = 0.02
                  ):
         super().__init__()
-
+        self.initializer_range = initializer_range
         self.transformer_encoder = TransformerLayer(transformer_hidden_size, num_transformer_heads,
                                                     num_transformer_layers, transformer_hidden_size * 4,
                                                     transformer_dropout)
-
-        self.transform = nn.Linear(transformer_hidden_size, transformer_hidden_size)
-        self.gelu = nn.GELU()
+        # TODO: removed for testing
+        # self.transform = nn.Linear(transformer_hidden_size, transformer_hidden_size)
+        # self.gelu = nn.GELU()
 
         self._init_internal(transformer_hidden_size, num_transformer_heads, num_transformer_layers, item_vocab_size,
                             max_seq_length, transformer_dropout, embedding_pooling_type)
 
         self.projection_layer = self._build_projection_layer(project_layer_type, transformer_hidden_size,
                                                              item_vocab_size)
+        self.apply(self._init_weights)
+
+    def _init_weights(self, module):
+        """ Initialize the weights """
+        if isinstance(module, (nn.Linear, nn.Embedding)):
+            module.weight.data.normal_(mean=0.0, std=self.initializer_range)
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+        if isinstance(module, nn.Linear) and module.bias is not None:
+            module.bias.data.zero_()
 
     def _init_internal(self,
                        transformer_hidden_size: int,
@@ -76,7 +88,7 @@ class BERT4RecBaseModel(nn.Module):
 
         encoded_sequence = self.transformer_encoder(embedded_sequence, padding_mask=padding_mask)
 
-        transformed = self.gelu(self.transform(encoded_sequence))
+        transformed = encoded_sequence  # self.gelu(self.transform(encoded_sequence))
 
         return self.projection_layer(transformed)
 
@@ -105,7 +117,8 @@ class BERT4RecModel(BERT4RecBaseModel):
                  max_seq_length: int,
                  transformer_dropout: float,
                  project_layer_type: str = 'transpose_embedding',
-                 embedding_pooling_type: str = None
+                 embedding_pooling_type: str = None,
+                 initializer_range: float = 0.02
                  ):
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
@@ -114,7 +127,8 @@ class BERT4RecModel(BERT4RecBaseModel):
                          max_seq_length=max_seq_length,
                          transformer_dropout=transformer_dropout,
                          project_layer_type=project_layer_type,
-                         embedding_pooling_type=embedding_pooling_type)
+                         embedding_pooling_type=embedding_pooling_type,
+                         initializer_range=initializer_range)
 
     def _init_internal(self,
                        transformer_hidden_size: int,
