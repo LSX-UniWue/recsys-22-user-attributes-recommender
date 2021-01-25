@@ -47,7 +47,7 @@ module:
         - 1
         - 5
         - 10
-  metrcis:
+  metrics:
     recall:
       - 5
 tokenizer:
