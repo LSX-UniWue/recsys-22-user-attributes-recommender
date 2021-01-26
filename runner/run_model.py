@@ -2,13 +2,13 @@ import logging
 import logging.handlers
 import os
 from pathlib import Path
-from tempfile import TemporaryFile, NamedTemporaryFile
+from tempfile import NamedTemporaryFile
 from typing import Dict, Any, Optional
 
 import optuna
 import typer
 from dependency_injector import containers
-from pytorch_lightning import Trainer, Callback, seed_everything
+from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.utilities import cloud_io
 
 from runner.util.callbacks import PredictionLoggerCallback
@@ -77,7 +77,8 @@ def search(model: str = typer.Argument(..., help="the model to run"),
            template_file: Path = typer.Argument(..., help='the path to the config file'),
            study_name: str = typer.Argument(..., help='the optuna study name'),
            study_storage: str = typer.Argument(..., help='the connection string for the study storage'),
-           objective_metric: str = typer.Argument(..., help='the name of the metric to watch during the study (e.g. rec_at_5).')
+           objective_metric: str = typer.Argument(..., help='the name of the metric to watch during the study'
+                                                            '(e.g. rec_at_5).')
           ) -> None:
     # XXX: because the dependency injector does not provide a error message when the config file does not exists,
     # we manually check if the config file exists
