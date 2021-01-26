@@ -3,14 +3,15 @@ from typing import Dict
 import torch
 from torch.nn import functional as F
 
-from modules.constants import RETURN_KEY_PREDICTIONS, RETURN_KEY_TARGETS, RETURN_KEY_MASK
+from modules.constants import RETURN_KEY_PREDICTIONS, RETURN_KEY_TARGETS, RETURN_KEY_MASK, RETURN_KEY_SEQUENCE
 from tokenization.tokenizer import Tokenizer
 
 
 def get_padding_mask(tensor: torch.Tensor,
                      tokenizer: Tokenizer,
                      transposed: bool = True,
-                     inverse: bool = False) -> torch.Tensor:
+                     inverse: bool = False
+                     ) -> torch.Tensor:
     """
     generates the padding mask based on the tokenizer (by default batch first)
     :param tensor:
@@ -80,13 +81,15 @@ def convert_target_to_multi_hot(target_tensor: torch.Tensor,
     return multi_hot
 
 
-def build_eval_step_return_dict(predictions: torch.Tensor,
+def build_eval_step_return_dict(input_sequence: torch.Tensor,
+                                predictions: torch.Tensor,
                                 targets: torch.Tensor,
                                 mask: torch.Tensor = None) -> Dict[str, torch.Tensor]:
 
     """
     Generates a dictionary to be returned from the validation/test step which contains information to be provided to callbacks.
 
+    :param input_sequence: the input sequence used by the model to calculate the predictions.
     :param predictions: Predictions made by the model in the current step.
     :param targets: Expected outputs from the model in the current step.
     :param mask: Optional mask which is forwarded to metrics.
@@ -95,10 +98,11 @@ def build_eval_step_return_dict(predictions: torch.Tensor,
     """
 
     return_dict = {
+        RETURN_KEY_SEQUENCE: input_sequence.to("cpu"),
         RETURN_KEY_PREDICTIONS: predictions.to("cpu"),
         RETURN_KEY_TARGETS: targets.to("cpu"),
     }
     if mask is not None:
-        return_dict.update({RETURN_KEY_MASK: mask})
+        return_dict.update({RETURN_KEY_MASK: mask.to("cpu")})
 
     return return_dict

@@ -13,7 +13,7 @@ from modules.util.module_util import get_padding_mask, convert_target_to_multi_h
 from tokenization.tokenizer import Tokenizer
 
 
-class GRUModule(pl.LightningModule):
+class RNNModule(pl.LightningModule):
 
     def __init__(self,
                  model: RNNSeqItemRecommenderModel,
@@ -34,6 +34,22 @@ class GRUModule(pl.LightningModule):
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
+        """
+        Performs a training step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `data.datasets.ITEM_SEQ_ENTRY_NAME`: a tensor of size :math `(N, S)` with the input sequences.
+            * `data.datasets.TARGET_ENTRY_NAME`: a tensor of size (N) with the target items,
+
+        Where N is the batch size and S the max sequence length.
+
+        A padding mask will be calculated on the fly, based on the `self.tokenizer` of the module.
+
+        :param batch: a batch.
+        :param batch_idx: the batch number.
+
+        :return: A dictionary with the loss.
+        """
         logits = self.forward(batch, batch_idx)
 
         target = batch[TARGET_ENTRY_NAME]
@@ -65,8 +81,10 @@ class GRUModule(pl.LightningModule):
         Performs a validation step on a batch of sequences and returns the overall loss.
 
         `batch` must be a dictionary containing the following entries:
-            * `data.datasets.ITEM_SEQ_ENTRY_NAME`: a tensor of size [BS x S] with the input sequences.
-            * `data.datasets.TARGET_ENTRY_NAME`: a tensor of size [BS] with the target items.
+            * `data.datasets.ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S) with the input sequences.
+            * `data.datasets.TARGET_ENTRY_NAME`: a tensor of size (N) with the target items,
+
+        Where N is the batch size and S the max sequence length.
 
         A padding mask will be calculated on the fly, based on the `self.tokenizer` of the module.
 
@@ -76,6 +94,8 @@ class GRUModule(pl.LightningModule):
         :return: A dictionary with entries according to `build_eval_step_return_dict`.
         """
 
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+
         logits = self(batch, batch_idx)
         target = batch[TARGET_ENTRY_NAME]
 
@@ -84,7 +104,7 @@ class GRUModule(pl.LightningModule):
 
         mask = None if len(target.size()) == 1 else ~ target.eq(self.tokenizer.pad_token_id)
 
-        return build_eval_step_return_dict(logits, target, mask=mask)
+        return build_eval_step_return_dict(input_seq, logits, target, mask=mask)
 
     def test_step(self,
                   batch: Dict[str, torch.Tensor],
@@ -106,14 +126,16 @@ class GRUModule(pl.LightningModule):
         Applies the RNN model on a batch of sequences and returns logits for every sample in the batch.
 
         `batch` must be a dictionary containing the following entries:
-            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size [BS x S]
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
 
         A padding mask will be calculated on the fly, based on the `self.tokenizer` of the module.
 
         :param batch: a batch.
         :param batch_idx: the batch number.
 
-        :return: a tensor with logits for every batch [BS x |I|]
+        :return: a tensor with logits for every batch of size (N, I)
+
+        Where N is the batch size, S the max sequence length, and I the item vocabulary size.
         """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)

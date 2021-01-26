@@ -4,6 +4,7 @@ from torch import nn
 import torch
 
 from models.bert4rec.bert4rec_model import BERT4RecBaseModel
+from models.layers.layers import PROJECT_TYPE_LINEAR
 from models.layers.transformer_layers import TransformerEmbedding
 
 
@@ -30,8 +31,7 @@ class LinearUpscaler(nn.Module):
         # the input is a sequence of content ids without any order
         # so we convert them into a multi-hot encoding
         multi_hot = torch.nn.functional.one_hot(content_input, self.vocab_size).sum(2).float()
-        # 0 is the padding category, so zero it out#
-        # FIXME: not batch first
+        # 0 is the padding category, so zero it out
         multi_hot[:, :, 0] = 0
         return self.linear(multi_hot)
 
@@ -45,11 +45,16 @@ class KeBERT4Rec(BERT4RecBaseModel):
                  item_vocab_size: int,
                  max_seq_length: int,
                  transformer_dropout: float,
-                 additional_attributes: Dict[str, (str, int)]):
+                 additional_attributes: Dict[str, (str, int)],
+                 embedding_pooling_type: str = None):
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
                          num_transformer_layers=num_transformer_layers,
-                         transformer_dropout=transformer_dropout)
+                         transformer_dropout=transformer_dropout,
+                         item_vocab_size=item_vocab_size,
+                         max_seq_length=max_seq_length,
+                         project_layer_type=PROJECT_TYPE_LINEAR,
+                         embedding_pooling_type=embedding_pooling_type)
 
         self.item_vocab_size = item_vocab_size
         self.max_seq_length = max_seq_length + 1
@@ -75,9 +80,6 @@ class KeBERT4Rec(BERT4RecBaseModel):
         self.embedding_norm = nn.LayerNorm(self.transformer_hidden_size)
         self.dropout_layer = nn.Dropout(p=self.transformer_dropout)
 
-        # for projection
-        self.projection_layer = nn.Linear(self.transformer_hidden_size, self.item_vocab_size)
-
     def _embed_input(self,
                      input_sequence: torch.Tensor,
                      position_ids: torch.Tensor,
@@ -86,11 +88,5 @@ class KeBERT4Rec(BERT4RecBaseModel):
         embedding = self.embedding(input_sequence, position_ids)
         for input_key, module in self.additional_attribute_embeddings:
             embedding += module(kwargs[input_key])
-        embedding = self.layer_norm(embedding)
         embedding = self.dropout_layer(embedding)
         return embedding
-
-    def _projection(self,
-                    dense: torch.Tensor
-                    ) -> torch.Tensor:
-        return self.projection_layer(dense)

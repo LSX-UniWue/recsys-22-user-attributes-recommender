@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Callable, Dict, Any, List, Optional
 
@@ -17,10 +16,9 @@ from data.datasets.prepare import Processor, build_processors, PositiveNegativeS
 from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
-from logger.GradientLoggerCallback import GradientLoggerCallback
+from logger.SampledMetricLoggerCallback import SampledMetricLoggerCallback
 from logger.MetricLoggerCallback import MetricLoggerCallback
-from logger.TrainLossLoggerCallback import TrainLossLoggerCallback
-from metrics.utils.metric_utils import build_metrics
+from metrics.utils.metric_utils import build_metrics, build_sampled_metrics
 from data.collate import padded_session_collate, PadDirection
 from tokenization.tokenizer import Tokenizer
 from tokenization.vocabulary import VocabularyReaderWriter, Vocabulary, CSVVocabularyReaderWriter
@@ -80,6 +78,10 @@ def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider
                 has_pos_neg_sampler_processor = True
         if not has_pos_neg_sampler_processor:
             raise ValueError('please configure a pos neg sampler')
+
+        if nip_index is not None:
+            return NextItemDataset(basic_dataset, SessionPositionIndex(Path(nip_index)), processors, add_target=False,
+                                   include_target_pos=True)
         return ItemSessionDataset(basic_dataset, processors)
 
     return build_dataset_provider_factory(provide_posneg_dataset, tokenizer_provider, processors_provider,
@@ -100,8 +102,8 @@ def build_tokenizer_provider(config: providers.Configuration) -> providers.Singl
     return providers.Singleton(provide_tokenizer, vocabulary, config.tokenizer.special_tokens)
 
 
-def _to_pad_direction(pad_id: str
-                      ) -> PadDirection:
+def to_pad_direction(pad_id: str
+                     ) -> PadDirection:
     return PadDirection[pad_id.upper()]
 
 
@@ -112,7 +114,7 @@ def build_session_loader_provider_factory(dataset_config: providers.Configuratio
     dataset = build_session_dataset_provider_factory(tokenizer_provider, processors_providers, dataset_config)
     dataset_loader_config = dataset_config.loader
 
-    pad_direction = providers.Factory(_to_pad_direction, dataset_loader_config.pad_direction)
+    pad_direction = providers.Factory(to_pad_direction, dataset_loader_config.pad_direction)
 
     return providers.Factory(
         provide_session_loader,
@@ -133,7 +135,7 @@ def build_nextitem_loader_provider_factory(dataset_config: providers.Configurati
     dataset = build_nextitem_dataset_provider_factory(tokenizer_provider, processors_provider, dataset_config)
     dataset_loader_config = dataset_config.loader
 
-    pad_direction = providers.Factory(_to_pad_direction, dataset_loader_config.pad_direction)
+    pad_direction = providers.Factory(to_pad_direction, dataset_loader_config.pad_direction)
 
     return providers.Factory(
         provide_nextit_loader,
@@ -155,7 +157,7 @@ def build_posneg_loader_provider_factory(dataset_config: providers.Configuration
     dataset = build_posnet_dataset_provider_factory(tokenizer_provider, processor_provider_provider, dataset_config)
     dataset_loader_config = dataset_config.loader
 
-    pad_direction = providers.Factory(_to_pad_direction, dataset_loader_config.pad_direction)
+    pad_direction = providers.Factory(to_pad_direction, dataset_loader_config.pad_direction)
 
     return providers.Factory(
         provide_session_loader,
@@ -224,7 +226,7 @@ def build_dataset_provider_factory(
         tokenizer_provider: providers.Provider,
         processors_provider: providers.Provider,
         dataset_config: providers.ConfigurationOption
-        ) -> providers.Factory:
+) -> providers.Factory:
     dataset_config = dataset_config.dataset
     parser_config = dataset_config.parser
 
@@ -277,7 +279,8 @@ def _build_entries_to_pad(max_seq_length: int,
     entries_to_pad = {
         ITEM_SEQ_ENTRY_NAME: [max_seq_length],
         POSITIVE_SAMPLES_ENTRY_NAME: [max_seq_length],
-        NEGATIVE_SAMPLES_ENTRY_NAME: [max_seq_length]
+        NEGATIVE_SAMPLES_ENTRY_NAME: [max_seq_length],
+        TARGET_ENTRY_NAME: [max_seq_length]
     }
 
     if max_seq_step_length is not None:
@@ -338,10 +341,12 @@ def provide_nextit_loader(dataset: Dataset,
     )
 
 
-def build_standard_trainer(config: providers.Configuration) -> providers.Singleton:
-    checkpoint = build_standard_model_checkpoint(config)
+def build_standard_trainer(config: providers.Configuration
+                           ) -> providers.Singleton:
+    checkpoint_callback = build_standard_model_checkpoint(config)
     logger = select_and_build_logger_provider(config)
-    logging_callbacks = build_standard_logging_callbacks_provider(config.module.metrics)
+
+    callbacks = build_standard_logging_callbacks_provider(config.module, checkpoint_callback)
 
     trainer_config = config.trainer
     return providers.Singleton(
@@ -349,21 +354,26 @@ def build_standard_trainer(config: providers.Configuration) -> providers.Singlet
         limit_train_batches=trainer_config.limit_train_batches,
         limit_val_batches=trainer_config.limit_val_batches,
         default_root_dir=trainer_config.default_root_dir,
-        checkpoint_callback=checkpoint,
         gradient_clip_val=trainer_config.gradient_clip_val,
         gpus=trainer_config.gpus,
         max_epochs=trainer_config.max_epochs,
         weights_summary='full',
         logger=logger,
-        callbacks=logging_callbacks
+        callbacks=callbacks,
+        track_grad_norm=trainer_config.track_grad_norm,
+        accelerator=trainer_config.accelerator,
+        check_val_every_n_epoch=trainer_config.check_val_every_n_epoch
     )
 
 
-def build_standard_model_checkpoint(config: providers.Configuration) -> providers.Singleton:
+def build_standard_model_checkpoint(config: providers.Configuration
+                                    ) -> providers.Singleton:
     return providers.Singleton(
         ModelCheckpoint,
-        filepath=config.trainer.checkpoint.filepath,
+        #dirpath=config.trainer.checkpoint.dirpath,
+        #filename=config.trainer.checkpoint.filename,
         monitor=config.trainer.checkpoint.monitor,
+        mode=config.trainer.checkpoint.mode,
         save_top_k=config.trainer.checkpoint.save_top_k,
     )
 
@@ -376,7 +386,16 @@ def build_metrics_provider(config: providers.ConfigurationOption
     )
 
 
-def select_and_build_logger_provider(config: providers.Configuration) -> providers.Singleton:
+def build_sampled_metrics_provider(config: providers.ConfigurationOption
+                                   ) -> providers.Singleton:
+    return providers.Singleton(
+        build_sampled_metrics,
+        config
+    )
+
+
+def select_and_build_logger_provider(config: providers.Configuration
+                                     ) -> providers.Singleton:
     def build_provider(logger_type: str, config: Dict[str, Any]):
         # for now default to tensorboard
         if logger_type == "mlflow":
@@ -387,29 +406,79 @@ def select_and_build_logger_provider(config: providers.Configuration) -> provide
     return providers.Singleton(build_provider, config.trainer.logger.type, config)
 
 
-def build_standard_tensorboard_logger_provider(config: Dict[str, Any]) -> TensorBoardLogger:
+def build_standard_tensorboard_logger_provider(config: Dict[str, Any]
+                                               ) -> TensorBoardLogger:
     log_dir = Path(config["trainer"]["default_root_dir"], "logs")
     return TensorBoardLogger(save_dir=log_dir, name=config["trainer"]["experiment_name"])
 
 
-def build_mlflow_logger_provider(config: Dict[str, Any]) -> MLFlowLogger:
+def build_mlflow_logger_provider(config: Dict[str, Any]
+                                 ) -> MLFlowLogger:
     experiment_name = config["trainer"]["experiment_name"]
     tracking_uri = config["trainer"]["logger"]["tracking_uri"]
 
     return MLFlowLogger(experiment_name=experiment_name, tracking_uri=tracking_uri)
 
 
-def build_standard_logging_callbacks_provider(config) -> providers.List:
+def _get_metrics_loggers_to_build(config_dict: Dict[str, Any]) -> str:
+    metrics = 'metrics' in config_dict
+    sampled_metrics = 'sampled_metrics' in config_dict
 
-    return providers.List(
-        build_metric_logger_provider(config),
-        GradientLoggerCallback(),
-        TrainLossLoggerCallback())
+    if metrics and sampled_metrics:
+        return 'all'
+
+    if metrics:
+        return 'metrics'
+
+    return 'sampled_metrics'
 
 
-def build_metric_logger_provider(config: providers.ConfigurationOption) -> providers.Singleton:
+# FIXME adding the checkpoint provider here is not a good solution, but I don't have any idea how to fix this otherwise
+def build_standard_logging_callbacks_provider(config: providers.Configuration, checkpoint_provider
+                                              ) -> providers.Selector:
+    # FIXME: is there a better way to build the loggers based on the config?
+    selector = providers.Singleton(_get_metrics_loggers_to_build, config)
+    return providers.Selector(selector,
+                              all=providers.List(
+                                  build_metric_logger_provider(config.metrics),
+                                  build_sampled_metric_logger_provider(config.sampled_metrics),
+                                  checkpoint_provider
+                              ),
+                              metrics=providers.List(
+                                  build_metric_logger_provider(config.metrics),
+                                  checkpoint_provider
+                              ),
+                              sampled_metrics=providers.List(
+                                  build_sampled_metric_logger_provider(config.sampled_metrics),
+                                  checkpoint_provider
+                              ))
+
+
+def build_metric_logger_provider(config: providers.ConfigurationOption
+                                 ) -> providers.Singleton:
     metric_provider = build_metrics_provider(config)
     return providers.Singleton(
         MetricLoggerCallback,
         metrics=metric_provider
     )
+
+
+def build_sampled_metric_logger_provider(config: providers.ConfigurationOption
+                                         ) -> providers.Singleton:
+    metric_provider = build_sampled_metrics_provider(config.metrics)
+    item_probabilities = providers.Singleton(convert_prob_file, config.sample_probability_file)
+    return providers.Singleton(
+        SampledMetricLoggerCallback,
+        metrics=metric_provider,
+        item_probabilities=item_probabilities,
+        num_negative_samples=config.num_negative_samples
+    )
+
+
+def convert_prob_file(path: str) -> List[float]:
+    probs = []
+    with open(path) as prob_file:
+        for line in prob_file.readlines():
+            probs.append(float(line))
+
+    return probs

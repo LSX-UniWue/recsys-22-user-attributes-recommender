@@ -16,27 +16,21 @@ class CsvDatasetIndex(MultiProcessSupport):
         self._init()
 
     def _init(self):
-        self._index_file_handle = self._index_file_path.open("rb")
-        self._num_sessions = self._read_num_sessions()
+        with self._index_file_path.open("rb") as file_handle:
+            self._num_sessions = self._read_num_sessions(file_handle)
 
-    def _read_num_sessions(self) -> int:
-        self._seek_to_header()
-        return self._read_int()
+    def _read_num_sessions(self, file_handle) -> int:
+        self._seek_to_header(file_handle)
+        return self._read_int(file_handle)
 
-    def _seek_to_header(self):
-        self._index_file_handle.seek(-self.INT_BYTE_SIZE, io.SEEK_END)
+    def _seek_to_header(self, file_handle):
+        file_handle.seek(-self.INT_BYTE_SIZE, io.SEEK_END)
 
-    def _read_int(self) -> int:
-        return int.from_bytes(self._index_file_handle.read(self.INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
+    def _read_int(self, file_handle) -> int:
+        return int.from_bytes(file_handle.read(self.INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
 
     def num_sessions(self) -> int:
         return self._num_sessions
-
-    def __enter__(self):
-        return self._index_file_handle
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._index_file_handle.close()
 
     def __len__(self):
         return self.num_sessions()
@@ -49,12 +43,13 @@ class CsvDatasetIndex(MultiProcessSupport):
         :param session_num: a number in [0; num_sessions-1]
         :return: a tuple with start and end byte position within the data file.
         """
-        self._index_file_handle.seek(session_num * self.INT_BYTE_SIZE * 2)
+        with self._index_file_path.open("rb") as file_handle:
+            file_handle.seek(session_num * self.INT_BYTE_SIZE * 2)
 
-        start = int.from_bytes(self._index_file_handle.read(self.INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
-        end = int.from_bytes(self._index_file_handle.read(self.INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
+            start = self._read_int(file_handle)
+            end = self._read_int(file_handle)
 
-        return start, end
+            return start, end
 
     def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
         self._init()
@@ -71,17 +66,10 @@ class CsvDatasetReader(MultiProcessSupport):
         self._init()
 
     def _init(self):
-        self._data_file_handle = self._data_file_path.open(mode="rb")
         self._num_sessions = self._index.num_sessions()
 
     def __len__(self):
         return self._num_sessions
-
-    def __enter__(self):
-        return self._data_file_handle
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._data_file_handle.close()
 
     def get_session(self, idx: int) -> str:
         if idx >= self._num_sessions:
@@ -93,8 +81,9 @@ class CsvDatasetReader(MultiProcessSupport):
         return session_raw
 
     def _read_session(self, start: int, end: int) -> str:
-        self._data_file_handle.seek(start)
-        return self._data_file_handle.read(end - start).decode(encoding="utf-8")
+        with self._data_file_path.open("rb") as file_handle:
+            file_handle.seek(start)
+            return file_handle.read(end - start).decode(encoding="utf-8")
 
     def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
         self._init()
