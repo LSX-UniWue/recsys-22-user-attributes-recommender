@@ -80,7 +80,7 @@ class BERT4RecBaseModel(nn.Module):
 
         :param sequence: the input sequence :math:`(N, S)`
         :param position_ids: (optional) positional_ids if None the position ids are generated :math:`(N, S)`
-        :param padding_mask: (optional) the padding mask if the sequence is padded :math:`(N, S)`
+        :param padding_mask: (optional) the padding mask if the sequence is padded :math:`(N, S)` True if not padded
         :return: the logits of the predicted tokens :math:`(N, S, I)`
         (Note: all logits for all positions are returned. For loss calculation please only use the positions of the
         MASK tokens.)
@@ -91,7 +91,11 @@ class BERT4RecBaseModel(nn.Module):
         # embedding the indexed sequence to sequence of vectors
         embedded_sequence = self.embedding(sequence, position_ids=position_ids)
 
-        encoded_sequence = self.transformer_encoder(embedded_sequence, padding_mask=padding_mask)
+        attention_mask = None
+        if padding_mask is not None:
+            attention_mask = padding_mask.unsqueeze(1).repeat(1, sequence.size()[1], 1).unsqueeze(1)
+
+        encoded_sequence = self.transformer_encoder(embedded_sequence, attention_mask=attention_mask)
 
         transformed = self.transform(encoded_sequence)
 
