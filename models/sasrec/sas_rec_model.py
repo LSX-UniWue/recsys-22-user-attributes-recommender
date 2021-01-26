@@ -3,30 +3,8 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
-from models.layers.transformer_layers import TransformerEmbedding
+from models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
 from models.layers.tensor_utils import generate_square_subsequent_mask
-
-
-class PointWiseFeedForward(torch.nn.Module):
-    def __init__(self,
-                 hidden_units: int,
-                 dropout_rate: float):
-
-        super(PointWiseFeedForward, self).__init__()
-
-        self.conv1 = torch.nn.Conv1d(hidden_units, hidden_units, kernel_size=1)
-        self.dropout1 = torch.nn.Dropout(p=dropout_rate)
-        self.relu = torch.nn.ReLU()
-        self.conv2 = torch.nn.Conv1d(hidden_units, hidden_units, kernel_size=1)
-        self.dropout2 = torch.nn.Dropout(p=dropout_rate)
-
-    def forward(self,
-                inputs: torch.Tensor
-                ) -> torch.Tensor:
-        outputs = self.dropout2(self.conv2(self.relu(self.dropout1(self.conv1(inputs.transpose(-1, -2))))))
-        outputs = outputs.transpose(-1, -2)  # as Conv1D requires (N, C, Length)
-        outputs += inputs
-        return outputs
 
 
 class SASRecModel(nn.Module):
@@ -72,29 +50,9 @@ class SASRecModel(nn.Module):
                                               dropout=self.transformer_dropout,
                                               embedding_pooling_type=self.embedding_mode)
 
-        self.attention_layernorms = torch.nn.ModuleList()
-        self.attention_layers = torch.nn.ModuleList()
-        self.forward_layernorms = torch.nn.ModuleList()
-        self.forward_layers = torch.nn.ModuleList()
-
-        self.last_layernorm = torch.nn.LayerNorm(self.transformer_hidden_size, eps=1e-8)
-
-        for _ in range(self.num_transformer_layers):
-            attn_layernorm = torch.nn.LayerNorm(self.transformer_hidden_size, eps=1e-8)
-            self.attention_layernorms.append(attn_layernorm)
-
-            attn_layer = nn.MultiheadAttention(self.transformer_hidden_size,
-                                               self.num_transformer_heads,
-                                               self.transformer_dropout)
-            self.attention_layers.append(attn_layer)
-
-            fwd_layernorm = torch.nn.LayerNorm(self.transformer_hidden_size, eps=1e-8)
-            self.forward_layernorms.append(fwd_layernorm)
-
-            fwd_layer = PointWiseFeedForward(self.transformer_hidden_size, self.transformer_dropout)
-            self.forward_layers.append(fwd_layer)
-
-        self.input_sequence_mask = None
+        self.transformer_encoder = TransformerLayer(transformer_hidden_size, num_transformer_heads,
+                                                    num_transformer_layers, transformer_hidden_size * 4,
+                                                    transformer_dropout)
 
     def forward(self,
                 input_sequence: torch.Tensor,
@@ -117,33 +75,22 @@ class SASRecModel(nn.Module):
 
         Where S is the (max) sequence length of the batch and N the batch size.
         """
-        # … and H is the hidden size of the transformer/embedding
-        device = input_sequence.device
-        if self.input_sequence_mask is None or self.input_sequence_mask.size(1) != input_sequence.size()[1]:
-            # to mask the next words we generate a triangle mask
-            mask = generate_square_subsequent_mask(input_sequence.size()[1]).to(device)
-            self.input_sequence_mask = mask
 
         # embed the input sequence
-        input_sequence = self.embedding(input_sequence, position_ids)  # (N, S, H)
+        embedded_sequence = self.embedding(input_sequence, position_ids)  # (N, S, H)
 
         # pipe the embedded sequence to the transformer
+        # first build the attention mask FIXME: check the attention mask
+        input_size = input_sequence.size()
+        batch_size = input_size[0]
+        sequence_length = input_size[1]
 
-        for i in range(len(self.attention_layers)):
-            input_sequence = torch.transpose(input_sequence, 0, 1)
-            Q = self.attention_layernorms[i](input_sequence)
-            mha_outputs, _ = self.attention_layers[i](Q, input_sequence, input_sequence,
-                                                      attn_mask=self.input_sequence_mask)
-            # key_padding_mask=timeline_mask
-            # need_weights=False) this arg do not work?
-            input_sequence = Q + mha_outputs
-            input_sequence = torch.transpose(input_sequence, 0, 1)
+        attention_mask = torch.triu(torch.ones([sequence_length, sequence_length])).transpose(1, 0).unsqueeze(0).repeat(batch_size, 1, 1)
+        if padding_mask is not None:
+            attention_mask = attention_mask * padding_mask.unsqueeze(1).repeat(1, sequence_length, 1)
+        attention_mask = attention_mask.unsqueeze(1).to(dtype=torch.bool)
 
-            input_sequence = self.forward_layernorms[i](input_sequence)
-            input_sequence = self.forward_layers[i](input_sequence)
-            input_sequence *= ~padding_mask.unsqueeze(-1)
-
-        transformer_output = self.last_layernorm(input_sequence)
+        transformer_output = self.transformer_encoder(embedded_sequence, attention_mask=attention_mask)
 
         # when training the model we multiply the seq embedding with the positive and negative items
         if neg_items is not None:
