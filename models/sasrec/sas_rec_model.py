@@ -85,7 +85,8 @@ class SASRecModel(nn.Module):
         batch_size = input_size[0]
         sequence_length = input_size[1]
 
-        attention_mask = torch.triu(torch.ones([sequence_length, sequence_length])).transpose(1, 0).unsqueeze(0).repeat(batch_size, 1, 1)
+        attention_mask = torch.triu(torch.ones([sequence_length, sequence_length], device=input_sequence.device))\
+            .transpose(1, 0).unsqueeze(0).repeat(batch_size, 1, 1)
         if padding_mask is not None:
             attention_mask = attention_mask * padding_mask.unsqueeze(1).repeat(1, sequence_length, 1)
         attention_mask = attention_mask.unsqueeze(1).to(dtype=torch.bool)
