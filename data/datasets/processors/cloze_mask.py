@@ -5,7 +5,7 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from data.datasets.processors.processor import Processor
 from tokenization.tokenizer import Tokenizer
 
-
+#TODO doc
 class ClozeMaskProcessor(Processor):
 
     def __init__(self,
