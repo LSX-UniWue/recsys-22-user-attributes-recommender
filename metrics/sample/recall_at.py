@@ -10,7 +10,6 @@ class RecallAtNegativeSamples(RecommendationSampleMetric):
                  dist_sync_on_step: bool = False):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
         self._k = k
-        self._num_negative_samples = 100
 
         self.add_state("recall", torch.tensor(0.), dist_reduce_fx="sum")
         self.add_state('count', torch.tensor(0.), dist_reduce_fx="sum")
@@ -41,3 +40,6 @@ class RecallAtNegativeSamples(RecommendationSampleMetric):
 
     def compute(self):
         return self.recall / self.count
+
+    def name(self):
+        return f"recall_at_{self._k}/sampled"

@@ -18,3 +18,11 @@ class RecommendationSampleMetric(pl.metrics.Metric):
                 positive_item_mask: torch.Tensor
                 ) -> None:
         pass
+
+    def name(self):
+        """
+        Returns the name that identifies this metric.
+
+        :return: the name.
+        """
+        pass
