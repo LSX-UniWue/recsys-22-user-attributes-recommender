@@ -8,6 +8,7 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from data.collate import PadDirection
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
+from metrics.sample.eval.sample_metrics_module import SamplingMetricsModule
 from modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TEST_LOSS, LOG_KEY_TRAINING_LOSS
 from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
