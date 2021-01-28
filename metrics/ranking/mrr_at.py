@@ -1,9 +1,9 @@
 import torch
 
-from metrics.rank.recommendation_metric import RecommendationMetric
+from metrics.ranking.ranking_metric import RankingMetric
 
 
-class MRRAtMetric(RecommendationMetric):
+class MRRAtMetric(RankingMetric):
 
     def __init__(self,
                  k: int,
@@ -40,3 +40,6 @@ class MRRAtMetric(RecommendationMetric):
 
     def compute(self):
         return self.mrr / self.count
+
+    def name(self):
+        return f"mrr_at_{self._k}"

@@ -4,17 +4,16 @@ from typing import List, Dict, Union, Callable
 
 import torch
 
-from metrics.rank.ndcg import NormalizedDiscountedCumulativeGain
-from metrics.rank.dcg import DiscountedCumulativeGain
-from metrics.sample.recall_at import RecallAtNegativeSamples
-from metrics.rank.mrr_at import MRRAtMetric
-from metrics.rank.recall_at import RecallAtMetric
-from metrics.rank.precision_at import PrecisionAtMetric
-from metrics.rank.f1_at import F1AtMetric
+from metrics.ranking.ndcg import NormalizedDiscountedCumulativeGain
+from metrics.ranking.dcg import DiscountedCumulativeGain
+from metrics.sampling.recall_at import RecallAtNegativeSamples
+from metrics.ranking.mrr_at import MRRAtMetric
+from metrics.ranking.recall_at import RecallAtMetric
+from metrics.ranking.precision_at import PrecisionAtMetric
+from metrics.ranking.f1_at import F1AtMetric
 
 
-def _build_metric(metric_id: str
-                  , k: int) -> pl.metrics.Metric:
+def _build_metric(metric_id: str, k: int) -> pl.metrics.Metric:
     return {
         'recall_sampled': RecallAtNegativeSamples(k),
         'recall': RecallAtMetric(k),
@@ -26,8 +25,7 @@ def _build_metric(metric_id: str
     }[metric_id]
 
 
-def _build_sampled_metric(metric_id: str
-                          , k: int) -> pl.metrics.Metric:
+def _build_sampled_metric(metric_id: str, k: int) -> pl.metrics.Metric:
     return {
         'recall': RecallAtNegativeSamples(k),
     }[metric_id]

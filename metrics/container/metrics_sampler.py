@@ -6,7 +6,7 @@ from torch import Tensor
 
 
 @dataclass
-class NegativeSample:
+class MetricsSample:
     sampled_predictions: Tensor
     """
     A tensor containing the predictions of the model for the sampled items.
@@ -18,13 +18,18 @@ class NegativeSample:
     """
 
 
-class MetricNegativeSampler:
+class MetricsSampler:
     """
     Generates negative samples based on the target item space, targets and actual input.
 
     The sampler draws from the target item distribution as defined by the :code weights provided
     on initialization. Also care is taken that the target items and items in the input sequence do not appear in the
     generated sample.
+
+    After the sample is drawn, the target scores for the target items are added.
+
+    Example:
+        If the :code sample_size is :code 100, and there is one target, the final sample has size :code 101
     """
 
     def __init__(self, weights: List[float], sample_size: int):
@@ -41,7 +46,7 @@ class MetricNegativeSampler:
                input_seq: torch.Tensor,
                targets: torch.Tensor,
                predictions: torch.Tensor,
-               mask: Optional[torch.Tensor] = None) -> NegativeSample:
+               mask: Optional[torch.Tensor] = None) -> MetricsSample:
         """
         Generates :code weights negative samples for each entry in the batch.
         
@@ -76,7 +81,7 @@ class MetricNegativeSampler:
         # FIXME: fix positive_item_mask with mask
         sampled_predictions = predictions.gather(1, sampled_items)
 
-        return NegativeSample(sampled_predictions, positive_item_mask)
+        return MetricsSample(sampled_predictions, positive_item_mask)
 
     def get_sample_size(self) -> int:
         return self.sample_size

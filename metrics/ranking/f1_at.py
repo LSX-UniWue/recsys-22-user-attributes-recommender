@@ -1,10 +1,10 @@
 import torch
 
-from metrics.rank.common import calc_recall, calc_precision
-from metrics.rank.recommendation_metric import RecommendationMetric
+from metrics.ranking.common import calc_recall, calc_precision
+from metrics.ranking.ranking_metric import RankingMetric
 
 
-class F1AtMetric(RecommendationMetric):
+class F1AtMetric(RankingMetric):
 
     def __init__(self,
                  k: int,
@@ -31,3 +31,6 @@ class F1AtMetric(RecommendationMetric):
 
     def compute(self):
         return self.f1 / self.count
+
+    def name(self):
+        return f"f1_at_{self._k}"

@@ -1,9 +1,9 @@
 import torch
 
-from metrics.sample.recommendation_sample_metric import RecommendationSampleMetric
+from metrics.sampling.sampling_metric import SamplingMetric
 
 
-class RecallAtNegativeSamples(RecommendationSampleMetric):
+class RecallAtNegativeSamples(SamplingMetric):
 
     def __init__(self,
                  k: int,

@@ -1,10 +1,10 @@
 import torch
 
-from metrics.rank.common import calc_dcg, reverse_cumsum
-from metrics.rank.recommendation_metric import RecommendationMetric
+from metrics.ranking.common import calc_dcg, reverse_cumsum
+from metrics.ranking.ranking_metric import RankingMetric
 
 
-class NormalizedDiscountedCumulativeGain(RecommendationMetric):
+class NormalizedDiscountedCumulativeGain(RankingMetric):
 
     def __init__(self,
                  k: int,
@@ -68,3 +68,7 @@ class NormalizedDiscountedCumulativeGain(RecommendationMetric):
 
     def compute(self):
         return self.ndcg / self.count
+
+    def name(self):
+        return f"ndcg_at_{self._k}"
+

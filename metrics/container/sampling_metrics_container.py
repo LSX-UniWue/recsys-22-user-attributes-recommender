@@ -2,18 +2,18 @@ from typing import List, Optional, Dict
 
 import torch
 
-from metrics.sample.eval.metric_negative_sampler import MetricNegativeSampler
-from metrics.sample.recommendation_sample_metric import RecommendationSampleMetric
+from metrics.container.metrics_sampler import MetricsSampler
+from metrics.container.metrics_container import MetricsContainer
+from metrics.sampling.sampling_metric import SamplingMetric
 
 
-# (AD) tagged as a pytorch module so PL recognizes it an performs things like moving state between devices
-class SamplingMetricsModule(torch.nn.Module):
+class SamplingMetricsContainer(MetricsContainer):
     """
-    A module that can be used as a container for a collection of ranking metrics.
+    A module that can be used as a container for a collection of sampling metrics.
     """
     def __init__(self,
-                 metrics: List[RecommendationSampleMetric],
-                 negative_sampler: MetricNegativeSampler):
+                 metrics: List[SamplingMetric],
+                 negative_sampler: MetricsSampler):
         """
         Construtor.
 
@@ -25,20 +25,19 @@ class SamplingMetricsModule(torch.nn.Module):
         self.negative_sample = negative_sampler
 
     def update(self,
-               input_seq:
-               torch.Tensor,
+               input_seq: torch.Tensor,
                targets: torch.Tensor,
                predictions: torch.Tensor,
                mask: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         """
         Updates all metrics stored in :code self.metrics using the provided inputs and predictions.
-        
-        :param input_seq: the batch with input sequences. 
+
+        :param input_seq: the batch with input sequences.
         :param targets: the expected targets.
         :param predictions: the predictions made by the model.
         :param mask: ???
-        
-        :return: a dictionary with the step values for all metrics managed by this module. 
+
+        :return: a dictionary with the step values for all metrics managed by this module.
         """
         negative_sample = self.negative_sample.sample(input_seq, targets, predictions, mask)
 
