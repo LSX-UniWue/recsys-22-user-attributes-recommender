@@ -1,17 +1,16 @@
 import os
-import typer
 import pandas as pd
 from pathlib import Path
 
-from dataset.app.utils import download_dataset, unzip_file, build_vocabularies, read_csv
-from dataset.app.pre_process_command import app, DOWNLOAD_URL_MAP
+from dataset.dataset_pre_processing.utils import build_vocabularies, read_csv, download_dataset, unzip_file
+
+DOWNLOAD_URL_MAP = {
+    'ml-1m': 'http://files.grouplens.org/datasets/movielens/ml-1m.zip',
+    'ml-20m': 'http://files.grouplens.org/datasets/movielens/ml-20m.zip'
+}
 
 
-@app.command()
-def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_choices=True),
-         output_dir: Path = typer.Option("./dataset/", help='directory to save data'),
-         min_seq_length: int = typer.Option(5, help='the minimum feedback the user must have')
-         ) -> None:
+def download_and_unzip_movielens_data(dataset:str, output_dir:Path, min_seq_length: int) -> (Path,Path):
     url = DOWNLOAD_URL_MAP[dataset]
     dataset_dir = output_dir / f'{dataset}_{min_seq_length}'
     download_dir = output_dir / dataset
@@ -23,10 +22,10 @@ def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_ch
         extract_dir.mkdir(parents=True, exist_ok=True)
 
     unzip_file(downloaded_file, extract_dir, delete=False)
-    preprocess_data(extract_dir, dataset_dir, dataset)
+    return (dataset_dir,extract_dir)
 
 
-def preprocess_data(dataset_dir: Path,
+def preprocess_movielens_data(dataset_dir: Path,
                     output_dir: Path,
                     name: str,
                     delimiter: str = '\t'

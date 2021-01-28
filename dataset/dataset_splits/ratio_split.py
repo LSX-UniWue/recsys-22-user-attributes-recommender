@@ -7,20 +7,6 @@ from tqdm import tqdm
 from numpy.random._generator import default_rng
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
-from dataset.app.split_command import app
-
-
-@app.command()
-def ratios(
-        data_file_path: Path = typer.Argument(..., help="Data file in csv format"),
-        session_index_path: Path = typer.Argument(..., help="Path to session index for the data file"),
-        output_dir_path: Path = typer.Argument(..., help="path that the splits should be written to"),
-        split_ratios: List[str] = typer.Argument(["train;0.9", "valid;0.05", "test;0.05"],
-                                                 help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
-        seed: int = typer.Option(123456, help="Seed for random sampling of splits")):
-    output_dir_path.mkdir(parents=True, exist_ok=True)
-    splits = extract_splits(split_ratios)
-    run(data_file_path, session_index_path, output_dir_path, splits, seed)
 
 
 def run(data_file_path: Path,
