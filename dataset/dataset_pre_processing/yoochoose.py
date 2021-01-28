@@ -8,27 +8,28 @@ from typing import Dict, List
 from tqdm import tqdm
 
 from data.base.indexer import CsvSessionIndexer
-from dataset.app.utils import build_vocabularies
-from dataset.app.pre_process_command import app
+from dataset.dataset_pre_processing.utils import build_vocabularies
 
+app = typer.Typer()
 FULL_TRAIN_SET = "full_training_set"
 TRAIN_SET = "training_set"
 VALIDATION_SET = "validation_set"
 TEST_SET = "test_set"
 
-SESSION_ID_KEY = "SessionId"
-CLICKS_FILE_NAME = "yoochoose-clicks.dat"
+YOOCHOOSE_SESSION_ID_KEY = "SessionId"
+YOOCHOOSE_CLICKS_FILE_NAME = "yoochoose-clicks"
 
 
-def pre_process_yoochoose_dataset(path_to_original_data: Path) -> pd.DataFrame:
+def pre_process_yoochoose_dataset(path_to_original_data: Path, output_dir_path: Path) -> Path:
     """
     Perform pre-processing for yoochoose data set as specified by Hidasi et al. 2016. Code adapted from
     https://github.com/hidasib/GRU4Rec/blob/master/examples/rsc15/preprocess.py.
 
-    :param path_to_original_data:
-    :return:
+    :param path_to_original_data: path to clicks.dat file
+    :param output_dir_path: output dir for pre-processed csv
+    :return: Stores preprocessed data at output_dir
     """
-    data = pd.read_csv(path_to_original_data.joinpath(CLICKS_FILE_NAME),
+    data = pd.read_csv(path_to_original_data.joinpath(YOOCHOOSE_CLICKS_FILE_NAME+'.dat'),
                        sep=',',
                        header=None,
                        usecols=[0, 1, 2],
@@ -42,46 +43,12 @@ def pre_process_yoochoose_dataset(path_to_original_data: Path) -> pd.DataFrame:
     data = data[np.in1d(data.ItemId, item_supports[item_supports >= 5].index)]
     session_lengths = data.groupby('SessionId').size()
     data = data[np.in1d(data.SessionId, session_lengths[session_lengths >= 2].index)]
-    return data
 
-
-@app.command()
-def yoochoose(input_dir: str = typer.Option("./yoochoose-data", help='directory path to the raw yoochoose data set'),
-         output_dir: str = typer.Option("./yoochoose-processed/", help='directory to save data'),
-         split: str = typer.Option("chronological", help='sequential or chronological')) -> None:
-    """
-    FixMe this is not complete
-    Typer CLI function which wraps handling of pre-processing, splitting, storing and indexing of the yoochoose
-    data set. As a prerequisite the yoochoose data set has to have been downloaded and stored at the input_dir.
-
-    :param input_dir: Directory under which the yoochoose data set files are stored.
-    :param output_dir: Directory under which the processed data is stored after successful execution.
-    :param split:
-    :return:
-    """
-    # Check if input dir contains the correct data path and that the yoochoose dataset is downloaded
-    input_dir = Path(input_dir)
-    if not os.path.isdir(input_dir):
-        print("Directory", input_dir,
-              "does not exist.\nPlease specify the correct directory under which",
-              CLICKS_FILE_NAME, "can be found.")
-        print("See --help for more information.")
-    elif not os.path.isfile(input_dir / CLICKS_FILE_NAME):
-        print(input_dir / CLICKS_FILE_NAME,
-              "does not exist. Please download the yoochoose data set and move it into",
-              input_dir, ".")
-        print("See --help for more information.")
-    else:
-        # Pre-process yoochoose data
-        print("Perform pre-processing...")
-        preprocessed_data = pre_process_yoochoose_dataset(Path(input_dir))
-        # ToDo test the building of vocabulary
-        build_vocabularies(preprocessed_data, input_dir, SESSION_ID_KEY)
-        # Check if a valid split is specified
-        # ToDo write main Index
-        print("Split data into train, validation and testing sets...")
-        # ToDo write splits
-        # ToDo write index for splits
+    if not os.path.exists(output_dir_path):
+        output_dir_path.mkdir(parents=True, exist_ok=True)
+    output_file_path = output_dir_path.joinpath(YOOCHOOSE_CLICKS_FILE_NAME+'.csv')
+    data.to_csv(path_or_buf=output_file_path)
+    return output_file_path
 
 
 """
@@ -169,7 +136,7 @@ def write_splits_as_csv_and_create_index(split_data: Dict[str, pd.DataFrame], pr
         index_path: Path = processed_data_dir_path / (key + ".idx")
         data_subset.to_csv(path_or_buf=csv_path)
         index = CsvSessionIndexer(delimiter=",")
-        index.create(csv_path, index_path, [SESSION_ID_KEY])
+        index.create(csv_path, index_path, [YOOCHOOSE_SESSION_ID_KEY])
 
 
 def _yoochoose_old(input_dir: str = typer.Option("./yoochoose-data", help='directory path to the raw yoochoose data set'),
@@ -189,10 +156,10 @@ def _yoochoose_old(input_dir: str = typer.Option("./yoochoose-data", help='direc
     if not os.path.isdir(input_dir):
         print("Directory", input_dir,
               "does not exist.\nPlease specify the correct directory under which",
-              CLICKS_FILE_NAME, "can be found.")
+              YOOCHOOSE_CLICKS_FILE_NAME, "can be found.")
         print("See --help for more information.")
-    elif not os.path.isfile(input_dir / CLICKS_FILE_NAME):
-        print(input_dir / CLICKS_FILE_NAME,
+    elif not os.path.isfile(input_dir / YOOCHOOSE_CLICKS_FILE_NAME):
+        print(input_dir / YOOCHOOSE_CLICKS_FILE_NAME,
               "does not exist. Please download the yoochoose data set and move it into",
               input_dir, ".")
         print("See --help for more information.")
@@ -201,13 +168,13 @@ def _yoochoose_old(input_dir: str = typer.Option("./yoochoose-data", help='direc
         print("Perform pre-processing...")
         preprocessed_data = pre_process_yoochoose_dataset(Path(input_dir))
         # ToDo test the building of vocabulary
-        build_vocabularies(preprocessed_data, input_dir, SESSION_ID_KEY)
+        build_vocabularies(preprocessed_data, input_dir, YOOCHOOSE_SESSION_ID_KEY)
         # Check if a valid split is specified
         print("Split data (%s)into train, validation and testing sets...", split)
         if split == "chronological":
             split_data, output_dir = chronological_split(data=preprocessed_data, output_dir=output_dir)
         elif split == "sequential":
-            split_data, output_dir = sequential_split(data=preprocessed_data, session_id_key=SESSION_ID_KEY,
+            split_data, output_dir = sequential_split(data=preprocessed_data, session_id_key=YOOCHOOSE_SESSION_ID_KEY,
                                                       output_dir=output_dir)
         else:
             print("Split option has to be \"chronological\" or \"sequential\". You however specified: \"", split, "\".")

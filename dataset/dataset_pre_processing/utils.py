@@ -103,3 +103,13 @@ def build_vocabularies(dataframe: pd.DataFrame,
 
     vocab_file = dataset_dir / f'vocab_{column}.txt'
     title_vocab.to_csv(vocab_file, index=False, sep="\t", header=False)
+
+
+def read_csv(dataset_dir: Path,
+             file: str,
+             file_type: str,
+             sep: str,
+             header: bool = None
+             ) -> pd.DataFrame:
+    file_path = dataset_dir / f"{file}{file_type}"
+    return pd.read_csv(file_path, sep=sep, header=header, engine="python")

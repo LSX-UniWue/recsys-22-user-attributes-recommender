@@ -105,6 +105,7 @@ class CsvSessionIndexer:
                 return False
         return True
 
+    # FixMe Is _part_of the same as python syntax "element in list"? If so remove and replace
     def _part_of(self, candidate: Text, list: List[Text]) -> bool:
         for element in list:
             if element == candidate:
