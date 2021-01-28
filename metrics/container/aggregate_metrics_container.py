@@ -22,7 +22,8 @@ class AggregateMetricsContainer(MetricsContainer):
 
         for container in self.containers:
             container_results = container.update(input_seq, targets, predictions, mask)
-            results.update(container_results)
+            if container_results is not None:
+                results.update(container_results)
 
         return results
 
@@ -31,6 +32,7 @@ class AggregateMetricsContainer(MetricsContainer):
 
         for container in self.containers:
             container_results = container.compute()
-            results.update(container_results)
+            if container_results is not None:
+                results.update(container_results)
 
         return results

@@ -345,10 +345,12 @@ def provide_nextit_loader(dataset: Dataset,
 
 def build_standard_trainer(config: providers.Configuration
                            ) -> providers.Singleton:
-    checkpoint_callback = build_standard_model_checkpoint(config)
+    callbacks = providers.List(
+        build_standard_model_checkpoint(config)
+    )
     logger = select_and_build_logger_provider(config)
 
-    callbacks = build_standard_logging_callbacks_provider(config.module, checkpoint_callback)
+    #callbacks = build_standard_logging_callbacks_provider(config.module, checkpoint_callback)
 
     trainer_config = config.trainer
     return providers.Singleton(

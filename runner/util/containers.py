@@ -12,6 +12,7 @@ from modules import BERT4RecModule, CaserModule, SASRecModule
 from modules.basket.dream_module import DreamModule
 from modules.rnn_module import RNNModule
 from modules.narm_module import NarmModule
+from runner.util.metrics_provider_utils import build_aggregate_metrics_container
 from runner.util.provider_utils import build_tokenizer_provider, build_session_loader_provider_factory, \
     build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, build_standard_trainer, \
     build_processors_provider, to_pad_direction
@@ -161,6 +162,8 @@ class BERT4RecContainer(containers.DeclarativeContainer):
 
     pad_direction = providers.Factory(to_pad_direction, module_config.pad_direction)
 
+    metrics_container = build_aggregate_metrics_container(module_config)
+
     module = providers.Singleton(
         BERT4RecModule,
         model=model,
@@ -171,7 +174,8 @@ class BERT4RecContainer(containers.DeclarativeContainer):
         weight_decay=module_config.weight_decay,
         num_warmup_steps=module_config.num_warmup_steps,
         tokenizer=tokenizer,
-        pad_direction=pad_direction
+        pad_direction=pad_direction,
+        metrics=metrics_container
     )
 
     # dataset config

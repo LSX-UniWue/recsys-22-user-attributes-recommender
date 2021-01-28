@@ -58,7 +58,7 @@ class MetricsSampler:
         :return: the negative sample.
         """
 
-        weight = torch.Tensor(self.weights)
+        weight = torch.tensor(self.weights, device=predictions.device)
         weight = weight.unsqueeze(0).repeat(input_seq.size()[0], 1)
 
         # never sample targets
