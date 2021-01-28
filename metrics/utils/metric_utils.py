@@ -15,7 +15,6 @@ from metrics.ranking.f1_at import F1AtMetric
 
 def _build_metric(metric_id: str, k: int) -> pl.metrics.Metric:
     return {
-        'recall_sampled': RecallAtNegativeSamples(k),
         'recall': RecallAtMetric(k),
         'precision': PrecisionAtMetric(k),
         'f1': F1AtMetric(k),
@@ -47,6 +46,22 @@ def _build_metrics_module_dict(metric_dict: Dict[str, Union[int, List[int]]],
             metrics[f"{metric_id}_at_{k}"] = build_metric(metric_id, k)
 
     return torch.nn.ModuleDict(modules=metrics)
+
+
+def _build_metrics_list(metric_dict: Dict[str, Union[int, List[int]]],
+                        build_metric: Callable[[str, int], pl.metrics.Metric]) -> List[pl.metrics.Metric]:
+    metrics = []
+    if metric_dict is None:
+        return metrics
+
+    for metric_id, ks in metric_dict.items():
+        # ks can be a single k => first convert it to a list
+        if not isinstance(ks, list):
+            ks = [ks]
+        for k in ks:
+            metrics.append(build_metric(metric_id, k))
+
+    return metrics
 
 
 def build_metrics(metric_dict: Dict[str, Union[int, List[int]]]
