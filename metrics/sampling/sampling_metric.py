@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 import torch
 
 
-class RecommendationSampleMetric(pl.metrics.Metric):
+class SamplingMetric(pl.metrics.Metric):
 
     def update(self,
                predictions: torch.Tensor,
@@ -19,6 +19,7 @@ class RecommendationSampleMetric(pl.metrics.Metric):
                 ) -> None:
         pass
 
+    @abstractmethod
     def name(self):
         """
         Returns the name that identifies this metric.

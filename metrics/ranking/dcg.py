@@ -1,10 +1,10 @@
 import torch
 
-from metrics.rank.common import calc_dcg
-from metrics.rank.recommendation_metric import RecommendationMetric
+from metrics.ranking.common import calc_dcg
+from metrics.ranking.ranking_metric import RankingMetric
 
 
-class DiscountedCumulativeGain(RecommendationMetric):
+class DiscountedCumulativeGain(RankingMetric):
 
     def __init__(self,
                  k: int,
@@ -30,3 +30,6 @@ class DiscountedCumulativeGain(RecommendationMetric):
 
     def compute(self):
         return self.dcg / self.count
+
+    def name(self):
+        return f"dcg_at_{self._k}"
