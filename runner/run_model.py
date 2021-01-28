@@ -2,24 +2,23 @@ import logging
 import logging.handlers
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 import typer
 from dependency_injector import containers
-from pytorch_lightning import Trainer, seed_everything
+from pytorch_lightning import seed_everything, Callback
 from pytorch_lightning.utilities import cloud_io
 
-from runner.util.callbacks import PredictionLoggerCallback
-from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer,\
-    DreamContainer
-from runner.util.provider_utils import build_standard_logging_callbacks_provider
+from runner.util.builder import TrainerBuilder, LoggerBuilder, CallbackBuilder
+from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer
+from runner.util.containers import DreamContainer
 
 app = typer.Typer()
 
 
 # TODO: introduce a subclass for all container configurations?
-def build_container(model_id) -> containers.DeclarativeContainer:
-    return {
+def build_container(model_id: str, config_file: str) -> containers.DeclarativeContainer:
+    container = {
         'bert4rec': BERT4RecContainer(),
         'sasrec': SASRecContainer(),
         'caser': CaserContainer(),
@@ -27,6 +26,8 @@ def build_container(model_id) -> containers.DeclarativeContainer:
         "rnn": RNNContainer(),
         'dream': DreamContainer()
     }[model_id]
+    container.config.from_yaml(config_file)
+    return container
 
 
 # FIXME: progress bar is not logged :(
@@ -34,11 +35,26 @@ def _config_logging(config: Dict[str, Any]
                     ) -> None:
     logger = logging.getLogger("lightning")
     handler = logging.handlers.RotatingFileHandler(
-        Path(config['trainer']['default_root_dir']) / 'run.log', maxBytes=(1048576*5), backupCount=7
+        Path(config['trainer']['default_root_dir']) / 'run.log', maxBytes=(1048576 * 5), backupCount=7
     )
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+
+
+def build_metrics_loggers(config: Dict[str, Any]) -> List[Callback]:
+    metrics = 'metrics' in config
+    sampled_metrics = 'sampled_metrics' in config
+
+    loggers = []
+
+    if sampled_metrics:
+        loggers += [CallbackBuilder(name="sampled_metric_logger",
+                                    parameters=config["sampled_metrics"]).build()]
+    if metrics:
+        loggers += [CallbackBuilder(name="metric_logger", parameters=config["metrics"]).build()]
+
+    return loggers
 
 
 @app.command()
@@ -53,13 +69,15 @@ def train(model: str = typer.Argument(..., help="the model to run"),
         print(f"the config file cannot be found. Please check the path '{config_file}'!")
         exit(-1)
 
-    container = build_container(model)
-    container.config.from_yaml(config_file)
+    container = build_container(model, config_file)
     module = container.module()
 
-    trainer = container.trainer()
-
-    # _config_logging(container.config())
+    config = container.config
+    trainer_builder = TrainerBuilder(config.trainer())
+    trainer_builder = trainer_builder.add_checkpoint_callback(config.trainer.checkpoint())
+    trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.trainer.logger()).build())
+    trainer_builder = trainer_builder.add_callback(build_metrics_loggers(config.module()))
+    trainer = trainer_builder.build()
 
     if do_train:
         trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
@@ -78,13 +96,11 @@ def predict(model: str = typer.Argument(..., help="the model to run"),
             log_input: Optional[bool] = typer.Option(default=False, help='enable input logging.'),
             strip_pad_token: Optional[bool] = typer.Option(default=True, help='strip pad token, if input is logged.')
             ):
-
     if not overwrite and output_file.exists():
         print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
         exit(-1)
 
-    container = build_container(model)
-    container.config.from_yaml(config_file)
+    container = build_container(model, config_file)
     module = container.module()
 
     # FIXME: try to use load_from_checkpoint later
@@ -101,18 +117,23 @@ def predict(model: str = typer.Argument(..., help="the model to run"),
 
     test_loader = container.test_loader()
 
-    callbacks = [
-        PredictionLoggerCallback(output_file_path=output_file,
-                                 log_input=log_input,
-                                 tokenizer=container.tokenizer(),
-                                 strip_padding_tokens=strip_pad_token)
-    ]
-    trainer = Trainer(callbacks=callbacks, gpus=gpu)
+    callback_params = {
+        "output_file_path": output_file,
+        "log_input": log_input,
+        "tokenizer": container.tokenizer(),
+        "strip_padding_tokens": strip_pad_token
+    }
+    config = container.config
+    trainer_builder = TrainerBuilder(config.trainer())
+    trainer_builder = trainer_builder.add_callback(CallbackBuilder("prediction_logger", callback_params).build())
+    trainer_builder = trainer_builder.set("gpus", gpu)
+    trainer = trainer_builder.build()
+
     trainer.test(module, test_dataloaders=test_loader)
 
 
-#FIXME: (AD) metrics are not calculated correctly
-#FIXME: (AD) need to write output to file, but first need to resolve Exception caused by trainer test loop :-/
+# FIXME: (AD) metrics are not calculated correctly
+# FIXME: (AD) need to write output to file, but first need to resolve Exception caused by trainer test loop :-/
 @app.command()
 def evaluate(model: str = typer.Argument(..., help="the model to run"),
              config_file: str = typer.Argument(..., help='the path to the config file'),
@@ -122,15 +143,13 @@ def evaluate(model: str = typer.Argument(..., help="the model to run"),
              overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
              seed: Optional[int] = typer.Option(default=42, help='seed for rng')
              ):
-
     if not overwrite and output_file.exists():
         print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
         exit(-1)
 
     seed_everything(seed)
 
-    container = build_container(model)
-    container.config.from_yaml(config_file)
+    container = build_container(model, config_file)
     module = container.module()
 
     # FIXME: try to use load_from_checkpoint later
@@ -147,9 +166,10 @@ def evaluate(model: str = typer.Argument(..., help="the model to run"),
 
     test_loader = container.test_loader()
 
-    callbacks = build_standard_logging_callbacks_provider(container.config.module)()
+    trainer_builder = TrainerBuilder(gpus=gpu)
+    trainer_builder.add_callback(build_metrics_loggers(container.config.module()))
 
-    trainer = Trainer(gpus=gpu, callbacks=callbacks)
+    trainer = trainer_builder.build()
     trainer.test(module, test_dataloaders=test_loader)
 
 
