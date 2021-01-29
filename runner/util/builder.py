@@ -1,13 +1,10 @@
 from pathlib import Path
-from typing import Any, Dict, Union, Iterable, List
+from typing import Any, Dict, Union, Iterable
 
 from pytorch_lightning import Trainer, Callback
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import LightningLoggerBase, TensorBoardLogger, MLFlowLogger
 
-from logger.MetricLoggerCallback import MetricLoggerCallback
-from logger.SampledMetricLoggerCallback import SampledMetricLoggerCallback
-from metrics.utils.metric_utils import build_metrics, build_sampled_metrics
 from runner.util.callbacks import PredictionLoggerCallback
 
 TRAINER_INIT_KEYS = ['logger',
@@ -162,32 +159,6 @@ class LoggerBuilder:
         return LOGGER_REGISTRY[self.type.lower()](self.parameters)
 
 
-def _build_metric_logger_callback(parameters: Dict[str, Any]) -> Callback:
-    metrics = build_metrics(parameters)
-    return MetricLoggerCallback(
-        metrics=metrics
-    )
-
-
-def _build_sampled_metric_logger_callback(parameters: Dict[str,Any]) -> Callback:
-    item_probabilities = convert_prob_file(parameters["sample_probability_file"])
-    num_negative_samples = parameters["num_negative_samples"]
-    metric_provider = build_sampled_metrics(parameters["metrics"])
-    return SampledMetricLoggerCallback(
-        metrics=metric_provider,
-        item_probabilities=item_probabilities,
-        num_negative_samples=num_negative_samples)
-
-
-def convert_prob_file(path: str) -> List[float]:
-    probs = []
-    with open(path) as prob_file:
-        for line in prob_file.readlines():
-            probs.append(float(line))
-
-    return probs
-
-
 def _build_prediction_logger_callback(parameters: Dict[str, Any]) -> Callback:
     return PredictionLoggerCallback(
         output_file_path=parameters["output_file_path"],
@@ -198,8 +169,6 @@ def _build_prediction_logger_callback(parameters: Dict[str, Any]) -> Callback:
 
 
 CALLBACK_REGISTRY = {
-    "metric_logger": _build_metric_logger_callback,
-    "sampled_metric_logger": _build_sampled_metric_logger_callback,
     "prediction_logger": _build_prediction_logger_callback
 }
 

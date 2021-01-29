@@ -76,7 +76,6 @@ def train(model: str = typer.Argument(..., help="the model to run"),
     trainer_builder = TrainerBuilder(config.trainer())
     trainer_builder = trainer_builder.add_checkpoint_callback(config.trainer.checkpoint())
     trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.trainer.logger()).build())
-    trainer_builder = trainer_builder.add_callback(build_metrics_loggers(config.module()))
     trainer = trainer_builder.build()
 
     if do_train:
@@ -167,7 +166,6 @@ def evaluate(model: str = typer.Argument(..., help="the model to run"),
     test_loader = container.test_loader()
 
     trainer_builder = TrainerBuilder(gpus=gpu)
-    trainer_builder.add_callback(build_metrics_loggers(container.config.module()))
 
     trainer = trainer_builder.build()
     trainer.test(module, test_dataloaders=test_loader)
