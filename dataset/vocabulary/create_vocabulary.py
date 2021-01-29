@@ -12,6 +12,15 @@ from tokenization.vocabulary import VocabularyBuilder, CSVVocabularyReaderWriter
 
 def create_session_data_set(item_header_name: str, data_file_path: Path, index_file_path: Path,
                             delimiter: str) -> PlainSessionDataset:
+    """
+    Helper method wich returns a PlainSessionDataset for a given data and index file
+
+    :param item_header_name: Name of the item key in the data set, e.g, "ItemId"
+    :param data_file_path: Path to CSV file containing original data
+    :param index_file_path: Path to index file belonging to the data file
+    :param delimiter: delimiter used in data file
+    :return: PlainSessionDataset
+    """
     reader_index = CsvDatasetIndex(index_file_path)
     reader = CsvDatasetReader(data_file_path, reader_index)
     parser = ItemSessionParser(create_indexed_header(read_csv_header(data_file_path, delimiter=delimiter)),
@@ -26,14 +35,14 @@ def create_token_vocabulary(item_header_name: str, data_file_path: Path, session
                             vocabulary_output_file_path: Path,
                             custom_tokens: List[str], delimiter: str):
     """
-    ToDo
-    :param item_header_name:
-    :param data_file_path:
-    :param session_index_path:
-    :param vocabulary_output_file_path:
-    :param custom_tokens:
-    :param delimiter:
-    :return:
+    Creates a token vocabulary for the items in the data set in data file path.
+
+    :param data_file_path: Path to CSV file containing original data
+    :param session_index_path: Path to index file belonging to the data file
+    :param vocabulary_output_file_path: output path for vocabulary file
+    :param item_header_name: Name of the item key in the data set, e.g, "ItemId"
+    :param delimiter: delimiter used in data file
+    :return: None, Side Effect: vocabulary for data file is written to vocabulary_output_file_path
     """
     vocab_builder = VocabularyBuilder()
     for token in custom_tokens:

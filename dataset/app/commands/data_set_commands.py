@@ -5,7 +5,6 @@ from dataset.dataset_pre_processing.movielens import download_and_unzip_movielen
 from dataset.dataset_pre_processing.yoochoose import pre_process_yoochoose_dataset, YOOCHOOSE_CLICKS_FILE_NAME, \
     YOOCHOOSE_SESSION_ID_KEY, YOOCHOOSE_ITEM_ID_KEY
 from dataset.app.commands import index_command, split_commands, popularity_command, vocabulary_command
-from dataset.vocabulary.create_vocabulary import create_token_vocabulary
 
 app = typer.Typer()
 
@@ -68,13 +67,20 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
                                  min_session_length=min_seq_length,
                                  delimiter=delimiter)
         print("Create ratios split...")
+        ratio_split_output_dir_path = output_dir_path.joinpath("ratios_split")
         split_commands.ratios(data_file_path=preprocessed_data_filepath,
                               session_index_path=session_index_path,
-                              output_dir_path=output_dir_path.joinpath("ratios_split"),
+                              output_dir_path=ratio_split_output_dir_path,
                               train_ratio=0.9,
                               validation_ratio=0.05,
                               testing_ratio=0.05,
                               seed=123456)
+        for split in ["train", "test", "valid"]:
+            data_file = ratio_split_output_dir_path.joinpath(split + ".csv")
+            index_file = ratio_split_output_dir_path.joinpath(split + ".idx")
+            index_command.index_csv(data_file_path=data_file, index_file_path=index_file,
+                                    session_key=[YOOCHOOSE_SESSION_ID_KEY],delimiter=delimiter)
+
         print("Create next item split...")
         # FixMe creates test and valid but not train.idx (Leave last two items out)
         split_commands.next_item(data_file_path=preprocessed_data_filepath,

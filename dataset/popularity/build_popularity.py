@@ -14,15 +14,17 @@ from tokenization.vocabulary import CSVVocabularyReaderWriter
 def build(data_file_path: Path, session_index_path: Path, vocabulary_file_path: Path, output_file_path: Path,
           item_header_name: str, min_session_length: int, delimiter: str) -> None:
     """
-    ToDo
-    :param data_file_path:
-    :param session_index_path:
-    :param vocabulary_file_path:
-    :param output_file_path:
-    :param item_header_name:
-    :param min_session_length:
-    :param delimiter:
-    :return:
+    Builds the popularity distribution of the items in the data set. This enables us to later sample the items
+    based on their original distribution, e.g., for evaluation.
+
+    :param data_file_path: CSV file containing original data
+    :param session_index_path: index file belonging to the data file
+    :param vocabulary_file_path: vocabulary file belonging to the data file
+    :param output_file_path: output file where the popularity should be written to
+    :param item_header_name: Name of the item key in the data set, e.g, "ItemId"
+    :param min_session_length: minimum session length determining which sessions should be used
+    :param delimiter: delimiter used in data file
+    :return: None, Side Effect: popularity distribution is written to output_file_path
     """
     session_parser = ItemSessionParser(
         create_indexed_header(read_csv_header(data_file_path, delimiter)),
@@ -45,7 +47,6 @@ def build(data_file_path: Path, session_index_path: Path, vocabulary_file_path: 
     for session_idx in tqdm(range(len(dataset)), desc="Counting items"):
         session = dataset[session_idx]
         items = session[ITEM_SEQ_ENTRY_NAME]
-        #print(items)
         # ignore session with lower min session length
         if len(items) > min_session_length:
             converted_tokens = tokenizer.convert_tokens_to_ids(items)
