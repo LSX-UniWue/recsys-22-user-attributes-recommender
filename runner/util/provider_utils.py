@@ -9,9 +9,9 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPL
     NEGATIVE_SAMPLES_ENTRY_NAME
 from data.datasets.nextitem import NextItemDataset
 from data.datasets.index import SessionPositionIndex
+from data.datasets.processors.pos_neg_sampler import PositiveNegativeSamplerProcessor
 from data.datasets.processors.processor import Processor
 from data.datasets.processors.util import build_processors
-from data.datasets.processors.pos_neg_sampler import PositiveNegativeSamplerProcessor
 from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
