@@ -13,6 +13,15 @@ def run(data_file_path: Path,
         output_dir_path: Path,
         split_ratios: Dict[Text, float],
         seed: int):
+    """
+    ToDo
+    :param data_file_path:
+    :param match_index_path:
+    :param output_dir_path:
+    :param split_ratios:
+    :param seed:
+    :return:
+    """
     session_index = CsvDatasetIndex(match_index_path)
     reader = CsvDatasetReader(data_file_path, session_index)
 
@@ -31,6 +40,12 @@ def run(data_file_path: Path,
 
 
 def perform_ratio_split(split_ratios: Dict[Text, float], sample_indices: List[int]) -> Dict[Text, List[int]]:
+    """
+    ToDo
+    :param split_ratios:
+    :param sample_indices:
+    :return:
+    """
     num_samples = len(sample_indices)
     remainder = sample_indices
     splits = dict()
@@ -51,6 +66,15 @@ def perform_ratio_split(split_ratios: Dict[Text, float], sample_indices: List[in
 
 def write_split(reader: CsvDatasetReader, output_dir_path: Path, header: Text, split_name: Text,
                 sample_indices: List[int]):
+    """
+    ToDo
+    :param reader:
+    :param output_dir_path:
+    :param header:
+    :param split_name:
+    :param sample_indices:
+    :return:
+    """
     output_file = output_dir_path / f"{split_name}.csv"
     with output_file.open("w") as file:
         file.write(header)

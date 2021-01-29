@@ -13,17 +13,18 @@ def next_item(
         output_dir_path: Path = typer.Argument(..., help="path that the splits should be written to"),
         minimum_session_length: int = typer.Option(4, help="Minimum length of sessions that are to be included"),
         delimiter: str = typer.Option('\t', help="Delimiter used in data file"),
-        # FixMe Help for item header is not descriptive
-        item_header: str = typer.Option('title', help="Item header")):
+        item_header: str = typer.Option('title', help="Dataset Key that the Item-IDs are stored under")):
     """
-    ToDo
-    :param data_file_path:
-    :param session_index_path:
-    :param output_dir_path:
-    :param minimum_session_length:
-    :param delimiter:
-    :param item_header:
-    :return:
+    Creates a next item split, i.e., From every session with length k use sequence[0:k-2] for training,
+    sequence[-2] for validation and sequence[-1] for testing.
+
+    :param data_file_path: data file that the split should be created for
+    :param session_index_path: session index belonging to the data file
+    :param output_dir_path: output directory where the index files for the splits are written to
+    :param minimum_session_length: Minimum length that sessions need to be in order to be included
+    :param delimiter: delimiter used in data file
+    :param item_header: data set key that the item-ids are stored under
+    :return: None, Side effect: Test and Validation indices are written FixMe Train index is missing
     """
     additional_features = {}
     next_item_split.create_conditional_index_using_extractor(data_file_path,
@@ -54,15 +55,16 @@ def ratios(
         testing_ratio: float = typer.Argument(0.05, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
         seed: int = typer.Option(123456, help="Seed for random sampling of splits")):
     """
-    ToDo
-    :param data_file_path:
-    :param session_index_path:
-    :param output_dir_path:
-    :param train_ratio:
-    :param validation_ratio:
-    :param testing_ratio:
-    :param seed:
-    :return:
+    Creates a data set split based on ratios where a percentage of the sessions are used for training, validation, and
+    testing.
+    :param data_file_path: data file that the split should be created for
+    :param session_index_path: session index belonging to the data file
+    :param output_dir_path: output directory where the data and index files for the splits are written to
+    :param train_ratio: share of session used for training
+    :param validation_ratio: share of session used for validation
+    :param testing_ratio: share of session used for testing
+    :param seed: Seed for random sampling
+    :return: None, Side effects: CSV Files for splits are written
     """
     output_dir_path.mkdir(parents=True, exist_ok=True)
     assert train_ratio+validation_ratio+testing_ratio == 1
