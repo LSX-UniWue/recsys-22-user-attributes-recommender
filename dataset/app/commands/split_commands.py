@@ -15,6 +15,16 @@ def next_item(
         delimiter: str = typer.Option('\t', help="Delimiter used in data file"),
         # FixMe Help for item header is not descriptive
         item_header: str = typer.Option('title', help="Item header")):
+    """
+    ToDo
+    :param data_file_path:
+    :param session_index_path:
+    :param output_dir_path:
+    :param minimum_session_length:
+    :param delimiter:
+    :param item_header:
+    :return:
+    """
     additional_features = {}
     next_item_split.create_conditional_index_using_extractor(data_file_path,
                                                              session_index_path,
@@ -43,7 +53,17 @@ def ratios(
         validation_ratio: float = typer.Argument(0.05, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
         testing_ratio: float = typer.Argument(0.05, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
         seed: int = typer.Option(123456, help="Seed for random sampling of splits")):
-
+    """
+    ToDo
+    :param data_file_path:
+    :param session_index_path:
+    :param output_dir_path:
+    :param train_ratio:
+    :param validation_ratio:
+    :param testing_ratio:
+    :param seed:
+    :return:
+    """
     output_dir_path.mkdir(parents=True, exist_ok=True)
     assert train_ratio+validation_ratio+testing_ratio == 1
     splits = {"train": train_ratio, "valid": validation_ratio, "test": testing_ratio}

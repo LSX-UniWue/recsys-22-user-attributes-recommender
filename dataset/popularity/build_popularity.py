@@ -1,10 +1,7 @@
-"""
-DEPRECATED new code in popularity/build_popularity.py
-"""
-from pathlib import Path
-
-import typer
+import os
 from tqdm import tqdm
+from pathlib import Path
+from typing import Dict
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME
@@ -13,19 +10,20 @@ from data.utils import read_csv_header, create_indexed_header
 from tokenization.tokenizer import Tokenizer
 from tokenization.vocabulary import CSVVocabularyReaderWriter
 
-app = typer.Typer()
 
-
-@app.command()
-def create_conditional_index(
-        data_file_path: Path = typer.Argument(..., exists=True, help="path to the input file in CSV format"),
-        session_index_path: Path = typer.Argument(..., exists=True, help="path to the session index file"),
-        vocabulary_file_path: Path = typer.Argument(..., exists=True, help='path to the vocab file'),
-        output_file_path: Path = typer.Argument(..., help="path to the output file"),
-        item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
-        min_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
-        delimiter: str = typer.Option("\t", help="the delimiter used in the CSV file."),
-        ) -> None:
+def build(data_file_path: Path, session_index_path: Path, vocabulary_file_path: Path, output_file_path: Path,
+          item_header_name: str, min_session_length: int, delimiter: str) -> None:
+    """
+    ToDo
+    :param data_file_path:
+    :param session_index_path:
+    :param vocabulary_file_path:
+    :param output_file_path:
+    :param item_header_name:
+    :param min_session_length:
+    :param delimiter:
+    :return:
+    """
     session_parser = ItemSessionParser(
         create_indexed_header(read_csv_header(data_file_path, delimiter)),
         item_header_name,
@@ -43,11 +41,11 @@ def create_conditional_index(
     vocabulary = vocabulary_reader.read(vocabulary_file_path.open("r"))
     tokenizer = Tokenizer(vocabulary)
 
-    counts = {}
-
+    counts: Dict[str, int] = {}
     for session_idx in tqdm(range(len(dataset)), desc="Counting items"):
         session = dataset[session_idx]
         items = session[ITEM_SEQ_ENTRY_NAME]
+        #print(items)
         # ignore session with lower min session length
         if len(items) > min_session_length:
             converted_tokens = tokenizer.convert_tokens_to_ids(items)
@@ -57,14 +55,13 @@ def create_conditional_index(
                 counts[token] = count
 
     total_count = sum(counts.values())
-
+    # print("Total count", total_count)
+    # print("Counts dict", counts)
+    if not os.path.exists(output_file_path.parent):
+        output_file_path.parent.mkdir(parents=True, exist_ok=True)
     # write to file
-    with open(output_file_path, 'w') as output_file:
+    with output_file_path.open('w') as output_file:
         # loop through the vocab to also get the special tokens
         for token_id, _ in vocabulary.id_to_token.items():
             count = counts.get(token_id, 0)
             output_file.write(f"{count / total_count}\n")
-
-
-if __name__ == "__main__":
-    app()

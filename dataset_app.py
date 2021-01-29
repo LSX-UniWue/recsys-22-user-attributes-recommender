@@ -1,6 +1,9 @@
 import typer
 from dataset.app.commands import data_set_commands, index_command, split_commands
-
+"""
+This file combines the Typer commands for the data set CLI.
+Documentation can be found under docs/data_set_typer_app.md  
+"""
 
 app = typer.Typer()
 # Register the Typer sub-commands

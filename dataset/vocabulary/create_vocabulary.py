@@ -10,26 +10,36 @@ from data.utils import create_indexed_header, read_csv_header
 from tokenization.vocabulary import VocabularyBuilder, CSVVocabularyReaderWriter
 
 
-def create_session_data_set(session_key: str, data_file_path: Path, index_file_path: Path,
+def create_session_data_set(item_header_name: str, data_file_path: Path, index_file_path: Path,
                             delimiter: str) -> PlainSessionDataset:
     reader_index = CsvDatasetIndex(index_file_path)
     reader = CsvDatasetReader(data_file_path, reader_index)
     parser = ItemSessionParser(create_indexed_header(read_csv_header(data_file_path, delimiter=delimiter)),
-                               session_key,
+                               item_header_name=item_header_name,
                                delimiter=delimiter)
 
     session_data_set = PlainSessionDataset(reader, parser)
     return session_data_set
 
 
-def create_token_vocabulary(session_key: str, data_file_path: Path, session_index_path: Path,
-                            vocabulary_output_path: Path,
+def create_token_vocabulary(item_header_name: str, data_file_path: Path, session_index_path: Path,
+                            vocabulary_output_file_path: Path,
                             custom_tokens: List[str], delimiter: str):
+    """
+    ToDo
+    :param item_header_name:
+    :param data_file_path:
+    :param session_index_path:
+    :param vocabulary_output_file_path:
+    :param custom_tokens:
+    :param delimiter:
+    :return:
+    """
     vocab_builder = VocabularyBuilder()
     for token in custom_tokens:
         vocab_builder.add_token(token)
 
-    data_set = create_session_data_set(session_key=session_key,
+    data_set = create_session_data_set(item_header_name=item_header_name,
                                        data_file_path=data_file_path,
                                        index_file_path=session_index_path,
                                        delimiter=delimiter)
@@ -43,7 +53,7 @@ def create_token_vocabulary(session_key: str, data_file_path: Path, session_inde
 
     vocabulary = vocab_builder.build()
 
-    if not os.path.exists(vocabulary_output_path):
-        vocabulary_output_path.mkdir(parents=True, exist_ok=True)
-    with vocabulary_output_path.joinpath("tokens.txt").open("w") as file:
+    if not os.path.exists(vocabulary_output_file_path.parent):
+        vocabulary_output_file_path.parent.mkdir(parents=True, exist_ok=True)
+    with vocabulary_output_file_path.open("w") as file:
         CSVVocabularyReaderWriter().write(vocabulary, file)

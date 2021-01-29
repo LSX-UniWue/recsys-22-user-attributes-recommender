@@ -3,8 +3,8 @@ import typer
 from pathlib import Path
 from dataset.dataset_pre_processing.movielens import download_and_unzip_movielens_data, preprocess_movielens_data
 from dataset.dataset_pre_processing.yoochoose import pre_process_yoochoose_dataset, YOOCHOOSE_CLICKS_FILE_NAME, \
-    YOOCHOOSE_SESSION_ID_KEY
-from dataset.app.commands import index_command, split_commands
+    YOOCHOOSE_SESSION_ID_KEY, YOOCHOOSE_ITEM_ID_KEY
+from dataset.app.commands import index_command, split_commands, popularity_command, vocabulary_command
 from dataset.vocabulary.create_vocabulary import create_token_vocabulary
 
 app = typer.Typer()
@@ -23,8 +23,10 @@ def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_ch
 @app.command()
 def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
                                                help='directory path to the raw yoochoose data set'),
-              output_dir_path: Path = typer.Argument("./dataset/yoochoose-processed/", help='directory to save data'),
-              min_seq_length: int = typer.Option(5, help='the minimum feedback the user must have')) -> None:
+              output_dir_path: Path = typer.Argument("./dataset/yoochoose-processed/",
+                                                     help='Output directory for indices, splits, and vocabulary.'),
+              min_seq_length: int = typer.Option(5, help='The minimum length of a session for the next item split')
+              ) -> None:
     """
     Typer CLI function which wraps handling of pre-processing, splitting, storing and indexing of the yoochoose
     data set. As a prerequisite the yoochoose data set has to have been downloaded and stored at the input_dir.
@@ -50,6 +52,21 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
                                 index_file_path=session_index_path,
                                 session_key=[YOOCHOOSE_SESSION_ID_KEY],
                                 delimiter=delimiter)
+        print("Build vocabulary...")
+        vocabulary_output_file_path: Path = output_dir_path.joinpath("vocabulary").joinpath("tokens.txt")
+        vocabulary_command.build(item_header_name=YOOCHOOSE_ITEM_ID_KEY,
+                                 data_file_path=preprocessed_data_filepath,
+                                 session_index_path=session_index_path,
+                                 vocabulary_output_file_path=vocabulary_output_file_path,
+                                 delimiter=delimiter)
+        print("Build popularity...")
+        popularity_command.build(data_file_path=preprocessed_data_filepath,
+                                 session_index_path=session_index_path,
+                                 vocabulary_file_path=vocabulary_output_file_path,
+                                 output_file_path=output_dir_path.joinpath("popularity/popularity.txt"),
+                                 item_header_name=YOOCHOOSE_ITEM_ID_KEY,
+                                 min_session_length=min_seq_length,
+                                 delimiter=delimiter)
         print("Create ratios split...")
         split_commands.ratios(data_file_path=preprocessed_data_filepath,
                               session_index_path=session_index_path,
@@ -65,11 +82,4 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
                                  output_dir_path=output_dir_path.joinpath("next_item_split"),
                                  minimum_session_length=min_seq_length,
                                  delimiter=delimiter,
-                                 item_header=YOOCHOOSE_SESSION_ID_KEY)
-        print("Build vocabulary...")
-        create_token_vocabulary(session_key=YOOCHOOSE_SESSION_ID_KEY,
-                                data_file_path=preprocessed_data_filepath,
-                                session_index_path=session_index_path,
-                                vocabulary_output_path=output_dir_path.joinpath("vocabulary"),
-                                custom_tokens=[],
-                                delimiter=delimiter)
+                                 item_header=YOOCHOOSE_ITEM_ID_KEY)
