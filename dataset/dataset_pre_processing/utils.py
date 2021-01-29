@@ -40,12 +40,14 @@ def unzip_file(src_file: Path,
                folder: Path,
                delete: bool = True
                ):
-    """ Unzip file
-        Args:
-            src_file (Path): Zip file.
-            folder (Path): Destination folder.
-            delete (bool): Whether or not to delete the zip file after unzipping.
-        """
+
+    """
+    Unzip file
+    :param src_file: (Path): Zip file.
+    :param folder: (Path): Destination folder.
+    :param delete: (bool): Whether or not to delete the zip file after unzipping.
+    :return None, Side effect: unzips src_file
+    """
     files_already_extracted = os.listdir(folder)
     if len(files_already_extracted) > 0:
         return
@@ -82,7 +84,7 @@ def build_vocabularies(dataframe: pd.DataFrame,
                        split: str = ""
                        ) -> None:
     """
-    Build and write a vocabulary file
+    Build and write a vocabulary file from a pandas DataFrame
     :param dataframe: base dataframe
     :param dataset_dir: folder for saving file
     :param column: column to create vocabulary for

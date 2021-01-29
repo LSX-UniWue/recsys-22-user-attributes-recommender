@@ -17,6 +17,7 @@ VALIDATION_SET = "validation_set"
 TEST_SET = "test_set"
 
 YOOCHOOSE_SESSION_ID_KEY = "SessionId"
+YOOCHOOSE_ITEM_ID_KEY = "ItemId"
 YOOCHOOSE_CLICKS_FILE_NAME = "yoochoose-clicks"
 
 
@@ -37,11 +38,11 @@ def pre_process_yoochoose_dataset(path_to_original_data: Path, output_dir_path: 
                        names=['SessionId', 'TimeStr', 'ItemId'])
 
     data['Time'] = data.TimeStr.apply(lambda x: dt.datetime.strptime(x, '%Y-%m-%dT%H:%M:%S.%fZ').timestamp())
-    session_lengths = data.groupby('SessionId').size()
+    session_lengths = data.groupby(YOOCHOOSE_SESSION_ID_KEY).size()
     data = data[np.in1d(data.SessionId, session_lengths[session_lengths > 1].index)]
-    item_supports = data.groupby('ItemId').size()
+    item_supports = data.groupby(YOOCHOOSE_ITEM_ID_KEY).size()
     data = data[np.in1d(data.ItemId, item_supports[item_supports >= 5].index)]
-    session_lengths = data.groupby('SessionId').size()
+    session_lengths = data.groupby(YOOCHOOSE_SESSION_ID_KEY).size()
     data = data[np.in1d(data.SessionId, session_lengths[session_lengths >= 2].index)]
 
     if not os.path.exists(output_dir_path):

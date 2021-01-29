@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Dict, Text, List
 from tqdm import tqdm
 from numpy.random._generator import default_rng
-
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 
 
