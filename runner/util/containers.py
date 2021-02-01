@@ -89,14 +89,13 @@ def _build_default_dataset_config(shuffle: bool,
 
 
 def _build_pos_neg_model_processors() -> Dict[str, Any]:
-    processors = [
-        {
+    processors = DEFAULT_PROCESSORS.copy()
+    processors.append({
             'pos_neg_sampler': {
                                     'pos_neg_sampling': True
                                 }
         }
-    ]
-    processors.extend(DEFAULT_PROCESSORS)
+    )
     return {
         'datasets': {
             'train': _build_default_dataset_config(shuffle=True, processors=processors)
@@ -213,12 +212,14 @@ class CaserContainer(containers.DeclarativeContainer):
 
     module_config = config.module
 
+    metrics_container = build_aggregate_metrics_container(module_config)
     module = providers.Singleton(
         CaserModule,
         model=model,
         tokenizer=tokenizer,
         learning_rate=module_config.learning_rate,
         weight_decay=module_config.weight_decay,
+        metrics=metrics_container
     )
 
     train_dataset_config = config.datasets.train
@@ -253,6 +254,7 @@ class SASRecContainer(containers.DeclarativeContainer):
 
     module_config = config.module
 
+    metrics_container = build_aggregate_metrics_container(module_config)
     module = providers.Singleton(
         SASRecModule,
         model=model,
@@ -261,6 +263,7 @@ class SASRecContainer(containers.DeclarativeContainer):
         beta_2=module_config.beta_2,
         tokenizer=tokenizer,
         batch_first=module_config.batch_first,
+        metrics=metrics_container
     )
 
     train_dataset_config = config.datasets.train
@@ -291,6 +294,7 @@ class NarmContainer(containers.DeclarativeContainer):
 
     module_config = config.module
 
+    metrics_container = build_aggregate_metrics_container(module_config)
     module = providers.Singleton(
         NarmModule,
         model,
@@ -300,6 +304,7 @@ class NarmContainer(containers.DeclarativeContainer):
         module_config.beta_2,
         tokenizer,
         module_config.batch_first,
+        metrics_container
     )
 
     train_dataset_config = config.datasets.train
