@@ -333,6 +333,8 @@ class RNNContainer(containers.DeclarativeContainer):
 
     module_config = config.module
 
+    metrics_container = build_aggregate_metrics_container(module_config)
+
     module = providers.Singleton(
         RNNModule,
         model,
@@ -340,6 +342,7 @@ class RNNContainer(containers.DeclarativeContainer):
         module_config.beta_1,
         module_config.beta_2,
         tokenizer,
+        metrics=metrics_container
     )
 
     train_dataset_config = config.datasets.train

@@ -1,7 +1,7 @@
 import torch
 import pytorch_lightning as pl
 
-from typing import Union, Dict, Optional, List, Any
+from typing import Union, Dict, Optional
 
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
@@ -10,13 +10,13 @@ from data.collate import PadDirection
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
 from metrics.container.metrics_container import MetricsContainer
 from modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TEST_LOSS, LOG_KEY_TRAINING_LOSS
-from modules.constants import RETURN_KEY_SEQUENCE, RETURN_KEY_PREDICTIONS, RETURN_KEY_TARGETS, RETURN_KEY_MASK
+from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
 
 
-class BERT4RecModule(pl.LightningModule):
+class BERT4RecModule(MetricsTrait, pl.LightningModule):
 
     """
     BERT4Rec module for the BERT4Rec model
@@ -53,6 +53,9 @@ class BERT4RecModule(pl.LightningModule):
         self.tokenizer = tokenizer
         self.pad_direction = pad_direction
         self.metrics = metrics
+
+    def get_metrics(self) -> MetricsContainer:
+        return self.metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
@@ -136,13 +139,6 @@ class BERT4RecModule(pl.LightningModule):
 
         return self._eval_step(batch, batch_idx)
 
-    def validation_step_end(self,
-                            outputs: Dict[str, torch.Tensor]):
-        self._eval_step_end(outputs)
-
-    def validation_epoch_end(self, outputs: List[Any]) -> None:
-        self._eval_epoch_end(outputs)
-
     def _eval_step(self,
                    batch: Dict[str, torch.Tensor],
                    batch_idx: int,
@@ -175,35 +171,8 @@ class BERT4RecModule(pl.LightningModule):
 
         return build_eval_step_return_dict(input_seq, prediction, targets, mask=mask)
 
-    def _eval_step_end(self, outputs: Dict[str, torch.Tensor]):
-        # (AD) Computation of metrics is moved to *_step_end because some modes, e.g. dp will incorrectly
-        # compute the metrics otherwise.
-        input_seq = outputs[RETURN_KEY_SEQUENCE]
-        prediction = outputs[RETURN_KEY_PREDICTIONS]
-        targets = outputs[RETURN_KEY_TARGETS]
-        if RETURN_KEY_MASK in outputs:
-            mask = outputs[RETURN_KEY_MASK]
-        else:
-            mask = None
-
-        metrics_step_values = self.metrics.update(input_seq, targets, prediction, mask=mask)
-        for name, step_value in metrics_step_values.items():
-            self.log(f"{name}", step_value, prog_bar=True)
-
-        return metrics_step_values
-
-    def _eval_epoch_end(self, outputs: List[Any]):
-        for name, value in self.metrics.compute().items():
-            self.log(f"{name}", value, prog_bar=True)
-
     def test_step(self, batch, batch_idx):
         return self._eval_step(batch, batch_idx, is_test=True)
-
-    def test_step_end(self, outputs: Dict[str, torch.Tensor]):
-        self._eval_step_end(outputs)
-
-    def test_epoch_end(self, outputs: List[Any]):
-        self._eval_epoch_end(outputs)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(),
