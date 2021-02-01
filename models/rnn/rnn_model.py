@@ -86,11 +86,12 @@ class RNNSeqItemRecommenderModel(nn.Module):
                                             embedding_pooling_type=self.embedding_pooling_type)
 
         # FIXME: maybe this should not be done here
+        rnn_dropout = dropout
         if num_layers == 1 and dropout > 0:
-            print("setting the dropout to 0 because the number of layers is 1")
-            dropout = 0.0
+            print("setting the dropout of the rnn to 0 because the number of layers is 1")
+            rnn_dropout = 0.0
 
-        self.rnn = _build_rnn_cell(cell_type, item_embedding_dim, hidden_size, num_layers, bidirectional, dropout,
+        self.rnn = _build_rnn_cell(cell_type, item_embedding_dim, hidden_size, num_layers, bidirectional, rnn_dropout,
                                    nonlinearity)
 
         self.pooling = RNNPooler(bidirectional=bidirectional)
