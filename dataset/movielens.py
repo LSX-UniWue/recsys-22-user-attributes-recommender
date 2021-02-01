@@ -74,6 +74,11 @@ def preprocess_data(dataset_dir: Path,
 
     # read and merge data
     ratings_df = read_csv(dataset_dir, "ratings", file_type, sep, header)
+
+    movielens_1m = name == 'ml-1m'
+    if movielens_1m:
+        ratings_df.columns = [RATING_USER_COLUMN_NAME, RATING_MOVIE_COLUMN_NAME, 'rating', RATING_TIMESTAMP_COLUMN_NAME]
+
     ratings_df = filter_ratings(ratings_df,
                                 min_user_feedback=min_user_feedback,
                                 min_item_feedback=min_item_feedback)
@@ -83,13 +88,11 @@ def preprocess_data(dataset_dir: Path,
     # only the ml-1m dataset has got a user info file …
     users_df = None
 
-    if name == "ml-1m":
-        ratings_df.columns = [RATING_USER_COLUMN_NAME, RATING_MOVIE_COLUMN_NAME, 'rating', RATING_TIMESTAMP_COLUMN_NAME]
+    if movielens_1m:
         movies_df.columns = ['movieId', 'title', 'genres']
         users_df = read_csv(dataset_dir, "users", file_type, sep, header)
         users_df.columns = [RATING_USER_COLUMN_NAME, 'gender', 'age', 'occupation', 'zip']
         ratings_df = pd.merge(ratings_df, users_df)
-
     elif name == "ml-20":
         links_df = read_csv(dataset_dir, "links", file_type, sep, header)
         ratings_df = pd.merge(ratings_df, links_df)
@@ -162,6 +165,11 @@ def _get_position_with_offset(session: Dict[str, Any],
     return [len(sequence) - offset]
 
 
+def _all_remaining_positions(session: Dict[str, Any]
+                             ) -> Iterable[int]:
+    return range(1, len(session[ITEM_SEQ_ENTRY_NAME]) - 2)
+
+
 def split_dataset(dataset_dir: Path,
                   main_file: Path,
                   session_key: str = 'userId',
@@ -178,6 +186,9 @@ def split_dataset(dataset_dir: Path,
     create_index_for_csv(main_file, index_file, [session_key], delimiter)
 
     additional_features = {}
+
+    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'train.nip.idx', item_header,
+                                             min_seq_length, delimiter, additional_features, _all_remaining_positions)
 
     create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'valid.loo.idx', item_header,
                                              min_seq_length, delimiter, additional_features,
@@ -201,6 +212,7 @@ def main(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_choices
     downloaded_file = download_dataset(url, download_dir)
 
     extract_dir = download_dir / 'raw'
+    os.makedirs(extract_dir, exist_ok=True)
 
     unzip_file(downloaded_file, extract_dir, delete=False)
     main_file = preprocess_data(extract_dir, dataset_dir, dataset,
