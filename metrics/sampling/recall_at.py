@@ -35,6 +35,8 @@ class RecallAtNegativeSamples(SamplingMetric):
 
         all_relevant_items = positive_item_mask.sum(1)
         recall = tp / all_relevant_items
+        # maybe there are no relevant items
+        recall[torch.isnan(recall)] = 0
         self.recall += recall.sum()
         self.count += prediction.size()[0]
 

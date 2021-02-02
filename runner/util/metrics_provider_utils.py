@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 from dependency_injector import providers
 
 from metrics.container.aggregate_metrics_container import AggregateMetricsContainer
-from metrics.container.metrics_sampler import MetricsSampler
+from metrics.container.metrics_sampler import NegativeMetricsSampler, FixedItemsSampler
 from metrics.container.ranking_metrics_container import RankingMetricsContainer
 from metrics.container.sampling_metrics_container import SamplingMetricsContainer
 from metrics.ranking.dcg import DiscountedCumulativeGain
@@ -32,7 +32,8 @@ def build_aggregate_metrics_container(config: providers.Configuration) -> provid
 def build_all_metrics_containers(config: providers.Configuration) -> providers.List:
     return providers.List(
         build_ranking_metrics_provider(config),
-        build_sampling_metrics_provider(config)
+        build_sampling_metrics_provider(config),
+        build_fixed_sampling_metrics_provider(config)
     )
 
 
@@ -60,11 +61,30 @@ def _build_sampling_metrics_container(config: Dict[str, Any]) -> SamplingMetrics
     if "sampled_metrics" not in config:
         return RankingMetricsContainer([]) #FIXME I don't want to waste time doing this properly since we will remove the DI framework anyways.
 
-    negative_sampler = MetricsSampler(
+    negative_sampler = NegativeMetricsSampler(
         load_weights(config["sampled_metrics"]["sample_probability_file"]),
         int(config["sampled_metrics"]["num_negative_samples"])
     )
     return SamplingMetricsContainer(_build_sampling_metrics(config["sampled_metrics"]["metrics"]), negative_sampler)
+
+
+def build_fixed_sampling_metrics_provider(config: providers.Configuration):
+    return providers.Factory(_build_fixed_sampling_metrics_container, config)
+
+
+def _build_fixed_sampling_metrics_container(config: Dict[str, Any]) -> SamplingMetricsContainer:
+    if "fixed_sampled_metrics" not in config:
+        return RankingMetricsContainer([])
+
+    fixed_config = config["fixed_sampled_metrics"]
+    sampler = FixedItemsSampler(load_items(fixed_config["item_file"]))
+
+    return SamplingMetricsContainer(_build_sampling_metrics(fixed_config['metrics']), sampler)
+
+
+def load_items(path: str) -> List[int]:
+    with open(path) as item_file:
+        return [int(line) for line in item_file.readlines()]
 
 
 def _build_sampling_metrics(metric_dict: Dict[str, Union[int, List[int]]]

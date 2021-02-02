@@ -37,6 +37,33 @@ class MetricsSampler:
         pass
 
 
+class FixedItemsSampler(MetricsSampler):
+    """
+    this sampler always returns the configured samples
+    """
+
+    def __init__(self, fixed_items: List[int]):
+        super().__init__()
+        self.fixed_items = fixed_items
+
+    def sample(self,
+               input_seq: torch.Tensor,
+               targets: torch.Tensor,
+               predictions: torch.Tensor,
+               mask: Optional[torch.Tensor] = None) -> MetricsSample:
+        fixed_items = torch.LongTensor(self.fixed_items).to(targets.device)
+        fixed_items = fixed_items.unsqueeze(0).repeat(predictions.size()[0], 1)
+
+        sampled_predictions = predictions.gather(1, fixed_items)
+        target_batched = targets.unsqueeze(1)
+        positive_item_mask = fixed_items.eq(target_batched).to(dtype=predictions.dtype)
+
+        return MetricsSample(sampled_predictions, positive_item_mask)
+
+    def get_sample_size(self) -> int:
+        return len(self.fixed_items)
+
+
 class NegativeMetricsSampler(MetricsSampler):
     """
     Generates negative samples based on the target item space, targets and actual input.
@@ -58,6 +85,7 @@ class NegativeMetricsSampler(MetricsSampler):
         :param weights: weights for each item in target space.
         :param sample_size: number of samples generated for evaluation.
         """
+        super().__init__()
         self.weights = weights
         self.sample_size = sample_size
 
