@@ -17,22 +17,39 @@ class BERT4RecBaseModel(nn.Module):
                  max_seq_length: int,
                  transformer_dropout: float,
                  project_layer_type: str = 'transpose_embedding',
-                 embedding_pooling_type: str = None
+                 embedding_pooling_type: str = None,
+                 initializer_range: float = 0.02
                  ):
         super().__init__()
-
+        self.initializer_range = initializer_range
         self.transformer_encoder = TransformerLayer(transformer_hidden_size, num_transformer_heads,
                                                     num_transformer_layers, transformer_hidden_size * 4,
                                                     transformer_dropout)
 
-        self.transform = nn.Linear(transformer_hidden_size, transformer_hidden_size)
-        self.gelu = nn.GELU()
+        self.transform = nn.Sequential(
+            nn.Linear(transformer_hidden_size, transformer_hidden_size),
+            nn.GELU(),
+            nn.LayerNorm(transformer_hidden_size)
+        )
 
         self._init_internal(transformer_hidden_size, num_transformer_heads, num_transformer_layers, item_vocab_size,
                             max_seq_length, transformer_dropout, embedding_pooling_type)
 
         self.projection_layer = self._build_projection_layer(project_layer_type, transformer_hidden_size,
                                                              item_vocab_size)
+        self.apply(self._init_weights)
+
+    def _init_weights(self, module):
+        """ Initializes the weights of the layers """
+        is_linear_layer = isinstance(module, nn.Linear)
+        is_embedding_layer = isinstance(module, nn.Embedding)
+        if is_linear_layer or is_embedding_layer:
+            module.weight.data.normal_(mean=0.0, std=self.initializer_range)
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+        if is_linear_layer and module.bias is not None:
+            module.bias.data.zero_()
 
     def _init_internal(self,
                        transformer_hidden_size: int,
@@ -63,7 +80,7 @@ class BERT4RecBaseModel(nn.Module):
 
         :param sequence: the input sequence :math:`(N, S)`
         :param position_ids: (optional) positional_ids if None the position ids are generated :math:`(N, S)`
-        :param padding_mask: (optional) the padding mask if the sequence is padded :math:`(N, S)`
+        :param padding_mask: (optional) the padding mask if the sequence is padded :math:`(N, S)` True if not padded
         :return: the logits of the predicted tokens :math:`(N, S, I)`
         (Note: all logits for all positions are returned. For loss calculation please only use the positions of the
         MASK tokens.)
@@ -74,9 +91,13 @@ class BERT4RecBaseModel(nn.Module):
         # embedding the indexed sequence to sequence of vectors
         embedded_sequence = self.embedding(sequence, position_ids=position_ids)
 
-        encoded_sequence = self.transformer_encoder(embedded_sequence, padding_mask=padding_mask)
+        attention_mask = None
+        if padding_mask is not None:
+            attention_mask = padding_mask.unsqueeze(1).repeat(1, sequence.size()[1], 1).unsqueeze(1)
 
-        transformed = self.gelu(self.transform(encoded_sequence))
+        encoded_sequence = self.transformer_encoder(embedded_sequence, attention_mask=attention_mask)
+
+        transformed = self.transform(encoded_sequence)
 
         return self.projection_layer(transformed)
 
@@ -105,7 +126,8 @@ class BERT4RecModel(BERT4RecBaseModel):
                  max_seq_length: int,
                  transformer_dropout: float,
                  project_layer_type: str = 'transpose_embedding',
-                 embedding_pooling_type: str = None
+                 embedding_pooling_type: str = None,
+                 initializer_range: float = 0.02
                  ):
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
@@ -114,7 +136,8 @@ class BERT4RecModel(BERT4RecBaseModel):
                          max_seq_length=max_seq_length,
                          transformer_dropout=transformer_dropout,
                          project_layer_type=project_layer_type,
-                         embedding_pooling_type=embedding_pooling_type)
+                         embedding_pooling_type=embedding_pooling_type,
+                         initializer_range=initializer_range)
 
     def _init_internal(self,
                        transformer_hidden_size: int,

@@ -33,7 +33,7 @@ model:
   num_transformer_layers: 2
   transformer_hidden_size: 64
   transformer_dropout: 0.2
-  project_layer_type: linear
+  project_layer_type: transpose_embedding
 module:
   mask_probability: 0.2
   beta_1: 0.99

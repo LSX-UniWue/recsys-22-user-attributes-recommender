@@ -4,7 +4,7 @@ import pytest
 import torch
 from util import build_sample, EPSILON
 
-from metrics.rank.ndcg import NormalizedDiscountedCumulativeGain
+from metrics.ranking.ndcg import NormalizedDiscountedCumulativeGain
 
 
 def get_single_item_recommendation_samples():

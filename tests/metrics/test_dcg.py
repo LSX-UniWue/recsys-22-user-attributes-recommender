@@ -1,9 +1,9 @@
-from typing import Dict, Any, Tuple, Union
+from typing import Tuple
 
 import pytest
 import torch
 
-from metrics.rank.dcg import DiscountedCumulativeGain
+from metrics.ranking.dcg import DiscountedCumulativeGain
 from util import EPSILON, build_sample
 
 
