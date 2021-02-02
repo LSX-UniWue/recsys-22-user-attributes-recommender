@@ -13,6 +13,7 @@ from metrics.ranking.mrr_at import MRRAtMetric
 from metrics.ranking.ndcg import NormalizedDiscountedCumulativeGain
 from metrics.ranking.precision_at import PrecisionAtMetric
 from metrics.ranking.recall_at import RecallAtMetric
+from metrics.sampling.ndcg import NDCGAtNegativeSamples
 from metrics.sampling.recall_at import RecallAtNegativeSamples
 
 
@@ -122,6 +123,7 @@ def _build_ranking_metric(metric_id: str, k: int) -> pl.metrics.Metric:
 def _build_sampling_metric(metric_id: str, k: int) -> pl.metrics.Metric:
     return {
         'recall': RecallAtNegativeSamples(k),
+        'ndcg': NDCGAtNegativeSamples(k)
     }[metric_id]
 
 

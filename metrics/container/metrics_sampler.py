@@ -52,11 +52,21 @@ class FixedItemsSampler(MetricsSampler):
                predictions: torch.Tensor,
                mask: Optional[torch.Tensor] = None) -> MetricsSample:
         fixed_items = torch.LongTensor(self.fixed_items).to(targets.device)
-        fixed_items = fixed_items.unsqueeze(0).repeat(predictions.size()[0], 1)
+        fixed_items = fixed_items.unsqueeze(0).repeat(targets.size()[0], 1)
 
         sampled_predictions = predictions.gather(1, fixed_items)
-        target_batched = targets.unsqueeze(1)
-        positive_item_mask = fixed_items.eq(target_batched).to(dtype=predictions.dtype)
+
+        if len(targets.size()) == 1:
+            # next-item recommendation
+            target_batched = targets.unsqueeze(1)
+            positive_item_mask = fixed_items.eq(target_batched).to(dtype=predictions.dtype)
+        else:
+            # here we multi-hot encode the targets (1 for each target in the item space)
+            multihot = torch.zeros_like(predictions).to(torch.long)
+            src = torch.ones_like(multihot).to(torch.long)
+            multihot.scatter_(1, targets, src)
+            # and than gather the corresponding indices by the fixed items
+            positive_item_mask = multihot.gather(1, fixed_items)
 
         return MetricsSample(sampled_predictions, positive_item_mask)
 

@@ -1,10 +1,10 @@
 import torch
 
-from metrics.sampling.common import calc_recall
+from metrics.sampling.common import calc_ndcg
 from metrics.sampling.sampling_metric import SamplingMetric
 
 
-class RecallAtNegativeSamples(SamplingMetric):
+class NDCGAtNegativeSamples(SamplingMetric):
 
     def __init__(self,
                  k: int,
@@ -12,7 +12,7 @@ class RecallAtNegativeSamples(SamplingMetric):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
         self._k = k
 
-        self.add_state("recall", torch.tensor(0.), dist_reduce_fx="sum")
+        self.add_state("ndcg", torch.tensor(0.), dist_reduce_fx="sum")
         self.add_state('count', torch.tensor(0.), dist_reduce_fx="sum")
 
     def _update(self,
@@ -25,12 +25,12 @@ class RecallAtNegativeSamples(SamplingMetric):
         :param positive_item_mask: a mask where a 1 indices that the item at this index is relevant :math`(N, I)`
         :return:
         """
-        recall = calc_recall(prediction, positive_item_mask, self._k)
-        self.recall += recall.sum()
+        ndcg = calc_ndcg(prediction, positive_item_mask, self._k)
+        self.ndcg += ndcg.sum()
         self.count += prediction.size()[0]
 
     def compute(self):
-        return self.recall / self.count
+        return self.ndcg / self.count
 
     def name(self):
-        return f"recall_at_{self._k}/sampled"
+        return f"ndcg_at_{self._k}/sampled"
