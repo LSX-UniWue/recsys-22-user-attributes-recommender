@@ -68,6 +68,15 @@ def calc_precision(prediction: torch.Tensor,
     return tp / k
 
 
+def _build_dcg_values(end: int,
+                      batch_size: int
+                      ) -> torch.Tensor:
+    range = torch.arange(2, end + 2).to(dtype=torch.float)
+
+    dcg_values = 1 / torch.log2(range)
+    return dcg_values.unsqueeze(0).repeat(batch_size, 1)
+
+
 def calc_ndcg(prediction: torch.Tensor,
               positive_item_mask: torch.Tensor,
               k: int
@@ -83,18 +92,17 @@ def calc_ndcg(prediction: torch.Tensor,
     """
 
     tp = _get_true_positives(prediction, positive_item_mask, k)
-    range = torch.arange(2, k + 2).to(dtype=torch.float)
+    dcg_values = _build_dcg_values(k, positive_item_mask.size()[0])
+    dcg = dcg_values * tp
 
-    dcg = 1 / torch.log2(range)
-    dcg = dcg.unsqueeze(0).repeat(positive_item_mask.size()[0], 1)
-    dcg = dcg * tp
+    idcg_all = _build_dcg_values(k, positive_item_mask.size()[0])
 
-    idcg_all = 1 / torch.log2(range)
-    idcg_all = idcg_all.unsqueeze(0).repeat(positive_item_mask.size()[0], 1)
-
+    # sum all relevant items per batch
     number_relevant_items = positive_item_mask.sum(dim=1)
+    # restrict them to k, there could be more
     number_relevant_items = torch.where(number_relevant_items <= k, number_relevant_items, k)
     number_relevant_items = number_relevant_items.unsqueeze(1).repeat(1, k)
+    # only use calculated values of the dcg that are lt than the max relevant items
     relevant_mask = torch.arange(0, k).lt(number_relevant_items)
     idcg = idcg_all * relevant_mask
 
