@@ -4,7 +4,7 @@ from metrics.common import calc_ndcg
 from metrics.metric import RankingMetric
 
 
-class NormalizedDiscountedCumulativeGainMetricMetric(RankingMetric):
+class NormalizedDiscountedCumulativeGainMetric(RankingMetric):
 
     """
     calculates the Normalized Discounted Cumulative Gain (NDCG) at k
