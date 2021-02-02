@@ -7,13 +7,15 @@ import torch.nn as nn
 from pytorch_lightning.core.decorators import auto_move_data
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
+from metrics.container.metrics_container import MetricsContainer
 from models.rnn.rnn_model import RNNSeqItemRecommenderModel
 from modules import LOG_KEY_VALIDATION_LOSS
+from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 
 
-class RNNModule(pl.LightningModule):
+class RNNModule(MetricsTrait, pl.LightningModule):
 
     def __init__(self,
                  model: RNNSeqItemRecommenderModel,
@@ -21,6 +23,7 @@ class RNNModule(pl.LightningModule):
                  beta_1: float,
                  beta_2: float,
                  tokenizer: Tokenizer,
+                 metrics: MetricsContainer
                  ):
         super().__init__()
 
@@ -29,6 +32,10 @@ class RNNModule(pl.LightningModule):
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.tokenizer = tokenizer
+        self.metrics = metrics
+
+    def get_metrics(self) -> MetricsContainer:
+        return self.metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
@@ -111,11 +118,6 @@ class RNNModule(pl.LightningModule):
                   batch_idx: int
                   ):
         return self.validation_step(batch, batch_idx)
-
-    def test_epoch_end(self,
-                       outputs: Union[Dict[str, torch.Tensor], List[Dict[str, torch.Tensor]]]
-                       ):
-        self.validation_epoch_end(outputs)
 
     @auto_move_data
     def forward(self,

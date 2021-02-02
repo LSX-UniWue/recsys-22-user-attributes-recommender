@@ -6,12 +6,14 @@ import pytorch_lightning as pl
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
 from losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
+from metrics.container.metrics_container import MetricsContainer
+from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import get_padding_mask, build_eval_step_return_dict
 from models.sasrec.sas_rec_model import SASRecModel
 from tokenization.tokenizer import Tokenizer
 
 
-class SASRecModule(pl.LightningModule):
+class SASRecModule(MetricsTrait, pl.LightningModule):
     """
     the module for the SASRec model
     """
@@ -23,6 +25,7 @@ class SASRecModule(pl.LightningModule):
                  beta_2: float,
                  tokenizer: Tokenizer,
                  batch_first: bool,
+                 metrics: MetricsContainer
                  ):
         """
         inits the SASRec module
@@ -32,6 +35,7 @@ class SASRecModule(pl.LightningModule):
         :param beta_2: the beta2 of the adam optimizer
         :param tokenizer: the tokenizer
         :param batch_first: True iff the dataloader returns batch_first tensors
+        :param metrics: metrics to compute on validation/test
         """
         super().__init__()
         self.model = model
@@ -41,6 +45,10 @@ class SASRecModule(pl.LightningModule):
         self.beta_2 = beta_2
         self.tokenizer = tokenizer
         self.batch_first = batch_first
+        self.metrics = metrics
+
+    def get_metrics(self) -> MetricsContainer:
+        return self.metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],

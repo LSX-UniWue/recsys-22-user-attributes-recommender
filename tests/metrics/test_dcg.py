@@ -3,7 +3,7 @@ from typing import Dict, Any, Tuple, Union
 import pytest
 import torch
 
-from metrics.ranking_metrics import DiscountedCumulativeGain
+from metrics.rank.dcg import DiscountedCumulativeGain
 from util import EPSILON, build_sample
 
 

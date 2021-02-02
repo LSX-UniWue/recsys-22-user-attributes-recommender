@@ -3,9 +3,9 @@ from typing import List
 from numpy.random._generator import default_rng
 from torch.utils.data import Dataset, IterableDataset
 
-from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, SAMPLE_IDS, LOADER_INFO
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, SAMPLE_IDS
 from data.datasets.index import SessionPositionIndex
-from data.datasets.prepare import Processor
+from data.datasets.processors.processor import Processor
 from data.datasets.session import ItemSessionDataset, PlainSessionDataset
 from data.mp import MultiProcessSupport
 
