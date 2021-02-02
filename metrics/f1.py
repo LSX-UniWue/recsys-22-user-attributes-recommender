@@ -1,10 +1,14 @@
 import torch
 
-from metrics.sampling.common import calc_precision, calc_recall
-from metrics.sampling.sampling_metric import SamplingMetric
+from metrics.common import calc_precision, calc_recall
+from metrics.metric import RankingMetric
 
 
-class F1AtNegativeSamples(SamplingMetric):
+class F1Metric(RankingMetric):
+
+    """
+    calculates the F1 score at k
+    """
 
     def __init__(self,
                  k: int,
@@ -33,4 +37,4 @@ class F1AtNegativeSamples(SamplingMetric):
         return self.precision / self.count
 
     def name(self):
-        return f"f1_at_{self._k}/sampled"
+        return f"f1@{self._k}"

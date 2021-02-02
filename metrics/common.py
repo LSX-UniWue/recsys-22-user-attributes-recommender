@@ -1,10 +1,17 @@
 import torch
 
 
-def _get_true_positives(prediction: torch.Tensor,
-                        positive_item_mask: torch.Tensor,
-                        k: int
-                        ) -> torch.Tensor:
+def get_true_positives(prediction: torch.Tensor,
+                       positive_item_mask: torch.Tensor,
+                       k: int
+                       ) -> torch.Tensor:
+    """
+    returns the mask of which items are relevant
+    :param prediction:
+    :param positive_item_mask:
+    :param k:
+    :return:
+    """
     # get the indices of the top k predictions
     predicted_id = torch.argsort(prediction, descending=True)
     # limit the prediction to the top k
@@ -25,7 +32,7 @@ def get_true_positive_count(prediction: torch.Tensor,
     :param positive_item_mask: a mask where 1 at position i indicates that the item at index i is relevant :math`(N, I)`
     :return: the number of true positives (N)
     """
-    tp = _get_true_positives(prediction, positive_item_mask, k)
+    tp = get_true_positives(prediction, positive_item_mask, k)
     return tp.sum(1)  # get the total number of positive items
 
 
@@ -91,9 +98,7 @@ def calc_ndcg(prediction: torch.Tensor,
     where N is the batch size and I the number of items to consider
     """
 
-    tp = _get_true_positives(prediction, positive_item_mask, k)
-    dcg_values = _build_dcg_values(k, positive_item_mask.size()[0])
-    dcg = dcg_values * tp
+    dcg = calc_dcg(prediction, positive_item_mask, k)
 
     idcg_all = _build_dcg_values(k, positive_item_mask.size()[0])
 
@@ -107,3 +112,13 @@ def calc_ndcg(prediction: torch.Tensor,
     idcg = idcg_all * relevant_mask
 
     return dcg / idcg.sum(dim=1)
+
+
+def calc_dcg(prediction: torch.Tensor,
+             positive_item_mask: torch.Tensor,
+             k: int
+             ) -> torch.Tensor:
+    tp = get_true_positives(prediction, positive_item_mask, k)
+    dcg_values = _build_dcg_values(k, positive_item_mask.size()[0])
+    dcg = dcg_values * tp
+    return dcg

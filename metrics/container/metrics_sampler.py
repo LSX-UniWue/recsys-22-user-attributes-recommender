@@ -33,13 +33,41 @@ class MetricsSampler:
         pass
 
     @abstractmethod
-    def get_sample_size(self) -> int:
+    def suffix_metric_name(self) -> str:
         pass
+
+
+class AllItemsSampler(MetricsSampler):
+
+    """
+        A sampler that samples all items
+    """
+
+    def sample(self,
+               input_seq: torch.Tensor,
+               targets: torch.Tensor,
+               predictions: torch.Tensor,
+               mask: Optional[torch.Tensor] = None) -> MetricsSample:
+        positive_item_mask = _to_multi_hot(predictions.size(), targets)
+        return MetricsSample(predictions, positive_item_mask)
+
+    def suffix_metric_name(self) -> str:
+        return ""
+
+
+def _to_multi_hot(size: List[int],
+                  targets: torch.Tensor
+                  ) -> torch.Tensor:
+    multihot = torch.zeros(size).to(torch.long)
+    src = torch.ones_like(multihot).to(torch.long)
+    if len(targets.size()) == 1:
+        targets = targets.unsqueeze(1)
+    return multihot.scatter(1, targets, src)
 
 
 class FixedItemsSampler(MetricsSampler):
     """
-    this sampler always returns the configured samples
+    this sampler always returns only the configured items
     """
 
     def __init__(self, fixed_items: List[int]):
@@ -62,16 +90,14 @@ class FixedItemsSampler(MetricsSampler):
             positive_item_mask = fixed_items.eq(target_batched).to(dtype=predictions.dtype)
         else:
             # here we multi-hot encode the targets (1 for each target in the item space)
-            multihot = torch.zeros_like(predictions).to(torch.long)
-            src = torch.ones_like(multihot).to(torch.long)
-            multihot.scatter_(1, targets, src)
+            multihot = _to_multi_hot(predictions.size(), targets)
             # and than gather the corresponding indices by the fixed items
             positive_item_mask = multihot.gather(1, fixed_items)
 
         return MetricsSample(sampled_predictions, positive_item_mask)
 
-    def get_sample_size(self) -> int:
-        return len(self.fixed_items)
+    def suffix_metric_name(self) -> str:
+        return "/fixed_sampled"
 
 
 class NegativeMetricsSampler(MetricsSampler):
@@ -103,7 +129,8 @@ class NegativeMetricsSampler(MetricsSampler):
                input_seq: torch.Tensor,
                targets: torch.Tensor,
                predictions: torch.Tensor,
-               mask: Optional[torch.Tensor] = None) -> MetricsSample:
+               mask: Optional[torch.Tensor] = None
+               ) -> MetricsSample:
         """
         Generates :code weights negative samples for each entry in the batch.
         
@@ -140,5 +167,5 @@ class NegativeMetricsSampler(MetricsSampler):
 
         return MetricsSample(sampled_predictions, positive_item_mask)
 
-    def get_sample_size(self) -> int:
-        return self.sample_size
+    def suffix_metric_name(self) -> str:
+        return f"/sampled({self.sample_size})"

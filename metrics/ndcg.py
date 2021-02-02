@@ -1,10 +1,14 @@
 import torch
 
-from metrics.sampling.common import calc_ndcg
-from metrics.sampling.sampling_metric import SamplingMetric
+from metrics.common import calc_ndcg
+from metrics.metric import RankingMetric
 
 
-class NDCGAtNegativeSamples(SamplingMetric):
+class NormalizedDiscountedCumulativeGainMetricMetric(RankingMetric):
+
+    """
+    calculates the Normalized Discounted Cumulative Gain (NDCG) at k
+    """
 
     def __init__(self,
                  k: int,
@@ -33,4 +37,4 @@ class NDCGAtNegativeSamples(SamplingMetric):
         return self.ndcg / self.count
 
     def name(self):
-        return f"ndcg_at_{self._k}/sampled"
+        return f"ndcg@{self._k}"

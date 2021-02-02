@@ -1,10 +1,14 @@
 import torch
 
-from metrics.sampling.common import calc_recall
-from metrics.sampling.sampling_metric import SamplingMetric
+from metrics.common import calc_recall
+from metrics.metric import RankingMetric
 
 
-class RecallAtNegativeSamples(SamplingMetric):
+class RecallMetric(RankingMetric):
+
+    """
+    calculates the recall at k
+    """
 
     def __init__(self,
                  k: int,
@@ -33,4 +37,4 @@ class RecallAtNegativeSamples(SamplingMetric):
         return self.recall / self.count
 
     def name(self):
-        return f"recall_at_{self._k}/sampled"
+        return f"recall@{self._k}"

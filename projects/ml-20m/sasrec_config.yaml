@@ -58,7 +58,7 @@ tokenizer:
     file: /scratch/jane-doe-framework/datasets/ml-20m/vocab_title.txt
 trainer:
   checkpoint:
-    monitor: recall_at_5
+    monitor: recall@5
     save_top_k: 3
   gradient_clip_val: 0.0
   default_root_dir: /scratch/jane-doe-framework/experiments/ml-20m/bert4rec

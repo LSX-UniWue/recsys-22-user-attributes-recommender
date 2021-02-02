@@ -1,10 +1,14 @@
 import torch
 
-from metrics.sampling.common import calc_precision
-from metrics.sampling.sampling_metric import SamplingMetric
+from metrics.common import calc_precision
+from metrics.metric import RankingMetric
 
 
-class PrecisionAtNegativeSamples(SamplingMetric):
+class PrecisionMetric(RankingMetric):
+
+    """
+    calculates the precision at k
+    """
 
     def __init__(self,
                  k: int,
@@ -28,4 +32,4 @@ class PrecisionAtNegativeSamples(SamplingMetric):
         return self.precision / self.count
 
     def name(self):
-        return f"precision_at_{self._k}/sampled"
+        return f"precision@{self._k}"
