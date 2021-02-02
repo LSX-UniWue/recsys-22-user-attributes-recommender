@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -19,6 +20,24 @@ class MetricsSample:
 
 
 class MetricsSampler:
+    """
+    abstract class to implement to sample only a subset of items for evaluation
+    """
+
+    @abstractmethod
+    def sample(self,
+               input_seq: torch.Tensor,
+               targets: torch.Tensor,
+               predictions: torch.Tensor,
+               mask: Optional[torch.Tensor] = None) -> MetricsSample:
+        pass
+
+    @abstractmethod
+    def get_sample_size(self) -> int:
+        pass
+
+
+class NegativeMetricsSampler(MetricsSampler):
     """
     Generates negative samples based on the target item space, targets and actual input.
 

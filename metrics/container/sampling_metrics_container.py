@@ -2,7 +2,7 @@ from typing import List, Optional, Dict
 
 import torch
 
-from metrics.container.metrics_sampler import MetricsSampler
+from metrics.container.metrics_sampler import NegativeMetricsSampler
 from metrics.container.metrics_container import MetricsContainer
 from metrics.sampling.sampling_metric import SamplingMetric
 
@@ -13,7 +13,7 @@ class SamplingMetricsContainer(MetricsContainer):
     """
     def __init__(self,
                  metrics: List[SamplingMetric],
-                 negative_sampler: MetricsSampler):
+                 negative_sampler: NegativeMetricsSampler):
         """
         Construtor.
 
