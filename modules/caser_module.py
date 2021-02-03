@@ -5,12 +5,14 @@ import torch
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, USER_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME, TARGET_ENTRY_NAME
+from metrics.container.metrics_container import MetricsContainer
 from models.caser.caser_model import CaserModel
+from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 
 
-class CaserModule(pl.LightningModule):
+class CaserModule(MetricsTrait, pl.LightningModule):
 
     @staticmethod
     def get_users_from_batch(batch: Dict[str, torch.Tensor]
@@ -22,6 +24,7 @@ class CaserModule(pl.LightningModule):
                  tokenizer: Tokenizer,
                  learning_rate: float,
                  weight_decay: float,
+                 metrics: MetricsContainer
                  ):
         super().__init__()
 
@@ -31,6 +34,10 @@ class CaserModule(pl.LightningModule):
 
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
+        self.metrics = metrics
+
+    def get_metrics(self) -> MetricsContainer:
+        return self.metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
@@ -110,6 +117,9 @@ class CaserModule(pl.LightningModule):
         prediction = self.model(input_seq, users, items_to_rank)
 
         return build_eval_step_return_dict(input_seq, prediction, targets)
+
+    def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
+        return self.validation_step(batch, batch_idx)
 
     def configure_optimizers(self):
         return torch.optim.Adam(

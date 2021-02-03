@@ -8,13 +8,15 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from data.collate import PadDirection
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
+from metrics.container.metrics_container import MetricsContainer
 from modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TEST_LOSS, LOG_KEY_TRAINING_LOSS
+from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
 
 
-class BERT4RecModule(pl.LightningModule):
+class BERT4RecModule(MetricsTrait, pl.LightningModule):
 
     """
     BERT4Rec module for the BERT4Rec model
@@ -34,7 +36,8 @@ class BERT4RecModule(pl.LightningModule):
                  weight_decay: float,
                  num_warmup_steps: int,
                  tokenizer: Tokenizer,
-                 pad_direction: PadDirection
+                 pad_direction: PadDirection,
+                 metrics: MetricsContainer
                  ):
         super().__init__()
         self.model = model
@@ -49,6 +52,10 @@ class BERT4RecModule(pl.LightningModule):
 
         self.tokenizer = tokenizer
         self.pad_direction = pad_direction
+        self.metrics = metrics
+
+    def get_metrics(self) -> MetricsContainer:
+        return self.metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
@@ -130,13 +137,13 @@ class BERT4RecModule(pl.LightningModule):
         :return: A dictionary with entries according to `build_eval_step_return_dict`.
         """
 
-        return self._eval_epoch_step(batch, batch_idx)
+        return self._eval_step(batch, batch_idx)
 
-    def _eval_epoch_step(self,
-                         batch: Dict[str, torch.Tensor],
-                         batch_idx: int,
-                         is_test: bool = False
-                         ) -> Dict[str, torch.Tensor]:
+    def _eval_step(self,
+                   batch: Dict[str, torch.Tensor],
+                   batch_idx: int,
+                   is_test: bool = False
+                   ) -> Dict[str, torch.Tensor]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
@@ -161,10 +168,11 @@ class BERT4RecModule(pl.LightningModule):
         # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
         # the target tensor
         mask = None if len(targets.size()) == 1 else ~ targets.eq(self.tokenizer.pad_token_id)
+
         return build_eval_step_return_dict(input_seq, prediction, targets, mask=mask)
 
     def test_step(self, batch, batch_idx):
-        return self._eval_epoch_step(batch, batch_idx, is_test=True)
+        return self._eval_step(batch, batch_idx, is_test=True)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(),
