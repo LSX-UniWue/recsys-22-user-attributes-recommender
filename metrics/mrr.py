@@ -4,7 +4,7 @@ from metrics.common import get_true_positives
 from metrics.metric import RankingMetric
 
 
-class MRRAtMetric(RankingMetric):
+class MRRMetric(RankingMetric):
 
     """
     calculates the Mean Reciprocal Rank (MRR) at k

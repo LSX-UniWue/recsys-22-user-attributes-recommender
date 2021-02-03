@@ -7,11 +7,11 @@ from metrics.container.metrics_container import AggregateMetricsContainer, Ranki
     NoopMetricsContainer, MetricsContainer
 from metrics.container.metrics_sampler import NegativeMetricsSampler, FixedItemsSampler, AllItemsSampler
 from metrics.dcg import DiscountedCumulativeGainMetric
-from metrics.ndcg import NormalizedDiscountedCumulativeGainMetricMetric
+from metrics.ndcg import NormalizedDiscountedCumulativeGainMetric
 from metrics.precision import PrecisionMetric
 from metrics.recall import RecallMetric
 from metrics.f1 import F1Metric
-from metrics.mrr import MRRAtMetric
+from metrics.mrr import MRRMetric
 
 
 def build_aggregate_metrics_container(config: providers.Configuration) -> providers.Factory:
@@ -106,9 +106,9 @@ def _build_ranking_metric(metric_id: str, k: int) -> pl.metrics.Metric:
         'recall': RecallMetric(k),
         'precision': PrecisionMetric(k),
         'f1': F1Metric(k),
-        'mrr': MRRAtMetric(k),
+        'mrr': MRRMetric(k),
         'dcg': DiscountedCumulativeGainMetric(k),
-        'ndcg': NormalizedDiscountedCumulativeGainMetricMetric(k),
+        'ndcg': NormalizedDiscountedCumulativeGainMetric(k),
     }[metric_id]
 
 
