@@ -6,10 +6,12 @@ from tokenization.tokenizer import Tokenizer
 
 
 class LastItemMaskProcessor(Processor):
+
     """
     Adds a mask token at the end of the input sequence.
     This is useful for evaluation purposes in some models, e.g. Bert4Rec.
     """
+
     def __init__(self,
                  tokenizer: Tokenizer,
                  ):

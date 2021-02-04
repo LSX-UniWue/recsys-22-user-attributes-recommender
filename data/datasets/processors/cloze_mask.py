@@ -5,8 +5,13 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from data.datasets.processors.processor import Processor
 from tokenization.tokenizer import Tokenizer
 
-#TODO doc
+
 class ClozeMaskProcessor(Processor):
+
+    """
+    Replaces with a given probability items in the sequence
+    with a mask token that the model should than predict (e.g. Bert4Rec)
+    """
 
     def __init__(self,
                  tokenizer: Tokenizer,
@@ -14,6 +19,12 @@ class ClozeMaskProcessor(Processor):
                  only_last_item_mask_prob: float,
                  seed: int
                  ):
+        """
+        :param tokenizer: the tokenizer
+        :param mask_prob: the mask prob to use for masking items in the sequence
+        :param only_last_item_mask_prob: the prob that the last item in the sequence should only be masked
+        :param seed: the seed to use
+        """
         super().__init__()
 
         self.tokenizer = tokenizer
