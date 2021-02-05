@@ -53,25 +53,27 @@ class MetricsSampler:
         :param input_seq: the batch of input sequences. 
         :param targets:  the targets for the provided batch.
         :param predictions: the predictions for the input_seq made by the model.
-        :param mask: ???
+        :param mask: ??? TODO: add documentation
          
         :return: the negative sample.
         """
 
         weight = torch.tensor(self.weights, device=predictions.device)
-        weight = weight.unsqueeze(0).repeat(input_seq.size()[0], 1)
+        batch_size = input_seq.size()[0]
+        weight = weight.unsqueeze(0).repeat(batch_size, 1)
 
         # never sample targets
-        weight[:, targets] = 0.
+        batch_indices = torch.arange(0, batch_size)
+        weight[batch_indices, targets] = 0.
 
         # we want to use scatter to set the items contained in the input to 0 for every row in the batch
         src = torch.ones_like(input_seq).to(torch.long)
-        mask = torch.zeros_like(weight).to(torch.long)
+        sequence_mask = torch.zeros_like(weight).to(torch.long)
 
         # calculate a mask where 1. signals that the item should get 0. probability since it occurs in the input
         # sequence.
-        mask.scatter_(1, input_seq, src)
-        weight[mask.to(dtype=torch.bool)] = 0.
+        sequence_mask = sequence_mask.scatter(1, input_seq, src)
+        weight[sequence_mask.to(dtype=torch.bool)] = 0.
 
         sampled_negatives = torch.multinomial(weight, num_samples=self.sample_size)
         target_batched = targets.unsqueeze(1)
