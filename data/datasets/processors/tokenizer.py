@@ -7,11 +7,18 @@ from tokenization.tokenizer import Tokenizer
 
 class TokenizerProcessor(Processor):
 
+    """
+    Tokenizes the configured fields with the tokenizer
+    """
+
     KEYS_TO_TOKENIZE = [ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME]
 
     def __init__(self,
                  tokenizer: Tokenizer
                  ):
+        """
+        :param tokenizer: the tokenizer to use for the tokenization
+        """
         super().__init__()
         self._tokenizer = tokenizer
 
