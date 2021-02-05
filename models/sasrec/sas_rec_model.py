@@ -59,7 +59,8 @@ class SASRecModel(nn.Module):
                 pos_items: torch.Tensor,
                 neg_items: Optional[torch.Tensor] = None,
                 position_ids: Optional[torch.Tensor] = None,
-                padding_mask: Optional[torch.Tensor] = None):
+                padding_mask: Optional[torch.Tensor] = None
+                ) -> torch.Tensor:
         """
         Forward pass to generate the logits for the positive (next) items and the negative (randomly sampled items,
         that are not in the current sequence) items.
@@ -69,7 +70,7 @@ class SASRecModel(nn.Module):
         :param pos_items: ids of the positive items (the next items in the sequence) :math:`(N)`
         :param neg_items: random sampled negative items that are not in the session of the user :math:`(N)`
         :param position_ids: the optional position ids if not the position ids are generated :math:`(N, S)`
-        :param padding_mask: the optional padding mask if the sequence is padded :math:`(N, S)`
+        :param padding_mask: the optional padding mask if the sequence is padded :math:`(N, S)` True if not padded
         :return: the logits of the pos_items and the logits of the negative_items, each of shape :math:`(N, S)`
                 iff neg_items is provided else the logits for the provided positive items of the same shape
 
@@ -120,6 +121,6 @@ class SASRecModel(nn.Module):
         batch_index = torch.arange(0, batch_size)
 
         # calculate indices from the padding mask
-        seq_index = (~padding_mask).sum(-1) - 1
+        seq_index = padding_mask.sum(-1) - 1
         scores = output[batch_index, seq_index, :]  # (N, I)
         return scores
