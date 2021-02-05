@@ -72,7 +72,7 @@ class SASRecModule(MetricsTrait, pl.LightningModule):
         pos = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
 
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
+        padding_mask = get_padding_mask(input_seq, self.tokenizer)
 
         pos_logits, neg_logits = self.model(input_seq, pos, neg_items=neg, padding_mask=padding_mask)
 
@@ -111,7 +111,7 @@ class SASRecModule(MetricsTrait, pl.LightningModule):
         batch_size = input_seq.size()[0]
 
         # calc the padding mask
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
+        padding_mask = get_padding_mask(input_seq, self.tokenizer)
 
         # provide items that the target item will be ranked against
         # TODO (AD) refactor this into a composable class to allow different strategies for item selection

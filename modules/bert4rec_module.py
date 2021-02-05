@@ -83,10 +83,7 @@ class BERT4RecModule(MetricsTrait, pl.LightningModule):
         position_ids = BERT4RecModule.get_position_ids(batch)
 
         # calc the padding mask
-        padding_mask = get_padding_mask(tensor=input_seq,
-                                        tokenizer=self.tokenizer,
-                                        transposed=False,
-                                        inverse=True)
+        padding_mask = get_padding_mask(sequence=input_seq, tokenizer=self.tokenizer)
 
         # call the model
         prediction_logits = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
@@ -155,7 +152,7 @@ class BERT4RecModule(MetricsTrait, pl.LightningModule):
             target_mask = target_mask.max(dim=-1)[0]
 
         # after adding the mask token we can calculate the padding mask
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
+        padding_mask = get_padding_mask(input_seq, self.tokenizer)
 
         # get predictions for all seq steps
         prediction = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)

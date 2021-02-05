@@ -1,4 +1,4 @@
-from typing import Union, Dict, List, Optional
+from typing import Union, Dict, Optional
 
 import pytorch_lightning as pl
 import torch
