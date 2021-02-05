@@ -1,9 +1,10 @@
-from typing import Optional
+from typing import Optional, Union, Tuple
 
 import torch
 import torch.nn as nn
 
 from models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
+
 
 class SASRecModel(nn.Module):
     """
@@ -53,18 +54,18 @@ class SASRecModel(nn.Module):
                                                     transformer_dropout)
 
     def forward(self,
-                input_sequence: torch.Tensor,
+                sequence: torch.Tensor,
                 pos_items: torch.Tensor,
                 neg_items: Optional[torch.Tensor] = None,
                 position_ids: Optional[torch.Tensor] = None,
                 padding_mask: Optional[torch.Tensor] = None
-                ) -> torch.Tensor:
+                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Forward pass to generate the logits for the positive (next) items and the negative (randomly sampled items,
         that are not in the current sequence) items.
         If no negative items are provided,
 
-        :param input_sequence: the sequence :math:`(N, S)`
+        :param sequence: the sequence :math:`(N, S)`
         :param pos_items: ids of the positive items (the next items in the sequence) :math:`(N)`
         :param neg_items: random sampled negative items that are not in the session of the user :math:`(N)`
         :param position_ids: the optional position ids if not the position ids are generated :math:`(N, S)`
@@ -76,15 +77,15 @@ class SASRecModel(nn.Module):
         """
 
         # embed the input sequence
-        embedded_sequence = self.embedding(input_sequence, position_ids)  # (N, S, H)
+        embedded_sequence = self.embedding(sequence, position_ids)  # (N, S, H)
 
         # pipe the embedded sequence to the transformer
         # first build the attention mask FIXME: check the attention mask
-        input_size = input_sequence.size()
+        input_size = sequence.size()
         batch_size = input_size[0]
         sequence_length = input_size[1]
 
-        attention_mask = torch.triu(torch.ones([sequence_length, sequence_length], device=input_sequence.device))\
+        attention_mask = torch.triu(torch.ones([sequence_length, sequence_length], device=sequence.device))\
             .transpose(1, 0).unsqueeze(0).repeat(batch_size, 1, 1)
         if padding_mask is not None:
             attention_mask = attention_mask * padding_mask.unsqueeze(1).repeat(1, sequence_length, 1)

@@ -52,24 +52,27 @@ class NarmModel(nn.Module):
         self.decoder = BilinearDecoder(self.item_embeddings, encoded_representation_size=2 * global_encoder_size)
 
     def forward(self,
-                session: torch.Tensor,
-                mask: torch.Tensor
+                sequence: torch.Tensor,
+                padding_mask: torch.Tensor
                 ):
         """
         Computes item similarity scores using the NARM model.
 
-        :param session: a sequence of item ids (B x N)
-        :param mask: a tensor masking padded sequence elements (B x N)
-        :return: scores for every item (B x NI)
+        :param sequence: a sequence of item ids :math`(N, S)`
+        :param padding_mask: a tensor masking padded sequence elements :math`(N, S)`
+        :return: scores for every item :math`(N, I)`
+
+        where N is the batch size, S the max sequence length, I the item vocab size
         """
         # H is the hidden size of the model
-        embedded_session = self.item_embeddings(session)  # (N, S, H)
-        embedded_session_do = self.item_embedding_dropout(embedded_session)  # (N, S, H)
+        embedded_sequence = self.item_embeddings(sequence)  # (N, S, H)
+        embedded_sequence = self.item_embedding_dropout(embedded_sequence)  # (N, S, H)
 
-        max_seq_length = embedded_session_do.size()[1]
+        max_seq_length = sequence.size()[1]  # should be S
+        lengths = padding_mask.sum(dim=-1).cpu()
         packed_embedded_session = nn.utils.rnn.pack_padded_sequence(
-            embedded_session_do,
-            torch.sum(mask, dim=-1),
+            embedded_sequence,
+            lengths,
             batch_first=True,
             enforce_sorted=False
         )
@@ -78,7 +81,7 @@ class NarmModel(nn.Module):
         c_tg = h_t = torch.squeeze(h_t, dim=0)
 
         h_i, _ = nn.utils.rnn.pad_packed_sequence(h_i, batch_first=self.batch_first, total_length=max_seq_length)  # we throw away the lengths, since we already have them.
-        c_tl = self.local_encoder(h_t, h_i, mask)
+        c_tl = self.local_encoder(h_t, h_i, padding_mask)
 
         c_t = torch.cat([c_tg, c_tl], dim=1)
 
