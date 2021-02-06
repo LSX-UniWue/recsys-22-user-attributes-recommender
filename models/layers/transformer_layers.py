@@ -11,7 +11,8 @@ from models.layers.tensor_utils import generate_position_ids
 
 class TransformerEmbedding(nn.Module):
     """
-    this transformer embedding combines the item embedding and positional embedding (incl. norm) into a single module
+    this transformer embedding combines the item embedding and positional embedding (incl. norm and dropout)
+    into a single module
     """
 
     def __init__(self,
@@ -46,26 +47,26 @@ class TransformerEmbedding(nn.Module):
         return self.item_embedding(input_sequence, flatten=flatten)
 
     def forward(self,
-                input_sequence: torch.Tensor,
+                sequence: torch.Tensor,
                 position_ids: torch.Tensor = None
                 ) -> torch.Tensor:
         """
-        :param input_sequence: (N, S)
+        :param sequence: the sequence input (N, S)
         :param position_ids: the position ids (N, S) optional, will be generated if not provided
+        :return: the embedding (item and position) :math`(N, S, H)`
 
-         where S is the sequence length and N the batch size
-        :return:
+        where S is the sequence length, N the batch size and H the embedding size
         """
         # generate the position ids if not provided
         if position_ids is None:
-            position_ids = generate_position_ids(input_sequence.size(), device=input_sequence.device)
+            position_ids = generate_position_ids(sequence.size(), device=sequence.device)
 
-        input_sequence = self.item_embedding(input_sequence)
-        input_sequence = input_sequence + self.position_embedding(position_ids)
-        input_sequence = self.embedding_norm(input_sequence)
+        sequence = self.item_embedding(sequence)
+        sequence = sequence + self.position_embedding(position_ids)
+        sequence = self.embedding_norm(sequence)
 
-        input_sequence = self.dropout(input_sequence)
-        return input_sequence
+        sequence = self.dropout(sequence)
+        return sequence
 
 
 class TransformerLayer(nn.Module):
