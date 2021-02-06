@@ -108,18 +108,17 @@ class SASRecModel(nn.Module):
 
         # inference step (I is the number of positive items to test)
         # embeddings of pos_items
-        item_embeddings = self.embedding.get_item_embedding(pos_items, flatten=False)  # (I, N, H)
+        item_embeddings = self.embedding.get_item_embedding(pos_items, flatten=False)  # (N, I, H)
 
-        # permute embeddings for batch matrix multiplication
-        item_embeddings = item_embeddings.permute(0, 2, 1)  # (N, H, I)
-
-        output = torch.matmul(transformer_output, item_embeddings)  # (N, S, I)
-
-        # we use "advanced" indexing to slice the right elements from the sequence.
-        batch_size = output.size()[0]
+        # we use "advanced" indexing to slice the right elements from the transformer output
+        batch_size = sequence.size()[0]
         batch_index = torch.arange(0, batch_size)
 
         # calculate indices from the padding mask
         seq_index = padding_mask.sum(-1) - 1
-        scores = output[batch_index, seq_index, :]  # (N, I)
-        return scores
+        transformer_last_pos_output = transformer_output[batch_index, seq_index]  # (N, H)
+
+        # now matmul it with the item embeddings
+        logits = item_embeddings.matmul(transformer_last_pos_output.unsqueeze(-1))
+
+        return logits.squeeze(-1)
