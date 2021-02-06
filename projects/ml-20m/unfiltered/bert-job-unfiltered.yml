@@ -22,11 +22,11 @@ spec:
             - name: HOME
               value: /home/ls6/zoller
             - name: PROJECT_DIR
-              value: /home/ls6/zoller/seq_recommendation/project_bugfixbert4rec
+              value: /home/ls6/zoller/seq_recommendation/project_master
             - name: REPO_USER
               value: daz65be
             - name: REPO_BRANCH
-              value: bugfix/bert4rec
+              value: master
             - name: PREPARE_SCRIPT
               value: /home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/unfiltered/copy_to_cache.sh
             - name: GIT_TOKEN
