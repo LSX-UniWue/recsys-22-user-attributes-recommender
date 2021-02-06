@@ -53,6 +53,20 @@ class SASRecModel(nn.Module):
                                                     num_transformer_layers, transformer_hidden_size * 4,
                                                     transformer_dropout)
 
+        self.apply(self._init_weights)
+
+    def _init_weights(self, module):
+        """ Initializes the weights of the layers """
+        is_linear_layer = isinstance(module, nn.Linear)
+        is_embedding_layer = isinstance(module, nn.Embedding)
+        if is_linear_layer or is_embedding_layer:
+            nn.init.xavier_normal(module.weight.data)
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+        if is_linear_layer and module.bias is not None:
+            module.bias.data.zero_()
+
     def forward(self,
                 sequence: torch.Tensor,
                 pos_items: torch.Tensor,
