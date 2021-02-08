@@ -10,7 +10,7 @@ DOWNLOAD_URL_MAP = {
 }
 
 
-def download_and_unzip_movielens_data(dataset:str, output_dir:Path, min_seq_length: int) -> (Path,Path):
+def download_and_unzip_movielens_data(dataset: str, output_dir: Path, min_seq_length: int) -> (Path, Path):
     url = DOWNLOAD_URL_MAP[dataset]
     dataset_dir = output_dir / f'{dataset}_{min_seq_length}'
     download_dir = output_dir / dataset
@@ -22,14 +22,13 @@ def download_and_unzip_movielens_data(dataset:str, output_dir:Path, min_seq_leng
         extract_dir.mkdir(parents=True, exist_ok=True)
 
     unzip_file(downloaded_file, extract_dir, delete=False)
-    return (dataset_dir,extract_dir)
+    return dataset_dir, extract_dir
 
 
 def preprocess_movielens_data(dataset_dir: Path,
-                    output_dir: Path,
-                    name: str,
-                    delimiter: str = '\t'
-                    ) -> Path:
+                              output_dir: Path,
+                              name: str,
+                              delimiter: str = '\t') -> Path:
     """
     Convert raw movielens data to csv files and create vocabularies
     :param delimiter:
@@ -88,4 +87,3 @@ def preprocess_movielens_data(dataset_dir: Path,
         build_vocabularies(users_df, output_dir, "zip")
 
     return main_file
-
