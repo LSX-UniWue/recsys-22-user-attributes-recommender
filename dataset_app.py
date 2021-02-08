@@ -1,5 +1,7 @@
 import typer
-from dataset.app.commands import data_set_commands, index_command, split_commands
+from dataset.app.commands import data_set_commands, index_command, split_commands, vocabulary_command, \
+    popularity_command
+
 """
 This file combines the Typer commands for the data set CLI.
 Documentation can be found under docs/data_set_typer_app.md  
@@ -10,6 +12,8 @@ app = typer.Typer()
 app.add_typer(data_set_commands.app, name="pre_process")
 app.add_typer(index_command.app, name="index")
 app.add_typer(split_commands.app, name="split")
+app.add_typer(vocabulary_command.app, name="vocabulary")
+app.add_typer(popularity_command.app, name="popularity")
 
 
 def get_data_set_app() -> typer.Typer:

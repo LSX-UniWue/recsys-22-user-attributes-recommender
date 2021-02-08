@@ -1,4 +1,5 @@
 import os
+import gzip
 import shutil
 from pathlib import Path
 
@@ -40,7 +41,6 @@ def unzip_file(src_file: Path,
                folder: Path,
                delete: bool = True
                ):
-
     """
     Unzip file
     :param src_file: (Path): Zip file.
@@ -49,7 +49,7 @@ def unzip_file(src_file: Path,
     :return None, Side effect: unzips src_file
     """
     files_already_extracted = os.listdir(folder)
-    if len(files_already_extracted) > 0:
+    if len(files_already_extracted) > 0 and (src_file.parent != folder):
         return
 
     fz = zipfile.ZipFile(src_file, "r")
@@ -76,6 +76,25 @@ def unzip_file(src_file: Path,
 
     if delete:
         os.remove(src_file)
+
+
+def unzip_gzip_file(src_file: Path, dest_file: Path, delete_src_file: bool = True):
+    """
+    Unzip gzip file
+    :param src_file: (Path): Gzip file.
+    :param dest_file: (Path): Destination file.
+    :param delete_src_file: (bool): Whether or not to delete the zip file after unzipping.
+    :return None, Side effect: unzips src_file
+    """
+    if os.path.exists(dest_file):
+        return
+
+    with gzip.open(src_file, 'rb') as f_in:
+        with dest_file.open('wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+
+    if delete_src_file:
+        os.remove(str(src_file))
 
 
 def build_vocabularies(dataframe: pd.DataFrame,

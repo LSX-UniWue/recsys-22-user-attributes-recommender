@@ -1,7 +1,7 @@
 import typer
 from typing import Dict, Any, Iterable
 from pathlib import Path
-from dataset.dataset_splits import next_item_split, ratio_split
+from dataset.dataset_splits import conditional_split, ratio_split
 
 app = typer.Typer()
 
@@ -27,22 +27,22 @@ def next_item(
     :return: None, Side effect: Test and Validation indices are written FixMe Train index is missing
     """
     additional_features = {}
-    next_item_split.create_conditional_index_using_extractor(data_file_path,
-                                                             session_index_path,
-                                                             output_dir_path / 'validation.idx',
-                                                             item_header,
-                                                             minimum_session_length,
-                                                             delimiter,
-                                                             additional_features,
-                                                             next_item_split.get_position_with_offset_one)
+    conditional_split.create_conditional_index_using_extractor(data_file_path,
+                                                               session_index_path,
+                                                               output_dir_path / 'validation.idx',
+                                                               item_header,
+                                                               minimum_session_length,
+                                                               delimiter,
+                                                               additional_features,
+                                                               conditional_split.get_position_with_offset_one)
 
-    next_item_split.create_conditional_index_using_extractor(data_file_path, session_index_path,
-                                                             output_dir_path / 'testing.idx',
-                                                             item_header,
-                                                             minimum_session_length,
-                                                             delimiter,
-                                                             additional_features,
-                                                             next_item_split.get_position_with_offset_two)
+    conditional_split.create_conditional_index_using_extractor(data_file_path, session_index_path,
+                                                               output_dir_path / 'testing.idx',
+                                                               item_header,
+                                                               minimum_session_length,
+                                                               delimiter,
+                                                               additional_features,
+                                                               conditional_split.get_position_with_offset_two)
 
 
 @app.command()

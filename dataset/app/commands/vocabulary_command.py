@@ -12,7 +12,7 @@ def build(data_file_path: Path = typer.Argument(..., exists=True, help="path to 
           item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
           delimiter: str = typer.Option("\t", help="the delimiter used in the CSV file.")) -> None:
     """
-    Wrapper Command for the building of a item distribution.
+    Builds item distribution for a given data set.
 
     :param data_file_path: CSV file containing original data
     :param session_index_path: index file belonging to the data file
