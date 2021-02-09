@@ -1,5 +1,4 @@
 import typer
-from typing import Dict, Any, Iterable
 from pathlib import Path
 from dataset.dataset_splits import conditional_split, ratio_split
 
@@ -24,20 +23,30 @@ def next_item(
     :param minimum_session_length: Minimum length that sessions need to be in order to be included
     :param delimiter: delimiter used in data file
     :param item_header: data set key that the item-ids are stored under
-    :return: None, Side effect: Test and Validation indices are written FixMe Train index is missing
+    :return: None, Side effect: Test and Validation indices are written
     """
     additional_features = {}
+    # Create training index with target item n-2
     conditional_split.create_conditional_index_using_extractor(data_file_path,
                                                                session_index_path,
-                                                               output_dir_path / 'validation.idx',
+                                                               output_dir_path / 'train.idx',
+                                                               item_header,
+                                                               minimum_session_length,
+                                                               delimiter,
+                                                               additional_features,
+                                                               conditional_split.get_position_with_offset_three)
+    # Create validation index with target item n-1
+    conditional_split.create_conditional_index_using_extractor(data_file_path,
+                                                               session_index_path,
+                                                               output_dir_path / 'valid.idx',
                                                                item_header,
                                                                minimum_session_length,
                                                                delimiter,
                                                                additional_features,
                                                                conditional_split.get_position_with_offset_one)
-
+    # Create testing index with target item n
     conditional_split.create_conditional_index_using_extractor(data_file_path, session_index_path,
-                                                               output_dir_path / 'testing.idx',
+                                                               output_dir_path / 'test.idx',
                                                                item_header,
                                                                minimum_session_length,
                                                                delimiter,
@@ -67,6 +76,6 @@ def ratios(
     :return: None, Side effects: CSV Files for splits are written
     """
     output_dir_path.mkdir(parents=True, exist_ok=True)
-    assert train_ratio+validation_ratio+testing_ratio == 1
+    assert train_ratio + validation_ratio + testing_ratio == 1
     splits = {"train": train_ratio, "valid": validation_ratio, "test": testing_ratio}
     ratio_split.run(data_file_path, session_index_path, output_dir_path, splits, seed)

@@ -19,6 +19,8 @@ def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_ch
     # FixMe min_seq_length influences nothing except naming of dataset_dir
     dataset_dir, extract_dir = download_and_unzip_movielens_data(dataset, output_dir, min_seq_length)
     preprocess_movielens_data(extract_dir, dataset_dir, dataset)
+    # TODO next item split
+    # split_commands.next_item()
 
 
 @app.command()
@@ -84,7 +86,6 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
                                     session_key=[YOOCHOOSE_SESSION_ID_KEY], delimiter=delimiter)
 
         print("Create next item split...")
-        # FixMe creates test and valid but not train.idx (Leave last two items out)
         split_commands.next_item(data_file_path=preprocessed_data_filepath,
                                  session_index_path=session_index_path,
                                  output_dir_path=output_dir_path.joinpath("next_item_split"),
@@ -148,7 +149,6 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
                                 session_key=[AMAZON_SESSION_ID], delimiter=AMAZON_DELIMITER)
 
     print("Create next item split...")
-    # FixMe creates test and valid but not train.idx (Leave last two items out)
     split_commands.next_item(data_file_path=raw_data_file_path,
                              session_index_path=session_index_path,
                              output_dir_path=output_dir_path.joinpath("next_item_split"),
