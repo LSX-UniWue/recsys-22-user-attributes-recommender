@@ -41,6 +41,7 @@ def create_token_vocabulary(item_header_name: str, data_file_path: Path, session
     :param session_index_path: Path to index file belonging to the data file
     :param vocabulary_output_file_path: output path for vocabulary file
     :param item_header_name: Name of the item key in the data set, e.g, "ItemId"
+    :param custom_tokens: FixMe I need documentation
     :param delimiter: delimiter used in data file
     :return: None, Side Effect: vocabulary for data file is written to vocabulary_output_file_path
     """

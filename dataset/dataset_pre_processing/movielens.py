@@ -1,8 +1,12 @@
 import os
+import functools
 import pandas as pd
 from pathlib import Path
 
 from dataset.dataset_pre_processing.utils import build_vocabularies, read_csv, download_dataset, unzip_file
+from dataset.dataset_index_splits.conditional_split import _get_position_with_offset, \
+    create_conditional_index_using_extractor
+from dataset.app.index_command import index_csv
 
 DOWNLOAD_URL_MAP = {
     'ml-1m': 'http://files.grouplens.org/datasets/movielens/ml-1m.zip',
@@ -87,3 +91,28 @@ def preprocess_movielens_data(dataset_dir: Path,
         build_vocabularies(users_df, output_dir, "zip")
 
     return main_file
+
+
+def split_movielens_dataset(dataset_dir: Path,
+                            main_file: Path,
+                            session_key: str = 'userId',
+                            delimiter: str = '\t',
+                            item_header: str = 'title',
+                            min_seq_length: int = 4
+                            ):
+    # we use leave one out evaluation: the last watched movie for each users is in the test set, the second last is in
+    # the valid test and the rest in the train set
+    # we generate the session position index for validation and test (for train the validation index can be used the
+    # validation index with the configuration that the target is not exposed to the model)
+    index_file = dataset_dir / f'{main_file.stem}.idx'
+
+    index_csv(main_file, index_file, [session_key], delimiter)
+
+    additional_features = {}
+
+    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'valid.loo.idx', item_header,
+                                             min_seq_length, delimiter, additional_features,
+                                             functools.partial(_get_position_with_offset, offset=2))
+    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'test.loo.idx', item_header,
+                                             min_seq_length, delimiter, additional_features,
+                                             functools.partial(_get_position_with_offset, offset=1))

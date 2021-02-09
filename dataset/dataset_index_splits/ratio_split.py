@@ -6,7 +6,7 @@ from tqdm import tqdm
 from numpy.random._generator import default_rng
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 
-from dataset.app.commands import index_command
+from dataset.app import index_command
 
 
 def run(data_file_path: Path,

@@ -46,7 +46,6 @@ def build(data_file_path: Path, session_index_path: Path, vocabulary_file_path: 
     counts: Dict[str, int] = {}
     for session_idx in tqdm(range(len(dataset)), desc="Counting items"):
         session = dataset[session_idx]
-        print(session)
         items = session[ITEM_SEQ_ENTRY_NAME]
         # ignore session with lower min session length
         if len(items) > min_session_length:

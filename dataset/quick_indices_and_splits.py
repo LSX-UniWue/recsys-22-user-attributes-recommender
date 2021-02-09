@@ -1,14 +1,8 @@
-"""
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-DEPRECATED
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-"""
 import typer
 from pathlib import Path
 
-from runner.dataset.create_reader_index import create_index_for_csv
-from runner.dataset.create_csv_dataset_splits import run as create_splits
-from runner.dataset.create_conditional_index import create_conditional_index
+from dataset.app.index_command import index_csv, create_conditional_index
+from dataset.dataset_index_splits.ratio_split import run as create_ratio_splits
 
 app = typer.Typer()
 
@@ -24,6 +18,19 @@ def create_splits(dataset: str = typer.Argument(..., help="ml-1m or ml-20m"),
                   test: float = typer.Option(0.05, help="train_split"),
                   min_session_length: int = typer.Option(2, help="minimum session length")
                   ) -> None:
+    """
+    FixMe I need documentation
+    :param dataset:
+    :param session_key:
+    :param item_header:
+    :param output_dir:
+    :param seed:
+    :param train:
+    :param valid:
+    :param test:
+    :param min_session_length:
+    :return:
+    """
 
     dataset_dir = output_dir / dataset
     path_main_csv = dataset_dir / f'{dataset}.csv'
@@ -31,16 +38,16 @@ def create_splits(dataset: str = typer.Argument(..., help="ml-1m or ml-20m"),
     split_dir_path = dataset_dir / 'splits'
     split_dir_path.mkdir(parents=True, exist_ok=True)
 
-    create_index_for_csv(path_main_csv, path_main_index, session_key=[session_key])
+    index_csv(path_main_csv, path_main_index, session_key=[session_key])
 
     splits = {"train": train, "valid": valid, "test": test}
-    create_splits(path_main_csv, path_main_index, split_dir_path, splits, seed)
+    create_ratio_splits(path_main_csv, path_main_index, split_dir_path, splits, seed)
 
     for split in ["test", "train", "valid"]:
         split_path = split_dir_path / f'{split}.csv'
         split_path_index = split_dir_path / f'{split}.idx'
         split_path_next_index = split_dir_path / f'{split}.nip'
-        create_index_for_csv(split_path, split_path_index, session_key=[session_key])
+        index_csv(split_path, split_path_index, session_key=[session_key])
         create_conditional_index(data_file_path=split_path,
                                  session_index_path=split_path_index,
                                  output_file_path=split_path_next_index,

@@ -1,12 +1,13 @@
 import os
 import typer
 from pathlib import Path
-from dataset.dataset_pre_processing.movielens import download_and_unzip_movielens_data, preprocess_movielens_data
+from dataset.dataset_pre_processing.movielens import download_and_unzip_movielens_data, preprocess_movielens_data, \
+    split_movielens_dataset
 from dataset.dataset_pre_processing.yoochoose import pre_process_yoochoose_dataset, YOOCHOOSE_CLICKS_FILE_NAME, \
     YOOCHOOSE_SESSION_ID_KEY, YOOCHOOSE_ITEM_ID_KEY
 from dataset.dataset_pre_processing.amazon import download_and_unzip_amazon_dataset, AMAZON_ITEM_ID, \
     AMAZON_SESSION_ID, AMAZON_DELIMITER
-from dataset.app.commands import index_command, split_commands, popularity_command, vocabulary_command
+from dataset.app import split_commands, popularity_command, vocabulary_command, index_command
 
 app = typer.Typer()
 
@@ -18,9 +19,8 @@ def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_ch
               ) -> None:
     # FixMe min_seq_length influences nothing except naming of dataset_dir
     dataset_dir, extract_dir = download_and_unzip_movielens_data(dataset, output_dir, min_seq_length)
-    preprocess_movielens_data(extract_dir, dataset_dir, dataset)
-    # TODO next item split
-    # split_commands.next_item()
+    main_file = preprocess_movielens_data(extract_dir, dataset_dir, dataset)
+    split_movielens_dataset(dataset_dir, main_file, min_seq_length=min_seq_length)
 
 
 @app.command()
