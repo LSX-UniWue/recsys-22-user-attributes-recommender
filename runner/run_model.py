@@ -61,6 +61,14 @@ def build_metrics_loggers(config: Dict[str, Any]) -> List[Callback]:
     return loggers
 
 
+def _build_trainer(config):
+    trainer_builder = TrainerBuilder(config())
+    trainer_builder = trainer_builder.add_checkpoint_callback(config.checkpoint())
+    trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.logger()).build())
+    trainer = trainer_builder.build()
+    return trainer
+
+
 @app.command()
 def train(model: str = typer.Argument(..., help="the model to run"),
           config_file: str = typer.Argument(..., help='the path to the config file'),
@@ -77,10 +85,7 @@ def train(model: str = typer.Argument(..., help="the model to run"),
     module = container.module()
 
     config = container.config
-    trainer_builder = TrainerBuilder(config.trainer())
-    trainer_builder = trainer_builder.add_checkpoint_callback(config.trainer.checkpoint())
-    trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.trainer.logger()).build())
-    trainer = trainer_builder.build()
+    trainer = _build_trainer(config.trainer)
 
     if do_train:
         trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
@@ -103,7 +108,9 @@ def search(model: str = typer.Argument(..., help="the model to run"),
         print(f"the config file cannot be found. Please check the path '{template_file}'!")
         exit(-1)
 
-    def config_from_template(template_file: Path, config_file_handle, trial):
+    def config_from_template(template_file: Path,
+                             config_file_handle,
+                             trial):
         import yaml
         resolver = OptunaParameterResolver(trial)
         processor = ConfigTemplateProcessor(resolver)
@@ -117,14 +124,14 @@ def search(model: str = typer.Argument(..., help="the model to run"),
 
     def objective(trial):
         with NamedTemporaryFile(mode='wt') as tmp_config_file:
-            container = build_container(model)
             config_from_template(template_file, tmp_config_file, trial)
 
-            container.config.from_yaml(tmp_config_file.name)
+            container = build_container(model, tmp_config_file.name)
 
             module = container.module()
 
-            trainer = container.trainer()
+            config = container.config
+            trainer = _build_trainer(config.trainer)
             trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
 
             # TODO (AD) We need a way to determine the metrics value for the best checkpoint
