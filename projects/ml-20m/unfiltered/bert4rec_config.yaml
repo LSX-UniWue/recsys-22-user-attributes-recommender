@@ -33,7 +33,7 @@ model:
   num_transformer_layers: 2
   transformer_hidden_size: 64
   transformer_dropout: 0.2
-  project_layer_type: linear
+  project_layer_type: transpose_embedding
 module:
   mask_probability: 0.2
   beta_1: 0.99
@@ -62,7 +62,7 @@ tokenizer:
     file: /ssd/ml-20m/vocab_title.txt
 trainer:
   checkpoint:
-    monitor: recall_at_10
+    monitor: recall_at_10/sampled
     save_top_k: 3
     mode: max
   gradient_clip_val: 0.0
@@ -70,4 +70,4 @@ trainer:
   gpus: 8
   max_epochs: 800
   accelerator: "ddp"
-  check_val_every_n_epoch: 100
+  check_val_every_n_epoch: 50

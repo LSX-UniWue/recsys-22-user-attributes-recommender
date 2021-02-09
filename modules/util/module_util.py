@@ -98,11 +98,12 @@ def build_eval_step_return_dict(input_sequence: torch.Tensor,
     """
 
     return_dict = {
-        RETURN_KEY_SEQUENCE: input_sequence.to("cpu"),
-        RETURN_KEY_PREDICTIONS: predictions.to("cpu"),
-        RETURN_KEY_TARGETS: targets.to("cpu"),
+        RETURN_KEY_SEQUENCE: input_sequence,
+        RETURN_KEY_PREDICTIONS: predictions,
+        RETURN_KEY_TARGETS: targets,
     }
+
     if mask is not None:
-        return_dict.update({RETURN_KEY_MASK: mask.to("cpu")})
+        return_dict.update({RETURN_KEY_MASK: mask})
 
     return return_dict

@@ -11,7 +11,8 @@ from models.layers.tensor_utils import generate_position_ids
 
 class TransformerEmbedding(nn.Module):
     """
-    this transformer embedding combines the item embedding and positional embedding (incl. norm) into a single module
+    this transformer embedding combines the item embedding and positional embedding (incl. norm and dropout)
+    into a single module
     """
 
     def __init__(self,
@@ -46,26 +47,26 @@ class TransformerEmbedding(nn.Module):
         return self.item_embedding(input_sequence, flatten=flatten)
 
     def forward(self,
-                input_sequence: torch.Tensor,
+                sequence: torch.Tensor,
                 position_ids: torch.Tensor = None
                 ) -> torch.Tensor:
         """
-        :param input_sequence: (N, S)
+        :param sequence: the sequence input (N, S)
         :param position_ids: the position ids (N, S) optional, will be generated if not provided
+        :return: the embedding (item and position) :math`(N, S, H)`
 
-         where S is the sequence length and N the batch size
-        :return:
+        where S is the sequence length, N the batch size and H the embedding size
         """
         # generate the position ids if not provided
         if position_ids is None:
-            position_ids = generate_position_ids(input_sequence.size(), device=input_sequence.device)
+            position_ids = generate_position_ids(sequence.size(), device=sequence.device)
 
-        input_sequence = self.item_embedding(input_sequence)
-        input_sequence = input_sequence + self.position_embedding(position_ids)
-        input_sequence = self.embedding_norm(input_sequence)
+        sequence = self.item_embedding(sequence)
+        sequence = sequence + self.position_embedding(position_ids)
+        sequence = self.embedding_norm(sequence)
 
-        input_sequence = self.dropout(input_sequence)
-        return input_sequence
+        sequence = self.dropout(sequence)
+        return sequence
 
 
 class TransformerLayer(nn.Module):
@@ -85,15 +86,12 @@ class TransformerLayer(nn.Module):
 
     def forward(self,
                 input_sequence: torch.Tensor,
-                padding_mask: torch.Tensor = None
+                attention_mask: torch.Tensor
                 ) -> torch.Tensor:
-
-        if padding_mask is not None:
-            padding_mask = padding_mask.unsqueeze(1).repeat(1, input_sequence.size()[1], 1).unsqueeze(1)
 
         # running over multiple transformer blocks
         for transformer in self.transformer_blocks:
-            input_sequence = transformer.forward(input_sequence, padding_mask)
+            input_sequence = transformer.forward(input_sequence, attention_mask)
 
         return input_sequence
 
@@ -123,6 +121,7 @@ class SublayerConnection(nn.Module):
 
 
 class Attention(nn.Module):
+
     """
     Computes 'Scaled Dot Product Attention'
     """
@@ -130,13 +129,13 @@ class Attention(nn.Module):
                 query: torch.Tensor,
                 key: torch.Tensor,
                 value: torch.Tensor,
-                mask: torch.Tensor = None,
+                attention_mask: torch.Tensor = None,
                 dropout: nn.Dropout = None
                 ) -> Tuple[torch.Tensor, torch.Tensor]:
         scores = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(query.size()[-1])
 
-        if mask is not None:
-            scores = scores.masked_fill(mask == 0, -1e9)
+        if attention_mask is not None:
+            scores = scores.masked_fill(attention_mask == 0, -1e9)
 
         p_attn = F.softmax(scores, dim=-1)
 
@@ -173,7 +172,7 @@ class MultiHeadedAttention(nn.Module):
                 query: torch.Tensor,
                 key: torch.Tensor,
                 value: torch.Tensor,
-                mask: torch.Tensor = None
+                attention_mask: torch.Tensor = None
                 ) -> torch.Tensor:
         batch_size = query.size()[0]
 
@@ -182,7 +181,7 @@ class MultiHeadedAttention(nn.Module):
                              for l, x in zip(self.linear_layers, (query, key, value))]
 
         # 2) Apply attention on all the projected vectors in batch.
-        x, attn = self.attention(query, key, value, mask=mask, dropout=self.dropout)
+        x, attn = self.attention(query, key, value, attention_mask=attention_mask, dropout=self.dropout)
 
         # 3) "Concat" using a view and apply a final linear.
         x = x.transpose(1, 2).contiguous().view(batch_size, -1, self.heads * self.d_k)
@@ -238,8 +237,9 @@ class TransformerBlock(nn.Module):
 
     def forward(self,
                 input_sequence: torch.Tensor,
-                mask: torch.Tensor
+                attention_mask: torch.Tensor
                 ) -> torch.Tensor:
-        input_sequence = self.input_sublayer(input_sequence, lambda _x: self.attention.forward(_x, _x, _x, mask=mask))
+        input_sequence = self.input_sublayer(input_sequence, lambda _x: self.attention.forward(_x, _x, _x,
+                                                                                               attention_mask=attention_mask))
         input_sequence = self.output_sublayer(input_sequence, self.feed_forward)
         return self.dropout(input_sequence)
