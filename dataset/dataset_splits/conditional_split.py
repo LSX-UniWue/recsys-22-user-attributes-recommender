@@ -1,4 +1,3 @@
-import typer
 from pathlib import Path
 from typing import Dict, Any, Iterable, Callable
 from data.datasets import ITEM_SEQ_ENTRY_NAME
@@ -29,6 +28,15 @@ def get_position_with_offset_two(session: Dict[str, Any]) -> Iterable[int]:
     :return: index within session where validation target is stored
     """
     return _get_position_with_offset(session, offset=2)
+
+
+def get_position_with_offset_three(session: Dict[str, Any]) -> Iterable[int]:
+    """
+    Helper method for training index
+    :param session: session that the target is to be extracted from
+    :return: index within session where testing target is stored
+    """
+    return _get_position_with_offset(session, offset=3)
 
 
 def create_conditional_index_using_extractor(data_file_path: Path,
