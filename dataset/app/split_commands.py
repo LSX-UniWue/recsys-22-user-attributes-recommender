@@ -1,6 +1,6 @@
 import typer
 from pathlib import Path
-from dataset.dataset_splits import conditional_split, ratio_split
+from dataset.dataset_index_splits import conditional_split, ratio_split
 
 app = typer.Typer()
 
@@ -89,3 +89,38 @@ def ratios(
                     split_ratios=splits,
                     delimiter=delimiter,
                     seed=seed)
+
+
+@app.command()
+def create_conditional_index(
+        data_file_path: Path = typer.Argument(..., exists=True, help="path to the input file in CSV format"),
+        session_index_path: Path = typer.Argument(..., exists=True, help="path to the session index file"),
+        output_file_path: Path = typer.Argument(..., help="path to the output file"),
+        item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
+        min_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
+        delimiter: str = typer.Option("\t", help="the delimiter used in the CSV file."),
+        target_feature: str = typer.Option(None, help="the target column name to build the targets against"
+                                                      "(default all next subsequences will be considered);"
+                                                      "the target must be a boolean feature")
+) -> None:
+    """
+    FixMe I need some documentation
+    :param data_file_path:
+    :param session_index_path:
+    :param output_file_path:
+    :param item_header_name:
+    :param min_session_length:
+    :param delimiter:
+    :param target_feature:
+    :return:
+    """
+
+    target_positions_extractor = conditional_split._build_target_position_extractor(target_feature)
+    additional_features = {}
+    if target_feature is not None:
+        additional_features[target_feature] = {'type': 'bool', 'sequence': True}
+
+    conditional_split.create_conditional_index_using_extractor(data_file_path, session_index_path, output_file_path,
+                                                               item_header_name,
+                                                               min_session_length, delimiter, additional_features,
+                                                               target_positions_extractor)

@@ -1,6 +1,5 @@
 import typer
-from dataset.app.commands import data_set_commands, index_command, split_commands, vocabulary_command, \
-    popularity_command
+from dataset.app import data_set_commands, split_commands, popularity_command, vocabulary_command, index_command
 
 """
 This file combines the Typer commands for the data set CLI.
