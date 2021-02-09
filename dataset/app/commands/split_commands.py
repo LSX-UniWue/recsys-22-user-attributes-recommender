@@ -59,9 +59,11 @@ def ratios(
         data_file_path: Path = typer.Argument(..., help="Data file in csv format"),
         session_index_path: Path = typer.Argument(..., help="Path to session index for the data file"),
         output_dir_path: Path = typer.Argument(..., help="path that the splits should be written to"),
+        session_key: [str] = typer.Argument("userId", help="session key"),
         train_ratio: float = typer.Argument(0.9, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
         validation_ratio: float = typer.Argument(0.05, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
         testing_ratio: float = typer.Argument(0.05, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
+        delimiter: str = typer.Option('\t', help="Delimiter used in data file"),
         seed: int = typer.Option(123456, help="Seed for random sampling of splits")):
     """
     Creates a data set split based on ratios where a percentage of the sessions are used for training, validation, and
@@ -69,13 +71,21 @@ def ratios(
     :param data_file_path: data file that the split should be created for
     :param session_index_path: session index belonging to the data file
     :param output_dir_path: output directory where the data and index files for the splits are written to
+    :param session_key: Session key used to uniquely identify sessions
     :param train_ratio: share of session used for training
     :param validation_ratio: share of session used for validation
     :param testing_ratio: share of session used for testing
+    :param delimiter: delimiter used in data file
     :param seed: Seed for random sampling
     :return: None, Side effects: CSV Files for splits are written
     """
     output_dir_path.mkdir(parents=True, exist_ok=True)
     assert train_ratio + validation_ratio + testing_ratio == 1
     splits = {"train": train_ratio, "valid": validation_ratio, "test": testing_ratio}
-    ratio_split.run(data_file_path, session_index_path, output_dir_path, splits, seed)
+    ratio_split.run(data_file_path=data_file_path,
+                    match_index_path=session_index_path,
+                    output_dir_path=output_dir_path,
+                    session_key=session_key,
+                    split_ratios=splits,
+                    delimiter=delimiter,
+                    seed=seed)

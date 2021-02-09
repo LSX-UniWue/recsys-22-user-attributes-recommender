@@ -75,15 +75,12 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
         split_commands.ratios(data_file_path=preprocessed_data_filepath,
                               session_index_path=session_index_path,
                               output_dir_path=ratio_split_output_dir_path,
+                              session_key=YOOCHOOSE_SESSION_ID_KEY,
                               train_ratio=0.9,
                               validation_ratio=0.05,
                               testing_ratio=0.05,
+                              delimiter=delimiter,
                               seed=123456)
-        for split in ["train", "test", "valid"]:
-            data_file = ratio_split_output_dir_path.joinpath(split + ".csv")
-            index_file = ratio_split_output_dir_path.joinpath(split + ".idx")
-            index_command.index_csv(data_file_path=data_file, index_file_path=index_file,
-                                    session_key=[YOOCHOOSE_SESSION_ID_KEY], delimiter=delimiter)
 
         print("Create next item split...")
         split_commands.next_item(data_file_path=preprocessed_data_filepath,
@@ -138,15 +135,12 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
     split_commands.ratios(data_file_path=raw_data_file_path,
                           session_index_path=session_index_path,
                           output_dir_path=ratio_split_output_dir_path,
+                          session_key=[AMAZON_SESSION_ID],
                           train_ratio=0.9,
                           validation_ratio=0.05,
                           testing_ratio=0.05,
+                          delimiter=AMAZON_DELIMITER,
                           seed=123456)
-    for split in ["train", "test", "valid"]:
-        data_file = ratio_split_output_dir_path.joinpath(split + ".csv")
-        index_file = ratio_split_output_dir_path.joinpath(split + ".idx")
-        index_command.index_csv(data_file_path=data_file, index_file_path=index_file,
-                                session_key=[AMAZON_SESSION_ID], delimiter=AMAZON_DELIMITER)
 
     print("Create next item split...")
     split_commands.next_item(data_file_path=raw_data_file_path,
