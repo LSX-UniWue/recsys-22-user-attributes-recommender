@@ -5,7 +5,6 @@ import torch
 
 from torch import nn
 
-from configs.models.caser.caser_config import CaserConfig
 from models.layers.layers import ItemEmbedding
 from models.layers.util_layers import get_activation_layer
 
@@ -19,19 +18,6 @@ class CaserModel(nn.Module):
         original pytorch implementation: https://github.com/graytowne/caser_pytorch
     """
 
-    @classmethod
-    def from_config(cls,
-                    config: CaserConfig) -> 'CaserModel':
-        return cls(embedding_size=config.d,
-                   item_vocab_size=config.item_vocab_size,
-                   user_vocab_size=config.user_voc_size,
-                   max_seq_length=config.max_seq_length,
-                   num_vertical_filters=config.num_vertical_filters,
-                   num_horizontal_filters=config.num_horizontal_filters,
-                   conv_activation_fn=config.conv_activation_fn,
-                   fc_activation_fn=config.fc_activation_fn,
-                   dropout=config.dropout)
-
     def __init__(self,
                  embedding_size: int,
                  item_vocab_size: int,
@@ -42,12 +28,12 @@ class CaserModel(nn.Module):
                  conv_activation_fn: str,
                  fc_activation_fn: str,
                  dropout: float,
-                 embedding_mode: str = None
+                 embedding_pooling_type: str = None
                  ):
         super().__init__()
 
         self.embedding_size = embedding_size
-        self.embedding_mode = embedding_mode
+        self.embedding_pooling_type = embedding_pooling_type
         self.item_vocab_size = item_vocab_size
         self.user_vocab_size = user_vocab_size
         self.max_seq_length = max_seq_length
@@ -62,8 +48,7 @@ class CaserModel(nn.Module):
             self.user_embedding = nn.Embedding(self.user_vocab_size, embedding_dim=self.embedding_size)
         self.item_embedding = ItemEmbedding(item_voc_size=self.item_vocab_size,
                                             embedding_size=self.embedding_size,
-                                            embedding_mode=self.embedding_mode,
-                                            init_weights_fnc=lambda weight: weight.data.normal_(0, 1.0 / embedding_size))
+                                            embedding_pooling_type=self.embedding_pooling_type)
 
         # vertical conv layer
         self.conv_vertical = nn.Conv2d(1, self.num_vertical_filters, (self.max_seq_length, 1))

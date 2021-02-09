@@ -11,6 +11,10 @@ import typer
 from runner.dataset.create_conditional_index import create_conditional_index_using_extractor
 from runner.dataset.create_reader_index import create_index_for_csv
 
+RATING_USER_COLUMN_NAME = 'userId'
+RATING_MOVIE_COLUMN_NAME = 'movieId'
+RATING_TIMESTAMP_COLUMN_NAME = 'timestamp'
+
 app = typer.Typer()
 
 
@@ -20,17 +24,41 @@ DOWNLOAD_URL_MAP = {
 }
 
 
+def filter_ratings(ratings_df: pd.DataFrame,
+                   min_user_feedback: int = 0,
+                   min_item_feedback: int = 0
+                   ):
+
+    def _filter_dataframe(column: str, min_count: int, dataframe: pd.DataFrame) -> pd.DataFrame:
+        sizes = ratings_df.groupby(column).size()
+        good_entities = sizes.index[sizes >= min_count]
+
+        return dataframe[ratings_df[column].isin(good_entities)]
+
+    if min_user_feedback > 1:
+        ratings_df = _filter_dataframe(RATING_USER_COLUMN_NAME, min_user_feedback, ratings_df)
+
+    if min_item_feedback > 1:
+        ratings_df = _filter_dataframe(RATING_MOVIE_COLUMN_NAME, min_item_feedback, ratings_df)
+
+    return ratings_df
+
+
 def preprocess_data(dataset_dir: Path,
                     output_dir: Path,
                     name: str,
-                    delimiter: str = '\t'
+                    delimiter: str = '\t',
+                    min_user_feedback: int = 0,
+                    min_item_feedback: int = 0
                     ) -> Path:
     """
     Convert raw movielens data to csv files and create vocabularies
+    :param min_item_feedback:
     :param delimiter:
     :param output_dir:
     :param dataset_dir:
     :param name:
+    :param min_user_feedback:
     :return: the path to the main file
     """
     print("Convert to csv...")
@@ -46,25 +74,32 @@ def preprocess_data(dataset_dir: Path,
 
     # read and merge data
     ratings_df = read_csv(dataset_dir, "ratings", file_type, sep, header)
+
+    movielens_1m = name == 'ml-1m'
+    if movielens_1m:
+        ratings_df.columns = [RATING_USER_COLUMN_NAME, RATING_MOVIE_COLUMN_NAME, 'rating', RATING_TIMESTAMP_COLUMN_NAME]
+
+    ratings_df = filter_ratings(ratings_df,
+                                min_user_feedback=min_user_feedback,
+                                min_item_feedback=min_item_feedback)
+
     movies_df = read_csv(dataset_dir, "movies", file_type, sep, header)
 
     # only the ml-1m dataset has got a user info file …
     users_df = None
 
-    if name == "ml-1m":
-        ratings_df.columns = ['userId', 'movieId', 'rating', 'timestamp']
+    if movielens_1m:
         movies_df.columns = ['movieId', 'title', 'genres']
         users_df = read_csv(dataset_dir, "users", file_type, sep, header)
-        users_df.columns = ['userId', 'gender', 'age', 'occupation', 'zip']
+        users_df.columns = [RATING_USER_COLUMN_NAME, 'gender', 'age', 'occupation', 'zip']
         ratings_df = pd.merge(ratings_df, users_df)
-
     elif name == "ml-20":
         links_df = read_csv(dataset_dir, "links", file_type, sep, header)
         ratings_df = pd.merge(ratings_df, links_df)
 
-    merged_df = pd.merge(ratings_df, movies_df).sort_values(by=["userId", "timestamp"])
+    merged_df = pd.merge(ratings_df, movies_df).sort_values(by=[RATING_USER_COLUMN_NAME, RATING_TIMESTAMP_COLUMN_NAME])
     # remove unused movie id column
-    del merged_df['movieId']
+    del merged_df[RATING_MOVIE_COLUMN_NAME]
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -72,8 +107,7 @@ def preprocess_data(dataset_dir: Path,
     merged_df.to_csv(main_file, sep=delimiter, index=False)
 
     # build vocabularies
-    # FIXME: the vocab should be build from the train set and not on the complete dataset
-    build_vocabularies(movies_df, output_dir, "title")
+    build_vocabularies(merged_df, output_dir, "title")
     build_vocabularies(movies_df, output_dir, "genres", split="|")
     # for the ml-1m also export the vocabularies for the attributes
     if users_df is not None:
@@ -95,7 +129,7 @@ def build_vocabularies(dataframe: pd.DataFrame,
     :param dataframe: base dataframe
     :param dataset_dir: folder for saving file
     :param column: column to create vocabulary for
-    :param split: token to split if column need splitting
+    :param split: token to split if column needs splitting
     :return:
     """
     if split != "":
@@ -131,22 +165,30 @@ def _get_position_with_offset(session: Dict[str, Any],
     return [len(sequence) - offset]
 
 
+def _all_remaining_positions(session: Dict[str, Any]
+                             ) -> Iterable[int]:
+    return range(1, len(session[ITEM_SEQ_ENTRY_NAME]) - 2)
+
+
 def split_dataset(dataset_dir: Path,
                   main_file: Path,
                   session_key: str = 'userId',
                   delimiter: str = '\t',
                   item_header: str = 'title',
-                  min_seq_length: int = 4
+                  min_seq_length: int = 3
                   ):
     # we use leave one out evaluation: the last watched movie for each users is in the test set, the second last is in
-    # the valid test and the rest in the train set
-    # we generate the session position index for validation and test (for train the validation index can be used the
-    # validation index with the configuration that the target is not exposed to the model)
+    # the valid set and the rest in the train set
+    # we generate the session position index for validation and test (for train the validation index can be used
+    # with the configuration that the target is not exposed to the training module)
     index_file = dataset_dir / f'{main_file.stem}.idx'
 
     create_index_for_csv(main_file, index_file, [session_key], delimiter)
 
     additional_features = {}
+
+    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'train.nip.idx', item_header,
+                                             min_seq_length, delimiter, additional_features, _all_remaining_positions)
 
     create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'valid.loo.idx', item_header,
                                              min_seq_length, delimiter, additional_features,
@@ -159,18 +201,23 @@ def split_dataset(dataset_dir: Path,
 @app.command()
 def main(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_choices=True),
          output_dir: Path = typer.Option("./dataset/", help='directory to save data'),
-         min_seq_length: int = typer.Option(5, help='the minimum feedback the user must have')
+         min_seq_length: int = typer.Option(3, help='the minimum sequence length'),
+         min_user_feedback: int = typer.Option(0, help='the minimum number of feedback a user must have'),
+         min_item_feedback: int = typer.Option(0, help='the minimum number of feedback an item must have received')
          ) -> None:
     url = DOWNLOAD_URL_MAP[dataset]
-    dataset_dir = output_dir / f'{dataset}_{min_seq_length}'
+    dataset_dir = output_dir / f'{dataset}_{min_seq_length}_{min_user_feedback}_{min_item_feedback}'
     download_dir = output_dir / dataset
 
     downloaded_file = download_dataset(url, download_dir)
 
     extract_dir = download_dir / 'raw'
+    os.makedirs(extract_dir, exist_ok=True)
 
     unzip_file(downloaded_file, extract_dir, delete=False)
-    main_file = preprocess_data(extract_dir, dataset_dir, dataset)
+    main_file = preprocess_data(extract_dir, dataset_dir, dataset,
+                                min_user_feedback=min_user_feedback,
+                                min_item_feedback=min_item_feedback)
     split_dataset(dataset_dir, main_file, min_seq_length=min_seq_length)
 
 

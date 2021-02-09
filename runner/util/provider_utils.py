@@ -1,11 +1,7 @@
-import os
 from pathlib import Path
 from typing import Callable, Dict, Any, List, Optional
 
 from dependency_injector import providers
-from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger, MLFlowLogger
 from torch.utils.data import Dataset, DataLoader
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
@@ -13,16 +9,13 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPL
     NEGATIVE_SAMPLES_ENTRY_NAME
 from data.datasets.nextitem import NextItemDataset
 from data.datasets.index import SessionPositionIndex
-from data.datasets.prepare import Processor, build_processors, PositiveNegativeSampler
+from data.datasets.processors.pos_neg_sampler import PositiveNegativeSamplerProcessor
+from data.datasets.processors.processor import Processor
+from data.datasets.processors.util import build_processors
 from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSessionDataset
 from data.mp import mp_worker_init_fn
 from data.utils import create_indexed_header, read_csv_header
-from logger.GradientLoggerCallback import GradientLoggerCallback
-from logger.MetricLoggerCallback import MetricLoggerCallback
-from logger.TrainLossLoggerCallback import TrainLossLoggerCallback
-from metrics.utils.metric_utils import build_metrics
 from data.collate import padded_session_collate, PadDirection
-from runner.util.builder import TrainerBuilder
 from tokenization.tokenizer import Tokenizer
 from tokenization.vocabulary import VocabularyReaderWriter, Vocabulary, CSVVocabularyReaderWriter
 
@@ -77,10 +70,14 @@ def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider
 
         has_pos_neg_sampler_processor = False
         for processor in processors:
-            if isinstance(processor, PositiveNegativeSampler):
+            if isinstance(processor, PositiveNegativeSamplerProcessor):
                 has_pos_neg_sampler_processor = True
         if not has_pos_neg_sampler_processor:
             raise ValueError('please configure a pos neg sampler')
+
+        if nip_index is not None:
+            return NextItemDataset(basic_dataset, SessionPositionIndex(Path(nip_index)), processors, add_target=False,
+                                   include_target_pos=True)
         return ItemSessionDataset(basic_dataset, processors)
 
     return build_dataset_provider_factory(provide_posneg_dataset, tokenizer_provider, processors_provider,
@@ -101,8 +98,8 @@ def build_tokenizer_provider(config: providers.Configuration) -> providers.Singl
     return providers.Singleton(provide_tokenizer, vocabulary, config.tokenizer.special_tokens)
 
 
-def _to_pad_direction(pad_id: str
-                      ) -> PadDirection:
+def to_pad_direction(pad_id: str
+                     ) -> PadDirection:
     return PadDirection[pad_id.upper()]
 
 
@@ -113,7 +110,7 @@ def build_session_loader_provider_factory(dataset_config: providers.Configuratio
     dataset = build_session_dataset_provider_factory(tokenizer_provider, processors_providers, dataset_config)
     dataset_loader_config = dataset_config.loader
 
-    pad_direction = providers.Factory(_to_pad_direction, dataset_loader_config.pad_direction)
+    pad_direction = providers.Factory(to_pad_direction, dataset_loader_config.pad_direction)
 
     return providers.Factory(
         provide_session_loader,
@@ -134,7 +131,7 @@ def build_nextitem_loader_provider_factory(dataset_config: providers.Configurati
     dataset = build_nextitem_dataset_provider_factory(tokenizer_provider, processors_provider, dataset_config)
     dataset_loader_config = dataset_config.loader
 
-    pad_direction = providers.Factory(_to_pad_direction, dataset_loader_config.pad_direction)
+    pad_direction = providers.Factory(to_pad_direction, dataset_loader_config.pad_direction)
 
     return providers.Factory(
         provide_nextit_loader,
@@ -156,7 +153,7 @@ def build_posneg_loader_provider_factory(dataset_config: providers.Configuration
     dataset = build_posnet_dataset_provider_factory(tokenizer_provider, processor_provider_provider, dataset_config)
     dataset_loader_config = dataset_config.loader
 
-    pad_direction = providers.Factory(_to_pad_direction, dataset_loader_config.pad_direction)
+    pad_direction = providers.Factory(to_pad_direction, dataset_loader_config.pad_direction)
 
     return providers.Factory(
         provide_session_loader,
@@ -225,7 +222,7 @@ def build_dataset_provider_factory(
         tokenizer_provider: providers.Provider,
         processors_provider: providers.Provider,
         dataset_config: providers.ConfigurationOption
-        ) -> providers.Factory:
+) -> providers.Factory:
     dataset_config = dataset_config.dataset
     parser_config = dataset_config.parser
 
@@ -278,7 +275,8 @@ def _build_entries_to_pad(max_seq_length: int,
     entries_to_pad = {
         ITEM_SEQ_ENTRY_NAME: [max_seq_length],
         POSITIVE_SAMPLES_ENTRY_NAME: [max_seq_length],
-        NEGATIVE_SAMPLES_ENTRY_NAME: [max_seq_length]
+        NEGATIVE_SAMPLES_ENTRY_NAME: [max_seq_length],
+        TARGET_ENTRY_NAME: [max_seq_length]
     }
 
     if max_seq_step_length is not None:
@@ -337,13 +335,3 @@ def provide_nextit_loader(dataset: Dataset,
         num_workers=num_workers,
         worker_init_fn=init_worker_fn
     )
-
-
-def build_standard_model_checkpoint(config: providers.Configuration) -> providers.Singleton:
-    return providers.Singleton(
-        ModelCheckpoint,
-        filepath=config.trainer.checkpoint.filepath,
-        monitor=config.trainer.checkpoint.monitor,
-        save_top_k=config.trainer.checkpoint.save_top_k,
-    )
-

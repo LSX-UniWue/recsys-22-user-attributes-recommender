@@ -5,12 +5,14 @@ import torch
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, USER_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME, TARGET_ENTRY_NAME
+from metrics.container.metrics_container import MetricsContainer
 from models.caser.caser_model import CaserModel
+from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 
 
-class CaserModule(pl.LightningModule):
+class CaserModule(MetricsTrait, pl.LightningModule):
 
     @staticmethod
     def get_users_from_batch(batch: Dict[str, torch.Tensor]
@@ -22,6 +24,7 @@ class CaserModule(pl.LightningModule):
                  tokenizer: Tokenizer,
                  learning_rate: float,
                  weight_decay: float,
+                 metrics: MetricsContainer
                  ):
         super().__init__()
 
@@ -31,11 +34,31 @@ class CaserModule(pl.LightningModule):
 
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
+        self.metrics = metrics
+
+    def get_metrics(self) -> MetricsContainer:
+        return self.metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
+        """
+        Performs a training step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
+            * `POSITIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N) containing the next sequence items (pos examples)
+            * `NEGATIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N) containing a negative item (sampled)
+        Optional entries are:
+            * `USER_ENTRY_NAME` a tensor of size (N) containing the user id for the provided sequences
+
+        Where N is the batch size and S the max sequence length.
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return: the total loss
+        """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         users = CaserModule.get_users_from_batch(batch)
         pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]
@@ -62,6 +85,23 @@ class CaserModule(pl.LightningModule):
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
                         ) -> Dict[str, torch.Tensor]:
+        """
+        Performs a validation step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
+            * `TARGET_ENTRY_NAME`: a tensor of size (N) with the target items,
+        Optional entries are:
+            * `USER_ENTRY_NAME` a tensor of size (N) containing the user id for the provided sequences
+
+        A padding mask will be generated on the fly, and also the masking of items
+
+        Where N is the batch size and S the max sequence length.
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return: A dictionary with entries according to `build_eval_step_return_dict`.
+        """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         users = CaserModule.get_users_from_batch(batch)
         targets = batch[TARGET_ENTRY_NAME]
@@ -76,7 +116,10 @@ class CaserModule(pl.LightningModule):
 
         prediction = self.model(input_seq, users, items_to_rank)
 
-        return build_eval_step_return_dict(prediction, targets)
+        return build_eval_step_return_dict(input_seq, prediction, targets)
+
+    def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
+        return self.validation_step(batch, batch_idx)
 
     def configure_optimizers(self):
         return torch.optim.Adam(

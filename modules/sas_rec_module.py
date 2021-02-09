@@ -1,4 +1,4 @@
-from typing import List, Union, Dict, Optional
+from typing import Union, Dict, Optional
 
 import torch
 
@@ -6,12 +6,17 @@ import pytorch_lightning as pl
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
 from losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
+from metrics.container.metrics_container import MetricsContainer
+from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import get_padding_mask, build_eval_step_return_dict
 from models.sasrec.sas_rec_model import SASRecModel
 from tokenization.tokenizer import Tokenizer
 
 
-class SASRecModule(pl.LightningModule):
+class SASRecModule(MetricsTrait, pl.LightningModule):
+    """
+    the module for the SASRec model
+    """
 
     def __init__(self,
                  model: SASRecModel,
@@ -20,16 +25,17 @@ class SASRecModule(pl.LightningModule):
                  beta_2: float,
                  tokenizer: Tokenizer,
                  batch_first: bool,
+                 metrics: MetricsContainer
                  ):
         """
         inits the SASRec module
-        :param model: the model to learn
+        :param model: the model to train
         :param learning_rate: the learning rate
         :param beta_1: the beta1 of the adam optimizer
         :param beta_2: the beta2 of the adam optimizer
         :param tokenizer: the tokenizer
         :param batch_first: True iff the dataloader returns batch_first tensors
-        :param metrics: the metrics to use for evaluation
+        :param metrics: metrics to compute on validation/test
         """
         super().__init__()
         self.model = model
@@ -39,11 +45,32 @@ class SASRecModule(pl.LightningModule):
         self.beta_2 = beta_2
         self.tokenizer = tokenizer
         self.batch_first = batch_first
+        self.metrics = metrics
+
+    def get_metrics(self) -> MetricsContainer:
+        return self.metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
+        """
+        Performs a training step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
+            * `POSITIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N) containing the next sequence items (pos examples),
+            * `NEGATIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N) containing a negative item (sampled)
+
+        Where N is the batch size and S the max sequence length.
+
+        A padding mask will be generated on the fly, and also the masking of items
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return: the total loss
+        """
+
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         pos = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
@@ -71,6 +98,21 @@ class SASRecModule(pl.LightningModule):
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
                         ) -> Dict[str, torch.Tensor]:
+        """
+        Performs a validation step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
+            * `TARGET_ENTRY_NAME`: a tensor of size (N) containing the next item of the provided sequence
+
+        Where N is the batch size and S the max sequence length.
+
+        A padding mask will be generated on the fly, and also the masking of items
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return: A dictionary with entries according to `build_eval_step_return_dict`.
+        """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
@@ -93,7 +135,9 @@ class SASRecModule(pl.LightningModule):
         prediction = self.model(input_seq, items_to_rank, padding_mask=padding_mask)
         prediction = prediction.transpose(1, 0)
 
-        return build_eval_step_return_dict(prediction, targets)
+        if self.batch_first:
+            input_seq = input_seq.transpose(1, 0)
+        return build_eval_step_return_dict(input_seq, prediction, targets)
 
     def test_step(self, batch, batch_idx):
         return self.validation_step(batch, batch_idx)

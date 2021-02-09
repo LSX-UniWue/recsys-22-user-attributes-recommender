@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from models.layers.transformer_layers import TransformerEmbedding
-from utils.tensor_utils import generate_square_subsequent_mask
+from models.layers.tensor_utils import generate_square_subsequent_mask
 
 
 class SASRecModel(nn.Module):
@@ -21,33 +21,39 @@ class SASRecModel(nn.Module):
                  num_transformer_layers: int,
                  item_vocab_size: int,
                  max_seq_length: int,
-                 dropout: float,
-                 embedding_mode: str,
+                 transformer_dropout: float,
+                 embedding_pooling_type: str,
                  ):
         """
         inits the SASRec model
-        :param config: all model configurations
+        :param transformer_hidden_size: the hidden size of the transformer
+        :param num_transformer_heads: the number of heads of the transformer
+        :param num_transformer_layers: the number of layers of the transformer
+        :param item_vocab_size: the item vocab size
+        :param max_seq_length: the max sequence length
+        :param transformer_dropout: the dropout of the model
+        :param embedding_pooling_type: the pooling to use for basket recommendation
         """
         super().__init__()
 
-        self.dropout = dropout
+        self.transformer_dropout = transformer_dropout
         self.max_seq_length = max_seq_length
         self.transformer_hidden_size = transformer_hidden_size
         self.num_transformer_heads = num_transformer_heads
         self.num_transformer_layers = num_transformer_layers
         self.item_vocab_size = item_vocab_size
-        self.embedding_mode = embedding_mode
+        self.embedding_mode = embedding_pooling_type
 
         self.embedding = TransformerEmbedding(item_voc_size=self.item_vocab_size,
                                               max_seq_len=self.max_seq_length,
                                               embedding_size=self.transformer_hidden_size,
-                                              dropout=self.dropout,
-                                              embedding_mode=self.embedding_mode)
+                                              dropout=self.transformer_dropout,
+                                              embedding_pooling_type=self.embedding_mode)
 
         encoder_layer = nn.TransformerEncoderLayer(d_model=self.transformer_hidden_size,
                                                    nhead=self.num_transformer_heads,
-                                                   dim_feedforward=self.transformer_hidden_size,
-                                                   dropout=self.dropout)
+                                                   dim_feedforward=self.transformer_hidden_size * 4,
+                                                   dropout=self.transformer_dropout)
         encoder_norm = nn.LayerNorm(self.transformer_hidden_size)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layer,
                                                          num_layers=self.num_transformer_layers,

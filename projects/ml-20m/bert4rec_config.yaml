@@ -7,48 +7,50 @@ loader: &loader
 datasets:
   test:
     dataset:
-      csv_file: /scratch/jane-doe-framework/datasets/ml-20m/ml-20m.csv
-      csv_file_index: /scratch/jane-doe-framework/datasets/ml-20m/ml-20m.idx
+      csv_file: /ssd/ml-20m/ml-20m.csv
+      csv_file_index: /ssd/ml-20m/ml-20m.idx
       parser: *parser
-      nip_index_file: /scratch/jane-doe-framework/datasets/ml-20m/test.loo.idx
+      nip_index_file: /ssd/ml-20m/test.loo.idx
     loader: *loader
   train:
     dataset:
-      csv_file: /scratch/jane-doe-framework/datasets/ml-20m/ml-20m.csv
-      csv_file_index: /scratch/jane-doe-framework/datasets/ml-20m/ml-20m.idx
-      truncated_seq_index_file:  /scratch/jane-doe-framework/datasets/ml-20m/valid.loo.idx
+      csv_file: /ssd/ml-20m/ml-20m.csv
+      csv_file_index: /ssd/ml-20m/ml-20m.idx
+      truncated_seq_index_file: /ssd/ml-20m/valid.loo.idx
       parser: *parser
     loader: *loader
   validation:
     dataset:
-      csv_file: /scratch/jane-doe-framework/datasets/ml-20m/ml-20m.csv
-      csv_file_index: /scratch/jane-doe-framework/datasets/ml-20m/ml-20m.idx
-      nip_index_file: /scratch/jane-doe-framework/datasets/ml-20m/valid.loo.idx
+      csv_file: /ssd/ml-20m/ml-20m.csv
+      csv_file_index: /ssd/ml-20m/ml-20m.idx
+      nip_index_file: /ssd/ml-20m/valid.loo.idx
       parser: *parser
     loader: *loader
 model:
-  item_vocab_size: 27265
+  item_vocab_size: 18340
   max_seq_length: 200
   num_transformer_heads: 2
   num_transformer_layers: 2
   transformer_hidden_size: 64
-  transformer_dropout: 0.1
+  transformer_dropout: 0.2
+  project_layer_type: linear
 module:
   mask_probability: 0.2
-  beta_1: 0.9
-  beta_2: 0.999
-  learning_rate: 0.001
-  weight_decay: 0.01
+  beta_1: 0.99
+  beta_2: 0.998
+  learning_rate: 0.0001
+  weight_decay: 0.00
   num_warmup_steps: 100
-  batch_first: false
+  sampled_metrics:
+    sample_probability_file: /ssd/ml-20m/popularity.txt
+    num_negative_samples: 100
+    metrics:
+      recall:
+        - 1
+        - 5
+        - 10
   metrics:
-    mrr:
-      - 1
-      - 5
-      - 10
     recall:
-      - 1
-      - 5
       - 10
 tokenizer:
   special_tokens:
@@ -57,11 +59,15 @@ tokenizer:
     unk_token: <UNK>
   vocabulary:
     delimiter: "\t"
-    file: /scratch/jane-doe-framework/datasets/ml-20m/vocab_title.txt
+    file: /ssd/ml-20m/vocab_title.txt
 trainer:
-  checkpoints:
-    monitor: recall_at_5
+  checkpoint:
+    monitor: recall_at_10
     save_top_k: 3
-  gradient_clip_val: 0
+    mode: max
+  gradient_clip_val: 0.0
   default_root_dir: /scratch/jane-doe-framework/experiments/ml-20m/bert4rec
-  gpus: 1
+  gpus: 8
+  max_epochs: 800
+  accelerator: "ddp"
+  check_val_every_n_epoch: 100

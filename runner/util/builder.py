@@ -5,8 +5,6 @@ from pytorch_lightning import Trainer, Callback
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import LightningLoggerBase, TensorBoardLogger, MLFlowLogger
 
-from logger.MetricLoggerCallback import MetricLoggerCallback
-from metrics.utils.metric_utils import build_metrics
 from runner.util.callbacks import PredictionLoggerCallback
 
 TRAINER_INIT_KEYS = ['logger',
@@ -65,8 +63,8 @@ TRAINER_INIT_KEYS = ['logger',
 
 class TrainerBuilder:
 
-    def __init__(self, trainer_parameters: Dict[str, Any] = None, strict=False):
-        self.kwargs = {}
+    def __init__(self, trainer_parameters: Dict[str, Any] = None, strict=False, **kwargs):
+        self.kwargs = kwargs
         self.callbacks = []
         self.loggers = []
         self.strict = strict
@@ -107,7 +105,13 @@ class TrainerBuilder:
         return self.add_callback(checkpoint)
 
     def build(self) -> Trainer:
-        return Trainer(**self.kwargs, callbacks=self.callbacks, logger=self.loggers)
+        # This is necessary since some of the keys occurring in the config are filled with actual objects by the builder
+        sanitized_args = self.kwargs.copy()
+        if len(self.loggers) > 0 and "logger" in sanitized_args:
+            sanitized_args.pop("logger")
+
+        # Build the actual trainer object from the parameters we got and the callbacks/loggers we constructed
+        return Trainer(**sanitized_args, callbacks=self.callbacks, logger=self.loggers)
 
 
 def _build_tensorboard_logger(parameters: Dict[str, Any]) -> LightningLoggerBase:
@@ -134,7 +138,7 @@ class LoggerBuilder:
 
     def __init__(self, name: str = None, parameters: Dict[str, Any] = None):
         self.parameters = parameters if parameters is not None else {}
-        self.name = name
+        self.type = name
 
     def load_dict(self, parameters: Dict[str, Any]):
         for key, value in parameters:
@@ -148,18 +152,11 @@ class LoggerBuilder:
         return self
 
     def build(self) -> LightningLoggerBase:
-        if "name" in self.parameters:
-            self.name = self.parameters.pop("name")
-        if self.name is None:
-            raise RuntimeError("Parameter 'name' has to be included in logger configuration")
-        return LOGGER_REGISTRY[self.name.lower()](self.parameters)
-
-
-def _build_metric_logger_callback(parameters: Dict[str, Any]) -> Callback:
-    metrics = build_metrics(parameters)
-    return MetricLoggerCallback(
-        metrics=metrics
-    )
+        if "type" in self.parameters:
+            self.type = self.parameters.pop("type")
+        if self.type is None:
+            raise RuntimeError("Parameter 'type' has to be included in logger configuration")
+        return LOGGER_REGISTRY[self.type.lower()](self.parameters)
 
 
 def _build_prediction_logger_callback(parameters: Dict[str, Any]) -> Callback:
@@ -172,7 +169,6 @@ def _build_prediction_logger_callback(parameters: Dict[str, Any]) -> Callback:
 
 
 CALLBACK_REGISTRY = {
-    "metric_logger": _build_metric_logger_callback,
     "prediction_logger": _build_prediction_logger_callback
 }
 
@@ -181,7 +177,7 @@ class CallbackBuilder:
 
     def __init__(self, name: str = None, parameters: Dict[str, Any] = None):
         self.parameters = parameters if parameters is not None else {}
-        self.name = name
+        self.type = name
 
     def load_dict(self, parameters: Dict[str, Any]):
         for key, value in parameters:
@@ -195,8 +191,8 @@ class CallbackBuilder:
         return self
 
     def build(self) -> Callback:
-        if "name" in self.parameters:
-            self.name = self.parameters.pop("name")
-        if self.name is None:
-            raise RuntimeError("Parameter 'name' has to be set in callback configuration")
-        return CALLBACK_REGISTRY[self.name.lower()](self.parameters)
+        if "type" in self.parameters:
+            self.type = self.parameters.pop("type")
+        if self.type is None:
+            raise RuntimeError("Parameter 'type' has to be set in callback configuration")
+        return CALLBACK_REGISTRY[self.type.lower()](self.parameters)

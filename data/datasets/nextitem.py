@@ -5,7 +5,7 @@ from torch.utils.data import Dataset, IterableDataset
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, SAMPLE_IDS
 from data.datasets.index import SessionPositionIndex
-from data.datasets.prepare import Processor
+from data.datasets.processors.processor import Processor
 from data.datasets.session import ItemSessionDataset, PlainSessionDataset
 from data.mp import MultiProcessSupport
 
@@ -16,7 +16,8 @@ class NextItemDataset(Dataset, MultiProcessSupport):
                  dataset: PlainSessionDataset,
                  index: SessionPositionIndex,
                  processors: List[Processor] = None,
-                 add_target: bool = True
+                 add_target: bool = True,
+                 include_target_pos: bool = False
                  ):
         super().__init__()
         self._dataset = dataset
@@ -25,6 +26,7 @@ class NextItemDataset(Dataset, MultiProcessSupport):
             processors = []
         self._processors = processors
         self._add_target = add_target
+        self._include_target_pos = include_target_pos
 
     def __len__(self):
         return len(self._index)
@@ -32,10 +34,11 @@ class NextItemDataset(Dataset, MultiProcessSupport):
     def __getitem__(self, idx):
         session_idx, target_pos = self._index[idx]
         parsed_session = self._dataset[session_idx]
-        parsed_session[SAMPLE_IDS] = idx
+        parsed_session[SAMPLE_IDS] = session_idx
+        parsed_session['pos'] = target_pos
 
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
-        truncated_session = session[:target_pos]
+        truncated_session = session[:target_pos] if not self._include_target_pos else session[:target_pos + 1]
         parsed_session[ITEM_SEQ_ENTRY_NAME] = truncated_session
         if self._add_target:
             parsed_session[TARGET_ENTRY_NAME] = session[target_pos]

@@ -1,7 +1,7 @@
 ## Build
 ```
 export BUILDAH_LAYERS=true
-buildah bud --format docker -f Dockerfile -t lsx-harbor.informatik.uni-wuerzburg.de/dallmann/recommender:latest -t recommender:latest .
+buildah bud --format docker -f Dockerfile -t lsx-harbor.informatik.uni-wuerzburg.de/dallmann/recommender/jane-doe-gpu:latest -t recommender:latest .
 ```
 
 ## Usage
@@ -16,7 +16,10 @@ purpose.
 4. Save the final token, because it won't be accessible afterwards
 
 ### Create kubernetes secret
+
+```
 kubectl -n <namespace> create secret generic gitlab-token --from-literal=token=xxx
+```
 
 ## Run on your local machine
 ```

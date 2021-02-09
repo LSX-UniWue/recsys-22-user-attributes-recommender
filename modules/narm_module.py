@@ -5,14 +5,16 @@ import torch
 import pytorch_lightning as pl
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
+from metrics.container.metrics_container import MetricsContainer
 from models.narm.narm_model import NarmModel
 from modules import LOG_KEY_VALIDATION_LOSS
+from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 from torch import nn
 
 
-class NarmModule(pl.LightningModule):
+class NarmModule(MetricsTrait, pl.LightningModule):
 
     def __init__(self,
                  model: NarmModel,
@@ -22,6 +24,7 @@ class NarmModule(pl.LightningModule):
                  beta_2: float,
                  tokenizer: Tokenizer,
                  batch_first: bool,
+                 metrics: MetricsContainer
                  ):
         """
         Initializes the Narm Module.
@@ -35,6 +38,10 @@ class NarmModule(pl.LightningModule):
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.tokenizer = tokenizer
+        self.metrics = metrics
+
+    def get_metrics(self) -> MetricsContainer:
+        return self.metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
@@ -82,7 +89,7 @@ class NarmModule(pl.LightningModule):
 
         mask = None if len(target.size()) == 1 else ~ target.eq(self.tokenizer.pad_token_id)
 
-        return build_eval_step_return_dict(logits, target, mask=mask)
+        return build_eval_step_return_dict(input_seq, logits, target, mask=mask)
 
     def test_step(self, batch, batch_idx):
         self.validation_step(batch, batch_idx)

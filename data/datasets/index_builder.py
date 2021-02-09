@@ -41,6 +41,9 @@ class SessionPositionIndexBuilder:
                 if len(items) > self._min_session_length:
                     target_positions = self._target_positions_extractor(session)
                     for target_pos in target_positions:
+                        # skip all session with target that do not satisfy the min session length
+                        if target_pos < self._min_session_length - 1:
+                            continue
                         self._write_entry(index_file, session_idx, target_pos)
                         current_idx += 1
             # write length at the end
