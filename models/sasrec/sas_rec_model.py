@@ -60,7 +60,7 @@ class SASRecModel(nn.Module):
         is_linear_layer = isinstance(module, nn.Linear)
         is_embedding_layer = isinstance(module, nn.Embedding)
         if is_linear_layer or is_embedding_layer:
-            nn.init.xavier_normal(module.weight.data)
+            nn.init.xavier_normal_(module.weight.data)
         elif isinstance(module, nn.LayerNorm):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
