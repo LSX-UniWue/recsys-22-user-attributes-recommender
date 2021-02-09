@@ -1,4 +1,3 @@
-import typer
 import math
 
 from pathlib import Path
@@ -7,18 +6,24 @@ from tqdm import tqdm
 from numpy.random._generator import default_rng
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 
+from dataset.app.commands import index_command
+
 
 def run(data_file_path: Path,
         match_index_path: Path,
         output_dir_path: Path,
+        session_key: List[str],
         split_ratios: Dict[Text, float],
+        delimiter: str,
         seed: int):
     """
     ToDo
     :param data_file_path:
     :param match_index_path:
     :param output_dir_path:
+    :param session_key: Session identifier name in data set header
     :param split_ratios:
+    :param delimiter: Delimiter used in original data file
     :param seed:
     :return:
     """
@@ -37,6 +42,13 @@ def run(data_file_path: Path,
 
     for split_name, sample_indices in splits.items():
         write_split(reader, output_dir_path, header, split_name, sample_indices)
+
+    # Index newly written splits
+    for split in ["train", "test", "valid"]:
+        data_file = output_dir_path.joinpath(split + ".csv")
+        index_file = output_dir_path.joinpath(split + ".idx")
+        index_command.index_csv(data_file_path=data_file, index_file_path=index_file,
+                                session_key=session_key, delimiter=delimiter)
 
 
 def perform_ratio_split(split_ratios: Dict[Text, float], sample_indices: List[int]) -> Dict[Text, List[int]]:
