@@ -5,11 +5,13 @@ from dependency_injector import containers, providers
 from data.collate import PadDirection
 from models.bert4rec.bert4rec_model import BERT4RecModel
 from models.caser.caser_model import CaserModel
+from models.cosrec.cosrec_model import CosRecModel
 from models.narm.narm_model import NarmModel
 from models.rnn.rnn_model import RNNSeqItemRecommenderModel
 from models.sasrec.sas_rec_model import SASRecModel
 from modules import BERT4RecModule, CaserModule, SASRecModule
 from modules.basket.dream_module import DreamModule
+from modules.cosrec_module import CosRecModule
 from modules.rnn_module import RNNModule
 from modules.narm_module import NarmModule
 from runner.util.metrics_provider_utils import build_aggregate_metrics_container
@@ -366,6 +368,46 @@ class RNNContainer(containers.DeclarativeContainer):
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
 
+class CosRecContainer(containers.DeclarativeContainer):
+    config = build_default_config()
+    # add pos neg sampler by default TODO: can we do this later?
+    config.from_dict(_build_pos_neg_model_processors())
+
+    # tokenizer
+    tokenizer = build_tokenizer_provider(config)
+
+    # model
+    model = providers.Singleton(_kwargs_adapter, CosRecModel, config.model)
+
+    module_config = config.module
+
+    metrics_container = build_aggregate_metrics_container(module_config)
+    module = providers.Singleton(
+        CosRecModule,
+        model=model,
+        tokenizer=tokenizer,
+        learning_rate=module_config.learning_rate,
+        weight_decay=module_config.weight_decay,
+        metrics=metrics_container
+    )
+
+    train_dataset_config = config.datasets.train
+    validation_dataset_config = config.datasets.validation
+    test_dataset_config = config.datasets.test
+
+    processors_objects = {'tokenizer': tokenizer}
+    train_processors = build_processors_provider(train_dataset_config.dataset.processors, processors_objects)
+    validation_processors = build_processors_provider(validation_dataset_config.dataset.processors, processors_objects)
+    test_processors = build_processors_provider(test_dataset_config.dataset.processors, processors_objects)
+
+    # loaders
+    train_loader = build_posneg_loader_provider_factory(train_dataset_config, tokenizer, train_processors)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
+                                                               validation_processors)
+    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
+
+
+
 class DreamContainer(containers.DeclarativeContainer):
 
     config = build_default_config()
@@ -402,3 +444,4 @@ class DreamContainer(containers.DeclarativeContainer):
     validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
                                                                validation_processors)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
+
