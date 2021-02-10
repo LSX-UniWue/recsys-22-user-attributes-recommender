@@ -24,10 +24,13 @@ class SASRecBinaryCrossEntropyLoss(nn.Module):
                 mask: torch.Tensor):
         """
         calculates the adapted binary cross entropy of the given positive and negative logits
-        :param pos_input: the positive logits
-        :param neg_input: the negative logits
-        :param mask: the mask to apply (padding)
+        :param pos_input: the positive logits :math `(N, S)`
+        :param neg_input: the negative logits :math `(N, S)`
+        :param mask: the mask to apply (e.g. for padding) :math `(N, S)`
+        true if the position i should be considered for the loss
         :return: the sas rec binary cross entropy
+
+        where N is batch size and S the max sequence length
         """
 
         return sas_rec_binary_cross_entropy(pos_input, neg_input, mask, self.reduction)
@@ -48,16 +51,15 @@ def sas_rec_binary_cross_entropy(pos_input: torch.Tensor,
                                  reduction: str = DEFAULT_REDUCTION
                                  ) -> torch.Tensor:
     """
-    :param pos_input: the positive logits
-    :param neg_input: the negative logits
-    :param mask: the mask to apply (padding)
+    :param pos_input: the positive logits :math `(N, S)`
+    :param neg_input: the negative logits :math `(N, S)`
+    :param mask: the mask to apply (padding) :math `(N, S)`
     :param reduction: the reduction to perform
     :return: the SASRec binary corss entropy for the given inputs
-    """
-    # AD: for some reason the transformer takes masks where 'True' signals the presence of a pad token. For this code
-    # to work, we need to negate the mask first
 
-    mask = ~mask
+    where N is batch size and S the max sequence length
+    """
+
     pos = _log_sigmoid(pos_input) * mask
     neg = _log_sigmoid(neg_input, reverse=True) * mask
 

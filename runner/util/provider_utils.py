@@ -55,7 +55,8 @@ def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider
                                delimiter: str,
                                item_column_name: str,
                                item_separator: str,
-                               additional_features: Dict[str, Any]
+                               additional_features: Dict[str, Any],
+                               truncated_index_path: str
                                ) -> Dataset:
         index = CsvDatasetIndex(Path(csv_file_index))
         csv_file = Path(csv_file)
@@ -78,6 +79,13 @@ def build_posnet_dataset_provider_factory(tokenizer_provider: providers.Provider
         if nip_index is not None:
             return NextItemDataset(basic_dataset, SessionPositionIndex(Path(nip_index)), processors, add_target=False,
                                    include_target_pos=True)
+        if truncated_index_path is not None:
+            index = SessionPositionIndex(Path(truncated_index_path))
+            return NextItemDataset(basic_dataset,
+                                   index=index,
+                                   processors=processors,
+                                   add_target=False)
+
         return ItemSessionDataset(basic_dataset, processors)
 
     return build_dataset_provider_factory(provide_posneg_dataset, tokenizer_provider, processors_provider,
@@ -236,7 +244,8 @@ def build_dataset_provider_factory(
         parser_config.delimiter,
         parser_config.item_column_name,
         parser_config.item_separator,
-        parser_config.additional_features
+        parser_config.additional_features,
+        dataset_config.truncated_seq_index_file
     )
 
 
@@ -252,7 +261,8 @@ def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provid
                                  delimiter: str,
                                  item_column_name: str,
                                  item_separator: str,
-                                 additional_features: Dict[str, Any]
+                                 additional_features: Dict[str, Any],
+                                 truncated_index_path: str
                                  ) -> Dataset:
         index = CsvDatasetIndex(Path(csv_file_index))
         csv_file = Path(csv_file)
@@ -265,7 +275,9 @@ def build_nextitem_dataset_provider_factory(tokenizer_provider: providers.Provid
         basic_dataset = PlainSessionDataset(reader, session_parser)
         return NextItemDataset(basic_dataset, SessionPositionIndex(Path(nip_index)), processors=preprocessors)
 
-    return build_dataset_provider_factory(provide_nextitem_dataset, tokenizer_provider, preprocessor_provider,
+    return build_dataset_provider_factory(provide_nextitem_dataset,
+                                          tokenizer_provider,
+                                          preprocessor_provider,
                                           dataset_config)
 
 

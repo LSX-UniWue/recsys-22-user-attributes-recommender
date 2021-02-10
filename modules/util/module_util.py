@@ -7,34 +7,24 @@ from modules.constants import RETURN_KEY_PREDICTIONS, RETURN_KEY_TARGETS, RETURN
 from tokenization.tokenizer import Tokenizer
 
 
-def get_padding_mask(tensor: torch.Tensor,
-                     tokenizer: Tokenizer,
-                     transposed: bool = True,
-                     inverse: bool = False
+def get_padding_mask(sequence: torch.Tensor,
+                     tokenizer: Tokenizer
                      ) -> torch.Tensor:
     """
-    generates the padding mask based on the tokenizer (by default batch first)
-    :param tensor:
-    :param tokenizer:
-    :param transposed:
-    :param inverse
+    generates the padding mask based on the tokenizer for the provided sequence
 
-    :return:
+    :param sequence: the sequence tensor :math`(N, S)`
+    :param tokenizer: the tokenizer
+    :return: the padding mask True where the sequence was not padded, False where the sequence was padded :math`(N, S)`
+
+    where N is the batch size and S the max sequence length
     """
 
-    if len(tensor.size()) > 2:
-        tensor = tensor.max(dim=2).values
+    if len(sequence.size()) > 2:
+        sequence = sequence.max(dim=2).values
 
     # the masking should be true where the padding token is set
-    if inverse:
-        padding_mask = tensor.ne(tokenizer.pad_token_id)
-    else:
-        padding_mask = tensor.eq(tokenizer.pad_token_id)
-
-    if transposed:
-        return padding_mask.transpose(0, 1)
-
-    return padding_mask
+    return sequence.ne(tokenizer.pad_token_id)
 
 
 def convert_target_for_multi_label_margin_loss(target: torch.Tensor,
