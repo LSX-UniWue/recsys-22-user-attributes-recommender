@@ -1,10 +1,9 @@
-from typing import Optional
+from typing import Optional, Union, Tuple
 
 import torch
 import torch.nn as nn
 
-from models.layers.transformer_layers import TransformerEmbedding
-from models.layers.tensor_utils import generate_square_subsequent_mask
+from models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
 
 
 class SASRecModel(nn.Module):
@@ -50,80 +49,90 @@ class SASRecModel(nn.Module):
                                               dropout=self.transformer_dropout,
                                               embedding_pooling_type=self.embedding_mode)
 
-        encoder_layer = nn.TransformerEncoderLayer(d_model=self.transformer_hidden_size,
-                                                   nhead=self.num_transformer_heads,
-                                                   dim_feedforward=self.transformer_hidden_size * 4,
-                                                   dropout=self.transformer_dropout)
-        encoder_norm = nn.LayerNorm(self.transformer_hidden_size)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer=encoder_layer,
-                                                         num_layers=self.num_transformer_layers,
-                                                         norm=encoder_norm)
+        self.transformer_encoder = TransformerLayer(transformer_hidden_size, num_transformer_heads,
+                                                    num_transformer_layers, transformer_hidden_size * 4,
+                                                    transformer_dropout)
 
-        self.input_sequence_mask = None
+        self.apply(self._init_weights)
+
+    def _init_weights(self, module):
+        """ Initializes the weights of the layers """
+        is_linear_layer = isinstance(module, nn.Linear)
+        is_embedding_layer = isinstance(module, nn.Embedding)
+        if is_linear_layer or is_embedding_layer:
+            nn.init.xavier_normal_(module.weight.data)
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+        if is_linear_layer and module.bias is not None:
+            module.bias.data.zero_()
 
     def forward(self,
-                input_sequence: torch.Tensor,
+                sequence: torch.Tensor,
                 pos_items: torch.Tensor,
                 neg_items: Optional[torch.Tensor] = None,
                 position_ids: Optional[torch.Tensor] = None,
-                padding_mask: Optional[torch.Tensor] = None):
+                padding_mask: Optional[torch.Tensor] = None
+                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Forward pass to generate the logits for the positive (next) items and the negative (randomly sampled items,
         that are not in the current sequence) items.
         If no negative items are provided,
 
-        :param input_sequence: the sequence :math:`(S, N)`
+        :param sequence: the sequence :math:`(N, S)`
         :param pos_items: ids of the positive items (the next items in the sequence) :math:`(N)`
         :param neg_items: random sampled negative items that are not in the session of the user :math:`(N)`
-        :param position_ids: the optional position ids if not the position ids are generated :math:`(S, N)`
-        :param padding_mask: the optional padding mask if the sequence is padded :math:`(N, S)`
-        :return: the logits of the pos_items and the logits of the negative_items, each of shape :math:`(S, N)`
+        :param position_ids: the optional position ids if not the position ids are generated :math:`(N, S)`
+        :param padding_mask: the optional padding mask if the sequence is padded :math:`(N, S)` True if not padded
+        :return: the logits of the pos_items and the logits of the negative_items, each of shape :math:`(N, S)`
                 iff neg_items is provided else the logits for the provided positive items of the same shape
 
         Where S is the (max) sequence length of the batch and N the batch size.
         """
-        # … and H is the hidden size of the transformer/embedding
-        device = input_sequence.device
-        if self.input_sequence_mask is None or self.input_sequence_mask.size(0) != len(input_sequence):
-            # to mask the next words we generate a triangle mask
-            mask = generate_square_subsequent_mask(len(input_sequence)).to(device)
-            self.input_sequence_mask = mask
 
         # embed the input sequence
-        input_sequence = self.embedding(input_sequence, position_ids)  # (S, N, H)
+        embedded_sequence = self.embedding(sequence, position_ids)  # (N, S, H)
 
         # pipe the embedded sequence to the transformer
-        transformer_output = self.transformer_encoder(input_sequence,
-                                                      mask=self.input_sequence_mask,
-                                                      src_key_padding_mask=padding_mask)  # (S, N, H)
+        # first build the attention mask FIXME: check the attention mask
+        input_size = sequence.size()
+        batch_size = input_size[0]
+        sequence_length = input_size[1]
+
+        attention_mask = torch.triu(torch.ones([sequence_length, sequence_length], device=sequence.device))\
+            .transpose(1, 0).unsqueeze(0).repeat(batch_size, 1, 1)
+        if padding_mask is not None:
+            attention_mask = attention_mask * padding_mask.unsqueeze(1).repeat(1, sequence_length, 1)
+        attention_mask = attention_mask.unsqueeze(1).to(dtype=torch.bool)
+
+        transformer_output = self.transformer_encoder(embedded_sequence, attention_mask=attention_mask)
+
         # when training the model we multiply the seq embedding with the positive and negative items
         if neg_items is not None:
             emb_pos_items = self.embedding.get_item_embedding(pos_items)  # (N, H)
             emb_neg_items = self.embedding.get_item_embedding(neg_items)  # (N, H)
 
-            pos_output = emb_pos_items * transformer_output  # (S, N, H)
-            neg_output = emb_neg_items * transformer_output  # (S, N, H)
+            pos_output = emb_pos_items * transformer_output  # (N, S, H)
+            neg_output = emb_neg_items * transformer_output  # (N, S, H)
 
-            pos_output = torch.sum(pos_output, -1)  # (S, N)
-            neg_output = torch.sum(neg_output, -1)  # (S, N)
+            pos_output = torch.sum(pos_output, -1)  # (N, S)
+            neg_output = torch.sum(neg_output, -1)  # (N, S)
 
             return pos_output, neg_output
 
         # inference step (I is the number of positive items to test)
         # embeddings of pos_items
-        item_embeddings = self.embedding.get_item_embedding(pos_items, flatten=False)  # (I, N, H)
+        item_embeddings = self.embedding.get_item_embedding(pos_items, flatten=False)  # (N, I, H)
 
-        # permute embeddings for batch matrix multiplication
-        item_embeddings = item_embeddings.permute(1, 2, 0)  # (N, H, I)
-        transformer_output = transformer_output.transpose(0, 1)  # (N, S, H)
-
-        output = torch.matmul(transformer_output, item_embeddings)  # (N, S, I)
-
-        # we use "advanced" indexing to slice the right elements from the sequence.
-        batch_size = output.size()[0]
+        # we use "advanced" indexing to slice the right elements from the transformer output
+        batch_size = sequence.size()[0]
         batch_index = torch.arange(0, batch_size)
 
         # calculate indices from the padding mask
-        seq_index = (~padding_mask).sum(-1) - 1
-        scores = output[batch_index, seq_index, :]  # (N, I)
-        return scores.transpose(0, 1)  # (I, N), to be consistent with the input format
+        seq_index = padding_mask.sum(-1) - 1
+        transformer_last_pos_output = transformer_output[batch_index, seq_index]  # (N, H)
+
+        # now matmul it with the item embeddings
+        logits = item_embeddings.matmul(transformer_last_pos_output.unsqueeze(-1))
+
+        return logits.squeeze(-1)

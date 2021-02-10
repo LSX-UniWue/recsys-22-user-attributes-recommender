@@ -90,12 +90,11 @@ def _build_default_dataset_config(shuffle: bool,
 
 def _build_pos_neg_model_processors() -> Dict[str, Any]:
     processors = DEFAULT_PROCESSORS.copy()
-    processors.append({
-            'pos_neg_sampler': {
-                                    'pos_neg_sampling': True
-                                }
-        }
-    )
+    processors.append(
+        {
+            'pos_neg_sampler': {}
+        })
+
     return {
         'datasets': {
             'train': _build_default_dataset_config(shuffle=True, processors=processors)
@@ -262,7 +261,6 @@ class SASRecContainer(containers.DeclarativeContainer):
         beta_1=module_config.beta_1,
         beta_2=module_config.beta_2,
         tokenizer=tokenizer,
-        batch_first=module_config.batch_first,
         metrics=metrics_container
     )
 

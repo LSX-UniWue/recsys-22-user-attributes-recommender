@@ -103,14 +103,25 @@ class RNNSeqItemRecommenderModel(nn.Module):
         self.dropout = nn.Dropout2d(p=dropout)
 
     def forward(self,
-                session: torch.Tensor,
-                mask: torch.Tensor
+                sequence: torch.Tensor,
+                padding_mask: torch.Tensor
                 ) -> torch.Tensor:
-        embedded_session = self.item_embedding(session)
-        embedded_session = self.dropout(embedded_session)
-        lengths = torch.sum(mask, dim=-1).cpu()  # required by torch >= 1.7, no cuda tensor allowed
+        """
+        calc the logits given the sequence and the mask
+        :param sequence: the sequence :math`(N, S)` or :math`(N, S, BS)`
+        :param padding_mask: a mask indicating the padding, True iff step i in the sequence is
+        not masked :math´(N, S)´
+        :return: the logits :math`(N, I)`
+
+        where N is the batch size, S the max sequence length and BS the max basket size
+        """
+        embedded_sequence = self.item_embedding(sequence)
+        embedded_sequence = self.dropout(embedded_sequence)
+
+        # calc the lengths, because padding => mask = false, we can use the sum here to calculate the lengths
+        lengths = padding_mask.sum(dim=-1).cpu()  # required by torch >= 1.7, no cuda tensor allowed
         packed_embedded_session = nn.utils.rnn.pack_padded_sequence(
-            embedded_session,
+            embedded_sequence,
             lengths,
             batch_first=True,
             enforce_sorted=False
