@@ -18,8 +18,13 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
                              ) -> Optional[torch.Tensor]:
         return batch[USER_ENTRY_NAME] if USER_ENTRY_NAME in batch else None
 
-    def __init__(self, model: CosRecModel, tokenizer: Tokenizer, learning_rate: float,
-                 weight_decay: float, metrics: MetricsContainer):
+    def __init__(self,
+                 model: CosRecModel,
+                 tokenizer: Tokenizer,
+                 learning_rate: float,
+                 weight_decay: float,
+                 metrics: MetricsContainer
+                 ):
         super().__init__()
         self.model = model
         self.tokenizer = tokenizer
@@ -37,8 +42,10 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
             weight_decay=self.weight_decay
         )
 
-    def training_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) \
-            -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
+    def training_step(self,
+                      batch: Dict[str, torch.Tensor],
+                      batch_idx: int
+                      ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
         """
         Performs a training step on a batch of sequences and returns the overall loss.
 
@@ -61,8 +68,7 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
         neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
         items_to_predict = torch.cat((pos_items, neg_items), 1)
         logits = self.model(input_seq, users, items_to_predict)
-        (pos_logits,
-         neg_logits) = torch.split(logits,
+        (pos_logits, neg_logits) = torch.split(logits,
                                    [pos_items.size(1),
                                     neg_items.size(1)], dim=1)
         loss = self._calc_loss(pos_logits, neg_logits)

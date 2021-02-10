@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from typing import List
 
-
+from models.layers.layers import ItemEmbedding
+from models.layers.util_layers import get_activation_layer
 
 
 class CosRecModel(nn.Module):
@@ -11,45 +11,51 @@ class CosRecModel(nn.Module):
     A 2D CNN for sequential Recommendation.
 
     Args:
-        num_users: number of users.
-        num_items: number of items.
-        seq_len: length of sequence, Markov order.
+        user_vocab_size: number of users.
+        item_vocab_size: number of items.
+        max_seq_length: length of sequence, Markov order.
         embed_dim: dimensions for user and item embeddings. (latent dimension in paper)
         block_num: number of cnn blocks. (convolutional layers??)
         block_dim: the dimensions for each block. len(block_dim)==block_num -> List
         fc_dim: dimension of the first fc layer, mainly for dimension reduction after CNN.
-        ac_fc: type of activation functions (string), zeigt auf platz in Activation getter
-        drop_prob: dropout ratio.
+        activation_function: type of activation functions (string) to use for the output fcn
+        dropout: dropout ratio.
     """
 
-    def __init__(self, num_users: int, num_items: int, seq_len: int, embed_dim: int, block_num: int,
-                 block_dim: List[int], fc_dim: int, ac_fc: str, drop_prob: float):
-        super(CosRecModel, self).__init__()
+    def __init__(self,
+                 user_vocab_size: int,
+                 item_vocab_size: int,
+                 max_seq_length: int,
+                 embed_dim: int,
+                 block_num: int,
+                 block_dim: List[int],
+                 fc_dim: int,
+                 activation_function: str,
+                 dropout: float,
+                 embedding_pooling_type: str = None
+                 ):
+        super().__init__()
+
         assert len(block_dim) == block_num
-        self.seq_len = seq_len
+
+        self.seq_len = max_seq_length
         self.embed_dim = embed_dim
         self.cnn_out_dim = block_dim[-1]  # dimension of output of last cnn block
         self.fc_dim = fc_dim
 
         # user and item embeddings
-        self.user_embeddings = nn.Embedding(num_users, embed_dim)
-        self.item_embeddings = nn.Embedding(num_items, embed_dim)
+        self.user_embeddings = nn.Embedding(user_vocab_size, embed_dim)
+        self.item_embeddings = ItemEmbedding(item_vocab_size, embed_dim, embedding_pooling_type=embedding_pooling_type)
 
         # W2, b2 are encoded with nn.Embedding, as we don't need to compute scores for all items
-        self.W2 = nn.Embedding(num_items, self.fc_dim + embed_dim)
-        self.b2 = nn.Embedding(num_items, 1)
-
-        # weight initialization
-        self.user_embeddings.weight.data.normal_(0, 1.0 / self.user_embeddings.embedding_dim)
-        self.item_embeddings.weight.data.normal_(0, 1.0 / self.item_embeddings.embedding_dim)
-        self.W2.weight.data.normal_(0, 1.0 / self.W2.embedding_dim)
-        self.b2.weight.data.zero_()
+        dim = self.fc_dim + embed_dim if user_vocab_size > 0 else self.fc_dim
+        self.W2 = nn.Embedding(item_vocab_size, dim)
+        self.b2 = nn.Embedding(item_vocab_size, 1)
 
         # dropout and fc layer
-        self.dropout = nn.Dropout(drop_prob)
+        self.dropout = nn.Dropout(dropout)
         self.fc1 = nn.Linear(self.cnn_out_dim, self.fc_dim)
-        activation_getter = {'iden': lambda x: x, 'relu': F.relu, 'tanh': torch.tanh, 'sigm': torch.sigmoid}
-        self.ac_fc = activation_getter[ac_fc]
+        self.activation_function = get_activation_layer(activation_function)
 
         # build cnnBlock
         self.block_num = block_num
@@ -60,54 +66,68 @@ class CosRecModel(nn.Module):
         self.cnnBlock = nn.ModuleList(self.cnnBlock)  # holds submodules in a list
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
 
-    def forward(self, seq_var: torch.FloatTensor, user_var: torch.LongTensor, item_var: torch.LongTensor,
-                eval: bool = False):
+        # weight initialization
+        self.user_embeddings.weight.data.normal_(0, 1.0 / embed_dim)
+        self.item_embeddings.get_weight().data.normal_(0, 1.0 / embed_dim)
+        self.W2.weight.data.normal_(0, 1.0 / self.W2.embedding_dim)
+        self.b2.weight.data.zero_()
+
+    def forward(self,
+                sequence: torch.Tensor,
+                user: torch.Tensor,
+                item_to_predict: torch.Tensor,
+                eval: bool = False
+                ):
         """
         Args:
-            seq_var: torch.FloatTensor with size [batch_size, max_sequence_length]
+            sequence: torch.Tensor with size :math`(N, S)`
                 a batch of sequence
-            user_var: torch.LongTensor with size [batch_size]
+            user: torch.Tensor with size :math`(N)`
                 a batch of user
-            item_var: torch.LongTensor with size [batch_size]
+            item_to_predict: torch.Tensor with size :math`(N)`
                 a batch of items
             eval: boolean, optional
                 Train or Prediction. Set to True when evaluation.
+
+            where N is the batch size and S the max sequence length
         """
 
-        item_embs = self.item_embeddings(seq_var)  # (b (batch-id), L (seq_len), embed (D in paper)) (b, 5, 50)
-        user_emb = self.user_embeddings(user_var)  # (b, 1, embed), only one user
+        item_embs = self.item_embeddings(sequence)  # (N, S, D)
 
         # cast all item embeddings pairs against each other
-        item_i = torch.unsqueeze(item_embs, 1)  # (b, 1, 5, embed)
-        item_i = item_i.repeat(1, self.seq_len, 1, 1)  # (b, 5, 5, embed)
-        item_j = torch.unsqueeze(item_embs, 2)  # (b, 5, 1, embed)
-        item_j = item_j.repeat(1, 1, self.seq_len, 1)  # (b, 5, 5, embed)
-        all_embed = torch.cat([item_i, item_j], 3)  # (b, 5, 5, 2*embed)
+        item_i = torch.unsqueeze(item_embs, 1)  # (N, 1, S, D)
+        item_i = item_i.repeat(1, self.seq_len, 1, 1)  # (N, S, S, D)
+        item_j = torch.unsqueeze(item_embs, 2)  # (N, S, 1, D)
+        item_j = item_j.repeat(1, 1, self.seq_len, 1)  # (N, S, S, D)
+        all_embed = torch.cat([item_i, item_j], 3)  # (N, S, S, 2*D)
         out = all_embed.permute(0, 3, 1, 2)
 
         # 2D CNN
-        mb = seq_var.shape[0]
+        mb = sequence.shape[0]
         for i in range(self.block_num):
             out = self.cnnBlock[i](out)  # forward CNN blocks
         out = self.avg_pool(out).reshape(mb, self.cnn_out_dim)
         out = out.squeeze(-1).squeeze(-1)
 
         # apply fc and dropout
-        out = self.ac_fc(self.fc1(out))
+        out = self.activation_function(self.fc1(out))
         out = self.dropout(out)
 
-        x = torch.cat([out, user_emb.squeeze(1)], 1)
+        if user is not None:
+            user_emb = self.user_embeddings(user)  # (N, 1, D)
 
-        w2 = self.W2(item_var)
-        b2 = self.b2(item_var)
-        if eval:
-            w2 = w2.squeeze()  # (b,6,100)
-            b2 = b2.squeeze()  # (b,6)
-            out = (x * w2).sum(1) + b2
+            x = torch.cat([out, user_emb.squeeze(1)], 1)
         else:
-            out = torch.baddbmm(b2, w2, x.unsqueeze(2)).squeeze()  # (b,6)
+            x = out
 
-        return out
+        w2 = self.W2(item_to_predict)
+        b2 = self.b2(item_to_predict)
+        if eval:
+            b2 = b2.squeeze()
+            w2 = w2.squeeze()
+            return (x * w2).sum(1) + b2
+
+        return torch.baddbmm(b2, w2, x.unsqueeze(2)).squeeze()
 
 
 class CNNBlock(nn.Module):
@@ -118,7 +138,9 @@ class CNNBlock(nn.Module):
     But to design deeper models, some modifications might be needed.
     """
 
-    def __init__(self, input_dim, output_dim, stride=1, padding=0):
+    def __init__(self,
+                 input_dim: int,
+                 output_dim: int):
         super(CNNBlock, self).__init__()
         self.conv1 = nn.Conv2d(input_dim, output_dim, kernel_size=1)
         self.conv2 = nn.Conv2d(output_dim, output_dim, kernel_size=3, stride=1)
