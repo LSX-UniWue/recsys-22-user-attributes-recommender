@@ -58,7 +58,8 @@ class AllItemsSampler(MetricsSampler):
 def _to_multi_hot(size: List[int],
                   targets: torch.Tensor
                   ) -> torch.Tensor:
-    multihot = torch.zeros(size).to(torch.long)
+    device = targets.device
+    multihot = torch.zeros(size).to(torch.long).to(device=device)
     src = torch.ones_like(multihot).to(torch.long)
     if len(targets.size()) == 1:
         targets = targets.unsqueeze(1)

@@ -28,8 +28,10 @@ class MRRMetric(RankingMetric):
         :param positive_item_mask: a mask where a 1 indices that the item at this index is relevant :math`(N, I)`
         :return:
         """
+        device = prediction.device
+
         tp = get_true_positives(prediction, positive_item_mask, self._k)
-        ranks = torch.arange(1, self._k + 1).unsqueeze(0).repeat(prediction.size()[0], 1)
+        ranks = torch.arange(1, self._k + 1).unsqueeze(0).repeat(prediction.size()[0], 1).to(device=device)
         rank = (ranks * tp).max(dim=-1).values
 
         # mrr will contain 'inf' values if target is not in top k scores -> setting it to 0

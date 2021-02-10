@@ -99,7 +99,7 @@ class RankingMetricsContainer(MetricsContainer):
         Computes the final results for all metrics managed by this module.
         :return: the final metric values.
         """
-        return {metric.name(): metric.compute() for metric in self.metrics}
+        return {f'{metric.name()}{self.sampler.suffix_metric_name()}': metric.compute() for metric in self.metrics}
 
 
 class AggregateMetricsContainer(MetricsContainer):

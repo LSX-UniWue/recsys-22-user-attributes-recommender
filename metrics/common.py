@@ -118,7 +118,9 @@ def calc_dcg(prediction: torch.Tensor,
              positive_item_mask: torch.Tensor,
              k: int
              ) -> torch.Tensor:
+    device = prediction.device
+
     tp = get_true_positives(prediction, positive_item_mask, k)
-    dcg_values = _build_dcg_values(k, positive_item_mask.size()[0])
+    dcg_values = _build_dcg_values(k, positive_item_mask.size()[0]).to(device=device)
     dcg = dcg_values * tp
     return dcg
