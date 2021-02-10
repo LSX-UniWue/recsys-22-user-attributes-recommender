@@ -82,7 +82,10 @@ def train(model: str = typer.Argument(..., help="the model to run"),
         trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
 
     if do_test:
-        trainer.test(test_dataloader=container.test_loader())
+        if not do_train:
+            print(f"The model has to be trained before it can be tested!")
+            exit(-1)
+        trainer.test(test_dataloaders=container.test_loader())
 
 
 @app.command()

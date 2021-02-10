@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: ml-20m-sasrec-linear-layer
+  name: ml-20m-sasrec-unfiltered
   labels:
     app: ds4rec
 spec:
@@ -16,7 +16,7 @@ spec:
             requests: &resources
               cpu: "4"
               memory: "64Gi"
-              nvidia.com/gpu: 1
+              nvidia.com/gpu: 8
             limits: *resources
           env:
             - name: HOME
@@ -27,21 +27,33 @@ spec:
               value: daz65be
             - name: REPO_BRANCH
               value: bugfix/sasrec
+            - name: PREPARE_SCRIPT
+              value: /home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/unfiltered/copy_to_cache.sh
             - name: GIT_TOKEN
               valueFrom:
                 secretKeyRef:
                   key: token
                   name: gitlab-token
-          args: ["train", "sasrec", "/home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/sasrec_config.yaml"]
+          args: ["train", "sasrec", "/home/ls6/zoller/seq_recommendation/recommender_sas_rec/projects/ml-20m/unfiltered/sasrec_config.yaml"]
           volumeMounts:
             - mountPath: /home/ls6/zoller
               name: home
             - mountPath: /scratch
               name: scratch
+            - mountPath: /dev/shm
+              name: dshm
+            - mountPath: /ssd
+              name: cache
           ports:
             - containerPort: 8888
       imagePullSecrets:
         - name: regcred
+      tolerations:
+        - effect: NoSchedule
+          key: network
+          operator: Exists
+      nodeSelector:
+        gputype: "2080ti"
       restartPolicy: "Never"
       volumes:
         - name: home
@@ -60,3 +72,11 @@ spec:
             path: "/scratch"
             secretRef:
               name: ceph-secret-zoller
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "4Gi"
+        - name: cache
+          emptyDir:
+            medium: Memory
+            sizeLimit: "4Gi"

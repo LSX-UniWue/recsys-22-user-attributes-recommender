@@ -97,28 +97,28 @@ class CaserModel(nn.Module):
         self.cache_x = None
 
     def forward(self,
-                sequences: torch.Tensor,
-                users: torch.Tensor,
+                sequence: torch.Tensor,
+                user: torch.Tensor,
                 pos_items: torch.Tensor,
                 neg_items: Optional[torch.Tensor] = None):
         """
         forward pass for the
-        :param sequences: the sequences :math`(N, S)`
-        :param users: the users for each batch :math `(N)`
+        :param sequence: the sequences :math`(N, S)`
+        :param user: the users for each batch :math `(N)`
         :param pos_items: the positive (next) items of the sequence `(N)`
         :param neg_items: the negative items (sampled) `(N, X)`, only required for training
         :return:
 
-        Where B is the batch size, S the max sequence length (of the current batch),
+        Where B is the batch size, S the max sequence length (of the current batch)
         """
         # Embedding Look-up
-        item_embs = self.item_embedding(sequences).unsqueeze(1)  # use unsqueeze() to get 4-D
+        item_embs = self.item_embedding(sequence).unsqueeze(1)  # use unsqueeze() to get 4-D
 
-        users_provided = users is not None
+        users_provided = user is not None
         if users_provided:
             if not self._has_users:
                 raise ValueError("no user voc size specified but users provided")
-            user_emb = self.user_embedding(users).squeeze(1)
+            user_emb = self.user_embedding(user).squeeze(1)
         else:
             user_emb = None
 

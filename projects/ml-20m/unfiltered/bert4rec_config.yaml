@@ -31,7 +31,7 @@ model:
   max_seq_length: 200
   num_transformer_heads: 2
   num_transformer_layers: 2
-  transformer_hidden_size: 64
+  transformer_hidden_size: 256
   transformer_dropout: 0.2
   project_layer_type: transpose_embedding
 module:

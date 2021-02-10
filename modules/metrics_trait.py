@@ -8,7 +8,12 @@ from metrics.container.metrics_container import MetricsContainer
 from modules.constants import RETURN_KEY_SEQUENCE, RETURN_KEY_PREDICTIONS, RETURN_KEY_TARGETS, RETURN_KEY_MASK
 
 
+# TODO: add documentation
 class MetricsTrait(pl.LightningModule):
+
+    """
+
+    """
 
     @abstractmethod
     def get_metrics(self) -> MetricsContainer:
