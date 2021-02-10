@@ -1,5 +1,6 @@
-from typing import Union, List, Dict, Any, Set
+import torch
 
+from typing import Union, List, Dict, Any, Set
 from numpy.random._generator import default_rng
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
@@ -36,23 +37,26 @@ class PositiveNegativeSamplerProcessor(Processor):
     def _sample_negative_target(self,
                                 session: Union[List[int], List[List[int]]]
                                 ) -> Union[List[int], List[List[int]]]:
-        # get all possible tokens
-        tokens = set(self._tokenizer.get_vocabulary().ids())
-        # remove special tokens TODO: maybe move to tokenizer?
-        tokens = tokens - set(self._tokenizer.get_special_token_ids())
-        used_tokens = self._get_all_tokens_of_session(session)
 
-        available_tokens = list(tokens - used_tokens)
+        # we want to use a multinomial distribution to draw negative samples fast
+        # start with a uniform distribution over all vocabulary tokens
+        weights = torch.ones([len(self._tokenizer)])
+
+        # set weight for special tokens to 0.
+        weights[self._tokenizer.get_special_token_ids()] = 0.
+
+        # prevent sampling of tokens already present in the session
+        used_tokens = self._get_all_tokens_of_session(session)
+        weights[list(used_tokens)] = 0.
 
         if isinstance(session[0], list):
             results = []
-            for seq_step in session[: -1]:  # skip last target
-                neg_samples = self._rng.choice(available_tokens, len(seq_step), replace=True).tolist()
+            for seq_step in session[:-1]:  # skip last target
+                neg_samples = torch.multinomial(weights, num_samples=len(seq_step), replacement=True).tolist()
                 results.append(neg_samples)
-
             return results
 
-        return self._rng.choice(available_tokens, len(session) - 1, replace=True).tolist()
+        return torch.multinomial(weights, num_samples=len(session), replacement=True).tolist()
 
     def _get_all_tokens_of_session(self, session: Union[List[int], List[List[int]]]
                                    ) -> Set[int]:
