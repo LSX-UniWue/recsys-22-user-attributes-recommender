@@ -97,10 +97,11 @@ def train(model: str = typer.Argument(..., help="the model to run"),
 @app.command()
 def search(model: str = typer.Argument(..., help="the model to run"),
            template_file: Path = typer.Argument(..., help='the path to the config file'),
-           study_name: str = typer.Argument(..., help='the optuna study name'),
+           study_name: str = typer.Argument(..., help='the study name of an existing optuna study'),
            study_storage: str = typer.Argument(..., help='the connection string for the study storage'),
            objective_metric: str = typer.Argument(..., help='the name of the metric to watch during the study'
-                                                            '(e.g. rec_at_5).')
+                                                            '(e.g. recall_at_5).'),
+           num_trails: int = typer.Option(default=20, help='the number of trails to execute')
           ) -> None:
     # XXX: because the dependency injector does not provide a error message when the config file does not exists,
     # we manually check if the config file exists
@@ -138,7 +139,7 @@ def search(model: str = typer.Argument(..., help="the model to run"),
             return trainer.callback_metrics[objective_metric]
 
     study = optuna.load_study(study_name=study_name, storage=study_storage)
-    study.optimize(objective, n_trials=20)
+    study.optimize(objective, n_trials=num_trails)
 
 
 @app.command()
