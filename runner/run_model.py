@@ -42,20 +42,11 @@ def _config_logging(config: Dict[str, Any]
     logger.addHandler(handler)
 
 
-def build_metrics_loggers(config: Dict[str, Any]) -> List[Callback]:
-    metrics = 'metrics' in config
-    sampled_metrics = 'sampled_metrics' in config
-
-    loggers = []
-
-    if sampled_metrics:
-        loggers += [CallbackBuilder(name="sampled_metric_logger",
-                                    parameters=config["sampled_metrics"]).build()]
-    if metrics:
-        loggers += [CallbackBuilder(name="metric_logger", parameters=config["metrics"]).build()]
-
-    return loggers
-
+def _get_base_trainer_builder(config) -> TrainerBuilder:
+    trainer_builder = TrainerBuilder(config.trainer())
+    trainer_builder = trainer_builder.add_checkpoint_callback(config.trainer.checkpoint())
+    trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.trainer.logger()).build())
+    return trainer_builder
 
 @app.command()
 def train(model: str = typer.Argument(..., help="the model to run"),
@@ -73,9 +64,7 @@ def train(model: str = typer.Argument(..., help="the model to run"),
     module = container.module()
 
     config = container.config
-    trainer_builder = TrainerBuilder(config.trainer())
-    trainer_builder = trainer_builder.add_checkpoint_callback(config.trainer.checkpoint())
-    trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.trainer.logger()).build())
+    trainer_builder = _get_base_trainer_builder(config)
     trainer = trainer_builder.build()
 
     if do_train:
@@ -172,6 +161,22 @@ def evaluate(model: str = typer.Argument(..., help="the model to run"),
 
     trainer = trainer_builder.build()
     trainer.test(module, test_dataloaders=test_loader)
+
+
+@app.command()
+def resume(model: str = typer.Argument(..., help="the model to run."),
+           config_file: str = typer.Argument(..., help='the path to the config file'),
+           checkpoint_file: str = typer.Argument(..., help="path to the checkpoint file.")):
+    container = build_container(model, config_file)
+    module = container.module()
+
+    config = container.config
+    trainer = _get_base_trainer_builder(config).from_checkpoint(checkpoint_file).build()
+
+    train_loader = container.train_loader()
+    validation_loader = container.validation_loader()
+
+    trainer.fit(module, train_dataloader=train_loader, val_dataloaders=validation_loader)
 
 
 if __name__ == "__main__":
