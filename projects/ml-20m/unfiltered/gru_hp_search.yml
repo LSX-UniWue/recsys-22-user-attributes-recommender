@@ -37,7 +37,7 @@ spec:
           args:
             - "search"
             - "gru"
-            - "/home/ls6/zoller/seq_recommendation/recommender/project_hpsearch/ml-20m/unfiltered/gru_config_hp.yaml"
+            - "/home/ls6/zoller/seq_recommendation/project_hpsearch/recommender/projects/ml-20m/unfiltered/gru_config_hp.yaml"
             - "no-name-0000000003"
             - "redis://redis"
             - "recall_at_10/sampled"
