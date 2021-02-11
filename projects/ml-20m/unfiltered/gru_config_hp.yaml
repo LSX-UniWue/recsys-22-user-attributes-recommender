@@ -27,12 +27,11 @@ datasets:
       parser: *parser
     loader: *loader
 model:
-  cell_type:
+  item_vocab_size: 26732
+  cell_type: gru
+  item_embedding_dim:
     optuna:
-      suggest_categorical: {name: cell_type, choices: ["gru", "lstm", "rnn"] }
-  item_embedding_size:
-    optuna:
-      suggest_int: {name: item_embedding_size, low: 2, high: 256, step: 2}
+      suggest_int: {name: item_embedding_dim, low: 2, high: 256, step: 2}
   hidden_size:
     optuna:
       suggest_int: {name: hidden_size, low: 2, high: 256, step: 2}
@@ -45,10 +44,7 @@ model:
   dropout:
     optuna:
       suggest_float: {name: dropout, low: 0.0, high: 0.9, step: 0.1}
-  nonlinearity:
-    optuna:
-      suggest_categorical: {name: nonlinearity, choices: ["relu", "tanh"] }
-      conditional: celltype == 'rnn'
+  nonlinearity: relu
 module:
   beta_1: 0.99
   beta_2: 0.998
