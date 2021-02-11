@@ -26,7 +26,7 @@ spec:
             - name: REPO_USER
               value: daz65be
             - name: REPO_BRANCH
-              value: feature/project_hpsearch
+              value: feature/hpsearch
             - name: PREPARE_SCRIPT
               value: /home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/unfiltered/copy_to_cache.sh
             - name: GIT_TOKEN
