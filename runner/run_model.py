@@ -3,11 +3,13 @@ import logging.handlers
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Callable
+
+import pytorch_lightning as pl
 
 import optuna
 import typer
-from dependency_injector import containers
+from dependency_injector import containers, providers
 from pytorch_lightning import seed_everything, Callback
 from pytorch_lightning.utilities import cloud_io
 
@@ -61,10 +63,15 @@ def build_metrics_loggers(config: Dict[str, Any]) -> List[Callback]:
     return loggers
 
 
-def _build_trainer(config):
+def _build_trainer(config: providers.Configuration,
+                   callbacks: List[Callback] = None
+                   ) -> pl.Trainer:
     trainer_builder = TrainerBuilder(config())
     trainer_builder = trainer_builder.add_checkpoint_callback(config.checkpoint())
     trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.logger()).build())
+    if callbacks:
+        for callback_logger in callbacks:
+            trainer_builder = trainer_builder.add_callback(callback_logger)
     trainer = trainer_builder.build()
     return trainer
 
@@ -101,6 +108,7 @@ def search(model: str = typer.Argument(..., help="the model to run"),
            study_storage: str = typer.Argument(..., help='the connection string for the study storage'),
            objective_metric: str = typer.Argument(..., help='the name of the metric to watch during the study'
                                                             '(e.g. recall_at_5).'),
+           objective_best_key: str = typer.Argument(..., help='the function to use to find the best value (min or max)'),
            num_trails: int = typer.Option(default=20, help='the number of trails to execute')
           ) -> None:
     # XXX: because the dependency injector does not provide a error message when the config file does not exists,
@@ -108,6 +116,8 @@ def search(model: str = typer.Argument(..., help="the model to run"),
     if not os.path.isfile(template_file):
         print(f"the config file cannot be found. Please check the path '{template_file}'!")
         exit(-1)
+
+    objective_best = {'min': min, 'max': max}[objective_best_key]
 
     def config_from_template(template_file: Path,
                              config_file_handle,
@@ -127,16 +137,32 @@ def search(model: str = typer.Argument(..., help="the model to run"),
         with NamedTemporaryFile(mode='wt') as tmp_config_file:
             config_from_template(template_file, tmp_config_file, trial)
 
+            class MetricsHistoryCallback(Callback):
+
+                def __init__(self):
+                    super().__init__()
+
+                    self.metric_history = []
+
+                def on_validation_end(self, trainer, pl_module):
+                    self.metric_history.append(trainer.callback_metrics)
+
+            metrics_tracker = MetricsHistoryCallback()
+
             container = build_container(model, tmp_config_file.name)
 
             module = container.module()
 
             config = container.config
-            trainer = _build_trainer(config.trainer)
+            trainer = _build_trainer(config.trainer, callbacks=[metrics_tracker])
             trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
 
-            # TODO (AD) We need a way to determine the metrics value for the best checkpoint
-            return trainer.callback_metrics[objective_metric]
+            def _find_best_value(key: str, best: Callable[[List[float]], float] = min) -> float:
+                values = [history_entry[key] for history_entry in metrics_tracker.metric_history]
+                return best(values)
+
+            best_value = _find_best_value(objective_metric, objective_best)
+            return best_value if 'min' == objective_best_key else - best_value
 
     study = optuna.load_study(study_name=study_name, storage=study_storage)
     study.optimize(objective, n_trials=num_trails)

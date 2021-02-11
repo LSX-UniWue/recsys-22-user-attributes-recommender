@@ -19,7 +19,8 @@ class PredictionLoggerCallback(Callback):
     HEADER = ["SID", "RANK", "ITEM", "PROBABILITY", "TARGET"]
     INPUT_HEADER_NAME = "INPUT"
 
-    def __init__(self, output_file_path: Path,
+    def __init__(self,
+                 output_file_path: Path,
                  log_input: bool = False,
                  tokenizer: Optional[Tokenizer] = None,
                  strip_padding_tokens: Optional[bool] = False):
