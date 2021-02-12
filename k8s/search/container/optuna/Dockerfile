@@ -1,4 +1,4 @@
-FROM optuna/optuna:py3.8-dev
+FROM optuna/optuna:v2.5.0-py3.8-dev
 
 RUN apt-get update && apt-get -y
-install python3-psycopg2 && rm -rf /var/lib/apt/lists/*
+RUN install python3-psycopg2 && rm -rf /var/lib/apt/lists/*

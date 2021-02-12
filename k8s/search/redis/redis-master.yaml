@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis-master-hpsearch
+  labels:
+    app: redis-optuna
+spec:
+  containers:
+    - name: master
+      image: redis
+      env:
+        - name: MASTER
+          value: "true"
+      ports:
+        - containerPort: 6379
+      volumeMounts:
+        - mountPath: "/data"
+          name: data
+  volumes:
+    - name: data
+      cephfs:
+        monitors:
+          - 132.187.14.16
+          - 132.187.14.17
+          - 132.187.14.19
+          - 132.187.14.20
+        user: zoller
+        path: "/home/ls6/zoller/seq_recommder/redis"
+        secretRef:
+          name: ceph-secret-zoller
