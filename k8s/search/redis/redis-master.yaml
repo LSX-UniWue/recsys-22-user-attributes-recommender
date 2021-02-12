@@ -25,6 +25,6 @@ spec:
           - 132.187.14.19
           - 132.187.14.20
         user: zoller
-        path: "/home/ls6/zoller/seq_recommender/redis"
+        path: "/home/ls6/zoller/seq_recommendation/redis"
         secretRef:
           name: ceph-secret-zoller
