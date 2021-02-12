@@ -36,9 +36,9 @@ spec:
                   name: gitlab-token
           args:
             - "search"
-            - "gru"
+            - "rnn"
             - "/home/ls6/zoller/seq_recommendation/project_hpsearch/recommender/projects/ml-20m/unfiltered/gru_config_hp.yaml"
-            - "test"
+            - "test2"
             - "redis://redis"
             - "recall_at_10/sampled"
           volumeMounts:
