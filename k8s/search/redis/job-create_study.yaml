@@ -18,8 +18,8 @@ spec:
           image: optuna/optuna:v2.5.0-py3.8-dev
           imagePullPolicy: IfNotPresent
           command:
-            - "optuna"
-            - "create-study"
-            - "--direction maximize"
-            - "--study-name test"
-            - "--storage redis://redis-optuna"
+            - /bin/sh
+            - -c
+            - -e
+            - -x
+            - optuna create-study --skip-if-exists --direction maximize --study-name "test" --storage "redis://redis-optuna"

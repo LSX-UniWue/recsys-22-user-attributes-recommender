@@ -37,9 +37,9 @@ spec:
           args:
             - "search"
             - "rnn"
-            - "/home/ls6/zoller/seq_recommendation/project_hpsearch/recommender/projects/ml-20m/unfiltered/gru_config_hp.yaml"
-            - "test2"
-            - "redis://redis"
+            - "/home/ls6/zoller/seq_recommendation/project_hpsearch/recommender/k8s/search/redis/example/gru_hp_config_hp.yaml"
+            - "test"
+            - "redis://redis-optuna"
             - "recall_at_10/sampled"
           volumeMounts:
             - mountPath: /home/ls6/zoller
