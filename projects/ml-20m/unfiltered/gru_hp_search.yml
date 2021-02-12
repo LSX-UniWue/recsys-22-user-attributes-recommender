@@ -38,10 +38,9 @@ spec:
             - "search"
             - "gru"
             - "/home/ls6/zoller/seq_recommendation/project_hpsearch/recommender/projects/ml-20m/unfiltered/gru_config_hp.yaml"
-            - "no-name-0000000003"
+            - "test"
             - "redis://redis"
             - "recall_at_10/sampled"
-            - "max"
           volumeMounts:
             - mountPath: /home/ls6/zoller
               name: home

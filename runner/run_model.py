@@ -10,6 +10,7 @@ import pytorch_lightning as pl
 import optuna
 import typer
 from dependency_injector import containers, providers
+from optuna.structs import StudyDirection
 from pytorch_lightning import seed_everything, Callback
 from pytorch_lightning.utilities import cloud_io
 
@@ -108,7 +109,6 @@ def search(model: str = typer.Argument(..., help="the model to run"),
            study_storage: str = typer.Argument(..., help='the connection string for the study storage'),
            objective_metric: str = typer.Argument(..., help='the name of the metric to watch during the study'
                                                             '(e.g. recall_at_5).'),
-           objective_best_key: str = typer.Argument(..., help='the function to use to find the best value (min or max)'),
            num_trails: int = typer.Option(default=20, help='the number of trails to execute')
           ) -> None:
     # XXX: because the dependency injector does not provide a error message when the config file does not exists,
@@ -116,8 +116,6 @@ def search(model: str = typer.Argument(..., help="the model to run"),
     if not os.path.isfile(template_file):
         print(f"the config file cannot be found. Please check the path '{template_file}'!")
         exit(-1)
-
-    objective_best = {'min': min, 'max': max}[objective_best_key]
 
     def config_from_template(template_file: Path,
                              config_file_handle,
@@ -133,7 +131,11 @@ def search(model: str = typer.Argument(..., help="the model to run"),
             yaml.dump(resolved_config, config_file_handle)
             config_file_handle.flush()
 
-    def objective(trial):
+    def objective(trial: optuna.Trial):
+        # get the direction to get if we must extract the max or the min value of the metric
+        study_direction = trial.study.direction
+        objective_best = {StudyDirection.MINIMIZE: min, StudyDirection.MAXIMIZE: max}[study_direction]
+
         with NamedTemporaryFile(mode='wt') as tmp_config_file:
             config_from_template(template_file, tmp_config_file, trial)
 
@@ -161,8 +163,7 @@ def search(model: str = typer.Argument(..., help="the model to run"),
                 values = [history_entry[key] for history_entry in metrics_tracker.metric_history]
                 return best(values)
 
-            best_value = _find_best_value(objective_metric, objective_best)
-            return best_value if 'min' == objective_best_key else - best_value
+            return _find_best_value(objective_metric, objective_best)
 
     study = optuna.load_study(study_name=study_name, storage=study_storage)
     study.optimize(objective, n_trials=num_trails)

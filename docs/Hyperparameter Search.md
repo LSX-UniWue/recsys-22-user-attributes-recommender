@@ -7,8 +7,10 @@ We use Optuna to optimize the hyperparameters of the models in the framework.
 Create a study using your favorite storage backend.
 
 ```
-optuna create-study --storage $STORAGE_URL
+optuna create-study --study-name $STUDY_NAME --storage $STORAGE --direction $DIRECTION
 ```
+
+e.g. storage can be `redis://redis`, direction can be `{minimize,maximize}` and should be `maximize` for recall@k
 
 Copy the study name from the cli output of optuna.
 
