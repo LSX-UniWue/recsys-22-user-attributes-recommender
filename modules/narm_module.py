@@ -1,4 +1,4 @@
-from typing import List, Union, Dict, Optional
+from typing import Union, Dict, Optional
 
 import torch
 
@@ -13,9 +13,12 @@ from modules.util.module_util import get_padding_mask, convert_target_to_multi_h
 from tokenization.tokenizer import Tokenizer
 from torch import nn
 
+from utils.hyperparameter_utils import save_hyperparameters
+
 
 class NarmModule(MetricsTrait, pl.LightningModule):
 
+    @save_hyperparameters
     def __init__(self,
                  model: NarmModel,
                  batch_size: int,
@@ -39,6 +42,8 @@ class NarmModule(MetricsTrait, pl.LightningModule):
         self.beta_2 = beta_2
         self.tokenizer = tokenizer
         self.metrics = metrics
+
+        self.save_hyperparameters(self.hyperparameters)
 
     def get_metrics(self) -> MetricsContainer:
         return self.metrics

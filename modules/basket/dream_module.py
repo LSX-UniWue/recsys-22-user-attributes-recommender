@@ -14,8 +14,12 @@ from tokenization.tokenizer import Tokenizer
 
 
 # FIXME: maybe merge with RNNModule and make loss configurable
+from utils.hyperparameter_utils import save_hyperparameters
+
+
 class DreamModule(pl.LightningModule):
 
+    @save_hyperparameters
     def __init__(self,
                  model: RNNSeqItemRecommenderModel,
                  tokenizer: Tokenizer,
@@ -30,6 +34,8 @@ class DreamModule(pl.LightningModule):
 
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
+
+        self.save_hyperparameters(self.hyperparameters)
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],

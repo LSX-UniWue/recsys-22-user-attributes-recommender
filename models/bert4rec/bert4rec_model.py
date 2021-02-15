@@ -5,10 +5,12 @@ from torch import nn
 
 from models.layers.layers import build_projection_layer
 from models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
+from utils.hyperparameter_utils import save_hyperparameters
 
 
 class BERT4RecBaseModel(nn.Module):
 
+    @save_hyperparameters
     def __init__(self,
                  transformer_hidden_size: int,
                  num_transformer_heads: int,

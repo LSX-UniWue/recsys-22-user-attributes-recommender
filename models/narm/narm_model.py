@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 from models.layers.layers import ItemEmbedding
+from utils.hyperparameter_utils import save_hyperparameters
 
 
 class NarmModel(nn.Module):
@@ -18,6 +19,7 @@ class NarmModel(nn.Module):
         * N - sequence length
     """
 
+    @save_hyperparameters
     def __init__(self,
                  num_items: int,
                  item_embedding_size: int,

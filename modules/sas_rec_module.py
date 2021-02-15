@@ -11,6 +11,7 @@ from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import get_padding_mask, build_eval_step_return_dict
 from models.sasrec.sas_rec_model import SASRecModel
 from tokenization.tokenizer import Tokenizer
+from utils.hyperparameter_utils import save_hyperparameters
 
 
 class SASRecModule(MetricsTrait, pl.LightningModule):
@@ -18,6 +19,7 @@ class SASRecModule(MetricsTrait, pl.LightningModule):
     the module for the SASRec model
     """
 
+    @save_hyperparameters
     def __init__(self,
                  model: SASRecModel,
                  learning_rate: float,
@@ -43,6 +45,8 @@ class SASRecModule(MetricsTrait, pl.LightningModule):
         self.beta_2 = beta_2
         self.tokenizer = tokenizer
         self.metrics = metrics
+
+        self.save_hyperparameters(self.hyperparameters)
 
     def get_metrics(self) -> MetricsContainer:
         return self.metrics
