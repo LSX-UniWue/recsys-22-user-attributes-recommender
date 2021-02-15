@@ -45,4 +45,4 @@ class MRRMetric(RankingMetric):
         return self.mrr / self.count
 
     def name(self):
-        return f"mrr@{self._k}"
+        return f"MRR@{self._k}"
