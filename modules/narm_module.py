@@ -50,7 +50,7 @@ class NarmModule(MetricsTrait, pl.LightningModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
 
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
+        padding_mask = get_padding_mask(input_seq, self.tokenizer)
 
         logits = self.model(input_seq, padding_mask)
         loss = self._calc_loss(logits, target)
@@ -80,7 +80,7 @@ class NarmModule(MetricsTrait, pl.LightningModule):
         target = batch[TARGET_ENTRY_NAME]
 
         # calc the padding mask
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
+        padding_mask = get_padding_mask(input_seq, self.tokenizer)
 
         logits = self.model(input_seq, padding_mask)
 
