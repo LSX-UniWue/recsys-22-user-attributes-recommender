@@ -5,8 +5,6 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Dict, Any, Optional, List, Callable
 
-import pytorch_lightning as pl
-
 import optuna
 import typer
 from dependency_injector import containers, providers
@@ -49,23 +47,15 @@ def _config_logging(config: Dict[str, Any]
     logger.addHandler(handler)
 
 
-def _get_base_trainer_builder(config) -> TrainerBuilder:
-    trainer_builder = TrainerBuilder(config.trainer())
-    trainer_builder = trainer_builder.add_checkpoint_callback(config.trainer.checkpoint())
-    trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.trainer.logger()).build())
-    return trainer_builder
-
-def _build_trainer(config: providers.Configuration,
-                   callbacks: List[Callback] = None
-                   ) -> pl.Trainer:
+def _get_base_trainer_builder(config: providers.Configuration,
+                              callbacks: List[Callback] = None) -> TrainerBuilder:
     trainer_builder = TrainerBuilder(config())
     trainer_builder = trainer_builder.add_checkpoint_callback(config.checkpoint())
     trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.logger()).build())
     if callbacks:
         for callback_logger in callbacks:
             trainer_builder = trainer_builder.add_callback(callback_logger)
-    trainer = trainer_builder.build()
-    return trainer
+    return trainer_builder
 
 
 @app.command()
@@ -84,7 +74,7 @@ def train(model: str = typer.Argument(..., help="the model to run"),
     module = container.module()
 
     config = container.config
-    trainer_builder = _get_base_trainer_builder(config)
+    trainer_builder = _get_base_trainer_builder(config.trainer)
     trainer = trainer_builder.build()
 
     if do_train:
@@ -151,7 +141,8 @@ def search(model: str = typer.Argument(..., help="the model to run"),
             module = container.module()
 
             config = container.config
-            trainer = _build_trainer(config.trainer, callbacks=[metrics_tracker])
+            trainer_builder = _get_base_trainer_builder(config.trainer, callbacks=[metrics_tracker])
+            trainer = trainer_builder.build()
             trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
 
             def _find_best_value(key: str, best: Callable[[List[float]], float] = min) -> float:
@@ -258,7 +249,7 @@ def resume(model: str = typer.Argument(..., help="the model to run."),
     module = container.module()
 
     config = container.config
-    trainer = _get_base_trainer_builder(config).from_checkpoint(checkpoint_file).build()
+    trainer = _get_base_trainer_builder(config.trainer).from_checkpoint(checkpoint_file).build()
 
     train_loader = container.train_loader()
     validation_loader = container.validation_loader()
