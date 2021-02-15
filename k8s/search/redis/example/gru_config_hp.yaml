@@ -76,3 +76,7 @@ trainer:
   default_root_dir: /scratch/jane-doe-framework/experiments/ml-20m/gru-hp
   gpus: 1
   max_epochs: 20
+  logger:
+    type: mlflow
+    experiment_name: gru-hp
+    tracking_uri: http://mlflow-service:5000
