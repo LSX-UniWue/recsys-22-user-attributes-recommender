@@ -89,7 +89,7 @@ def calc_ndcg(prediction: torch.Tensor,
               k: int
               ) -> torch.Tensor:
     """
-    calcs the ndcg given the predictions and positive item mask
+    calculates the NDCG given the predictions and positive item mask
     :param positive_item_mask: a mask, where 1 at index i indicates that item i in predictions is relevant
     :param prediction: the prediction logits :math`(N, I)
     :param k: the k
@@ -111,16 +111,26 @@ def calc_ndcg(prediction: torch.Tensor,
     relevant_mask = torch.arange(0, k).lt(number_relevant_items)
     idcg = idcg_all * relevant_mask
 
-    return dcg / idcg.sum(dim=1)
+    ndcg = dcg / idcg.sum(dim=1)
+    return ndcg
 
 
 def calc_dcg(prediction: torch.Tensor,
              positive_item_mask: torch.Tensor,
              k: int
              ) -> torch.Tensor:
+    """
+    calculates the DCG of the prediction given the positive item mask and k
+    :param prediction: the prediction (N, I)
+    :param positive_item_mask: the positive item mask (N, I)
+    :param k: the k
+    :return: the dcg (N)
+
+    where N is the batch size and I the number of items
+    """
     device = prediction.device
 
     tp = get_true_positives(prediction, positive_item_mask, k)
     dcg_values = _build_dcg_values(k, positive_item_mask.size()[0]).to(device=device)
     dcg = dcg_values * tp
-    return dcg
+    return dcg.sum(dim=1)
