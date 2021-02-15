@@ -31,20 +31,38 @@ model:
   item_vocab_size: 26732
   cell_type: gru
   item_embedding_dim:
-    optuna:
-      suggest_int: {name: item_embedding_dim, low: 2, high: 256, step: 2}
+    hyper_opt:
+      suggest: int
+      params:
+        low: 2
+        high: 256
+        step: 2
   hidden_size:
-    optuna:
-      suggest_int: {name: hidden_size, low: 2, high: 256, step: 2}
+    hyper_opt:
+      suggest: int
+      params:
+        low: 2
+        high: 256
+        step: 2
   num_layers:
-    optuna:
-      suggest_int: {name: num_layers, low: 2, high: 6, step: 1}
+    hyper_opt:
+      suggest: int
+      params:
+        low: 2
+        high: 6
+        step: 1
   bidirectional:
-    optuna:
-      suggest_categorical: {name: bidirectional, choices: [True, False] }
+    hyper_opt:
+      suggest: suggest
+      params:
+        choices: [True, False]
   dropout:
-    optuna:
-      suggest_float: {name: dropout, low: 0.0, high: 0.9, step: 0.1}
+    hyper_opt:
+      suggest: float
+      params:
+        low: 0.0
+        high: 0.9
+        step: 0.1
   nonlinearity: relu
 module:
   beta_1: 0.99

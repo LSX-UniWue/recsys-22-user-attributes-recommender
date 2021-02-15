@@ -32,5 +32,55 @@ Copy the study name from the cli output of optuna.
 
 Create a run config.
 
+Instead of config a fixed value for a hyperparameter:
+
+```
+model:
+    num_transformer_heads: 4
+```
+
+Add a hyper_opt config object to the hyperparameter:
+
+```
+model:
+    num_transformer_heads:
+        hyper_opt:
+            suggest: int
+            params:
+                low: 2
+                high: 8
+                step: 2
+```
+
+Possible values for the suggest function are:
+
+- [categorical](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial.suggest_categorical)
+- [discrete_uniform](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial.suggest_discrete_uniform)
+- [float](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial.suggest_float)
+- [int](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial.suggest_int)
+- [loguniform](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial.suggest_loguniform)
+- [uniform](https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial.suggest_uniform)
+
+Please refer to the Optuna documentation for the available parameters for each suggest function. 
+
+If a hyperparameter depends on another hyperparameter you can specify this also in the config:
+
+```
+model:
+    transformer_hidden_size:
+        hyper_opt:
+          suggest: int
+          params:
+            low: 2
+            high: 8
+            step: 2
+          depends_on: model.num_transformer_heads
+          dependency: multiply
+```
+
+Currently, we support the following dependencies:
+
+* multiply: the suggested value is multiplied with the dependent value
+
 
 ## 4. Step: Run Study
