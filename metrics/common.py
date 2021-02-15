@@ -100,7 +100,7 @@ def calc_ndcg(prediction: torch.Tensor,
 
     dcg = calc_dcg(prediction, positive_item_mask, k)
 
-    idcg_all = _build_dcg_values(k, positive_item_mask.size()[0])
+    idcg_all = _build_dcg_values(k, positive_item_mask.size()[0]).type_as(prediction)
 
     # sum all relevant items per batch
     number_relevant_items = positive_item_mask.sum(dim=1)
@@ -108,7 +108,7 @@ def calc_ndcg(prediction: torch.Tensor,
     number_relevant_items = torch.where(number_relevant_items <= k, number_relevant_items, k)
     number_relevant_items = number_relevant_items.unsqueeze(1).repeat(1, k)
     # only use calculated values of the dcg that are lt than the max relevant items
-    relevant_mask = torch.arange(0, k).lt(number_relevant_items)
+    relevant_mask = torch.arange(0, k).type_as(prediction).lt(number_relevant_items)
     idcg = idcg_all * relevant_mask
 
     ndcg = dcg / idcg.sum(dim=1)
