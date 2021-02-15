@@ -6,7 +6,7 @@ authors = ["Alexander Dallmann <dallman@informatik.uni-wuerzburg.de>"]
 license = "LGPLv3"
 
 [tool.poetry.dependencies]
-python = ">=3.7"
+python = ">=3.7,<4"
 tqdm = "^4.48.2"
 numpy = "^1.19.1"
 scipy = "^1.5.2"
@@ -21,6 +21,7 @@ pytorch-lightning = "^1.1.0"
 dependency-injector = "^3.44.0"
 typer = "^0.3.2"
 mlflow = "^1.12.1"
+wandb = "^0.10.19"
 
 [tool.poetry.dev-dependencies]
 

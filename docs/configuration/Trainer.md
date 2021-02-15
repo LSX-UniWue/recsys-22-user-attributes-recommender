@@ -7,7 +7,7 @@ TODO
 ## Loggers
 
 ### mlflow
-under trainer add a logger section:
+Under trainer add a logger section:
 
 ```
 trainer:
@@ -16,4 +16,15 @@ trainer:
         type: mlflow
         experiment_name: test
         tracking_uri: http://localhost:5000
+```
+
+### wandb
+Under trainer add a logger section:
+```
+trainer:
+    ...
+      logger:
+        type: wandb
+        log_model: False
+        project: test
 ```

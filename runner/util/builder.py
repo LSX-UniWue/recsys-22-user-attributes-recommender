@@ -3,7 +3,7 @@ from typing import Any, Dict, Union, Iterable
 
 from pytorch_lightning import Trainer, Callback
 from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import LightningLoggerBase, TensorBoardLogger, MLFlowLogger
+from pytorch_lightning.loggers import LightningLoggerBase, TensorBoardLogger, MLFlowLogger, WandbLogger
 
 from runner.util.callbacks import PredictionLoggerCallback
 
@@ -128,9 +128,17 @@ def _build_mlflow_logger(parameters: Dict[str, Any]) -> LightningLoggerBase:
     )
 
 
+def _build_wandb_logger(parameters: Dict[str, Any]) -> LightningLoggerBase:
+    return WandbLogger(
+        project=parameters['project'],
+        log_model=parameters.get('log_model', False)
+    )
+
+
 LOGGER_REGISTRY = {
     'tensorboard': _build_tensorboard_logger,
-    'mlflow': _build_mlflow_logger
+    'mlflow': _build_mlflow_logger,
+    'wandb': _build_wandb_logger
 }
 
 
