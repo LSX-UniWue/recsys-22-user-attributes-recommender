@@ -2,14 +2,12 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: gru-hp-search
-  labels:
-    app: ds4rec
 spec:
   backoffLimit: 1
   template:
     spec:
       containers:
-        - name: ds4rec
+        - name: recommender-framework
           image: gitlab2.informatik.uni-wuerzburg.de:4567/dmir/dallmann/recommender/jane-doe-gpu:latest
           imagePullPolicy: "Always"
           resources:
@@ -22,7 +20,7 @@ spec:
             - name: HOME
               value: /home/ls6/zoller
             - name: PROJECT_DIR
-              value: /home/ls6/zoller/seq_recommendation/project_hpsearch
+              value: /home/ls6/zoller/seq_recommendation/gru_hp_search
             - name: REPO_USER
               value: daz65be
             - name: REPO_BRANCH
@@ -37,7 +35,7 @@ spec:
           args:
             - "search"
             - "rnn"
-            - "/home/ls6/zoller/seq_recommendation/project_hpsearch/recommender/k8s/search/redis/example/gru_hp_config_hp.yaml"
+            - "/home/ls6/zoller/seq_recommendation/gru_hp_search/recommender/k8s/search/redis/example/gru_config_hp.yaml"
             - "test"
             - "redis://redis-optuna"
             - "recall_at_10/sampled"

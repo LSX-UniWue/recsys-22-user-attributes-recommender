@@ -16,10 +16,9 @@ spec:
         limits: *resources
       command:
         - "mlflow"
-      args:
-        - server
-        - --host 0.0.0.0
-        - --backend-store-uri file:///data
+        - "server"
+        - "-h 0.0.0.0"
+        - "--backend-store-uri=file:///data"
       volumeMounts:
         - mountPath: /data
           name: home
