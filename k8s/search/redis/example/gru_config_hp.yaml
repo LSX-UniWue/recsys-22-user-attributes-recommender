@@ -16,7 +16,8 @@ datasets:
     dataset:
       csv_file: /ssd/ml-20m/ml-20m.csv
       csv_file_index: /ssd/ml-20m/ml-20m.idx
-      truncated_seq_index_file: /ssd/ml-20m/valid.loo.idx
+      # FIXME this is the wrong index for validation only
+      nip_index_file: /ssd/ml-20m/valid.loo.idx
       parser: *parser
     loader: *loader
   validation:
