@@ -36,4 +36,4 @@ class DiscountedCumulativeGainMetric(RankingMetric):
         return self.dcg / self.count
 
     def name(self):
-        return f"dcg@{self._k}"
+        return f"DCG@{self._k}"

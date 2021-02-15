@@ -37,4 +37,4 @@ class F1Metric(RankingMetric):
         return self.precision / self.count
 
     def name(self):
-        return f"f1@{self._k}"
+        return f"F1@{self._k}"

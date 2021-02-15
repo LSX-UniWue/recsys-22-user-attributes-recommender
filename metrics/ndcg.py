@@ -37,4 +37,4 @@ class NormalizedDiscountedCumulativeGainMetric(RankingMetric):
         return self.ndcg / self.count
 
     def name(self):
-        return f"ndcg@{self._k}"
+        return f"NDCG@{self._k}"

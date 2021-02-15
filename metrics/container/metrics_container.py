@@ -5,11 +5,11 @@ import torch
 
 from torch import nn
 
-# (AD) tagged as a pytorch module so PL recognizes it an performs things like moving state between devices
 from metrics.container.metrics_sampler import MetricsSampler
 from metrics.metric import RankingMetric
 
 
+# (AD) tagged as a pytorch module so PL recognizes it an performs things like moving state between devices
 class MetricsContainer(nn.Module):
     """
     Base class for containers that manage a collection of metrics.
