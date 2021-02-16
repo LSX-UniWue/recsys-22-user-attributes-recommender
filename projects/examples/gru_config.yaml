@@ -42,6 +42,8 @@ module:
       - 1
       - 3
       - 5
+    ndcg:
+      - 10
 tokenizer:
   special_tokens:
     pad_token: <PAD>

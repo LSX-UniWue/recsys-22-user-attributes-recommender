@@ -71,10 +71,10 @@ def build_fixed_sampling_metrics_provider(config: providers.Configuration):
 
 
 def _build_fixed_sampling_metrics_container(config: Dict[str, Any]) -> MetricsContainer:
-    if "fixed_sampled_metrics" not in config:
+    if "fixed_subset_metrics" not in config:
         return NoopMetricsContainer()
 
-    fixed_config = config["fixed_sampled_metrics"]
+    fixed_config = config["fixed_subset_metrics"]
     sampler = FixedItemsSampler(load_items(fixed_config["item_file"]))
 
     return RankingMetricsContainer(_build_metrics(fixed_config['metrics']), sampler)
