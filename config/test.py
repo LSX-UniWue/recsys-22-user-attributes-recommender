@@ -1,5 +1,8 @@
 from config.config_builder import ContainerBuilder
-from config.factories.tokenizer_factory import TokenizerFactory
+from config.factories.config import Config
+from config.factories.context import Context
+from config.factories.object_factory import CanBuildResult, CanBuildResultType
+from config.factories.tokenizer_factory import TokenizerFactory, TokenizersFactory
 
 if __name__ == "__main__":
     import json
@@ -15,9 +18,25 @@ if __name__ == "__main__":
 
     builder = ContainerBuilder()
 
-    tokenizer_handler = TokenizerFactory()
-    builder.register_handler(tokenizer_handler)
+    tokenizer_factory = TokenizersFactory()
 
-    container = builder.build(config)
+    config = Config(config)
+    context = Context()
 
-    print(container.context)
+    if not config.has_path(tokenizer_factory.config_path()):
+        print(f"Missing tokenizer configuration.")
+    else:
+        tokenizer_config = config.get_config(tokenizer_factory.config_path())
+
+        if tokenizer_factory.can_build(tokenizer_config, context).type == CanBuildResultType.CAN_BUILD:
+            tokenizer = tokenizer_factory.build(tokenizer_config, context)
+            print(tokenizer)
+        else:
+            print("Error")
+
+
+    #builder.register_handler(tokenizer_handler)
+
+    #container = builder.build(config)
+
+    #print(container.context)
