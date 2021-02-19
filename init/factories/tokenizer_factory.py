@@ -1,14 +1,18 @@
 from pathlib import Path
 from typing import List, Any
 
-from config.factories.config import Config
-from config.factories.context import Context
-from config.factories.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
+from init.config import Config
+from init.context import Context
+from init.factories.vocabulary_factory import VocabularyFactory
+from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from tokenization.tokenizer import Tokenizer
 from tokenization.vocabulary import CSVVocabularyReaderWriter
 
 
 class TokenizersFactory(ObjectFactory):
+    """
+    Builds all tokenizers within the `tokenizers` section.
+    """
 
     KEY = "tokenizers"
 
@@ -49,11 +53,11 @@ class TokenizersFactory(ObjectFactory):
         return [self.KEY]
 
 
-# TODO (AD) support multiple tokenizers
 class TokenizerFactory(ObjectFactory):
-
-    # (AD) this is special since we can have multiple tokenizers with individual names. Keep in mind that the
-    # TokenizersFactory will take care to place the tokenizers at the correct path in the context
+    """
+    Builds a single tokenizer entry inside the tokenizers section.
+    """
+    # (AD) this is special since we can have multiple tokenizers with individual keys/names.
     KEY = "tokenizer"
     SPECIAL_TOKENS_KEY = "special_tokens"
 
@@ -87,31 +91,3 @@ class TokenizerFactory(ObjectFactory):
     def _get_special_tokens(self, config: Config):
         special_tokens_config = config.get_or_default([self.SPECIAL_TOKENS_KEY], {})
         return special_tokens_config
-
-
-class VocabularyFactory(ObjectFactory):
-
-    KEY = "vocabulary"
-    REQUIRED_KEYS = ["file", "delimiter"]
-
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
-        for key in self.REQUIRED_KEYS:
-            if not config.has_path([key]):
-                return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION, f"missing key <{key}>")
-
-        return CanBuildResult(CanBuildResultType.CAN_BUILD)
-
-    def build(self, config: Config, context: Context):
-        delimiter = config.get_or_default(["delimiter"], "\t")
-        vocab_file = config.get_or_raise(["file"], f"<file> could not be found in vocabulary config section.")
-
-        vocab_reader = CSVVocabularyReaderWriter(delimiter)
-
-        with Path(vocab_file).open("r") as file:
-            return vocab_reader.read(file)
-
-    def is_required(self, context: Context) -> bool:
-        return True
-
-    def config_path(self) -> List[str]:
-        return [self.KEY]

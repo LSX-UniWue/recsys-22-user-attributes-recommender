@@ -1,8 +1,8 @@
-from config.config_builder import ContainerBuilder
-from config.factories.config import Config
-from config.factories.context import Context
-from config.factories.object_factory import CanBuildResult, CanBuildResultType
-from config.factories.tokenizer_factory import TokenizerFactory, TokenizersFactory
+from init.config import Config
+from init.config_builder import ContainerBuilder
+from init.context import Context
+from init.factories.tokenizer_factory import TokenizersFactory
+from init.object_factory import CanBuildResultType
 
 if __name__ == "__main__":
     import json

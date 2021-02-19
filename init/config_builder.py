@@ -1,7 +1,7 @@
 from typing import Dict, Any
 
-from config.factories.config import Config
-from config.factories.object_factory import ObjectFactory
+from config import Config
+from object_factory import ObjectFactory
 
 
 class Container:

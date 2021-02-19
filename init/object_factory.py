@@ -2,8 +2,8 @@ import abc
 from typing import Any, List, Optional
 from enum import Enum
 
-from config.factories.config import Config
-from config.factories.context import Context
+from init.config import Config
+from init.context import Context
 
 
 class CanBuildResultType(Enum):
