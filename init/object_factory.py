@@ -1,5 +1,5 @@
 import abc
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union, Dict
 from enum import Enum
 
 from init.config import Config
@@ -27,8 +27,13 @@ class CanBuildResult:
         self.type = type
         self.message = message
 
-
+# TODO (AD) add static initilization methods to configure classes
+# TODO (AD) make all object factories configurable by transforming abstract classes like Dependencies / MultipleElementsFactory to full classes and use Composition instead of inheritance
 class ObjectFactory:
+
+    def __init__(self):
+        super(ObjectFactory, self).__init__()  # make this constructor cooperative so we can have multiple traits
+
     """
     Interface for factories that can participate in building objects from the configuration file. Factories operate only
     on the part of the configuration file, marked by their `config_path()` method and can build hierarchies to perfrom
@@ -49,7 +54,7 @@ class ObjectFactory:
         pass
 
     @abc.abstractmethod
-    def build(self, config: Config, context: Context) -> Any:
+    def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
         """
         Builds the object.
 
@@ -79,5 +84,13 @@ class ObjectFactory:
         Gets configuration path this factory can build.
 
         :return: a path.
+        """
+        pass
+
+    @abc.abstractmethod
+    def config_key(self) -> str:
+        """
+        Gets the a key for this factory. This is used to identify the object, e.g. if added as a dependency.
+        :return: a key.
         """
         pass

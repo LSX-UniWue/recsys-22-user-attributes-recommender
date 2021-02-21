@@ -35,3 +35,6 @@ class VocabularyFactory(ObjectFactory):
 
     def config_path(self) -> List[str]:
         return [self.KEY]
+
+    def config_key(self) -> str:
+        return self.KEY

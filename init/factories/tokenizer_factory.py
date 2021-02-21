@@ -1,15 +1,15 @@
-from pathlib import Path
 from typing import List, Any
 
 from init.config import Config
 from init.context import Context
+from init.factories.dependencies import DependenciesTrait
+from init.factories.multiple_elements_factory import MultipleElementsFactoryTrait
 from init.factories.vocabulary_factory import VocabularyFactory
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from tokenization.tokenizer import Tokenizer
-from tokenization.vocabulary import CSVVocabularyReaderWriter
 
 
-class TokenizersFactory(ObjectFactory):
+class TokenizersFactory(ObjectFactory, MultipleElementsFactoryTrait):
     """
     Builds all tokenizers within the `tokenizers` section.
     """
@@ -17,34 +17,14 @@ class TokenizersFactory(ObjectFactory):
     KEY = "tokenizers"
 
     def __init__(self):
+        super(TokenizersFactory, self).__init__()
         self.tokenizer_factory = TokenizerFactory()
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
-
-        tokenizers = config.get([])
-        if len(tokenizers) == 0:
-            return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION, f"At least one tokenizer must be specified.")
-
-        for name in tokenizers.keys():
-            tokenizer_config = config.get_config([name])
-            can_build_result = self.tokenizer_factory.can_build(tokenizer_config, context)
-
-            if not can_build_result.type == CanBuildResultType.CAN_BUILD:
-                return can_build_result
-
-        return CanBuildResult(CanBuildResultType.CAN_BUILD)
+        return self.can_build_elements(config, context, self.tokenizer_factory)
 
     def build(self, config: Config, context: Context) -> Any:
-        tokenizers = config.get([])
-
-        result = {}
-        for name in tokenizers.keys():
-            tokenizer_config = config.get_config([name])
-            tokenizer = self.tokenizer_factory.build(tokenizer_config, context)
-
-            result[name] = tokenizer
-
-        return result
+        return self.build_elements(config, context, self.tokenizer_factory)
 
     def is_required(self, context: Context) -> bool:
         return True
@@ -52,8 +32,11 @@ class TokenizersFactory(ObjectFactory):
     def config_path(self) -> List[str]:
         return [self.KEY]
 
+    def config_key(self) -> str:
+        return self.KEY
 
-class TokenizerFactory(ObjectFactory):
+
+class TokenizerFactory(ObjectFactory, DependenciesTrait):
     """
     Builds a single tokenizer entry inside the tokenizers section.
     """
@@ -62,14 +45,14 @@ class TokenizerFactory(ObjectFactory):
     SPECIAL_TOKENS_KEY = "special_tokens"
 
     def __init__(self):
-        self.dependencies = {
-            VocabularyFactory.KEY: VocabularyFactory()
-        }
+        super(TokenizerFactory, self).__init__()
+        self.add_dependency(VocabularyFactory())
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
-        for path, factory in self.dependencies.items():
-            if not config.has_path([path]) and factory.is_required(context):
-                return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION, f"missing key <{path}>")
+
+        dependencies_result = self.can_build_dependencies(config, context)
+        if dependencies_result.type != CanBuildResultType.CAN_BUILD:
+            return dependencies_result
 
         if not config.has_path([self.SPECIAL_TOKENS_KEY]):
             return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION, f"missing key <{self.SPECIAL_TOKENS_KEY}>")
@@ -77,7 +60,7 @@ class TokenizerFactory(ObjectFactory):
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
     def build(self, config: Config, context: Context):
-        vocabulary = self.dependencies[VocabularyFactory.KEY].build(config.get_config([VocabularyFactory.KEY]), context)
+        vocabulary = self.get_dependency(VocabularyFactory.KEY).build(config.get_config([VocabularyFactory.KEY]), context)
         special_tokens = self._get_special_tokens(config)
 
         return Tokenizer(vocabulary, **special_tokens)
@@ -87,6 +70,9 @@ class TokenizerFactory(ObjectFactory):
 
     def config_path(self) -> List[str]:
         return [self.KEY]
+
+    def config_key(self) -> str:
+        return self.KEY
 
     def _get_special_tokens(self, config: Config):
         special_tokens_config = config.get_or_default([self.SPECIAL_TOKENS_KEY], {})
