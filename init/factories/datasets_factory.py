@@ -2,13 +2,13 @@ from typing import List, Any
 
 from init.config import Config
 from init.context import Context
-from init.factories.dependencies import DependenciesTrait
-from init.factories.multiple_elements_factory import MultipleElementsFactoryTrait
+from init.factories.dependencies_factory import DependenciesTrait
+from init.factories.list_elements_factory import NamedListElementsFactory
 from init.factories.select_from_factory import SelectFromFactory
 from init.object_factory import ObjectFactory, CanBuildResult
 
 
-class DataSourcesFactory(ObjectFactory, MultipleElementsFactoryTrait):
+class DataSourcesFactory(ObjectFactory, NamedListElementsFactory):
 
     KEY = "data_sources"
 

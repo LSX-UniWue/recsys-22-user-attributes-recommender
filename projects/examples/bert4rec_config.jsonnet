@@ -87,14 +87,16 @@
     },
     tokenizers: {
         item: {
-            special_tokens: {
-                pad_token: "<PAD>",
-                mask_token: "<MASK>",
-                unk_token: "<UNK>"
-            },
-            vocabulary: {
-                delimiter: "\t",
-                file: "../tests/example_dataset/vocab.txt"
+            tokenizer: {
+                special_tokens: {
+                    pad_token: "<PAD>",
+                    mask_token: "<MASK>",
+                    unk_token: "<UNK>"
+                },
+                vocabulary: {
+                    delimiter: "\t",
+                    file: "../tests/example_dataset/vocab.txt"
+                }
             }
         }
     },
