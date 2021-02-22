@@ -4,7 +4,7 @@ from data.collate import PadDirection
 from init.config import Config
 from init.context import Context
 from init.factories.metrics.metrics_container import MetricsContainerFactory
-from init.factories.tokenizer.tokenizer_factory import TOKENIZER_ITEM_KEY, get_tokenizer_key_for_voc
+from init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc
 from init.factories.util import check_config_keys_exist
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from models.bert4rec.bert4rec_model import BERT4RecModel
