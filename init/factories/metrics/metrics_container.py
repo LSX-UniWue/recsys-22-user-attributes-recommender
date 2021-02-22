@@ -3,7 +3,8 @@ from typing import List, Union, Any, Dict
 from init.config import Config
 from init.context import Context
 from init.factories.common.dependencies_factory import DependenciesFactory
-from init.factories.metrics.full import FullMetricsFactory
+from init.factories.metrics.full_metrics import FullMetricsFactory
+from init.factories.metrics.sampled_metrics import SampledMetricsFactory
 from init.object_factory import ObjectFactory, CanBuildResult
 from metrics.container.aggregate_metrics_container import AggregateMetricsContainer
 
@@ -13,7 +14,8 @@ class MetricsContainerFactory(ObjectFactory):
     def __init__(self):
         super().__init__()
 
-        self.metric_factories = DependenciesFactory([FullMetricsFactory()])
+        self.metric_factories = DependenciesFactory([FullMetricsFactory(), SampledMetricsFactory()],
+                                                    optional_based_on_path=True)
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         return self.metric_factories.can_build(config, context)

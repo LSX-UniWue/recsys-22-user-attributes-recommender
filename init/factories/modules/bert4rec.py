@@ -32,7 +32,8 @@ class Bert4RecModuleFactory(ObjectFactory):
         padding_direction_str = config.get_or_default('padding_direction', PadDirection.RIGHT.value)
         padding_direction = PadDirection[padding_direction_str.upper()]
 
-        metrics = self.metrics_container_factory.build(config, context)
+        metrics = self.metrics_container_factory.build(config.get_config(self.metrics_container_factory.config_path()),
+                                                       context=context)
 
         model = self.model_factory.build(config.get_config(self.model_factory.config_path()), context)
         return BERT4RecModule(model, learning_rate=learning_rate, beta_1=beta_1, beta_2=beta_2,
