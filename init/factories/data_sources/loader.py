@@ -83,7 +83,7 @@ class LoaderFactory(ObjectFactory):
             dataset=dataset,
             batch_size=config.get("batch_size"),
             shuffle=config.get("shuffle"),
-            num_workers=config.get("num_workers"),
+            num_workers=config.get("num_workers", 0),
             worker_init_fn=init_worker_fn,
             collate_fn=padded_session_collate(
                 pad_token_id=tokenizer.pad_token_id,

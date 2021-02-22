@@ -38,12 +38,12 @@ if __name__ == "__main__":
                 context.set(context_key, tokenizer)
 
             if not config.has_path(data_sources_factory.config_path()):
-                print(f"Missing loader configuartion.")
+                print(f"Missing loader configuration.")
             else:
                 data_sources_config = config.get_config(data_sources_factory.config_path())
 
                 if data_sources_factory.can_build(data_sources_config, context):
-                    data_sources = data_sources_factory.build(config, context)
+                    data_sources = data_sources_factory.build(data_sources_config, context)
                     print(data_sources)
 
         else:

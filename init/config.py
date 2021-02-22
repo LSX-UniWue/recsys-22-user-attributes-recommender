@@ -29,14 +29,21 @@ class Config:
 
         return current_section
 
-    def get(self, path: Union[str, List[str]]) -> Optional[Any]:
+    def get(self,
+            path: Union[str, List[str]],
+            default_value: Any = None
+            ) -> Optional[Any]:
         """
         Gets the value associated with a path. If the path does not exist within the configuration, None is returned.
 
+        :param default_value: the default value to apply if there is no such path
         :param path: a path.
         :return: a value, or None if the path does not exist.
         """
-        return self._get_path(path)
+        resolved_config = self._get_path(path)
+        if resolved_config is None and default_value is not None:
+            return default_value
+        return resolved_config
 
     def has_path(self, path: Union[str, List[str]]) -> bool:
         """

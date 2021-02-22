@@ -22,12 +22,6 @@
                             mask_probability: 0.2,
                             only_last_item_mask_prob: 0.1,
                             seed: 123456
-                        },
-                        {
-                            type: "cloze",
-                            mask_probability: 0.2,
-                            only_last_item_mask_prob: 0.1,
-                            seed: 123456
                         }
                     ]
                 }
@@ -59,7 +53,6 @@
     },
     module: {
         type: "bert4rec",
-        mask_probability: 0.9,
         metrics: {
             full: {
                 metrics: {
@@ -104,7 +97,7 @@
     trainer: {
         checkpoint: {
             monitor: "recall_at_5",
-            save_top_k: 3
+            save_top_k: 3 #TODO: max?
         }
     }
 }

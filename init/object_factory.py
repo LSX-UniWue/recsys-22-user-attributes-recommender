@@ -89,7 +89,7 @@ class ObjectFactory:
     @abc.abstractmethod
     def config_key(self) -> str:
         """
-        Gets the a key for this factory. This is used to identify the object, e.g. if added as a dependency.
+        Gets a key for this factory. This is used to identify the object, e.g. if added as a dependency.
         :return: a key.
         """
         pass
