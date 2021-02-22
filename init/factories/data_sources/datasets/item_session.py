@@ -7,8 +7,9 @@ from data.datasets.session import ItemSessionParser, PlainSessionDataset, ItemSe
 from init.config import Config
 from init.context import Context
 from init.factories.util import require_config_field_equal
-from init.object_factory import ObjectFactory, CanBuildResult
+from init.object_factory import  CanBuildResult
 from init.factories.data_sources.datasets.dataset_factory import DatasetFactory
+
 
 class ItemSessionDatasetFactory(DatasetFactory):
 
@@ -18,6 +19,8 @@ class ItemSessionDatasetFactory(DatasetFactory):
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         return require_config_field_equal(config, 'type', 'session')
 
+    def _can_build_dataset(self, config: Config, context: Context) -> CanBuildResult:
+        pass
 
     def _build_dataset(self, config: Config, context: Context, session_parser: ItemSessionParser,
                        processors: List[Processor]) -> Any:

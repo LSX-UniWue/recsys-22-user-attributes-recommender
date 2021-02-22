@@ -3,11 +3,14 @@ from typing import List
 from data.datasets.processors.cloze_mask import ClozeMaskProcessor
 from init.config import Config
 from init.context import Context
-from init.factories.util import require_config_field_equal
-from init.object_factory import ObjectFactory, CanBuildResult
+from init.factories.tokenizer.tokenizer_factory import TokenizerFactory
+from init.factories.util import check_config_keys_exist
+from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
 
 class ClozeProcessorFactory(ObjectFactory):
+
+    TOKENIZER_KEY = TokenizerFactory.KEY + '.item'
 
     """
     factory for the ClozeMaskProcessor
@@ -17,13 +20,21 @@ class ClozeProcessorFactory(ObjectFactory):
                   config: Config,
                   context: Context
                   ) -> CanBuildResult:
-        return require_config_field_equal(config, 'type', 'cloze')
+        # check for config keys
+        config_keys_exist = check_config_keys_exist(config, ['mask_probability', 'only_last_item_mask_prob', 'seed'])
+        if not config_keys_exist:
+            return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION)
+
+        if self.TOKENIZER_KEY not in context:
+            return CanBuildResult(CanBuildResultType.MISSING_DEPENDENCY, 'item tokenizer missing')
+
+        return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
     def build(self,
               config: Config,
               context: Context
               ) -> ClozeMaskProcessor:
-        tokenizer = context.get('tokenizers.item')
+        tokenizer = context.get(self.TOKENIZER_KEY)
         mask_probability = config.get('mask_probability')
         only_last_item_mask_prob = config.get('only_last_item_mask_prob')
         seed = config.get('seed')
