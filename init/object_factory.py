@@ -39,7 +39,10 @@ class ObjectFactory:
     object initialization.
     """
     @abc.abstractmethod
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
+    def can_build(self,
+                  config: Config,
+                  context: Context
+                  ) -> CanBuildResult:
         """
         Checks if the factory can build its object, based on the configuration and current context.
         This method is expected to raise an Exception if the constraints can never be satisfied, e.g. some configuration
@@ -53,7 +56,10 @@ class ObjectFactory:
         pass
 
     @abc.abstractmethod
-    def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
+    def build(self,
+              config: Config,
+              context: Context
+              ) -> Union[Any, Dict[str, Any], List[Any]]:
         """
         Builds the object.
 

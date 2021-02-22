@@ -2,6 +2,7 @@ from init.config import Config
 from init.config_builder import ContainerBuilder
 from init.context import Context
 from init.factories.data_sources.data_sources import DataSourcesFactory
+from init.factories.modules.modules import ModuleFactory
 from init.factories.tokenizer.tokenizer_factory import TokenizersFactory
 from init.object_factory import CanBuildResultType
 
@@ -21,6 +22,7 @@ if __name__ == "__main__":
 
     tokenizers_factory = TokenizersFactory()
     data_sources_factory = DataSourcesFactory()
+    module_factory = ModuleFactory()
 
     config = Config(config)
     context = Context()
@@ -48,6 +50,12 @@ if __name__ == "__main__":
 
         else:
             print("Error")
+
+        if config.has_path(module_factory.config_path()):
+
+            module_config = config.get_config(module_factory.config_path())
+            if module_factory.can_build(module_config, context).type == CanBuildResultType.CAN_BUILD:
+                module = module_factory.build(module_config, context)
 
 
     #builder.register_handler(tokenizer_handler)

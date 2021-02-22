@@ -21,6 +21,19 @@ def check_context_entries_exists(context: Context, keys: List[str]) -> bool:
     return True
 
 
+def require_config_keys(config: Config,
+                        required_key: List[str]
+                        ) -> CanBuildResult:
+
+    if not check_config_keys_exist(config, required_key):
+        return CanBuildResult(
+            CanBuildResultType.MISSING_CONFIGURATION,
+            f"Could not find all required keys ({required_key}) in config."
+        )
+
+    return CanBuildResult(CanBuildResultType.CAN_BUILD)
+
+
 def require_config_field_equal(config: Config,
                                field_key: Union[str, List[str]],
                                required_field_value: Any

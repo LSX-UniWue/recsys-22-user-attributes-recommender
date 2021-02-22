@@ -10,15 +10,16 @@ from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultTyp
 class DependenciesFactory(ObjectFactory):
     """
     A trait that contains operations that can help manage dependent factories. The trait assumes that dependent
-    factories are responsible for building a specific subsection of the configuration and that the subection name
-    matches the `config_path()` reported by the dependendent factory.
+    factories are responsible for building a specific subsection of the configuration and that the subsection name
+    matches the `config_path()` reported by the dependent factory.
     """
 
     def __init__(self,
                  dependencies: List[ObjectFactory],
                  config_key: str = "",
                  config_path: List[str] = [],
-                 required: bool = True):
+                 required: bool = True,
+                 optional_based_on_path: bool = False):
         """
         Adds all dependencies with the assumption that they can be used to build the configuration subsection with their
         `config_key`.
@@ -27,11 +28,13 @@ class DependenciesFactory(ObjectFactory):
         :param config_key: the config key for this factory.
         :param config_path: the config path for this factory.
         :param required: whether this factory needs to be built.
+        :param optional_based_on_path: the dependency should only be called if the path exists
         """
         super(DependenciesFactory, self).__init__()
         self._required = required
         self._config_path = config_path
         self._config_key = config_key
+        self._optional_based_on_path = optional_based_on_path
 
         self._dependencies: Dict[str, ObjectFactory] = {}
         self.add_dependencies(dependencies)
@@ -48,7 +51,7 @@ class DependenciesFactory(ObjectFactory):
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         for key, factory in self._dependencies.items():
-            if not config.has_path(factory.config_path()) and factory.is_required(context):
+            if not self._optional_based_on_path and not config.has_path(factory.config_path()) and factory.is_required(context):
                 return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION, f"missing path <{factory.config_path}>")
 
             factory_config = config.get_config(factory.config_path())
@@ -61,7 +64,11 @@ class DependenciesFactory(ObjectFactory):
     def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
         result = {}
         for key, factory in self._dependencies.items():
-            factory_config = config.get_config(factory.config_path())
+            factory_config_path = factory.config_path()
+            if self._optional_based_on_path and not config.has_path(factory_config_path):
+                # we skip this dependency because the path is not present and the config allow this situation
+                continue
+            factory_config = config.get_config(factory_config_path)
             obj = factory.build(factory_config, context)
             result[key] = obj
         return result

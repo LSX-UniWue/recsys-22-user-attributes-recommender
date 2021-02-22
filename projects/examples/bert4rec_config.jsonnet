@@ -65,7 +65,7 @@
                 num_negative_samples: 100,
                 metrics: {
                     mrr: [1, 3, 5],
-                    recall:[1, 3, 5]
+                    recall: [1, 3, 5]
                 }
             }
         },

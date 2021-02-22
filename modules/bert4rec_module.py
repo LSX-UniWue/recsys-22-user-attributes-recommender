@@ -29,7 +29,6 @@ class BERT4RecModule(MetricsTrait, pl.LightningModule):
 
     def __init__(self,
                  model: BERT4RecModel,
-                 mask_probability: float,
                  learning_rate: float,
                  beta_1: float,
                  beta_2: float,
@@ -41,8 +40,6 @@ class BERT4RecModule(MetricsTrait, pl.LightningModule):
                  ):
         super().__init__()
         self.model = model
-
-        self.mask_probability = mask_probability
 
         self.learning_rate = learning_rate
         self.beta_1 = beta_1

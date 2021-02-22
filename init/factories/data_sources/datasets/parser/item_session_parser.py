@@ -19,7 +19,7 @@ class ItemSessionParserFactory(ObjectFactory):
     def build(self, config: Config, context: Context) -> Any:
         csv_file = Path(config.get('csv_file'))
         parser_config = config.get_config(['parser'])
-        delimiter = parser_config.get('delimiter', '\t')
+        delimiter = parser_config.get_or_default('delimiter', '\t')
         item_column_name = parser_config.get('item_column_name')
         item_separator = parser_config.get('item_separator')
 

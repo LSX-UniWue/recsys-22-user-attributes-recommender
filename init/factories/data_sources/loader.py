@@ -73,7 +73,7 @@ class LoaderFactory(ObjectFactory):
         dataset = dependencies[self.DATASET_DEPENDENCY_KEY]
         # TODO next
         tokenizer = context.get(self.TOKENIZER_CONTEXT_KEY)
-        num_workers = config.get("num_workers")
+        num_workers = config.get_or_default("num_workers", 0)
 
         init_worker_fn = None if num_workers == 0 else mp_worker_init_fn
 
@@ -83,7 +83,7 @@ class LoaderFactory(ObjectFactory):
             dataset=dataset,
             batch_size=config.get("batch_size"),
             shuffle=config.get("shuffle"),
-            num_workers=config.get("num_workers", 0),
+            num_workers=num_workers,
             worker_init_fn=init_worker_fn,
             collate_fn=padded_session_collate(
                 pad_token_id=tokenizer.pad_token_id,
