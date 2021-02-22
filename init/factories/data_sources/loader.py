@@ -12,6 +12,7 @@ from init.factories.common.dependencies_factory import DependenciesFactory
 from init.factories.common.union_factory import UnionFactory
 from init.factories.data_sources.datasets.item_session import ItemSessionDatasetFactory
 from init.factories.data_sources.datasets.next_item import NextItemDatasetFactory
+from init.factories.data_sources.datasets.plain_session import PlainSessionDatasetFactory
 from init.factories.util import check_config_keys_exist, check_context_entries_exists
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
@@ -20,7 +21,7 @@ class LoaderFactory(ObjectFactory):
     KEY = "loader"
 
     DATASET_DEPENDENCY_KEY = "dataset"
-    REQUIRED_CONFIG_PARAMS = [
+    REQUIRED_CONFIG_KEYS = [
         "batch_size",
         "max_seq_length",
         "max_seq_step_length",
@@ -52,10 +53,10 @@ class LoaderFactory(ObjectFactory):
         if dependencies_result.type != CanBuildResultType.CAN_BUILD:
             return dependencies_result
 
-        if not check_config_keys_exist(config, self.REQUIRED_CONFIG_PARAMS):
+        if not check_config_keys_exist(config, self.REQUIRED_CONFIG_KEYS):
             return CanBuildResult(
                 CanBuildResultType.MISSING_CONFIGURATION,
-                f"Could not find all required keys ({self.REQUIRED_CONFIG_PARAMS}) in config."
+                f"Could not find all required keys ({self.REQUIRED_CONFIG_KEYS}) in config."
             )
 
         if not check_context_entries_exists(context, self.REQUIRED_CONTEXT_ENTRIES):
@@ -71,7 +72,7 @@ class LoaderFactory(ObjectFactory):
         dependencies = self._dependencies.build(config, context)
 
         dataset = dependencies[self.DATASET_DEPENDENCY_KEY]
-        # TODO next
+
         tokenizer = context.get(self.TOKENIZER_CONTEXT_KEY)
         num_workers = config.get_or_default("num_workers", 0)
 

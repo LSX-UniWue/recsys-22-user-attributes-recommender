@@ -14,6 +14,8 @@ from abc import abstractmethod
 
 class DatasetFactory(ObjectFactory):
 
+    KEY = "dataset"
+
     def __init__(self):
         super().__init__()
         self.parser_dependency = DependenciesFactory([ItemSessionParserFactory(), ProcessorsFactory()])
@@ -33,6 +35,15 @@ class DatasetFactory(ObjectFactory):
 
         return self._build_dataset(config, context, session_parser, processors)
 
+    def is_required(self, context: Context) -> bool:
+        return True
+
+    def config_path(self) -> List[str]:
+        return [self.KEY]
+
+    def config_key(self) -> str:
+        return self.KEY
+
     @abstractmethod
     def _build_dataset(self,
                        config: Config,
@@ -48,3 +59,5 @@ class DatasetFactory(ObjectFactory):
                            context: Context
                            ) -> CanBuildResult:
         pass
+
+
