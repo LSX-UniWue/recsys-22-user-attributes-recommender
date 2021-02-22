@@ -51,6 +51,9 @@ module:
         - 1
         - 5
         - 10
+  metrics:
+    recall:
+      - 5
 tokenizer:
   special_tokens:
     pad_token: <PAD>
@@ -66,4 +69,4 @@ trainer:
     monitor: recall_at_10/sampled
     save_top_k: 3
   gradient_clip_val: 5
-  default_root_dir: ../dataset/experiments/ml-20m/bert4rec
+  default_root_dir: ../dataset/experiments/ml-20m/sasrec
