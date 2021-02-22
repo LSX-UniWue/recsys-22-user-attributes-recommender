@@ -3,7 +3,7 @@ from typing import List
 from init.config import Config
 from init.context import Context
 from init.factories.metrics.metrics_container import MetricsContainerFactory
-from init.factories.tokenizer.tokenizer_factory import TokenizerFactory
+from init.factories.tokenizer.tokenizer_factory import TokenizerFactory, get_tokenizer_key_for_voc
 from init.factories.util import check_config_keys_exist
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from models.narm.narm_model import NarmModel
@@ -44,8 +44,7 @@ class NarmModuleFactory(ObjectFactory):
 
 class NarmModelFactory(ObjectFactory):
 
-    # FIXME: rename num_items => item_vocab_size
-    CONFIG_KEY_REQUIRED = ['num_items', 'item_embedding_size', 'global_encoder_size',
+    CONFIG_KEY_REQUIRED = ['item_embedding_size', 'global_encoder_size',
                            'global_encoder_num_layers', 'embedding_dropout', 'context_dropout',
                            'embedding_pooling_type']
 
@@ -58,7 +57,9 @@ class NarmModelFactory(ObjectFactory):
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
     def build(self, config: Config, context: Context) -> NarmModel:
-        item_vocab_size = config.get('num_items')
+        tokenizer = context.get(get_tokenizer_key_for_voc('item'))
+        item_vocab_size = len(tokenizer)
+
         item_embedding_size = config.get('item_embedding_size')
         global_encoder_size = config.get('global_encoder_size')
         global_encoder_num_layers = config.get('global_encoder_num_layers')

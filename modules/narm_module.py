@@ -18,12 +18,10 @@ class NarmModule(MetricsTrait, pl.LightningModule):
 
     def __init__(self,
                  model: NarmModel,
-                 batch_size: int,
                  learning_rate: float,
                  beta_1: float,
                  beta_2: float,
                  tokenizer: Tokenizer,
-                 batch_first: bool,
                  metrics: MetricsContainer
                  ):
         """
@@ -32,8 +30,6 @@ class NarmModule(MetricsTrait, pl.LightningModule):
         super().__init__()
         self.model = model
 
-        self.batch_size = batch_size
-        self.batch_first = batch_first
         self.learning_rate = learning_rate
         self.beta_1 = beta_1
         self.beta_2 = beta_2

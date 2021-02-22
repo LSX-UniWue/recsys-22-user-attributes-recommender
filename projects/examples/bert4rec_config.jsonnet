@@ -70,7 +70,6 @@
             }
         },
         model: {
-            item_vocab_size: 13,
             max_seq_length: 5,
             num_transformer_heads: 1,
             num_transformer_layers: 1,

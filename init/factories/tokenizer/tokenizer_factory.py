@@ -10,6 +10,10 @@ from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultTyp
 from tokenization.tokenizer import Tokenizer
 
 
+def get_tokenizer_key_for_voc(voc_id: str) -> str:
+    return f'{TokenizerFactory.KEY}s.{voc_id}'
+
+
 class TokenizerFactory(ObjectFactory):
     """
     Builds a single tokenizer entry inside the tokenizers section.
