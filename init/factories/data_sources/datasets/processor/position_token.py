@@ -1,42 +1,38 @@
 from typing import List
 
-from data.datasets.processors.pos_neg_sampler import PositiveNegativeSamplerProcessor
+from data.datasets.processors.position_token import PositionTokenProcessor
 from init.config import Config
 from init.context import Context
-from init.factories.tokenizer.tokenizer_factory import TokenizerFactory
 from init.factories.util import check_config_keys_exist
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
 
-class PositiveNegativeSamplerProcessorFactory(ObjectFactory):
+class PositionTokenProcessorFactory(ObjectFactory):
     #FIXME make this configurable for other tokenizers, e.g. keywords
-    TOKENIZER_KEY = TokenizerFactory.KEY + '.item'
-
+    SEQ_LENGTH_KEY = 'seq_length'
     """
-    factory for the PositiveNegativeSamplerProcessor
+    Factory for the PositionTokenProcessor
     """
 
     def can_build(self,
                   config: Config,
                   context: Context
                   ) -> CanBuildResult:
-        config_keys_exist = check_config_keys_exist(config, ['seed'])
+
+        config_keys_exist = check_config_keys_exist(config, [self.SEQ_LENGTH_KEY])
         if not config_keys_exist:
             return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION)
-
-        if context.has_path(self.TOKENIZER_KEY):
-            return CanBuildResult(CanBuildResultType.MISSING_DEPENDENCY, 'item tokenizer missing')
 
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
     def build(self,
               config: Config,
               context: Context
-              ) -> PositiveNegativeSamplerProcessor:
-        tokenizer = context.get(self.TOKENIZER_KEY)
-        seed = config.get('seed')
+              ) -> PositionTokenProcessor:
 
-        return PositiveNegativeSamplerProcessor(tokenizer, seed)
+        seq_length = config.get(self.SEQ_LENGTH_KEY)
+
+        return PositionTokenProcessor(seq_length)
 
     def is_required(self, context: Context) -> bool:
         return False
@@ -45,4 +41,4 @@ class PositiveNegativeSamplerProcessorFactory(ObjectFactory):
         return []
 
     def config_key(self) -> str:
-        return 'pos_neg_sampler_processor'
+        return 'position_token_processor'

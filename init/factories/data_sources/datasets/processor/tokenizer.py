@@ -1,29 +1,26 @@
 from typing import List
 
-from data.datasets.processors.pos_neg_sampler import PositiveNegativeSamplerProcessor
+from data.datasets.processors.last_item_mask import LastItemMaskProcessor
+from data.datasets.processors.tokenizer import TokenizerProcessor
 from init.config import Config
 from init.context import Context
 from init.factories.tokenizer.tokenizer_factory import TokenizerFactory
-from init.factories.util import check_config_keys_exist
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
 
-class PositiveNegativeSamplerProcessorFactory(ObjectFactory):
+class TokenizerProcessorFactory(ObjectFactory):
+
     #FIXME make this configurable for other tokenizers, e.g. keywords
     TOKENIZER_KEY = TokenizerFactory.KEY + '.item'
 
     """
-    factory for the PositiveNegativeSamplerProcessor
+    Factory for the TokenizerProcessor
     """
 
     def can_build(self,
                   config: Config,
                   context: Context
                   ) -> CanBuildResult:
-        config_keys_exist = check_config_keys_exist(config, ['seed'])
-        if not config_keys_exist:
-            return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION)
-
         if context.has_path(self.TOKENIZER_KEY):
             return CanBuildResult(CanBuildResultType.MISSING_DEPENDENCY, 'item tokenizer missing')
 
@@ -32,11 +29,10 @@ class PositiveNegativeSamplerProcessorFactory(ObjectFactory):
     def build(self,
               config: Config,
               context: Context
-              ) -> PositiveNegativeSamplerProcessor:
+              ) -> TokenizerProcessor:
         tokenizer = context.get(self.TOKENIZER_KEY)
-        seed = config.get('seed')
 
-        return PositiveNegativeSamplerProcessor(tokenizer, seed)
+        return TokenizerProcessor(tokenizer)
 
     def is_required(self, context: Context) -> bool:
         return False
@@ -45,4 +41,4 @@ class PositiveNegativeSamplerProcessorFactory(ObjectFactory):
         return []
 
     def config_key(self) -> str:
-        return 'pos_neg_sampler_processor'
+        return 'tokenizer_processor'
