@@ -35,21 +35,21 @@ class MetricsTrait(pl.LightningModule):
         for name, step_value in metrics_step_values.items():
             self.log(f"{name}", step_value, prog_bar=True)
 
-        return metrics_step_values
+        return {**outputs, **metrics_step_values}
 
     def _eval_epoch_end(self, outputs: List[Any]):
         for name, value in self.get_metrics().compute().items():
             self.log(f"{name}", value, prog_bar=True)
 
     def test_step_end(self, outputs: Dict[str, torch.Tensor]):
-        self._eval_step_end(outputs)
+        return self._eval_step_end(outputs)
 
     def test_epoch_end(self, outputs: List[Any]):
         self._eval_epoch_end(outputs)
 
     def validation_step_end(self,
                             outputs: Dict[str, torch.Tensor]):
-        self._eval_step_end(outputs)
+        return self._eval_step_end(outputs)
 
     def validation_epoch_end(self, outputs: List[Any]) -> None:
         self._eval_epoch_end(outputs)
