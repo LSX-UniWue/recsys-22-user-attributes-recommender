@@ -3,9 +3,9 @@ from typing import List, Any
 from init.config import Config
 from init.context import Context
 
-from init.factories.dependencies_factory import DependenciesFactory
-from init.factories.list_elements_factory import NamedListElementsFactory
-from init.factories.vocabulary_factory import VocabularyFactory
+from init.factories.common.dependencies_factory import DependenciesFactory
+from init.factories.common.list_elements_factory import NamedListElementsFactory
+from init.factories.tokenizer.vocabulary_factory import VocabularyFactory
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from tokenization.tokenizer import Tokenizer
 

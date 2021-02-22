@@ -27,8 +27,7 @@ class CanBuildResult:
         self.type = type
         self.message = message
 
-# TODO (AD) add static initilization methods to configure classes
-# TODO (AD) make all object factories configurable by transforming abstract classes like Dependencies / MultipleElementsFactory to full classes and use Composition instead of inheritance
+
 class ObjectFactory:
 
     def __init__(self):

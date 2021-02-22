@@ -1,7 +1,8 @@
 from init.config import Config
 from init.config_builder import ContainerBuilder
 from init.context import Context
-from init.factories.tokenizer_factory import TokenizersFactory
+from init.factories.data_sources.data_sources import DataSourcesFactory
+from init.factories.tokenizer.tokenizer_factory import TokenizersFactory
 from init.object_factory import CanBuildResultType
 
 if __name__ == "__main__":
@@ -18,19 +19,33 @@ if __name__ == "__main__":
 
     builder = ContainerBuilder()
 
-    tokenizer_factory = TokenizersFactory()
+    tokenizers_factory = TokenizersFactory()
+    data_sources_factory = DataSourcesFactory()
 
     config = Config(config)
     context = Context()
 
-    if not config.has_path(tokenizer_factory.config_path()):
+    if not config.has_path(tokenizers_factory.config_path()):
         print(f"Missing tokenizer configuration.")
     else:
-        tokenizer_config = config.get_config(tokenizer_factory.config_path())
+        tokenizer_config = config.get_config(tokenizers_factory.config_path())
 
-        if tokenizer_factory.can_build(tokenizer_config, context).type == CanBuildResultType.CAN_BUILD:
-            tokenizer = tokenizer_factory.build(tokenizer_config, context)
-            print(tokenizer)
+        if tokenizers_factory.can_build(tokenizer_config, context).type == CanBuildResultType.CAN_BUILD:
+            tokenizers = tokenizers_factory.build(tokenizer_config, context)
+            for key, tokenizer in tokenizers.items():
+                context_key = tokenizer_config.base_path
+                context_key.append(key)
+                context.set(context_key, tokenizer)
+
+            if not config.has_path(data_sources_factory.config_path()):
+                print(f"Missing loader configuartion.")
+            else:
+                data_sources_config = config.get_config(data_sources_factory.config_path())
+
+                if data_sources_factory.can_build(data_sources_config, context):
+                    data_sources = data_sources_factory.build(config, context)
+                    print(data_sources)
+
         else:
             print("Error")
 

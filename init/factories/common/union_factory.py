@@ -5,15 +5,16 @@ from init.context import Context
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
 
-class SelectFromFactory(ObjectFactory):
+class UnionFactory(ObjectFactory):
     """
     Selects the appropriate factory to handle a configuration section from a list of possible candidates. If multiple
     factories are eligible to handle the configuration section, the first one as supplied during instantiation is used.
     """
 
-    def __init__(self, key: str, required: bool, factories: List[ObjectFactory]):
-        super(SelectFromFactory, self).__init__()
-        self.key = key
+    def __init__(self, factories: List[ObjectFactory], config_key: str, config_path: List[str], required: bool = True):
+        super(UnionFactory, self).__init__()
+        self._config_key = config_key
+        self._config_path = config_path
         self.required = required
         self.factories = factories
 
@@ -39,7 +40,7 @@ class SelectFromFactory(ObjectFactory):
         return self.required
 
     def config_path(self) -> List[str]:
-        return [self.key]
+        return self._config_path
 
     def config_key(self) -> str:
-        return self.key
+        return self._config_key

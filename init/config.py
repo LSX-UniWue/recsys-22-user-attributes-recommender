@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 
 
 class Config:
@@ -29,8 +29,7 @@ class Config:
 
         return current_section
 
-
-    def get(self, path: List[str]) -> Optional[Any]:
+    def get(self, path: Union[str, List[str]]) -> Optional[Any]:
         """
         Gets the value associated with a path. If the path does not exist within the configuration, None is returned.
 
@@ -39,7 +38,7 @@ class Config:
         """
         return self._get_path(path)
 
-    def has_path(self, path: List[str]) -> bool:
+    def has_path(self, path: Union[str, List[str]]) -> bool:
         """
         Checks whether a path exists in the configuration.
 
@@ -48,7 +47,7 @@ class Config:
         """
         return self.get(path) is not None
 
-    def get_or_raise(self, path: List[str], exception_msg: str = None) -> Any:
+    def get_or_raise(self, path: Union[str, List[str]], exception_msg: str = None) -> Any:
         """
         Gets the value associated with a key or raises an exception if the key can not be found.
 
@@ -63,7 +62,7 @@ class Config:
 
         return value
 
-    def get_or_default(self, path: List[str], default: Any) -> Any:
+    def get_or_default(self, path: Union[str, List[str]], default: Any) -> Any:
         """
         Gets the value associated with a path or the default value if the key can not be found.
 

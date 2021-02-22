@@ -2,6 +2,10 @@ from typing import List, Any, Optional, Union
 
 
 class Context:
+    """
+    Manages the factory context. The context maps string keys to objects. Hierarchies are expressed by separating the section with dots, e.g.
+    `tokenizers.item` or `data_sources.train`.
+    """
     def __init__(self):
         self.context = {}
 
