@@ -3,14 +3,12 @@ from typing import List
 from data.datasets.processors.cloze_mask import ClozeMaskProcessor
 from init.config import Config
 from init.context import Context
-from init.factories.tokenizer.tokenizer_factory import TokenizerFactory
+from init.factories.tokenizer.tokenizer_factory import TokenizerFactory, get_tokenizer_key_for_voc
 from init.factories.util import check_config_keys_exist
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
 
 class ClozeProcessorFactory(ObjectFactory):
-
-    TOKENIZER_KEY = TokenizerFactory.KEY + '.item'
 
     """
     factory for the ClozeMaskProcessor
@@ -25,7 +23,7 @@ class ClozeProcessorFactory(ObjectFactory):
         if not config_keys_exist:
             return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION)
 
-        if context.has_path(self.TOKENIZER_KEY):
+        if not context.has_path(get_tokenizer_key_for_voc("item")):
             return CanBuildResult(CanBuildResultType.MISSING_DEPENDENCY, 'item tokenizer missing')
 
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
@@ -34,7 +32,7 @@ class ClozeProcessorFactory(ObjectFactory):
               config: Config,
               context: Context
               ) -> ClozeMaskProcessor:
-        tokenizer = context.get(self.TOKENIZER_KEY)
+        tokenizer = context.get(get_tokenizer_key_for_voc("item"))
         mask_probability = config.get('mask_probability')
         only_last_item_mask_prob = config.get('only_last_item_mask_prob')
         seed = config.get('seed')

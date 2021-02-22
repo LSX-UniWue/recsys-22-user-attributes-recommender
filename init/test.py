@@ -5,6 +5,7 @@ from init.factories.data_sources.data_sources import DataSourcesFactory
 from init.factories.modules.modules import ModuleFactory
 from init.factories.tokenizer.tokenizer_factory import TokenizersFactory
 from init.object_factory import CanBuildResultType
+from runner.util.builder import TrainerBuilder
 
 if __name__ == "__main__":
     import json
@@ -58,6 +59,10 @@ if __name__ == "__main__":
                 module = module_factory.build(module_config, context)
 
                 print(module)
+
+        trainer = TrainerBuilder().build()
+        trainer.fit(module, train_dataloader=data_sources["train"])
+
 
 
     #builder.register_handler(tokenizer_handler)

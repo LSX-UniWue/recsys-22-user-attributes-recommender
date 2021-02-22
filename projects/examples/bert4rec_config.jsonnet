@@ -18,10 +18,7 @@
                     nip_index_file: "../tests/example_dataset/train.nip.idx",
                     processors: [
                         {
-                            type: "cloze",
-                            mask_probability: 0.2,
-                            only_last_item_mask_prob: 0.1,
-                            seed: 123456
+                            type: "tokenizer"
                         }
                     ]
                 }
@@ -35,7 +32,11 @@
                     csv_file_index: "../tests/example_dataset/train.idx",
                     parser: $['parser'],
                     nip_index_file: "../tests/example_dataset/train.nip.idx",
-                    processors: [] #TODO add processors
+                    processors: [
+                        {
+                            type: "tokenizer"
+                        }
+                    ]
                 }
             } + $['loader']
         },
@@ -46,7 +47,17 @@
                     csv_file: "../tests/example_dataset/train.csv",
                     csv_file_index: "../tests/example_dataset/train.idx",
                     parser: $['parser'],
-                    processors: [] # TODO add processors
+                    processors:  [
+                        {
+                            type: "tokenizer"
+                        },
+                        {
+                            type: "cloze",
+                            mask_probability: 0.2,
+                            only_last_item_mask_prob: 0.1,
+                            seed: 123456
+                        }
+                    ]
                 },
             } + $['loader']
         }
