@@ -8,11 +8,6 @@ from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultTyp
 # TODO (AD) rewrite dependencyTrait in a way that it automatically processes all dependencies where they key can be found
 # in the configuration
 class DependenciesFactory(ObjectFactory):
-    """
-    A trait that contains operations that can help manage dependent factories. The trait assumes that dependent
-    factories are responsible for building a specific subsection of the configuration and that the subsection name
-    matches the `config_path()` reported by the dependent factory.
-    """
 
     def __init__(self,
                  dependencies: List[ObjectFactory],
