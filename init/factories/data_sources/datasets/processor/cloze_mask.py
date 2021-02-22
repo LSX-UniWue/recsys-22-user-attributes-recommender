@@ -25,7 +25,7 @@ class ClozeProcessorFactory(ObjectFactory):
         if not config_keys_exist:
             return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION)
 
-        if self.TOKENIZER_KEY not in context:
+        if context.has_path(self.TOKENIZER_KEY):
             return CanBuildResult(CanBuildResultType.MISSING_DEPENDENCY, 'item tokenizer missing')
 
         return CanBuildResult(CanBuildResultType.CAN_BUILD)

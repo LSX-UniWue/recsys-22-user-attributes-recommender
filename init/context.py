@@ -29,3 +29,10 @@ class Context:
             return None
         else:
             return self.context[path]
+
+    def has_path(self,
+                 path: Union[str, List[str]]
+                 ) -> bool:
+        if isinstance(path, list):
+            path = self._path_to_str(path)
+        return path in self.context
