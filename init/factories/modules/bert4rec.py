@@ -3,6 +3,7 @@ from typing import List
 from data.collate import PadDirection
 from init.config import Config
 from init.context import Context
+from init.factories.metrics.metrics_container import MetricsContainerFactory
 from init.factories.tokenizer.tokenizer_factory import TokenizerFactory
 from init.factories.util import check_config_keys_exist
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
@@ -15,10 +16,10 @@ class Bert4RecModuleFactory(ObjectFactory):
     def __init__(self):
         super().__init__()
         self.model_factory = BERT4RecModelFactory()
-        self.metrics_container_factory = None # TODO
+        self.metrics_container_factory = MetricsContainerFactory()
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
-        return self.model_factory.can_build(config, context)
+        return self.model_factory.can_build(config.get_config(self.model_factory.config_path()), context)
 
     def build(self, config: Config, context: Context) -> BERT4RecModule:
         learning_rate = config.get_or_default('learning_rate', 0.001)

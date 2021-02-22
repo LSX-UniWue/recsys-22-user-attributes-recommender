@@ -57,6 +57,8 @@ if __name__ == "__main__":
             if module_factory.can_build(module_config, context).type == CanBuildResultType.CAN_BUILD:
                 module = module_factory.build(module_config, context)
 
+                print(module)
+
 
     #builder.register_handler(tokenizer_handler)
 

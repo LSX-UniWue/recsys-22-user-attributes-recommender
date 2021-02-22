@@ -13,7 +13,6 @@ class FullMetricsFactory(ObjectFactory):
 
     def __init__(self):
         super().__init__()
-
         self.metrics_factory = MetricsFactory()
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:

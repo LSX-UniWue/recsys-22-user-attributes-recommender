@@ -5,20 +5,23 @@ from init.context import Context
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
 
-class ListFactory(ObjectFactory):
+class ConditionalFactory(ObjectFactory):
 
     """
-    a factory that loops through a list and calls the object factory on this sub config
+    a factory that loops through a list and based on a config value call the proper factory
+    for the config
     """
 
     def __init__(self,
-                 object_factory: ObjectFactory,
+                 key: str,
+                 factory_dict: Dict[str, ObjectFactory],
                  config_key: str = "",
                  config_path: List[str] = [],
                  is_required: bool = True,
                  ):
         super().__init__()
-        self._object_factory = object_factory
+        self._key = key
+        self._factory_dict = factory_dict
 
         self._is_required = is_required
         self._config_path = config_path
@@ -28,25 +31,19 @@ class ListFactory(ObjectFactory):
                   config: Config,
                   context: Context
                   ) -> CanBuildResult:
-        config_list = config.get([])
-
-        for config_dict in config_list:
-            config = Config(config_dict, base_path=config.base_path)
-            can_build = self._object_factory.can_build(config, context)
-            if can_build.type != CanBuildResultType.CAN_BUILD:
-                return can_build
-
-        return CanBuildResult(CanBuildResultType.CAN_BUILD)
+        factory = self._get_factory(config)
+        return factory.can_build(config, context)
 
     def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
-        result = []
-        config_list = config.get([])
-
-        for config_dict in config_list:
-            config = Config(config_dict, base_path=config.base_path)
-            single_result = self._object_factory.build(config, context)
-            result.append(single_result)
+        factory = self._get_factory(config)
+        result = factory.build(config, context)
         return result
+
+    def _get_factory(self, config):
+        config_value = config.get(self._key)
+        if config_value not in self._factory_dict:
+            raise ValueError(f'no factory found for {config_value}')
+        return self._factory_dict[config_value]
 
     def is_required(self, context: Context) -> bool:
         return self._is_required

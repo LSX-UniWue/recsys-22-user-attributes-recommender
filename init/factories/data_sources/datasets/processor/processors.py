@@ -3,7 +3,8 @@ from typing import List
 from data.datasets.processors.processor import Processor
 from init.config import Config
 from init.context import Context
-from init.factories.common.config_based_factory import ConfigBasedFactory
+from init.factories.common.conditional_based_factory import ConditionalFactory
+from init.factories.common.config_based_factory import ListFactory
 from init.factories.data_sources.datasets.processor.cloze_mask import ClozeProcessorFactory
 from init.factories.data_sources.datasets.processor.pos_neg_sampler import PositiveNegativeSamplerProcessorFactory
 from init.object_factory import ObjectFactory, CanBuildResult
@@ -16,8 +17,8 @@ class ProcessorsFactory(ObjectFactory):
         super().__init__()
 
         # FIXME: register other processors
-        self.processors_factories = ConfigBasedFactory('type', {'cloze': ClozeProcessorFactory(),
-                                                                'pos_neg': PositiveNegativeSamplerProcessorFactory()})
+        self.processors_factories = ListFactory(ConditionalFactory('type', {'cloze': ClozeProcessorFactory(),
+                                                                   'pos_neg': PositiveNegativeSamplerProcessorFactory()}))
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         return self.processors_factories.can_build(config, context)

@@ -5,6 +5,7 @@ from init.context import Context
 from init.factories.common.dependencies_factory import DependenciesFactory
 from init.factories.metrics.full import FullMetricsFactory
 from init.object_factory import ObjectFactory, CanBuildResult
+from metrics.container.aggregate_metrics_container import AggregateMetricsContainer
 
 
 class MetricsContainerFactory(ObjectFactory):
@@ -18,8 +19,8 @@ class MetricsContainerFactory(ObjectFactory):
         return self.metric_factories.can_build(config, context)
 
     def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
-        metrics = self.metric_factories.build(config, context)
-        pass
+        metrics_dict = self.metric_factories.build(config, context)
+        return AggregateMetricsContainer(list(metrics_dict.values()))
 
     def is_required(self, context: Context) -> bool:
         pass
