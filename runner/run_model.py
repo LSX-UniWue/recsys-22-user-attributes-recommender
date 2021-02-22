@@ -10,7 +10,8 @@ from pytorch_lightning import seed_everything, Callback
 from pytorch_lightning.utilities import cloud_io
 
 from runner.util.builder import TrainerBuilder, LoggerBuilder, CallbackBuilder
-from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer
+from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer, \
+    PopContainer
 from runner.util.containers import DreamContainer
 
 app = typer.Typer()
@@ -24,7 +25,8 @@ def build_container(model_id: str, config_file: str) -> containers.DeclarativeCo
         'caser': CaserContainer(),
         "narm": NarmContainer(),
         "rnn": RNNContainer(),
-        'dream': DreamContainer()
+        'dream': DreamContainer(),
+        'pop': PopContainer()
     }[model_id]
     container.config.from_yaml(config_file)
     return container
