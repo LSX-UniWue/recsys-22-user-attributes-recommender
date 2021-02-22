@@ -3,7 +3,7 @@ from typing import Any, List
 from init.config import Config
 from init.context import Context
 from init.factories.common.conditional_based_factory import ConditionalFactory
-from init.factories.modules.bert4rec import Bert4RecModuleFactory
+from init.factories.modules.bert4rec import BERT4RecModuleFactory
 from init.object_factory import ObjectFactory, CanBuildResult
 
 
@@ -14,7 +14,7 @@ class ModuleFactory(ObjectFactory):
     def __init__(self):
         super().__init__()
 
-        self.module_factory = ConditionalFactory('type', {'bert4rec': Bert4RecModuleFactory()})
+        self.module_factory = ConditionalFactory('type', {'bert4rec': BERT4RecModuleFactory()})
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         return self.module_factory.can_build(config, context)

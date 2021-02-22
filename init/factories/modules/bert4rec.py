@@ -11,7 +11,7 @@ from models.bert4rec.bert4rec_model import BERT4RecModel
 from modules import BERT4RecModule
 
 
-class Bert4RecModuleFactory(ObjectFactory):
+class BERT4RecModuleFactory(ObjectFactory):
 
     def __init__(self):
         super().__init__()
