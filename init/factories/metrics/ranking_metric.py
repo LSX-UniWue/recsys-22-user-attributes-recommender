@@ -7,6 +7,9 @@ from metrics.metric import RankingMetric
 
 
 class RankingMetricFactory(ObjectFactory):
+    """
+    general class to build a RankingMetric for one or multiple ks
+    """
 
     def __init__(self,
                  key: str,

@@ -3,6 +3,7 @@ from typing import List, Union, Any, Dict
 from init.config import Config
 from init.context import Context
 from init.factories.common.dependencies_factory import DependenciesFactory
+from init.factories.metrics.fixed_items_metrics import FixedItemsMetricsFactory
 from init.factories.metrics.full_metrics import FullMetricsFactory
 from init.factories.metrics.sampled_metrics import SampledMetricsFactory
 from init.object_factory import ObjectFactory, CanBuildResult
@@ -11,11 +12,16 @@ from metrics.container.metrics_container import AggregateMetricsContainer
 
 class MetricsContainerFactory(ObjectFactory):
 
-    def __init__(self):
-        super().__init__()
+    """
+    factory to build each metrics container
+    """
 
-        self.metric_factories = DependenciesFactory([FullMetricsFactory(), SampledMetricsFactory()],
-                                                    optional_based_on_path=True)
+    def __init__(self, metrics_factories: DependenciesFactory = DependenciesFactory([FullMetricsFactory(),
+                                                                                     SampledMetricsFactory(),
+                                                                                     FixedItemsMetricsFactory()],
+                                                                                    optional_based_on_path=True)):
+        super().__init__()
+        self.metric_factories = metrics_factories
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         return self.metric_factories.can_build(config, context)
@@ -25,10 +31,10 @@ class MetricsContainerFactory(ObjectFactory):
         return AggregateMetricsContainer(list(metrics_dict.values()))
 
     def is_required(self, context: Context) -> bool:
-        pass
+        return True
 
     def config_path(self) -> List[str]:
         return ['metrics']
 
     def config_key(self) -> str:
-        pass
+        return "metrics_containers"
