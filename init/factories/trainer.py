@@ -91,12 +91,12 @@ class CheckpointFactory(KwargsFactory):
         super(CheckpointFactory, self).__init__(t=ModelCheckpoint, key="checkpoint")
 
 
-class TrainerFactory(ObjectFactory):
+class TrainerBuilderFactory(ObjectFactory):
 
     KEY = "trainer"
 
     def __init__(self):
-        super(TrainerFactory, self).__init__()
+        super(TrainerBuilderFactory, self).__init__()
 
         self.dependencies = DependenciesFactory([
             UnionFactory([TensorboardLoggerFactory(), MLFlowLoggerFactory()], "logger", ["logger"]),
@@ -106,7 +106,7 @@ class TrainerFactory(ObjectFactory):
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
-    def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
+    def build(self, config: Config, context: Context) -> TrainerBuilder:
         config_keys = config.get_keys()
         dependency_keys = self.dependencies.get_dependency_keys()
 
@@ -119,7 +119,7 @@ class TrainerFactory(ObjectFactory):
         trainer_builder.add_logger(dependencies["logger"])
         trainer_builder.add_callback(dependencies["checkpoint"])
 
-        return trainer_builder.build()
+        return trainer_builder
 
     def is_required(self, context: Context) -> bool:
         return True

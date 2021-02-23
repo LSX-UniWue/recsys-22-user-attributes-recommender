@@ -8,7 +8,7 @@ from init.factories.common.dependencies_factory import DependenciesFactory
 from init.factories.data_sources.data_sources import DataSourcesFactory
 from init.factories.modules.modules import GenericModuleFactory
 from init.factories.tokenizer.tokenizer_factory import TokenizersFactory
-from init.factories.trainer import TrainerFactory
+from init.factories.trainer import TrainerBuilderFactory
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from models.bert4rec.bert4rec_model import BERT4RecModel
 from models.caser.caser_model import CaserModel
@@ -33,7 +33,7 @@ class ContainerFactory(ObjectFactory):
                                             'rnn': GenericModuleFactory(RNNModule, RNNModel)}, config_key='module',
                                    config_path=['module']),
                 DataSourcesFactory(),
-                TrainerFactory()
+                TrainerBuilderFactory()
             ]
         )
 
