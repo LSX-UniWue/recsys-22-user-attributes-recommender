@@ -16,7 +16,8 @@ from modules.narm_module import NarmModule
 from runner.util.metrics_provider_utils import build_aggregate_metrics_container
 from runner.util.provider_utils import build_tokenizer_provider, build_session_loader_provider_factory, \
     build_nextitem_loader_provider_factory, build_posneg_loader_provider_factory, \
-    build_processors_provider, to_pad_direction
+    build_processors_provider, to_pad_direction, \
+    build_session_dataset_provider_factory
 
 DEFAULT_PROCESSORS = [
     {
@@ -402,6 +403,7 @@ class DreamContainer(containers.DeclarativeContainer):
                                                                validation_processors)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
 
+
 class PopContainer(containers.DeclarativeContainer):
 
     config = build_default_config()
@@ -433,7 +435,9 @@ class PopContainer(containers.DeclarativeContainer):
     test_processors = build_processors_provider(test_dataset_config.dataset.processors, processors_objects)
 
     # loaders
-    train_loader = build_nextitem_loader_provider_factory(train_dataset_config, tokenizer, train_processors)
-    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer,
-                                                               validation_processors)
+    #train_loader = build_plain_session_dataset_provider_factory(tokenizer, train_processors, train_dataset_config)
+    #validation_loader = build_plain_session_dataset_provider_factory(tokenizer, validation_processors, validation_dataset_config)
+    #test_loader = build_plain_session_dataset_provider_factory(tokenizer, test_processors, test_dataset_config)
+    train_loader = build_session_dataset_provider_factory(tokenizer, train_processors, train_dataset_config)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer, validation_processors)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)

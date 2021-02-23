@@ -12,14 +12,13 @@ datasets:
     dataset:
       csv_file: ../dataset/dataset/ml-20m_3_5_5/ml-20m.csv
       csv_file_index: ../dataset/dataset/ml-20m_3_5_5/ml-20m.idx
-      parser: *parser
       nip_index_file: ../dataset/dataset/ml-20m_3_5_5/test.loo.idx
+      parser: *parser
     loader: *loader
   train:
     dataset:
       csv_file: ../dataset/dataset/ml-20m_3_5_5/ml-20m.csv
       csv_file_index: ../dataset/dataset/ml-20m_3_5_5/ml-20m.idx
-      nip_index_file: ../dataset/dataset/ml-20m_3_5_5/valid.loo.idx
       parser: *parser
     loader: *loader
   validation:
