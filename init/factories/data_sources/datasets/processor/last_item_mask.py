@@ -39,4 +39,4 @@ class LastItemMaskProcessorFactory(ObjectFactory):
         return []
 
     def config_key(self) -> str:
-        return 'pos_neg_sampler_processor'
+        return 'last_item_processor'

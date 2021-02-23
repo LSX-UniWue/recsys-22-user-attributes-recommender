@@ -25,5 +25,5 @@ if __name__ == "__main__":
 
     container = container_factory.build(config, context)
 
-    container.trainer().fit(container.module(), container.train_dataloader())
+    container.trainer().fit(container.module(), container.train_dataloader(), val_dataloaders=container.validation_dataloader())
 

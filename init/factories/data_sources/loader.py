@@ -12,7 +12,6 @@ from init.factories.common.dependencies_factory import DependenciesFactory
 from init.factories.common.union_factory import UnionFactory
 from init.factories.data_sources.datasets.item_session import ItemSessionDatasetFactory
 from init.factories.data_sources.datasets.next_item import NextItemDatasetFactory
-from init.factories.data_sources.datasets.plain_session import PlainSessionDatasetFactory
 from init.factories.util import check_config_keys_exist, check_context_entries_exists
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 

@@ -19,6 +19,9 @@
                     processors: [
                         {
                             type: "tokenizer"
+                        },
+                        {
+                            type: "last_item"
                         }
                     ]
                 }
@@ -35,6 +38,9 @@
                     processors: [
                         {
                             type: "tokenizer"
+                        },
+                        {
+                            type: "last_item"
                         }
                     ]
                 }
@@ -68,22 +74,25 @@
             full: {
                 metrics: {
                     mrr: [1, 3, 5],
-                    recall: [1, 3, 5]
+                    recall: [1, 3, 5],
+                    ndcg: [1, 3, 5]
                 }
             },
             sampled: {
                 sample_probability_file: "../tests/example_dataset/popularity.txt",
-                num_negative_samples: 100,
+                num_negative_samples: 2,
                 metrics: {
                     mrr: [1, 3, 5],
-                    recall: [1, 3, 5]
+                    recall: [1, 3, 5],
+                    ndcg: [1, 3, 5]
                 }
             },
             fixed: {
                 item_file: "../tests/example_dataset/relevant_items.txt",
                 metrics: {
                     mrr: [1, 3, 5],
-                    recall: [1, 3, 5]
+                    recall: [1, 3, 5],
+                    ndcg: [1, 3, 5]
                 }
             }
         },
