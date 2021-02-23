@@ -13,6 +13,7 @@ from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultTyp
 MODEL_PARAM_NAME = 'model'
 METRICS_PARAM_NAME = 'metrics'
 TOKENIZER_SUFFIX = '_tokenizer'
+VOCAB_SIZE_SUFFIX = '_vocab_size'
 
 
 class GenericModuleFactory(ObjectFactory):
@@ -83,38 +84,6 @@ class GenericModuleFactory(ObjectFactory):
         return self._module_csl.__name__.lower()
 
 
-def _filter_parameters(parameters: Dict[str, Optional[Any]],
-                       filter_func: Callable[[], bool]
-                       ) -> Dict[str, Optional[Any]]:
-    return dict(filter(filter_func, parameters.items()))
-
-
-def _get_vocab_parameters(parameters: List[str]):
-    return [parameter for parameter in parameters if parameter.endswith('vocab_size')]
-
-
-def _get_config_required_config_params(parameters: Dict[str, Optional[Any]]) -> List[str]:
-    result = []
-
-    for parameter_name, default_value in parameters.items():
-        if default_value is inspect._empty and not parameter_name.endswith('_vocab_size'):
-            result.append(parameter_name)
-
-    return result
-
-
-def _get_parameters(cls) -> Dict[str, Optional[Any]]:
-    signature = inspect.signature(cls.__init__)
-
-    parameter_info = {}
-
-    for parameter_name, info in signature.parameters.items():
-        if parameter_name != 'self':
-            parameter_info[parameter_name] = info.default
-
-    return parameter_info
-
-
 class GenericModelFactory(ObjectFactory):
 
     """
@@ -148,8 +117,10 @@ class GenericModelFactory(ObjectFactory):
             default_value = None if default_value == inspect._empty else default_value
             named_parameters[parameter] = config.get_or_default(parameter, default_value)
 
-        for vocab_var in _get_vocab_parameters(list(parameters.keys())):
-            tokenizer_to_use = vocab_var.replace('_vocab_size', '')
+        vocab_vars = _filter_parameters(parameters, lambda dict_item: dict_item[0].endswith(VOCAB_SIZE_SUFFIX))
+
+        for vocab_var in vocab_vars.keys():
+            tokenizer_to_use = vocab_var.replace(VOCAB_SIZE_SUFFIX, '')
             tokenizer = context.get(get_tokenizer_key_for_voc(tokenizer_to_use))
             named_parameters[vocab_var] = len(tokenizer)
 
@@ -163,3 +134,35 @@ class GenericModelFactory(ObjectFactory):
 
     def config_key(self) -> str:
         return self._model_cls.__name__.lower()
+
+
+def _filter_parameters(parameters: Dict[str, Optional[Any]],
+                       filter_func: Callable[[], bool]
+                       ) -> Dict[str, Optional[Any]]:
+    return dict(filter(filter_func, parameters.items()))
+
+
+def _get_vocab_parameters(parameters: List[str]):
+    return [parameter for parameter in parameters if parameter.endswith('vocab_size')]
+
+
+def _get_config_required_config_params(parameters: Dict[str, Optional[Any]]) -> List[str]:
+    result = []
+
+    for parameter_name, default_value in parameters.items():
+        if default_value is inspect._empty and not parameter_name.endswith('_vocab_size'):
+            result.append(parameter_name)
+
+    return result
+
+
+def _get_parameters(cls) -> Dict[str, Optional[Any]]:
+    signature = inspect.signature(cls.__init__)
+
+    parameter_info = {}
+
+    for parameter_name, info in signature.parameters.items():
+        if parameter_name != 'self':
+            parameter_info[parameter_name] = info.default
+
+    return parameter_info

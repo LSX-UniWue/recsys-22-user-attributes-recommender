@@ -132,7 +132,6 @@
             save_top_k: 3,
             mode: 'max',
             dirpath: "/tmp/bert4rec/checkpoints"
-        },
-        gpus: 1
+        }
     }
 }
