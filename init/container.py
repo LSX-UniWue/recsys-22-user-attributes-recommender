@@ -1,7 +1,10 @@
 from typing import Dict, Any
 
-from pytorch_lightning import LightningModule, Trainer
+from pytorch_lightning import LightningModule
 from torch.utils.data import DataLoader
+
+from runner.util.builder import TrainerBuilder
+from tokenization.tokenizer import Tokenizer
 
 
 class Container:
@@ -20,5 +23,8 @@ class Container:
     def module(self) -> LightningModule:
         return self._objects["module"]
 
-    def trainer(self) -> Trainer:
+    def trainer(self) -> TrainerBuilder:
         return self._objects["trainer"]
+
+    def tokenizer(self, id: str) -> Tokenizer:
+        return self._objects["tokenizers"][id]

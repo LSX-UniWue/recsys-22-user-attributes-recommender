@@ -7,7 +7,6 @@
         max_seq_length: 5
     },
     data_sources: {
-    # TODO configure processors everywhere
         test: {
             loader: {
                 dataset: {
