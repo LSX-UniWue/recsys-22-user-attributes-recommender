@@ -52,6 +52,9 @@ module:
         - 1
         - 5
         - 10
+  metrics:
+    recall:
+      - 5
 tokenizer:
   special_tokens:
     pad_token: <PAD>
