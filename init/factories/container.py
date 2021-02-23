@@ -3,12 +3,21 @@ from typing import List
 from init.config import Config
 from init.container import Container
 from init.context import Context
+from init.factories.common.conditional_based_factory import ConditionalFactory
 from init.factories.common.dependencies_factory import DependenciesFactory
 from init.factories.data_sources.data_sources import DataSourcesFactory
-from init.factories.modules.modules import ModuleFactory
+from init.factories.modules.modules import GenericModuleFactory
 from init.factories.tokenizer.tokenizer_factory import TokenizersFactory
 from init.factories.trainer import TrainerFactory
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
+from models.bert4rec.bert4rec_model import BERT4RecModel
+from models.caser.caser_model import CaserModel
+from models.narm.narm_model import NarmModel
+from models.rnn.rnn_model import RNNModel
+from models.sasrec.sas_rec_model import SASRecModel
+from modules import BERT4RecModule, CaserModule, SASRecModule
+from modules.narm_module import NarmModule
+from modules.rnn_module import RNNModule
 
 
 class ContainerFactory(ObjectFactory):
@@ -17,7 +26,12 @@ class ContainerFactory(ObjectFactory):
         self.tokenizers_factory = TokenizersFactory()
         self.dependencies = DependenciesFactory(
             [
-                ModuleFactory(),
+                ConditionalFactory('type', {'bert4rec': GenericModuleFactory(BERT4RecModule, BERT4RecModel),
+                                            'caser': GenericModuleFactory(CaserModule, CaserModel),
+                                            'narm': GenericModuleFactory(NarmModule, NarmModel),
+                                            'sasrec': GenericModuleFactory(SASRecModule, SASRecModel),
+                                            'rnn': GenericModuleFactory(RNNModule, RNNModel)}, config_key='module',
+                                   config_path=['module']),
                 DataSourcesFactory(),
                 TrainerFactory()
             ]

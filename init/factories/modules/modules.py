@@ -1,13 +1,5 @@
 import inspect
 
-from init.factories.common.conditional_based_factory import ConditionalFactory
-from models.bert4rec.bert4rec_model import BERT4RecModel
-from models.caser.caser_model import CaserModel
-from models.narm.narm_model import NarmModel
-from models.rnn.rnn_model import RNNModel
-from models.sasrec.sas_rec_model import SASRecModel
-from modules import BERT4RecModule, CaserModule, SASRecModule
-
 from typing import List, Any, Dict, Optional, Union, Callable
 
 from init.config import Config
@@ -16,37 +8,6 @@ from init.factories.metrics.metrics_container import MetricsContainerFactory
 from init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc
 from init.factories.util import check_config_keys_exist
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
-from modules.narm_module import NarmModule
-from modules.rnn_module import RNNModule
-
-
-class ModuleFactory(ObjectFactory):
-
-    KEY = "module"
-
-    def __init__(self):
-        super().__init__()
-
-        self.module_factory = ConditionalFactory('type', {'bert4rec': GenericModuleFactory(BERT4RecModule, BERT4RecModel),
-                                                          'caser': GenericModuleFactory(CaserModule, CaserModel),
-                                                          'narm': GenericModuleFactory(NarmModule, NarmModel),
-                                                          'sasrec': GenericModuleFactory(SASRecModule, SASRecModel),
-                                                          'rnn': GenericModuleFactory(RNNModule, RNNModel)})
-
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
-        return self.module_factory.can_build(config, context)
-
-    def build(self, config: Config, context: Context) -> Any:
-        return self.module_factory.build(config, context)
-
-    def is_required(self, context: Context) -> bool:
-        return True
-
-    def config_path(self) -> List[str]:
-        return [self.KEY]
-
-    def config_key(self) -> str:
-        return self.KEY
 
 
 MODEL_PARAM_NAME = 'model'
