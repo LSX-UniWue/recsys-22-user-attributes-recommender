@@ -12,7 +12,7 @@ from init.factories.container import ContainerFactory
 from pytorch_lightning import seed_everything
 from pytorch_lightning.utilities import cloud_io
 
-from runner.util.builder import CallbackBuilder
+from init.trainer_builder import CallbackBuilder
 
 app = typer.Typer()
 

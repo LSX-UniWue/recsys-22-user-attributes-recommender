@@ -5,7 +5,7 @@ from pytorch_lightning import Trainer, Callback
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import LightningLoggerBase, TensorBoardLogger, MLFlowLogger
 
-from runner.util.callbacks import PredictionLoggerCallback
+from callbacks.prediction_logger import PredictionLoggerCallback
 
 TRAINER_INIT_KEYS = ['logger',
                      'checkpoint_callback',

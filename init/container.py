@@ -3,7 +3,7 @@ from typing import Dict, Any
 from pytorch_lightning import LightningModule
 from torch.utils.data import DataLoader
 
-from runner.util.builder import TrainerBuilder
+from init.trainer_builder import TrainerBuilder
 from tokenization.tokenizer import Tokenizer
 
 

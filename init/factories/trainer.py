@@ -9,7 +9,7 @@ from init.factories.common.dependencies_factory import DependenciesFactory
 from init.factories.common.union_factory import UnionFactory
 from init.factories.util import require_config_keys
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
-from runner.util.builder import TrainerBuilder
+from init.trainer_builder import TrainerBuilder
 
 
 class KwargsFactory(ObjectFactory):
