@@ -6,7 +6,7 @@ from data.collate import PadDirection
 from models.bert4rec.bert4rec_model import BERT4RecModel
 from models.caser.caser_model import CaserModel
 from models.narm.narm_model import NarmModel
-from models.rnn.rnn_model import RNNSeqItemRecommenderModel
+from models.rnn.rnn_model import RNNModel
 from models.sasrec.sas_rec_model import SASRecModel
 from modules import BERT4RecModule, CaserModule, SASRecModule
 from modules.basket.dream_module import DreamModule
@@ -332,7 +332,7 @@ class RNNContainer(containers.DeclarativeContainer):
     model_config = config.model
 
     # model
-    model = providers.Singleton(_kwargs_adapter, RNNSeqItemRecommenderModel, config.model)
+    model = providers.Singleton(_kwargs_adapter, RNNModel, config.model)
 
     module_config = config.module
 
@@ -374,7 +374,7 @@ class DreamContainer(containers.DeclarativeContainer):
     tokenizer = build_tokenizer_provider(config)
 
     # model
-    model = providers.Singleton(_kwargs_adapter, RNNSeqItemRecommenderModel, config.model)
+    model = providers.Singleton(_kwargs_adapter, RNNModel, config.model)
 
     module_config = config.module
 

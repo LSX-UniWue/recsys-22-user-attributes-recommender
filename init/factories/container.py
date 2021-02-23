@@ -4,9 +4,8 @@ from init.config import Config
 from init.container import Container
 from init.context import Context
 from init.factories.common.dependencies_factory import DependenciesFactory
-from init.factories.common.union_factory import UnionFactory
 from init.factories.data_sources.data_sources import DataSourcesFactory
-from init.factories.modules.bert4rec import BERT4RecModuleFactory
+from init.factories.modules.modules import ModuleFactory
 from init.factories.tokenizer.tokenizer_factory import TokenizersFactory
 from init.factories.trainer import TrainerFactory
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
@@ -18,9 +17,7 @@ class ContainerFactory(ObjectFactory):
         self.tokenizers_factory = TokenizersFactory()
         self.dependencies = DependenciesFactory(
             [
-                UnionFactory([
-                    BERT4RecModuleFactory()
-                ], "module", ["module"]),
+                ModuleFactory(),
                 DataSourcesFactory(),
                 TrainerFactory()
             ]

@@ -8,7 +8,7 @@ import torch
 from data.datasets import ITEM_SEQ_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME, TARGET_ENTRY_NAME
 
-from models.rnn.rnn_model import RNNSeqItemRecommenderModel
+from models.rnn.rnn_model import RNNModel
 from modules.util.module_util import build_eval_step_return_dict, get_padding_mask
 from tokenization.tokenizer import Tokenizer
 
@@ -17,7 +17,7 @@ from tokenization.tokenizer import Tokenizer
 class DreamModule(pl.LightningModule):
 
     def __init__(self,
-                 model: RNNSeqItemRecommenderModel,
+                 model: RNNModel,
                  tokenizer: Tokenizer,
                  learning_rate: float,
                  weight_decay: float
