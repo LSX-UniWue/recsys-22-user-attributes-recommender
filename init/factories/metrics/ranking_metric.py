@@ -3,7 +3,7 @@ from typing import List
 from init.config import Config
 from init.context import Context
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
-from metrics.ranking.ranking_metric import RankingMetric
+from metrics.metric import RankingMetric
 
 
 class RankingMetricFactory(ObjectFactory):

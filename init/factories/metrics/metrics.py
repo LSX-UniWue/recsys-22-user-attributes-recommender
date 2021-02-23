@@ -5,13 +5,13 @@ from init.context import Context
 from init.factories.common.dependencies_factory import DependenciesFactory
 from init.factories.metrics.ranking_metric import RankingMetricFactory
 from init.object_factory import ObjectFactory, CanBuildResult
-from metrics.ranking.dcg import DiscountedCumulativeGain
-from metrics.ranking.f1_at import F1AtMetric
-from metrics.ranking.mrr_at import MRRAtMetric
-from metrics.ranking.ndcg import NormalizedDiscountedCumulativeGain
-from metrics.ranking.precision_at import PrecisionAtMetric
-from metrics.ranking.ranking_metric import RankingMetric
-from metrics.ranking.recall_at import RecallAtMetric
+from metrics.dcg import DiscountedCumulativeGainMetric
+from metrics.f1 import F1Metric
+from metrics.mrr import MRRMetric
+from metrics.ndcg import NormalizedDiscountedCumulativeGainMetric
+from metrics.precision import PrecisionMetric
+from metrics.metric import RankingMetric
+from metrics.recall import RecallMetric
 
 
 def _collect(metrics_dict: [str, List[Any]]) -> List[Any]:
@@ -23,13 +23,13 @@ class MetricsFactory(ObjectFactory):
     def __init__(self):
         super().__init__()
 
-        #TODO: config this
-        self.metrics = DependenciesFactory([RankingMetricFactory('mrr', MRRAtMetric),
-                                            RankingMetricFactory('f1', F1AtMetric),
-                                            RankingMetricFactory('recall', RecallAtMetric),
-                                            RankingMetricFactory('dcg', DiscountedCumulativeGain),
-                                            RankingMetricFactory('ndcg', NormalizedDiscountedCumulativeGain),
-                                            RankingMetricFactory('precision', PrecisionAtMetric)],
+        # TODO: config this
+        self.metrics = DependenciesFactory([RankingMetricFactory('mrr', MRRMetric),
+                                            RankingMetricFactory('f1', F1Metric),
+                                            RankingMetricFactory('recall', RecallMetric),
+                                            RankingMetricFactory('dcg', DiscountedCumulativeGainMetric),
+                                            RankingMetricFactory('ndcg', NormalizedDiscountedCumulativeGainMetric),
+                                            RankingMetricFactory('precision', PrecisionMetric)],
                                            optional_based_on_path=True)
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:

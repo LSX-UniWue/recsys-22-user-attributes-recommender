@@ -6,8 +6,8 @@ from init.context import Context
 from init.factories.metrics.metrics import MetricsFactory
 from init.factories.util import require_config_keys
 from init.object_factory import ObjectFactory, CanBuildResult
-from metrics.container.metrics_sampler import MetricsSampler
-from metrics.container.sampling_metrics_container import SamplingMetricsContainer
+from metrics.container.metrics_sampler import MetricsSampler, NegativeMetricsSampler
+from metrics.container.metrics_container import RankingMetricsContainer
 
 
 def _load_weights_file(file_path: Path) -> List[float]:
@@ -30,13 +30,13 @@ class SampledMetricsFactory(ObjectFactory):
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         return require_config_keys(config, ['metrics', 'num_negative_samples', 'sample_probability_file'])
 
-    def build(self, config: Config, context: Context) -> SamplingMetricsContainer:
+    def build(self, config: Config, context: Context) -> RankingMetricsContainer:
         metrics = self.metrics_factory.build(config.get_config(self.metrics_factory.config_path()), context)
         sample_size = config.get('num_negative_samples')
         weights = _load_weights_file(config.get('sample_probability_file'))
 
-        sampler = MetricsSampler(weights, sample_size)
-        return SamplingMetricsContainer(metrics, sampler)
+        sampler = NegativeMetricsSampler(weights, sample_size)
+        return RankingMetricsContainer(metrics, sampler)
 
     def is_required(self, context: Context) -> bool:
         return True

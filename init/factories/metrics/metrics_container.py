@@ -6,7 +6,7 @@ from init.factories.common.dependencies_factory import DependenciesFactory
 from init.factories.metrics.full_metrics import FullMetricsFactory
 from init.factories.metrics.sampled_metrics import SampledMetricsFactory
 from init.object_factory import ObjectFactory, CanBuildResult
-from metrics.container.aggregate_metrics_container import AggregateMetricsContainer
+from metrics.container.metrics_container import AggregateMetricsContainer
 
 
 class MetricsContainerFactory(ObjectFactory):

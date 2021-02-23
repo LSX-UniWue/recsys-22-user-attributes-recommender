@@ -5,7 +5,8 @@ from init.context import Context
 from init.factories.metrics.metrics import MetricsFactory
 from init.factories.util import require_config_keys
 from init.object_factory import ObjectFactory, CanBuildResult
-from metrics.container.ranking_metrics_container import RankingMetricsContainer
+from metrics.container.metrics_container import RankingMetricsContainer
+from metrics.container.metrics_sampler import AllItemsSampler
 
 
 class FullMetricsFactory(ObjectFactory):
@@ -20,7 +21,7 @@ class FullMetricsFactory(ObjectFactory):
 
     def build(self, config: Config, context: Context) -> RankingMetricsContainer:
         metrics = self.metrics_factory.build(config.get_config(self.metrics_factory.config_path()), context)
-        return RankingMetricsContainer(metrics)
+        return RankingMetricsContainer(metrics, AllItemsSampler())
 
     def is_required(self, context: Context) -> bool:
         return True
