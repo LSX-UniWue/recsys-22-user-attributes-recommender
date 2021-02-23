@@ -2,7 +2,7 @@ parser: &parser
   item_column_name: item_id
   item_separator: ' + '
 loader: &loader
-  batch_size: 2
+  batch_size: 3
   max_seq_length: 5
   max_seq_step_length: 5
 datasets:
@@ -28,18 +28,23 @@ datasets:
       parser: *parser
     loader: *loader
 model:
-  num_items: 13
-  item_embedding_size: 4
-  global_encoder_size: 128
-  global_encoder_num_layers: 1
-  embedding_dropout: 0.25
-  context_dropout: 0.25
-  batch_first: true
+  cell_type: gru
+  item_vocab_size: 13
+  item_embedding_dim: 4
+  hidden_size: 4
+  num_layers: 5
+  dropout: 0.2
   embedding_pooling_type: mean
 module:
-  learning_rate: 0.001
-  beta_1: 0.99
-  beta_2: 0.998
+  fixed_sampled_metrics:
+    item_file: ../tests/example_dataset/relevant_items.txt
+    metrics:
+      recall:
+        - 1
+        - 3
+        - 5
+      ndcg:
+        - 5
   metrics:
     precision:
       - 1

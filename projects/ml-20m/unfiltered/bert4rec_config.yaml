@@ -62,7 +62,7 @@ tokenizer:
     file: /ssd/ml-20m/vocab_title.txt
 trainer:
   checkpoint:
-    monitor: recall_at_10/sampled
+    monitor: recall@10
     save_top_k: 3
     mode: max
   gradient_clip_val: 0.0

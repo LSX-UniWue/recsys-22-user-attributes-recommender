@@ -84,5 +84,6 @@ class PredictionLoggerCallback(Callback):
 
     def teardown(self, trainer, pl_module, stage: str):
         self.csv_writer = None
-        self.output_file_handle.close()
-        self.output_file_handle = None
+        if self.output_file_handle is not None:
+            self.output_file_handle.close()
+            self.output_file_handle = None

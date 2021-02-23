@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -20,6 +21,88 @@ class MetricsSample:
 
 class MetricsSampler:
     """
+    abstract class to implement to sample only a subset of items for evaluation
+    """
+
+    @abstractmethod
+    def sample(self,
+               input_seq: torch.Tensor,
+               targets: torch.Tensor,
+               predictions: torch.Tensor,
+               mask: Optional[torch.Tensor] = None) -> MetricsSample:
+        pass
+
+    @abstractmethod
+    def suffix_metric_name(self) -> str:
+        pass
+
+
+class AllItemsSampler(MetricsSampler):
+
+    """
+        A sampler that samples all items
+    """
+
+    def sample(self,
+               input_seq: torch.Tensor,
+               targets: torch.Tensor,
+               predictions: torch.Tensor,
+               mask: Optional[torch.Tensor] = None) -> MetricsSample:
+        positive_item_mask = _to_multi_hot(predictions.size(), targets)
+        return MetricsSample(predictions, positive_item_mask)
+
+    def suffix_metric_name(self) -> str:
+        return ""
+
+
+def _to_multi_hot(size: List[int],
+                  targets: torch.Tensor
+                  ) -> torch.Tensor:
+    device = targets.device
+    multihot = torch.zeros(size).to(torch.long).to(device=device)
+    src = torch.ones_like(multihot).to(torch.long)
+    if len(targets.size()) == 1:
+        targets = targets.unsqueeze(1)
+    return multihot.scatter(1, targets, src)
+
+
+class FixedItemsSampler(MetricsSampler):
+    """
+    this sampler always returns only the configured items
+    """
+
+    def __init__(self, fixed_items: List[int]):
+        super().__init__()
+        self.fixed_items = fixed_items
+
+    def sample(self,
+               input_seq: torch.Tensor,
+               targets: torch.Tensor,
+               predictions: torch.Tensor,
+               mask: Optional[torch.Tensor] = None) -> MetricsSample:
+        fixed_items = torch.LongTensor(self.fixed_items).to(targets.device)
+        fixed_items = fixed_items.unsqueeze(0).repeat(targets.size()[0], 1)
+
+        sampled_predictions = predictions.gather(1, fixed_items)
+
+        if len(targets.size()) == 1:
+            # next-item recommendation
+            target_batched = targets.unsqueeze(1)
+            positive_item_mask = fixed_items.eq(target_batched).to(dtype=predictions.dtype)
+        else:
+            # here we multi-hot encode the targets (1 for each target in the item space)
+            multihot = _to_multi_hot(predictions.size(), targets)
+            # and than gather the corresponding indices by the fixed items
+            positive_item_mask = multihot.gather(1, fixed_items)
+
+        return MetricsSample(sampled_predictions, positive_item_mask)
+
+    def suffix_metric_name(self) -> str:
+        return "/fixed_sampled"
+
+
+class NegativeMetricsSampler(MetricsSampler):
+    """
     Generates negative samples based on the target item space, targets and actual input.
 
     The sampler draws from the target item distribution as defined by the :code weights provided
@@ -39,6 +122,7 @@ class MetricsSampler:
         :param weights: weights for each item in target space.
         :param sample_size: number of samples generated for evaluation.
         """
+        super().__init__()
         self.weights = weights
         self.sample_size = sample_size
 
@@ -46,7 +130,8 @@ class MetricsSampler:
                input_seq: torch.Tensor,
                targets: torch.Tensor,
                predictions: torch.Tensor,
-               mask: Optional[torch.Tensor] = None) -> MetricsSample:
+               mask: Optional[torch.Tensor] = None
+               ) -> MetricsSample:
         """
         Generates :code weights negative samples for each entry in the batch.
         
@@ -85,5 +170,5 @@ class MetricsSampler:
 
         return MetricsSample(sampled_predictions, positive_item_mask)
 
-    def get_sample_size(self) -> int:
-        return self.sample_size
+    def suffix_metric_name(self) -> str:
+        return f"/sampled({self.sample_size})"
