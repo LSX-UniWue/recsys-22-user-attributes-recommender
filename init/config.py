@@ -89,3 +89,11 @@ class Config:
 
     def is_root(self) -> bool:
         return len(self.base_path) < 0
+
+    def get_keys(self) -> List[str]:
+        """
+        Returns a list with all keys at the root of this config instance.
+
+        :return: a list with keys.
+        """
+        return [key for key, _ in self.config.items()]

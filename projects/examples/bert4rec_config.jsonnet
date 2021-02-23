@@ -73,26 +73,26 @@
         metrics: {
             full: {
                 metrics: {
-                    mrr: [1, 3, 5],
+                    #mrr: [1, 3, 5],
                     recall: [1, 3, 5],
-                    ndcg: [1, 3, 5]
+                    #ndcg: [1, 3, 5]
                 }
             },
             sampled: {
                 sample_probability_file: "../tests/example_dataset/popularity.txt",
                 num_negative_samples: 2,
                 metrics: {
-                    mrr: [1, 3, 5],
+                    #mrr: [1, 3, 5],
                     recall: [1, 3, 5],
-                    ndcg: [1, 3, 5]
+                    #ndcg: [1, 3, 5]
                 }
             },
             fixed: {
                 item_file: "../tests/example_dataset/relevant_items.txt",
                 metrics: {
-                    mrr: [1, 3, 5],
+                    #mrr: [1, 3, 5],
                     recall: [1, 3, 5],
-                    ndcg: [1, 3, 5]
+                    #ndcg: [1, 3, 5]
                 }
             }
         },
@@ -121,9 +121,18 @@
     },
 
     trainer: {
+        logger: {
+            type: "tensorboard",
+            save_dir: "/tmp/bert4rec",
+            name: "bert4rec",
+            version: ""
+        },
         checkpoint: {
-            monitor: "recall_at_5",
-            save_top_k: 3 #TODO: max?
-        }
+            monitor: "recall@5",
+            save_top_k: 3,
+            mode: 'max',
+            dirpath: "/tmp/bert4rec/checkpoints"
+        },
+        gpus: 1
     }
 }

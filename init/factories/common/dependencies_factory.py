@@ -44,6 +44,14 @@ class DependenciesFactory(ObjectFactory):
             raise Exception(f"A factory for path <{key}> is already registered.")
         self._dependencies[key] = dependency
 
+    def get_dependency_keys(self) -> List[str]:
+        """
+        Retrieves the keys for all registered dependencies.
+
+        :return: a list with keys for all dependencies.
+        """
+        return [key for key, _ in self._dependencies.items()]
+
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         for key, factory in self._dependencies.items():
             if not self._optional_based_on_path and not config.has_path(factory.config_path()) and factory.is_required(context):
