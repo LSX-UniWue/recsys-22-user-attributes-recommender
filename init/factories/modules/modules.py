@@ -122,7 +122,12 @@ class GenericModelFactory(ObjectFactory):
         for vocab_var in vocab_vars.keys():
             tokenizer_to_use = vocab_var.replace(VOCAB_SIZE_SUFFIX, '')
             tokenizer = context.get(get_tokenizer_key_for_voc(tokenizer_to_use))
-            named_parameters[vocab_var] = len(tokenizer)
+
+            vocab_size = 0
+            if tokenizer is not None:
+                vocab_size = len(tokenizer)
+
+            named_parameters[vocab_var] = vocab_size
 
         return self._model_cls(**named_parameters)
 

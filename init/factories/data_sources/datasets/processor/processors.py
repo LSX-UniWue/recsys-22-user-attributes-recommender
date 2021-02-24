@@ -24,7 +24,7 @@ class ProcessorsFactory(ObjectFactory):
             ConditionalFactory('type', {
                 'cloze': ClozeProcessorFactory(),
                 'pos_neg': PositiveNegativeSamplerProcessorFactory(),
-                'last_item': LastItemMaskProcessorFactory(),
+                'last_item_mask': LastItemMaskProcessorFactory(),
                 'position_token': PositionTokenProcessorFactory(),
                 'tokenizer': TokenizerProcessorFactory()
             })

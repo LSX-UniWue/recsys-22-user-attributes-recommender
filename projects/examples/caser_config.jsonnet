@@ -8,15 +8,16 @@ local cloze_processor = {
     only_last_item_mask_prob: 0.1,
     seed: 123456
 };
-local last_item_mask_processor = {
-    type: "last_item_mask"
+local pos_neg_sampler = {
+    type: "pos_neg",
+    seed: 42
 };
 
 
 {
-    data_sources: dataset.example_dataset(base_path, "nextit",  train_processors=[cloze_processor], test_processors=[last_item_mask_processor], validation_processors=[last_item_mask_processor]),
+    data_sources: dataset.example_dataset(base_path, "session", train_processors=[pos_neg_sampler], test_processors=[], validation_processors=[]),
     module: {
-        type: "bert4rec",
+        type: "caser",
         metrics: {
             full: {
                 metrics: {
@@ -44,28 +45,16 @@ local last_item_mask_processor = {
             }
         },
         model: {
+            dropout: 0.1,
             max_seq_length: 5,
-            num_transformer_heads: 1,
-            num_transformer_layers: 1,
-            transformer_hidden_size: 2,
-            transformer_dropout: 0.1
+            embedding_size: 4,
+            num_vertical_filters: 2,
+            num_horizontal_filters: 1,
+            fc_activation_fn: "relu",
+            conv_activation_fn: "relu",
         }
     },
-    tokenizers: {
-        item: {
-            tokenizer: {
-                special_tokens: {
-                    pad_token: "<PAD>",
-                    mask_token: "<MASK>",
-                    unk_token: "<UNK>"
-                },
-                vocabulary: {
-                    delimiter: "\t",
-                    file: base_path + "vocab.txt"
-                }
-            }
-        }
-    },
+    tokenizers: dataset.tokenizer(base_path),
     trainer: {
         logger: {
             type: "tensorboard",
