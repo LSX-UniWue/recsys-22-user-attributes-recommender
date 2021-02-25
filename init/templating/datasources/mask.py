@@ -43,6 +43,7 @@ class MaskDataSourcesTemplateProcessor(TemplateProcessor):
         }
         return config
 
+
 # FIXME: document
 def build_datasource(datasource_type: str,
                      parser: Dict[str, Any],
@@ -67,19 +68,24 @@ def build_datasource(datasource_type: str,
     if processor is not None:
         processors.append(processor)
 
+    loader_config = {
+        'dataset': {
+            'type': datasource_type,
+            'csv_file': f'{base_path}{prefix}.csv',
+            'csv_file_index': f'{base_path}{prefix}.idx',
+            'nip_index_file': f'{base_path}{prefix}.nip.idx',
+            'parser': parser,
+            'processors': processors
+        },
+        'batch_size': batch_size,
+        'max_seq_length': max_seq_length
+    }
+
+    max_seq_step_length = config.get('max_seq_step_length')
+    if max_seq_step_length is not None:
+        loader_config['max_seq_step_length'] = max_seq_step_length
     return {
-        'loader': {
-            'dataset': {
-                'type': datasource_type,
-                'csv_file': f'{base_path}{prefix}.csv',
-                'csv_file_index': f'{base_path}{prefix}.idx',
-                'nip_index_file': f'{base_path}{prefix}.nip.idx',
-                'parser': parser,
-                'processors': processors
-            },
-            'batch_size': batch_size,
-            'max_seq_length': max_seq_length
-        }
+        'loader': loader_config
     }
 
 
@@ -90,8 +96,8 @@ def build_parser_config(parser_config: Dict[str, Any]) -> Dict[str, Any]:
         'item_column_name': item_column_name
     }
 
-    max_seq_step_length = parser_config.get('max_seq_step_length', None)
-    if max_seq_step_length is not None:
-        parser['max_seq_step_length'] = max_seq_step_length
+    item_separator = parser_config.get('item_separator', None)
+    if item_separator is not None:
+        parser['item_separator'] = item_separator
 
     return parser

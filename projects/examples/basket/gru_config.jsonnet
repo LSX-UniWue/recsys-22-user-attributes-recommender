@@ -8,16 +8,18 @@ local metrics =  {
 {
     next_sequence_step_data_sources: {
         parser: {
-            item_column_name: "item_id"
+            item_column_name: "item_id",
+            item_separator: ' + '
         },
         batch_size: 9,
         max_seq_length: max_seq_length,
+        max_seq_step_length: 5,
         path: base_path,
         validation_file_prefix: "train",
         test_file_prefix: "train"
     },
     module: {
-        type: "narm",
+        type: "rnn",
         metrics: {
             full: {
                 metrics: metrics
@@ -33,12 +35,12 @@ local metrics =  {
             }
         },
         model: {
-            item_embedding_size: 4,
-            global_encoder_size: 128,
-            global_encoder_num_layers: 1,
-            embedding_dropout: 0.25,
-            context_dropout: 0.25,
-            batch_first: true
+            cell_type: "gru",
+            item_embedding_dim: 4,
+            hidden_size: 4,
+            num_layers: 1,
+            dropout: 0.0,
+            embedding_pooling_type: 'mean'
         }
     },
     tokenizers: {

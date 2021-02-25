@@ -22,5 +22,11 @@ class LastItemMaskProcessor(Processor):
     def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
         # just add a mask token at the end of the sequence
-        session.append(self.tokenizer.mask_token_id)
+        mask_token = self.tokenizer.mask_token_id
+
+        # check for basket recommendation
+        # TODO: maybe config another processor?
+        if isinstance(session[0], list):
+            mask_token = [mask_token]
+        session.append(mask_token)
         return parsed_session

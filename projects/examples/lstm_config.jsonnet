@@ -14,8 +14,7 @@ local metrics =  {
         max_seq_length: max_seq_length,
         path: base_path,
         validation_file_prefix: "train",
-        test_file_prefix: "train",
-        seed: 123456
+        test_file_prefix: "train"
     },
     module: {
         type: "rnn",

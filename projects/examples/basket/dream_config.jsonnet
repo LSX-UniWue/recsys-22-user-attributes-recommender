@@ -1,127 +1,73 @@
+local base_path = "../tests/example_dataset/";
+local max_seq_length = 7;
+local metrics =  {
+    mrr: [1, 3, 5],
+    recall: [1, 3, 5],
+    ndcg: [1, 3, 5]
+};
 {
-    parser: {
-        item_column_name: "item_id",
-        item_separator: " + "
-    },
-    loader: {
-        batch_size: 2,
-        max_seq_length: 5,
-        max_seq_step_length: 5
-    },
-    data_sources: {
-        test: {
-            loader: {
-                dataset: {
-                    type: "nextit",
-                    csv_file: "../tests/example_dataset/train.csv",
-                    csv_file_index: "../tests/example_dataset/train.idx",
-                    parser: $['parser'],
-                    nip_index_file: "../tests/example_dataset/train.nip.idx",
-                    processors: [
-                        {
-                            type: "tokenizer"
-                        }
-                    ]
-                }
-            } + $['loader']
+    next_sequence_step_data_sources: {
+        parser: {
+            item_column_name: "item_id",
+            item_separator: ' + '
         },
-        validation: {
-            loader: {
-                dataset: {
-                    type: "nextit",
-                    csv_file: "../tests/example_dataset/train.csv",
-                    csv_file_index: "../tests/example_dataset/train.idx",
-                    parser: $['parser'],
-                    nip_index_file: "../tests/example_dataset/train.nip.idx",
-                    processors: [
-                        {
-                            type: "tokenizer"
-                        }
-                    ]
-                }
-            } + $['loader']
-        },
-        train: {
-            loader: {
-                dataset: {
-                    type: "session",
-                    csv_file: "../tests/example_dataset/train.csv",
-                    csv_file_index: "../tests/example_dataset/train.idx",
-                    parser: $['parser'],
-                    processors:  [
-                        {
-                            type: "tokenizer"
-                        }
-                    ]
-                },
-            } + $['loader']
-        }
+        batch_size: 9,
+        max_seq_length: max_seq_length,
+        path: base_path,
+        validation_file_prefix: "train",
+        test_file_prefix: "train",
+        seed: 123456
     },
     module: {
-        type: "dream",
+        type: "rnn",
         metrics: {
             full: {
-                metrics: {
-                    mrr: [1, 3, 5],
-                    recall: [1, 3, 5],
-                    ndcg: [1, 3, 5]
-                }
+                metrics: metrics
             },
             sampled: {
-                sample_probability_file: "../tests/example_dataset/popularity.txt",
+                sample_probability_file: base_path + "popularity.txt",
                 num_negative_samples: 2,
-                metrics: {
-                    mrr: [1, 3, 5],
-                    recall: [1, 3, 5],
-                    ndcg: [1, 3, 5]
-                }
+                metrics: metrics
             },
             fixed: {
-                item_file: "../tests/example_dataset/relevant_items.txt",
-                metrics: {
-                    mrr: [1, 3, 5],
-                    recall: [1, 3, 5],
-                    ndcg: [1, 3, 5]
-                }
+                item_file: base_path + "relevant_items.txt",
+                metrics: metrics
             }
         },
         model: {
-            cell_type: "gru",
+            cell_type: "lstm",
             item_embedding_dim: 4,
             hidden_size: 4,
-            num_layers: 5,
-            dropout: 0.2,
-            embedding_pooling_type: "mean",
+            num_layers: 1,
+            dropout: 0.0
         }
     },
     tokenizers: {
-        item: {
-            tokenizer: {
-                special_tokens: {
-                    pad_token: "<PAD>",
-                    mask_token: "<MASK>",
-                    unk_token: "<UNK>"
-                },
-                vocabulary: {
-                    delimiter: "\t",
-                    file: "../tests/example_dataset/vocab.txt"
+            item: {
+                tokenizer: {
+                    special_tokens: {
+                        pad_token: "<PAD>",
+                        mask_token: "<MASK>",
+                        unk_token: "<UNK>"
+                    },
+                    vocabulary: {
+                        delimiter: "\t",
+                        file: base_path + "vocab.txt"
+                    }
                 }
             }
-        }
-    },
-
+        },
     trainer: {
         logger: {
             type: "tensorboard",
-            save_dir: "/tmp/dream",
-            name: "bert4rec",
-            version: ""
+            save_dir: "/tmp/caser",
+            name: "caser",
         },
         checkpoint: {
             monitor: "recall@5",
             save_top_k: 3,
             mode: 'max',
-            dirpath: "/tmp/dream/checkpoints"
+            dirpath: "/tmp/caser/checkpoints"
         }
     }
 }

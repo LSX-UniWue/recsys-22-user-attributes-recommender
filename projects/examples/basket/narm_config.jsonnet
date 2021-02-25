@@ -8,10 +8,12 @@ local metrics =  {
 {
     next_sequence_step_data_sources: {
         parser: {
-            item_column_name: "item_id"
+            item_column_name: "item_id",
+            item_separator: ' + '
         },
         batch_size: 9,
         max_seq_length: max_seq_length,
+        max_seq_step_length: 5,
         path: base_path,
         validation_file_prefix: "train",
         test_file_prefix: "train"
@@ -38,7 +40,8 @@ local metrics =  {
             global_encoder_num_layers: 1,
             embedding_dropout: 0.25,
             context_dropout: 0.25,
-            batch_first: true
+            batch_first: true,
+            embedding_pooling_type: 'mean'
         }
     },
     tokenizers: {

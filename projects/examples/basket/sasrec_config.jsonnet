@@ -6,18 +6,21 @@ local metrics =  {
     ndcg: [1, 3, 5]
 };
 {
-    next_sequence_step_data_sources: {
+    pos_neg_data_sources: {
         parser: {
-            item_column_name: "item_id"
+            item_column_name: "item_id",
+            item_separator: ' + '
         },
         batch_size: 9,
         max_seq_length: max_seq_length,
+        max_seq_step_length: 5,
         path: base_path,
         validation_file_prefix: "train",
-        test_file_prefix: "train"
+        test_file_prefix: "train",
+        seed: 123456
     },
     module: {
-        type: "narm",
+        type: "sasrec",
         metrics: {
             full: {
                 metrics: metrics
@@ -33,12 +36,12 @@ local metrics =  {
             }
         },
         model: {
-            item_embedding_size: 4,
-            global_encoder_size: 128,
-            global_encoder_num_layers: 1,
-            embedding_dropout: 0.25,
-            context_dropout: 0.25,
-            batch_first: true
+            transformer_hidden_size: 4,
+            num_transformer_heads: 2,
+            num_transformer_layers: 1,
+            max_seq_length: max_seq_length,
+            transformer_dropout: 0.1,
+            embedding_pooling_type: 'mean'
         }
     },
     tokenizers: {
