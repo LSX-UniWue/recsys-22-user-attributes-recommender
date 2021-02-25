@@ -7,20 +7,23 @@ import torch
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME, TARGET_ENTRY_NAME
+from metrics.container.metrics_container import MetricsContainer
 
 from models.rnn.rnn_model import RNNSeqItemRecommenderModel
+from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import build_eval_step_return_dict, get_padding_mask
 from tokenization.tokenizer import Tokenizer
 
 
 # FIXME: maybe merge with RNNModule and make loss configurable
-class DreamModule(pl.LightningModule):
+class DreamModule(MetricsTrait, pl.LightningModule):
 
     def __init__(self,
                  model: RNNSeqItemRecommenderModel,
                  tokenizer: Tokenizer,
                  learning_rate: float,
-                 weight_decay: float
+                 weight_decay: float,
+                 metrics: MetricsContainer
                  ):
         super().__init__()
 
@@ -30,6 +33,11 @@ class DreamModule(pl.LightningModule):
 
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
+
+        self.metrics = metrics
+
+    def get_metrics(self) -> MetricsContainer:
+        return self.metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
@@ -53,7 +61,7 @@ class DreamModule(pl.LightningModule):
         pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
 
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
+        padding_mask = get_padding_mask(input_seq, self.tokenizer)
 
         logits = self.model(input_seq, padding_mask)
 
@@ -107,7 +115,7 @@ class DreamModule(pl.LightningModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
+        padding_mask = get_padding_mask(input_seq, self.tokenizer)
         prediction = self.model(input_seq, padding_mask)
 
         mask = ~ targets.eq(self.tokenizer.pad_token_id)
