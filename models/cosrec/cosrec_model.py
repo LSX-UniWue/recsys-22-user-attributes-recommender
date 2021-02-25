@@ -123,8 +123,8 @@ class CosRecModel(nn.Module):
         w2 = self.W2(item_to_predict)
         b2 = self.b2(item_to_predict)
         if eval:
-            w2 = w2.squeeze()
-            return (torch.bmm(w2, x.unsqueeze(2))+b2).squeeze()
+            w2 = w2.squeeze()       # removed: b2 = b2.squeeze
+            return (torch.bmm(w2, x.unsqueeze(2))+b2).squeeze()  # original (x * w2).sum(1) + b2
 
         return torch.baddbmm(b2, w2, x.unsqueeze(2)).squeeze()
 
