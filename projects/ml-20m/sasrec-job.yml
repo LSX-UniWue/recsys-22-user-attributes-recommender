@@ -22,11 +22,11 @@ spec:
             - name: HOME
               value: /home/ls6/zoller
             - name: PROJECT_DIR
-              value: /home/ls6/zoller/seq_recommendation/project_master
+              value: /home/ls6/zoller/seq_recommendation/bugfix_sasrec
             - name: REPO_USER
               value: daz65be
             - name: REPO_BRANCH
-              value: master
+              value: bugfix/sasrec
             - name: GIT_TOKEN
               valueFrom:
                 secretKeyRef:

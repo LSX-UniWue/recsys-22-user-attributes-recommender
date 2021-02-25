@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 import torch
 
 
-class SamplingMetric(pl.metrics.Metric):
+class RankingMetric(pl.metrics.Metric):
 
     def update(self,
                predictions: torch.Tensor,

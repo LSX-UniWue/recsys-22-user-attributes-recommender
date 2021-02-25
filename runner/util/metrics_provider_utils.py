@@ -3,17 +3,15 @@ from typing import Dict, Any, Union, List, Callable
 import pytorch_lightning as pl
 from dependency_injector import providers
 
-from metrics.container.aggregate_metrics_container import AggregateMetricsContainer
-from metrics.container.metrics_sampler import MetricsSampler
-from metrics.container.ranking_metrics_container import RankingMetricsContainer
-from metrics.container.sampling_metrics_container import SamplingMetricsContainer
-from metrics.ranking.dcg import DiscountedCumulativeGain
-from metrics.ranking.f1_at import F1AtMetric
-from metrics.ranking.mrr_at import MRRAtMetric
-from metrics.ranking.ndcg import NormalizedDiscountedCumulativeGain
-from metrics.ranking.precision_at import PrecisionAtMetric
-from metrics.ranking.recall_at import RecallAtMetric
-from metrics.sampling.recall_at import RecallAtNegativeSamples
+from metrics.container.metrics_container import AggregateMetricsContainer, RankingMetricsContainer, \
+    NoopMetricsContainer, MetricsContainer
+from metrics.container.metrics_sampler import NegativeMetricsSampler, FixedItemsSampler, AllItemsSampler
+from metrics.dcg import DiscountedCumulativeGainMetric
+from metrics.ndcg import NormalizedDiscountedCumulativeGainMetric
+from metrics.precision import PrecisionMetric
+from metrics.recall import RecallMetric
+from metrics.f1 import F1Metric
+from metrics.mrr import MRRMetric
 
 
 def build_aggregate_metrics_container(config: providers.Configuration) -> providers.Factory:
@@ -32,7 +30,8 @@ def build_aggregate_metrics_container(config: providers.Configuration) -> provid
 def build_all_metrics_containers(config: providers.Configuration) -> providers.List:
     return providers.List(
         build_ranking_metrics_provider(config),
-        build_sampling_metrics_provider(config)
+        build_sampling_metrics_provider(config),
+        build_fixed_sampling_metrics_provider(config)
     )
 
 
@@ -40,11 +39,11 @@ def build_ranking_metrics_provider(config: providers.Configuration):
     return providers.Factory(_build_ranking_metrics_provider, config)
 
 
-def _build_ranking_metrics_provider(config: Dict[str, Any]) -> RankingMetricsContainer:
+def _build_ranking_metrics_provider(config: Dict[str, Any]) -> MetricsContainer:
     if "metrics" not in config:
-        return RankingMetricsContainer([])
+        return NoopMetricsContainer()
 
-    return RankingMetricsContainer(_build_ranking_metrics(config["metrics"]))
+    return RankingMetricsContainer(_build_metrics(config["metrics"]), AllItemsSampler())
 
 
 def _build_ranking_metrics(metric_dict: Dict[str, Union[int, List[int]]]
@@ -56,20 +55,34 @@ def build_sampling_metrics_provider(config: providers.Configuration):
     return providers.Factory(_build_sampling_metrics_container, config)
 
 
-def _build_sampling_metrics_container(config: Dict[str, Any]) -> SamplingMetricsContainer:
+def _build_sampling_metrics_container(config: Dict[str, Any]) -> MetricsContainer:
     if "sampled_metrics" not in config:
-        return RankingMetricsContainer([]) #FIXME I don't want to waste time doing this properly since we will remove the DI framework anyways.
+        return NoopMetricsContainer() #FIXME I don't want to waste time doing this properly since we will remove the DI framework anyways.
 
-    negative_sampler = MetricsSampler(
+    negative_sampler = NegativeMetricsSampler(
         load_weights(config["sampled_metrics"]["sample_probability_file"]),
         int(config["sampled_metrics"]["num_negative_samples"])
     )
-    return SamplingMetricsContainer(_build_sampling_metrics(config["sampled_metrics"]["metrics"]), negative_sampler)
+    return RankingMetricsContainer(_build_metrics(config["sampled_metrics"]["metrics"]), negative_sampler)
 
 
-def _build_sampling_metrics(metric_dict: Dict[str, Union[int, List[int]]]
-                          ) -> List[pl.metrics.Metric]:
-    return _build_metrics_list(metric_dict, _build_sampling_metric)
+def build_fixed_sampling_metrics_provider(config: providers.Configuration):
+    return providers.Factory(_build_fixed_sampling_metrics_container, config)
+
+
+def _build_fixed_sampling_metrics_container(config: Dict[str, Any]) -> MetricsContainer:
+    if "fixed_subset_metrics" not in config:
+        return NoopMetricsContainer()
+
+    fixed_config = config["fixed_subset_metrics"]
+    sampler = FixedItemsSampler(load_items(fixed_config["item_file"]))
+
+    return RankingMetricsContainer(_build_metrics(fixed_config['metrics']), sampler)
+
+
+def _build_metrics(metric_dict: Dict[str, Union[int, List[int]]]
+                   ) -> List[pl.metrics.Metric]:
+    return _build_metrics_list(metric_dict, _build_ranking_metric)
 
 
 def _build_metrics_list(metric_dict: Dict[str, Union[int, List[int]]],
@@ -90,25 +103,20 @@ def _build_metrics_list(metric_dict: Dict[str, Union[int, List[int]]],
 
 def _build_ranking_metric(metric_id: str, k: int) -> pl.metrics.Metric:
     return {
-        'recall': RecallAtMetric(k),
-        'precision': PrecisionAtMetric(k),
-        'f1': F1AtMetric(k),
-        'mrr': MRRAtMetric(k),
-        'dcg': DiscountedCumulativeGain(k),
-        'ndcg': NormalizedDiscountedCumulativeGain(k),
-    }[metric_id]
-
-
-def _build_sampling_metric(metric_id: str, k: int) -> pl.metrics.Metric:
-    return {
-        'recall': RecallAtNegativeSamples(k),
+        'recall': RecallMetric(k),
+        'precision': PrecisionMetric(k),
+        'f1': F1Metric(k),
+        'mrr': MRRMetric(k),
+        'dcg': DiscountedCumulativeGainMetric(k),
+        'ndcg': NormalizedDiscountedCumulativeGainMetric(k),
     }[metric_id]
 
 
 def load_weights(path: str) -> List[float]:
-    weights = []
     with open(path) as prob_file:
-        for line in prob_file.readlines():
-            weights.append(float(line))
+        return [float(line) for line in prob_file.readlines()]
 
-    return weights
+
+def load_items(path: str) -> List[int]:
+    with open(path) as item_file:
+        return [int(line) for line in item_file.readlines()]

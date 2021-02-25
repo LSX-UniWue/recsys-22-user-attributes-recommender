@@ -31,7 +31,7 @@ model:
   max_seq_length: 200
   num_transformer_heads: 2
   num_transformer_layers: 2
-  transformer_hidden_size: 64
+  transformer_hidden_size: 256
   transformer_dropout: 0.2
   project_layer_type: transpose_embedding
 module:
@@ -62,7 +62,7 @@ tokenizer:
     file: /ssd/ml-20m/vocab_title.txt
 trainer:
   checkpoint:
-    monitor: recall_at_10/sampled
+    monitor: recall@10
     save_top_k: 3
     mode: max
   gradient_clip_val: 0.0

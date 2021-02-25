@@ -1,9 +1,14 @@
 import torch
 
-from metrics.sampling.sampling_metric import SamplingMetric
+from metrics.common import calc_recall
+from metrics.metric import RankingMetric
 
 
-class RecallAtNegativeSamples(SamplingMetric):
+class RecallMetric(RankingMetric):
+
+    """
+    calculates the recall at k
+    """
 
     def __init__(self,
                  k: int,
@@ -24,17 +29,7 @@ class RecallAtNegativeSamples(SamplingMetric):
         :param positive_item_mask: a mask where a 1 indices that the item at this index is relevant :math`(N, I)`
         :return:
         """
-        # get the indices of the top k predictions
-        predicted_id = torch.argsort(prediction, descending=True)
-        # limit the prediction to the top k
-        predicted_id = predicted_id[:, :self._k]
-
-        # select the mask for each of the indices, this is than the tp
-        tp = positive_item_mask.gather(1, predicted_id)
-        tp = tp.sum(1)  # get the total number of positive items
-
-        all_relevant_items = positive_item_mask.sum(1)
-        recall = tp / all_relevant_items
+        recall = calc_recall(prediction, positive_item_mask, self._k)
         self.recall += recall.sum()
         self.count += prediction.size()[0]
 
@@ -42,4 +37,4 @@ class RecallAtNegativeSamples(SamplingMetric):
         return self.recall / self.count
 
     def name(self):
-        return f"recall_at_{self._k}/sampled"
+        return f"recall@{self._k}"

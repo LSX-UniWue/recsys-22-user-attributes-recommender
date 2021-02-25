@@ -99,16 +99,20 @@ class TrainerBuilder:
         return self
 
     def add_checkpoint_callback(self, parameters: Dict[str, Any]):
-        if "filepath" not in parameters and "default_root_dir" in self.kwargs:
-            parameters["filepath"] = Path(self.kwargs["default_root_dir"]) / "checkpoints" / "{epoch}.ckpt"
+        if "dirpath" not in parameters and "default_root_dir" in self.kwargs:
+            parameters["dirpath"] = Path(self.kwargs["default_root_dir"]) / "checkpoints"
+        if "filename" not in parameters:
+            parameters['filename'] = "{epoch}"
         checkpoint = ModelCheckpoint(**parameters)
         return self.add_callback(checkpoint)
 
     def build(self) -> Trainer:
         # This is necessary since some of the keys occurring in the config are filled with actual objects by the builder
         sanitized_args = self.kwargs.copy()
-        if len(self.loggers) > 0 and "logger" in sanitized_args:
-            sanitized_args.pop("logger")
+        if "logger" in sanitized_args:
+            logger_config = sanitized_args.pop("logger")
+            if len(self.loggers) == 0:
+                self.add_logger(LoggerBuilder(parameters=logger_config).build())
 
         # Build the actual trainer object from the parameters we got and the callbacks/loggers we constructed
         return Trainer(**sanitized_args, callbacks=self.callbacks, logger=self.loggers)

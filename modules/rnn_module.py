@@ -140,7 +140,7 @@ class RNNModule(MetricsTrait, pl.LightningModule):
         Where N is the batch size, S the max sequence length, and I the item vocabulary size.
         """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
+        padding_mask = get_padding_mask(input_seq, self.tokenizer)
 
         return self.model(input_seq, padding_mask)
 
