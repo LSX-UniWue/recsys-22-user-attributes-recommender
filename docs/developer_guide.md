@@ -31,14 +31,14 @@ The metric needs to be able to handle tensors to be compatible with pytorch.
 To implement it go to [metrics/ranking_metrics](./../metrics/ranking_metrics.py) and implement a new metrics class.
 
 ## Adding a new Data set ##
-All Necessary Files for the integration of data sets can be found under [data](./../data), [dataset](./../dataset), and
-[runner/dataset](./../runner/dataset).
+All Necessary Files for the integration of data sets can be found under the [dataset folder](./../dataset).
 
 In order to add a new dataset and make it usable you have to implement the following steps:
 1. Download the data set or document where it is available
 2. Index the data set and create train, validation, test split
 3. Create a vocabulary for the data set
-4. Create CLI for execution of the newly implemented Code using [Typer](https://typer.tiangolo.com/)
+4. Integrate those steps into the dataset [Typer](https://typer.tiangolo.com/) CLI as a new command under 
+[dataset/app/data_set_commands.py](./../dataset/app/data_set_commands.py)
 
 ## Adding a new Model ##
 In order to add a new model multiple things need to be implemented:

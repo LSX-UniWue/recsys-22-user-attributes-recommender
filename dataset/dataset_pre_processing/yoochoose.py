@@ -14,9 +14,10 @@ TEST_SET = "test_set"
 YOOCHOOSE_SESSION_ID_KEY = "SessionId"
 YOOCHOOSE_ITEM_ID_KEY = "ItemId"
 YOOCHOOSE_CLICKS_FILE_NAME = "yoochoose-clicks"
+YOOCHOOSE_BUYS_FILE_NAME = "yoochoose-buys"
 
 
-def pre_process_yoochoose_dataset(path_to_original_data: Path, output_dir_path: Path) -> Path:
+def pre_process_yoochoose_dataset(path_to_original_data: Path, output_dir_path: Path, file_name:str) -> Path:
     """
     Perform pre-processing for yoochoose data set as specified by Hidasi et al. 2016. Code adapted from
     https://github.com/hidasib/GRU4Rec/blob/master/examples/rsc15/preprocess.py.
@@ -25,7 +26,7 @@ def pre_process_yoochoose_dataset(path_to_original_data: Path, output_dir_path: 
     :param output_dir_path: output dir for pre-processed csv
     :return: Stores preprocessed data at output_dir
     """
-    data = pd.read_csv(path_to_original_data.joinpath(YOOCHOOSE_CLICKS_FILE_NAME+'.dat'),
+    data = pd.read_csv(path_to_original_data.joinpath(file_name+'.dat'),
                        sep=',',
                        header=None,
                        usecols=[0, 1, 2],
@@ -42,7 +43,7 @@ def pre_process_yoochoose_dataset(path_to_original_data: Path, output_dir_path: 
 
     if not os.path.exists(output_dir_path):
         output_dir_path.mkdir(parents=True, exist_ok=True)
-    output_file_path = output_dir_path.joinpath(YOOCHOOSE_CLICKS_FILE_NAME+'.csv')
+    output_file_path = output_dir_path.joinpath(file_name+'.csv')
     data = data.sort_values(YOOCHOOSE_SESSION_ID_KEY)
     data.to_csv(path_or_buf=output_file_path)
     return output_file_path
