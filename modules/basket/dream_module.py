@@ -20,7 +20,7 @@ class DreamModule(MetricsTrait, pl.LightningModule):
 
     def __init__(self,
                  model: RNNModel,
-                 tokenizer: Tokenizer,
+                 item_tokenizer: Tokenizer,
                  metrics: MetricsContainer,
                  learning_rate: float = 0.001,
                  weight_decay: float = 0.0
@@ -29,7 +29,7 @@ class DreamModule(MetricsTrait, pl.LightningModule):
 
         self.model = model
 
-        self.tokenizer = tokenizer
+        self.item_tokenizer = item_tokenizer
 
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
@@ -61,7 +61,7 @@ class DreamModule(MetricsTrait, pl.LightningModule):
         pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
 
-        padding_mask = get_padding_mask(input_seq, self.tokenizer)
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
 
         logits = self.model(input_seq, padding_mask)
 
@@ -85,7 +85,7 @@ class DreamModule(MetricsTrait, pl.LightningModule):
         pos_logits = logit.gather(1, pos_items)
         neg_logits = logit.gather(1, neg_items)
 
-        mask = ~ pos_items.eq(self.tokenizer.pad_token_id)
+        mask = ~ pos_items.eq(self.item_tokenizer.pad_token_id)
         num_items = mask.sum()
 
         score = F.logsigmoid(pos_logits - neg_logits)
@@ -115,10 +115,10 @@ class DreamModule(MetricsTrait, pl.LightningModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
-        padding_mask = get_padding_mask(input_seq, self.tokenizer)
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
         prediction = self.model(input_seq, padding_mask)
 
-        mask = ~ targets.eq(self.tokenizer.pad_token_id)
+        mask = ~ targets.eq(self.item_tokenizer.pad_token_id)
         return build_eval_step_return_dict(input_seq, prediction, targets, mask=mask)
 
     def configure_optimizers(self):
