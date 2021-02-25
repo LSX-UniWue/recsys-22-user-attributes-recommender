@@ -6,7 +6,7 @@ from dataset.dataset_pre_processing.movielens import download_and_unzip_movielen
 from dataset.dataset_pre_processing.yoochoose import pre_process_yoochoose_dataset, YOOCHOOSE_CLICKS_FILE_NAME, \
     YOOCHOOSE_SESSION_ID_KEY, YOOCHOOSE_ITEM_ID_KEY
 from dataset.dataset_pre_processing.amazon import download_and_unzip_amazon_dataset, AMAZON_ITEM_ID, \
-    AMAZON_SESSION_ID, AMAZON_DELIMITER
+    AMAZON_SESSION_ID, AMAZON_DELIMITER, preprocess_amazon_dataset_for_indexing
 from dataset.app import split_commands, popularity_command, vocabulary_command, index_command
 
 app = typer.Typer()
@@ -108,9 +108,10 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
     # Pre-process yoochoose data
     print("Download dataset...")
     raw_data_file_path = download_and_unzip_amazon_dataset(category=category, output_dir=output_dir_path)
+    print("Pre-process data...")
+    preprocess_amazon_dataset_for_indexing(raw_data_tsv_file_path=raw_data_file_path)
     print("Indexing processed data...")
     session_index_path = raw_data_file_path.parent.joinpath(raw_data_file_path.name + '.idx')
-    # FixMe all sessions have length 1
     index_command.index_csv(data_file_path=raw_data_file_path,
                             index_file_path=session_index_path,
                             session_key=[AMAZON_SESSION_ID],

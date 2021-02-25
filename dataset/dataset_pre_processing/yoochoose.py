@@ -43,6 +43,7 @@ def pre_process_yoochoose_dataset(path_to_original_data: Path, output_dir_path: 
     if not os.path.exists(output_dir_path):
         output_dir_path.mkdir(parents=True, exist_ok=True)
     output_file_path = output_dir_path.joinpath(YOOCHOOSE_CLICKS_FILE_NAME+'.csv')
+    data = data.sort_values(YOOCHOOSE_SESSION_ID_KEY)
     data.to_csv(path_or_buf=output_file_path)
     return output_file_path
 

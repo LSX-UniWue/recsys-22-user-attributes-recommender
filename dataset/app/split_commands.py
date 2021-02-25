@@ -1,5 +1,6 @@
 import typer
 from pathlib import Path
+from typing import List
 from dataset.dataset_index_splits import conditional_split, ratio_split
 
 app = typer.Typer()
@@ -59,7 +60,7 @@ def ratios(
         data_file_path: Path = typer.Argument(..., help="Data file in csv format"),
         session_index_path: Path = typer.Argument(..., help="Path to session index for the data file"),
         output_dir_path: Path = typer.Argument(..., help="path that the splits should be written to"),
-        session_key: [str] = typer.Argument("userId", help="session key"),
+        session_key: List[str] = typer.Argument(..., help="session key"),
         train_ratio: float = typer.Argument(0.9, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
         validation_ratio: float = typer.Argument(0.05, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
         testing_ratio: float = typer.Argument(0.05, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
@@ -78,7 +79,7 @@ def ratios(
     :param delimiter: delimiter used in data file
     :param seed: Seed for random sampling
     :return: None, Side effects: CSV Files for splits are written
-    """
+     """
     output_dir_path.mkdir(parents=True, exist_ok=True)
     assert train_ratio + validation_ratio + testing_ratio == 1
     splits = {"train": train_ratio, "valid": validation_ratio, "test": testing_ratio}
