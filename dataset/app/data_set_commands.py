@@ -4,7 +4,7 @@ from pathlib import Path
 from dataset.dataset_pre_processing.movielens import download_and_unzip_movielens_data, preprocess_movielens_data, \
     split_movielens_dataset
 from dataset.dataset_pre_processing.yoochoose import pre_process_yoochoose_dataset, YOOCHOOSE_CLICKS_FILE_NAME, \
-    YOOCHOOSE_SESSION_ID_KEY, YOOCHOOSE_ITEM_ID_KEY
+    YOOCHOOSE_SESSION_ID_KEY, YOOCHOOSE_ITEM_ID_KEY, YOOCHOOSE_BUYS_FILE_NAME
 from dataset.dataset_pre_processing.amazon import download_and_unzip_amazon_dataset, AMAZON_ITEM_ID, \
     AMAZON_SESSION_ID, AMAZON_DELIMITER, preprocess_amazon_dataset_for_indexing
 from dataset.app import split_commands, popularity_command, vocabulary_command, index_command
@@ -26,8 +26,9 @@ def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_ch
 @app.command()
 def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
                                                help='directory path to the raw yoochoose data set'),
-              output_dir_path: Path = typer.Argument("./dataset/yoochoose-processed/",
+              output_dir_path: Path = typer.Argument("./dataset/yoochoose/",
                                                      help='Output directory for indices, splits, and vocabulary.'),
+              category: str = typer.Option(..., help="buys or clicks"),
               min_seq_length: int = typer.Option(5, help='The minimum length of a session for the next item split')
               ) -> None:
     """
@@ -36,21 +37,29 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
 
     :param input_dir: Directory under which the yoochoose data set files are stored.
     :param output_dir_path: Directory under which the processed data is stored after successful execution.
+    :param category: buys or clicks depending on which data should be processed
     :param min_seq_length: Minimum length of a session in order to be included in the next item split
     :return:
     """
     delimiter = ","
+    if category == "buys":
+        file_name = YOOCHOOSE_BUYS_FILE_NAME
+    elif category == "clicks":
+        file_name = YOOCHOOSE_CLICKS_FILE_NAME
+    else:
+        raise Exception("Please specify a correct --category=[clicks or buys]")
+    output_dir_path = output_dir_path / category
     # Check if input dir contains the correct data path and that the yoochoose dataset is downloaded
-    if not os.path.isfile(input_dir / (YOOCHOOSE_CLICKS_FILE_NAME + '.dat')):
-        print(input_dir / (YOOCHOOSE_CLICKS_FILE_NAME + '.dat'),
+    if not os.path.isfile(input_dir / (file_name + '.dat')):
+        print(input_dir / (file_name + '.dat'),
               "does not exist. Please download the yoochoose data set and move it into", input_dir, ".")
         print("See --help for more information.")
     else:
         # Pre-process yoochoose data
         print("Perform pre-processing...")
-        preprocessed_data_filepath = pre_process_yoochoose_dataset(input_dir, output_dir_path)
+        preprocessed_data_filepath = pre_process_yoochoose_dataset(input_dir, output_dir_path, file_name=file_name)
         print("Indexing processed data...")
-        session_index_path = output_dir_path.joinpath(YOOCHOOSE_CLICKS_FILE_NAME + '.idx')
+        session_index_path = output_dir_path.joinpath(file_name + '.idx')
         index_command.index_csv(data_file_path=preprocessed_data_filepath,
                                 index_file_path=session_index_path,
                                 session_key=[YOOCHOOSE_SESSION_ID_KEY],
@@ -75,7 +84,7 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
         split_commands.ratios(data_file_path=preprocessed_data_filepath,
                               session_index_path=session_index_path,
                               output_dir_path=ratio_split_output_dir_path,
-                              session_key=YOOCHOOSE_SESSION_ID_KEY,
+                              session_key=[YOOCHOOSE_SESSION_ID_KEY],
                               train_ratio=0.9,
                               validation_ratio=0.05,
                               testing_ratio=0.05,
@@ -105,6 +114,7 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
     :param min_seq_length: Minimum length of a session in order to be included in the next item split
     :return:
     """
+    output_dir_path = output_dir_path / category
     # Pre-process yoochoose data
     print("Download dataset...")
     raw_data_file_path = download_and_unzip_amazon_dataset(category=category, output_dir=output_dir_path)

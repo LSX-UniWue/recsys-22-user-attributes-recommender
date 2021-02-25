@@ -13,6 +13,7 @@ The structure of the CLI (dataset_app.py) is as follows:
 * pre_process
     * movielens
     * yoochoose
+    * amazon
 * split   
     * next-item
     * ratios
