@@ -6,7 +6,7 @@ local metrics =  {
     ndcg: [1, 3, 5]
 };
 {
-    pos_neg_data_sources: {
+    next_sequence_step_data_sources: {
         parser: {
             item_column_name: "item_id"
         },
@@ -18,7 +18,7 @@ local metrics =  {
         seed: 123456
     },
     module: {
-        type: "caser",
+        type: "narm",
         metrics: {
             full: {
                 metrics: metrics
@@ -34,13 +34,12 @@ local metrics =  {
             }
         },
         model: {
-            dropout: 0.1,
-            max_seq_length: max_seq_length,
-            embedding_size: 4,
-            num_vertical_filters: 2,
-            num_horizontal_filters: 1,
-            fc_activation_fn: "relu",
-            conv_activation_fn: "relu",
+            item_embedding_size: 4,
+            global_encoder_size: 128,
+            global_encoder_num_layers: 1,
+            embedding_dropout: 0.25,
+            context_dropout: 0.25,
+            batch_first: true
         }
     },
     tokenizers: {

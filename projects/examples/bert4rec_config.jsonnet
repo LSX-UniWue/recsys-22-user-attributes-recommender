@@ -1,50 +1,41 @@
-local dataset = import 'dataset_base.libsonnet';
-
 local base_path = "../tests/example_dataset/";
-
-local cloze_processor = {
-    type: "cloze",
-    mask_probability: 0.2,
-    only_last_item_mask_prob: 0.1,
-    seed: 123456
+local max_seq_length = 7;
+local metrics =  {
+    mrr: [1, 3, 5],
+    recall: [1, 3, 5],
+    ndcg: [1, 3, 5]
 };
-local last_item_mask_processor = {
-    type: "last_item_mask"
-};
-
-
 {
-    data_sources: dataset.example_dataset(base_path, "nextit",  train_processors=[cloze_processor], test_processors=[last_item_mask_processor], validation_processors=[last_item_mask_processor]),
+    mask_data_sources: {
+        parser: {
+            item_column_name: "item_id"
+        },
+        batch_size: 9,
+        max_seq_length: max_seq_length,
+        path: base_path,
+        validation_file_prefix: "train",
+        test_file_prefix: "train",
+        mask_probability: 0.1,
+        seed: 123456
+    },
     module: {
         type: "bert4rec",
         metrics: {
             full: {
-                metrics: {
-                    mrr: [1, 3, 5],
-                    recall: [1, 3, 5],
-                    ndcg: [1, 3, 5]
-                }
+                metrics: metrics
             },
             sampled: {
                 sample_probability_file: base_path + "popularity.txt",
                 num_negative_samples: 2,
-                metrics: {
-                    mrr: [1, 3, 5],
-                    recall: [1, 3, 5],
-                    ndcg: [1, 3, 5]
-                }
+                metrics: metrics
             },
             fixed: {
                 item_file: base_path + "relevant_items.txt",
-                metrics: {
-                    mrr: [1, 3, 5],
-                    recall: [1, 3, 5],
-                    ndcg: [1, 3, 5]
-                }
+                metrics: metrics
             }
         },
         model: {
-            max_seq_length: 5,
+            max_seq_length: max_seq_length,
             num_transformer_heads: 1,
             num_transformer_layers: 1,
             transformer_hidden_size: 2,

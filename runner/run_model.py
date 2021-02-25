@@ -12,6 +12,7 @@ from init.factories.container import ContainerFactory
 from pytorch_lightning import seed_everything
 from pytorch_lightning.utilities import cloud_io
 
+from init.templating.template_engine import TemplateEngine
 from init.trainer_builder import CallbackBuilder
 
 app = typer.Typer()
@@ -38,7 +39,10 @@ def load_config(config_file: Path) -> Config:
 
     config_json = _jsonnet.evaluate_file(str(config_file))
 
-    return Config(json.loads(config_json))
+    loaded_config = json.loads(config_json)
+
+    config_to_use = TemplateEngine().modify(loaded_config)
+    return Config(config_to_use)
 
 
 def create_container(config: Config) -> Container:

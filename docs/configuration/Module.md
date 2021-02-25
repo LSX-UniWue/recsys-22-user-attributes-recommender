@@ -22,12 +22,19 @@ of the item space, you can specify a metrics section under module.
 For each metric you can specify which `k`s should be evaluated.
 
 ```
-module: 
-    metrics:
-        recall:
-            - 1
-            - 5
-            - 10
+...
+module: {
+        ...
+        metrics: {
+            full: {
+                metrics: {
+                    recall: [1, 3, 5]
+                }
+            },
+            ...
+        },
+        ...
+}
 ```
 
 
@@ -36,17 +43,22 @@ module:
 In contrast to metrics the sampled metrics configuration only samples items from the item space
 to evaluate it with target item(s).
 
-
 ```
-module: 
-    sampled_metrics:
-        sample_probability_file: PATH_TO_FILE
-        num_negative_samples: 100
-        metrics:
-            recall:
-                - 1
-                - 5
-                - 10
+...
+module: {
+        ...
+        metrics: {
+            sampled: {
+                sample_probability_file: PATH_TO_FILE,
+                num_negative_samples: 100,
+                metrics: {
+                    recall: [1, 3, 5]
+                }
+            },
+            ...
+        },
+        ...
+}
 ```
 
 The configurable file `sample_probability_file` contains in the i-th line the propability of the (i-1) item based
@@ -61,13 +73,20 @@ TODO: point to the help script to calculate the file
 This metric only evaluates a fixed set of items.
 
 ```
-fixed_subset_metrics:
-    item_file: PATH_TO_FILE
-    metrics:
-      recall:
-        - 1
-        - 3
-        - 5
+...
+module: {
+        ...
+        metrics: {
+            fixed: {
+                item_file: PATH_TO_FILE,
+                metrics: {
+                    recall: [1, 3, 5]
+                }
+            },
+            ...
+        },
+        ...
+}
 ```
 
 The 

@@ -18,7 +18,7 @@ local metrics =  {
         seed: 123456
     },
     module: {
-        type: "caser",
+        type: "sasrec",
         metrics: {
             full: {
                 metrics: metrics
@@ -34,13 +34,11 @@ local metrics =  {
             }
         },
         model: {
-            dropout: 0.1,
+            transformer_hidden_size: 4,
+            num_transformer_heads: 2,
+            num_transformer_layers: 1,
             max_seq_length: max_seq_length,
-            embedding_size: 4,
-            num_vertical_filters: 2,
-            num_horizontal_filters: 1,
-            fc_activation_fn: "relu",
-            conv_activation_fn: "relu",
+            transformer_dropout: 0.1
         }
     },
     tokenizers: {

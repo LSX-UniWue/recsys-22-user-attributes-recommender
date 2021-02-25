@@ -121,4 +121,4 @@ class Config:
 
         :return: a list with keys.
         """
-        return [key for key, _ in self.config.items()]
+        return [key for key in self.config.keys()]
