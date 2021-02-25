@@ -68,6 +68,9 @@ class TensorboardLoggerFactory(ObjectFactory):
         config_keys = config.get_keys()
         kwargs = {key: config.get(key) for key in config_keys if key != "type"}
 
+        if "version" not in kwargs:
+            kwargs["version"] = ""
+
         return TensorBoardLogger(**kwargs)
 
     def is_required(self, context: Context) -> bool:

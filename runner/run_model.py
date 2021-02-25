@@ -29,7 +29,7 @@ def _config_logging(config: Dict[str, Any]
     logger.addHandler(handler)
 
 
-def load_container(config_file: Path) -> Container:
+def load_config(config_file: Path) -> Config:
     config_file = Path(config_file)
 
     if not config_file.exists():
@@ -38,7 +38,10 @@ def load_container(config_file: Path) -> Container:
 
     config_json = _jsonnet.evaluate_file(str(config_file))
 
-    config = Config(json.loads(config_json))
+    return Config(json.loads(config_json))
+
+
+def create_container(config: Config) -> Container:
     context = Context()
 
     container_factory = ContainerFactory()
@@ -47,13 +50,21 @@ def load_container(config_file: Path) -> Container:
     return container
 
 
+def load_container(config_file: Path) -> Container:
+    config_raw = load_config(config_file)
+    return create_container(config_raw)
+
+
 @app.command()
 def train(config_file: str = typer.Argument(..., help='the path to the config file'),
           do_train: bool = typer.Option(True, help='flag iff the model should be trained'),
           do_test: bool = typer.Option(False, help='flag iff the model should be tested (after training)')
           ) -> None:
 
-    container = load_container(Path(config_file))
+    config_file_path = Path(config_file)
+    config = load_config(config_file_path)
+
+    container = create_container(config)
     trainer = container.trainer().build()
 
     if do_train:

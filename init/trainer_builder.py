@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, Union, Iterable
+from typing import Any, Dict, Union, Iterable, Optional
 
 from pytorch_lightning import Trainer, Callback
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -74,6 +74,12 @@ class TrainerBuilder:
 
     def from_checkpoint(self, checkpoint_path: str):
         return self.set("resume_from_checkpoint", checkpoint_path)
+
+    def get(self, key: str) -> Optional[Any]:
+        if key in self.kwargs:
+            return self.kwargs[key]
+
+        return None
 
     def set(self, key: str, value: Any):
         if key not in TRAINER_INIT_KEYS:

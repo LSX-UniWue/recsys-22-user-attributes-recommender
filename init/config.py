@@ -29,6 +29,31 @@ class Config:
 
         return current_section
 
+    def set(self, path: Union[str, List[str]], value: Any, make_parents: bool = True) -> Optional[Any]:
+        if isinstance(path, str):
+            path = path.split(".")
+
+        current_section = self.config
+
+        for i, key in enumerate(path[:-1]):
+            if not isinstance(current_section, Dict):
+                return None
+            if key not in current_section and make_parents:
+                current_section[key] = dict()
+            else:
+                return None
+
+            current_section = current_section[key]
+
+        if not isinstance(current_section, dict):
+            return None
+
+        current_section[path[-1]] = value
+
+        return value
+
+
+
     def get(self,
             path: Union[str, List[str]]
             ) -> Optional[Any]:
