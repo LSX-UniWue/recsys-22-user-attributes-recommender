@@ -3,7 +3,7 @@ parser: &parser
   item_separator: ' + '
 loader: &loader
   batch_size: 3
-  max_seq_length: 5
+  max_seq_length: 7
   max_seq_step_length: 5
 datasets:
   test:
@@ -39,19 +39,50 @@ model:
 module:
   learning_rate: 0.001
   weight_decay: 0.01
+  sampled_metrics:
+    sample_probability_file: ../tests/example_dataset/popularity.txt
+    num_negative_samples: 5
+    metrics:
+      precision:
+        - 1
+        - 3
+        - 5
+      recall:
+        - 1
+        - 3
+        - 5
+      f1:
+        - 1
+        - 3
+        - 5
+  fixed_subset_metrics:
+    item_file: ../tests/example_dataset/relevant_items.txt
+    metrics:
+      precision:
+        - 1
+        - 3
+        - 5
+      recall:
+        - 1
+        - 3
+        - 5
+      f1:
+        - 1
+        - 3
+        - 5
   metrics:
-    precision:
-      - 1
-      - 3
-      - 5
-    recall:
-      - 1
-      - 3
-      - 5
-    f1:
-      - 1
-      - 3
-      - 5
+   precision:
+     - 1
+     - 3
+     - 5
+   recall:
+     - 1
+     - 3
+     - 5
+   f1:
+     - 1
+     - 3
+     - 5
 tokenizer:
   special_tokens:
     pad_token: <PAD>

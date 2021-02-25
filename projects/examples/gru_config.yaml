@@ -33,6 +33,14 @@ model:
   num_layers: 5
   dropout: 0.0
 module:
+  sampled_metrics:
+    sample_probability_file: ../tests/example_dataset/popularity.txt
+    num_negative_samples: 5
+    metrics:
+      recall:
+        - 1
+        - 3
+        - 5
   metrics:
     mrr:
       - 1
