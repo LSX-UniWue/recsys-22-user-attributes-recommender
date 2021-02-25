@@ -30,11 +30,11 @@ class F1Metric(RankingMetric):
         f1 = 2 * recall * precision / (recall + precision)
         f1[torch.isnan(f1)] = 0.0
 
-        self.f1 += precision.sum()
-        self.count += predictions.size()[0]
+        self.f1 += f1.sum()
+        self.count += f1.size()[0]
 
     def compute(self):
-        return self.precision / self.count
+        return self.f1 / self.count
 
     def name(self):
         return f"F1@{self._k}"
