@@ -99,8 +99,10 @@ class TrainerBuilder:
         return self
 
     def add_checkpoint_callback(self, parameters: Dict[str, Any]):
-        if "filepath" not in parameters and "default_root_dir" in self.kwargs:
-            parameters["filepath"] = Path(self.kwargs["default_root_dir"]) / "checkpoints" / "{epoch}"
+        if "dirpath" not in parameters and "default_root_dir" in self.kwargs:
+            parameters["dirpath"] = Path(self.kwargs["default_root_dir"]) / "checkpoints"
+        if "filename" not in parameters:
+            parameters['filename'] = "{epoch}"
         checkpoint = ModelCheckpoint(**parameters)
         return self.add_callback(checkpoint)
 
