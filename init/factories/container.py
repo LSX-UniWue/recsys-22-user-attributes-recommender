@@ -16,6 +16,7 @@ from models.narm.narm_model import NarmModel
 from models.rnn.rnn_model import RNNModel
 from models.sasrec.sas_rec_model import SASRecModel
 from modules import BERT4RecModule, CaserModule, SASRecModule
+from modules.basket.dream_module import DreamModule
 from modules.narm_module import NarmModule
 from modules.rnn_module import RNNModule
 
@@ -30,7 +31,8 @@ class ContainerFactory(ObjectFactory):
                                             'caser': GenericModuleFactory(CaserModule, CaserModel),
                                             'narm': GenericModuleFactory(NarmModule, NarmModel),
                                             'sasrec': GenericModuleFactory(SASRecModule, SASRecModel),
-                                            'rnn': GenericModuleFactory(RNNModule, RNNModel)}, config_key='module',
+                                            'rnn': GenericModuleFactory(RNNModule, RNNModel),
+                                            'dream': GenericModuleFactory(DreamModule, RNNModel)}, config_key='module',
                                    config_path=['module']),
                 DataSourcesFactory(),
                 TrainerBuilderFactory()

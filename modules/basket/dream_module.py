@@ -19,8 +19,8 @@ class DreamModule(pl.LightningModule):
     def __init__(self,
                  model: RNNModel,
                  tokenizer: Tokenizer,
-                 learning_rate: float,
-                 weight_decay: float
+                 learning_rate: float = 0.001,
+                 weight_decay: float = 0.0
                  ):
         super().__init__()
 
