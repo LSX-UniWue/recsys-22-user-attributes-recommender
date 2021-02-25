@@ -378,12 +378,15 @@ class DreamContainer(containers.DeclarativeContainer):
 
     module_config = config.module
 
+    metrics_container = build_aggregate_metrics_container(module_config)
+
     module = providers.Singleton(
         DreamModule,
         model=model,
         tokenizer=tokenizer,
         learning_rate=module_config.learning_rate,
         weight_decay=module_config.weight_decay,
+        metrics=metrics_container
     )
 
     train_dataset_config = config.datasets.train
