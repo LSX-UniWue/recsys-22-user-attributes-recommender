@@ -1,8 +1,11 @@
 import logging
 import logging.handlers
 import typer
+import optuna
+from optuna.structs import StudyDirection
 import json
 import _jsonnet
+from tempfile import NamedTemporaryFile
 from pathlib import Path
 from typing import Dict, Any, Optional
 from init.config import Config
@@ -14,6 +17,8 @@ from pytorch_lightning.utilities import cloud_io
 
 from init.templating.template_engine import TemplateEngine
 from init.trainer_builder import CallbackBuilder
+from search.processor import ConfigTemplateProcessor
+from search.resolver import OptunaParameterResolver
 
 app = typer.Typer()
 
@@ -59,6 +64,7 @@ def load_container(config_file: Path) -> Container:
     return create_container(config_raw)
 
 
+
 @app.command()
 def train(config_file: str = typer.Argument(..., help='the path to the config file'),
           do_train: bool = typer.Option(True, help='flag iff the model should be trained'),
@@ -81,6 +87,74 @@ def train(config_file: str = typer.Argument(..., help='the path to the config fi
             print(f"The model has to be trained before it can be tested!")
             exit(-1)
         trainer.test(test_dataloaders=container.test_dataloader())
+
+
+@app.command()
+def search(model: str = typer.Argument(..., help="the model to run"),
+           template_file: Path = typer.Argument(..., help='the path to the config file'),
+           study_name: str = typer.Argument(..., help='the study name of an existing optuna study'),
+           study_storage: str = typer.Argument(..., help='the connection string for the study storage'),
+           objective_metric: str = typer.Argument(..., help='the name of the metric to watch during the study'
+                                                            '(e.g. recall_at_5).'),
+           num_trails: int = typer.Option(default=20, help='the number of trails to execute')
+          ) -> None:
+    # XXX: because the dependency injector does not provide a error message when the config file does not exists,
+    # we manually check if the config file exists
+    if not os.path.isfile(template_file):
+        print(f"the config file cannot be found. Please check the path '{template_file}'!")
+        exit(-1)
+
+    def config_from_template(template_file: Path,
+                             config_file_handle,
+                             trial):
+        import yaml
+        resolver = OptunaParameterResolver(trial)
+        processor = ConfigTemplateProcessor(resolver)
+
+        with template_file.open("r") as f:
+            template = yaml.load(f)
+            resolved_config = processor.process(template)
+
+            yaml.dump(resolved_config, config_file_handle)
+            config_file_handle.flush()
+
+    def objective(trial: optuna.Trial):
+        # get the direction to get if we must extract the max or the min value of the metric
+        study_direction = trial.study.direction
+        objective_best = {StudyDirection.MINIMIZE: min, StudyDirection.MAXIMIZE: max}[study_direction]
+
+        with NamedTemporaryFile(mode='wt') as tmp_config_file:
+            config_from_template(template_file, tmp_config_file, trial)
+
+            class MetricsHistoryCallback(Callback):
+
+                def __init__(self):
+                    super().__init__()
+
+                    self.metric_history = []
+
+                def on_validation_end(self, trainer, pl_module):
+                    self.metric_history.append(trainer.callback_metrics)
+
+            metrics_tracker = MetricsHistoryCallback()
+
+            container = build_container(model, tmp_config_file.name)
+
+            module = container.module()
+
+            config = container.config
+            trainer_builder = _get_base_trainer_builder(config.trainer, callbacks=[metrics_tracker])
+            trainer = trainer_builder.build()
+            trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
+
+            def _find_best_value(key: str, best: Callable[[List[float]], float] = min) -> float:
+                values = [history_entry[key] for history_entry in metrics_tracker.metric_history]
+                return best(values)
+
+            return _find_best_value(objective_metric, objective_best)
+
+    study = optuna.load_study(study_name=study_name, storage=study_storage)
+    study.optimize(objective, n_trials=num_trails)
 
 
 @app.command()
