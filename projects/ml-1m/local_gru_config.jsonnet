@@ -1,28 +1,31 @@
-local base_path = "../tests/example_dataset/";
-local max_seq_length = 7;
+local base_path = "../dataset/dataset/ml-1m_3_5_5/";
+local max_seq_length = 50;
 local metrics =  {
+    mrr: [1, 3, 5],
     recall: [1, 3, 5],
-    ndcg: [1, 3, 5],
-    f1: [1, 3, 5[
+    ndcg: [1, 3, 5]
 };
+
+local file_prefix = 'ml-1m';
+
 {
     templates: {
         unified_output: {
-            path: "/tmp/experiments/gru_basket"
+            path: "../dataset/dataset/experiments/ml-1m/gru"
         },
         next_sequence_step_data_sources: {
             parser: {
-                item_column_name: "item_id",
-                item_separator: ' + '
+                item_column_name: "title"
             },
             loader: {
-                batch_size: 9,
-                max_seq_length: max_seq_length,
-                max_seq_step_length: 5
+                batch_size: 16,
+                max_seq_length: max_seq_length
             },
             path: base_path,
-            validation_file_prefix: "train",
-            test_file_prefix: "train"
+            train_file_prefix: file_prefix,
+            validation_file_prefix: file_prefix,
+            test_file_prefix: file_prefix,
+            leave_one_out: true,
         }
     },
     module: {
@@ -33,21 +36,16 @@ local metrics =  {
             },
             sampled: {
                 sample_probability_file: base_path + "popularity.txt",
-                num_negative_samples: 2,
-                metrics: metrics
-            },
-            fixed: {
-                item_file: base_path + "relevant_items.txt",
+                num_negative_samples: 100,
                 metrics: metrics
             }
         },
         model: {
             cell_type: "gru",
-            item_embedding_dim: 4,
-            hidden_size: 4,
-            num_layers: 1,
-            dropout: 0.0,
-            embedding_pooling_type: 'mean'
+            item_embedding_dim: 64,
+            hidden_size: 64,
+            num_layers: 2,
+            dropout: 0.2
         }
     },
     tokenizers: {
@@ -59,7 +57,8 @@ local metrics =  {
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "vocab.txt"
+                    delimiter: "\t",
+                    file: base_path + "vocab_title.txt"
                 }
             }
         }
@@ -69,9 +68,10 @@ local metrics =  {
             type: "tensorboard"
         },
         checkpoint: {
-            monitor: "recall@5",
+            monitor: "recall@5/sampled(100)",
             save_top_k: 3,
             mode: 'max'
-        }
+        },
+        max_epochs: 100
     }
 }

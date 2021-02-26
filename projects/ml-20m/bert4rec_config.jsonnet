@@ -1,51 +1,54 @@
-local base_path = "../tests/example_dataset/";
-local max_seq_length = 7;
+local base_path = "/ssd/ml-20m/";
+local output_path = "/scratch/jane-doe-framework/experiments/ml-20m/bert4rec";
+local max_seq_length = 200;
 local metrics =  {
     mrr: [1, 3, 5],
     recall: [1, 3, 5],
     ndcg: [1, 3, 5]
 };
+
+local file_prefix = 'ml-20m';
+
 {
-    template: {
+    templates: {
         unified_output: {
-            path: "/tmp/experiments/sasrec"
+            path: output_path
         },
-        pos_neg_data_sources: {
+        mask_data_sources: {
             parser: {
-                item_column_name: "item_id"
+                item_column_name: "title"
             },
             loader: {
-                batch_size: 9,
+                batch_size: 64,
                 max_seq_length: max_seq_length
             },
             path: base_path,
-            validation_file_prefix: "train",
-            test_file_prefix: "train",
-            seed: 123456
+            train_file_prefix: file_prefix,
+            validation_file_prefix: file_prefix,
+            test_file_prefix: file_prefix,
+            mask_probability: 0.2,
+            seed: 42
         }
     },
     module: {
-        type: "sasrec",
+        type: "bert4rec",
         metrics: {
             full: {
                 metrics: metrics
             },
             sampled: {
                 sample_probability_file: base_path + "popularity.txt",
-                num_negative_samples: 2,
-                metrics: metrics
-            },
-            fixed: {
-                item_file: base_path + "relevant_items.txt",
+                num_negative_samples: 100,
                 metrics: metrics
             }
         },
         model: {
-            transformer_hidden_size: 4,
-            num_transformer_heads: 2,
-            num_transformer_layers: 1,
             max_seq_length: max_seq_length,
-            transformer_dropout: 0.1
+            num_transformer_heads: 2,
+            num_transformer_layers: 2,
+            transformer_hidden_size: 256,
+            transformer_dropout: 0.2,
+            project_layer_type: 'linear'
         }
     },
     tokenizers: {
@@ -64,12 +67,16 @@ local metrics =  {
     },
     trainer: {
         logger: {
-            type: "tensorboard"
+            type: "tensorboard",
         },
         checkpoint: {
-            monitor: "recall@5",
+            monitor: "recall@10/sampled(100)",
             save_top_k: 3,
             mode: 'max'
-        }
+        },
+        gpus: 8,
+        max_epochs: 800,
+        accelerator: "ddp",
+        check_val_every_n_epoch: 50
     }
 }

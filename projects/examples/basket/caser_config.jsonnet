@@ -1,24 +1,30 @@
 local base_path = "../tests/example_dataset/";
 local max_seq_length = 7;
 local metrics =  {
-    mrr: [1, 3, 5],
     recall: [1, 3, 5],
-    ndcg: [1, 3, 5]
+    ndcg: [1, 3, 5],
+    f1: [1, 3, 5[
 };
 {
-    output_directory: "/tmp/experiments/caser_basket",
-    pos_neg_data_sources: {
-        parser: {
-            item_column_name: "item_id",
-            item_separator: ' + '
+    templates: {
+        unified_output: {
+            path: "/tmp/experiments/caser_basket"
         },
-        batch_size: 9,
-        max_seq_length: max_seq_length,
-        max_seq_step_length: 5,
-        path: base_path,
-        validation_file_prefix: "train",
-        test_file_prefix: "train",
-        seed: 123456
+        pos_neg_data_sources: {
+            parser: {
+                item_column_name: "item_id",
+                item_separator: ' + '
+            },
+            loader: {
+                batch_size: 9,
+                max_seq_length: max_seq_length,
+                max_seq_step_length: 5
+            },
+            path: base_path,
+            validation_file_prefix: "train",
+            test_file_prefix: "train",
+            seed: 123456
+        }
     },
     module: {
         type: "caser",
@@ -56,7 +62,6 @@ local metrics =  {
                         unk_token: "<UNK>"
                     },
                     vocabulary: {
-                        delimiter: "\t",
                         file: base_path + "vocab.txt"
                     }
                 }

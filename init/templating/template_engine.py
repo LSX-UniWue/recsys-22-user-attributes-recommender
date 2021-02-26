@@ -1,5 +1,6 @@
 from typing import Dict, Any
 
+from init.templating import TEMPLATES_CONFIG_KEY
 from init.templating.datasources.mask import MaskDataSourcesTemplateProcessor
 from init.templating.datasources.next import NextSequenceStepDataSourcesTemplateProcessor
 from init.templating.datasources.positive_negative import PositiveNegativeDataSourcesTemplateProcessor
@@ -16,10 +17,10 @@ class TemplateEngine:
 
     def __init__(self):
         super(TemplateEngine, self).__init__()
-        self._templates = [MaskDataSourcesTemplateProcessor(),
-                           PositiveNegativeDataSourcesTemplateProcessor(),
-                           NextSequenceStepDataSourcesTemplateProcessor(),
-                           OutputDirectoryProcessor()]
+        self._template_processors = [MaskDataSourcesTemplateProcessor(),
+                                     PositiveNegativeDataSourcesTemplateProcessor(),
+                                     NextSequenceStepDataSourcesTemplateProcessor(),
+                                     OutputDirectoryProcessor()]
 
     def modify(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -28,9 +29,16 @@ class TemplateEngine:
         :param config: a config containing templates.
         :return: the updated config after applying all processors.
         """
-        for template in self._templates:
-            if template.can_modify(config):
-                config = template.modify(config)
+        if TEMPLATES_CONFIG_KEY not in config:
+            # no templates in config -> nothing to do
+            return config
+        for template_processors in self._template_processors:
+            if template_processors.can_modify(config):
+                config = template_processors.modify(config)
+
+        # after all templates are applied remove the templates element from the config
+        # check if every
+        config.pop(TEMPLATES_CONFIG_KEY)
         return config
 
     def add_processor(self, processor: TemplateProcessor):
@@ -40,4 +48,4 @@ class TemplateEngine:
         :param processor: a processor.
         :return:
         """
-        self._templates.append(processor)
+        self._template_processors.append(processor)

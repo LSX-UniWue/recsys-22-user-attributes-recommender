@@ -6,17 +6,23 @@ local metrics =  {
     ndcg: [1, 3, 5]
 };
 {
-    output_directory: "/tmp/experiments/caser",
-    pos_neg_data_sources: {
-        parser: {
-            item_column_name: "item_id"
+    templates: {
+        unified_output: {
+            path: "/tmp/experiments/caser"
         },
-        batch_size: 9,
-        max_seq_length: max_seq_length,
-        path: base_path,
-        validation_file_prefix: "train",
-        test_file_prefix: "train",
-        seed: 123456
+        pos_neg_data_sources: {
+            parser: {
+                item_column_name: "item_id"
+            },
+            loader: {
+                batch_size: 9,
+                max_seq_length: max_seq_length
+            },
+            path: base_path,
+            validation_file_prefix: "train",
+            test_file_prefix: "train",
+            seed: 123456
+        }
     },
     module: {
         type: "caser",
@@ -45,20 +51,19 @@ local metrics =  {
         }
     },
     tokenizers: {
-            item: {
-                tokenizer: {
-                    special_tokens: {
-                        pad_token: "<PAD>",
-                        mask_token: "<MASK>",
-                        unk_token: "<UNK>"
-                    },
-                    vocabulary: {
-                        delimiter: "\t",
-                        file: base_path + "vocab.txt"
-                    }
+        item: {
+            tokenizer: {
+                special_tokens: {
+                    pad_token: "<PAD>",
+                    mask_token: "<MASK>",
+                    unk_token: "<UNK>"
+                },
+                vocabulary: {
+                    file: base_path + "vocab.txt"
                 }
             }
-        },
+        }
+    },
     trainer: {
         logger: {
             type: "tensorboard"

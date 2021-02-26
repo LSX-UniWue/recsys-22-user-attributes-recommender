@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from typing import Dict, Any
 
+from init.templating import TEMPLATES_CONFIG_KEY
 from init.templating.template_processor import TemplateProcessor
 
 
@@ -14,8 +15,9 @@ class DataSourceTemplateProcessor(TemplateProcessor):
     """
 
     def can_modify(self, config: Dict[str, Any]) -> bool:
-        template_present = self._get_template_key() in config
-        if CONFIG_DATASOURCES_KEY in config and template_present:
+        template_config = config.get(TEMPLATES_CONFIG_KEY)
+        template_present = self._get_template_key() in template_config
+        if CONFIG_DATASOURCES_KEY in template_config and template_present:
             raise KeyError('data_sources already specified. Can not apply template.')
 
         return template_present
@@ -25,7 +27,8 @@ class DataSourceTemplateProcessor(TemplateProcessor):
         pass
 
     def modify(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        data = config.pop(self._get_template_key())
+        template_config = config.get(TEMPLATES_CONFIG_KEY)
+        data = template_config.pop(self._get_template_key())
 
         parser_config = data['parser']
         parser = build_parser_config(parser_config)
@@ -98,9 +101,11 @@ def build_datasource(datasource_type: str,
     """
     base_path = config['path']
 
-    base_batch_size = config.get('batch_size', 0)
-    batch_size = config.get(f'{prefix_id}_batch_size', base_batch_size)
-    max_seq_length = config['max_seq_length']
+    loader_config = config['loader']
+
+    base_batch_size = loader_config.get('batch_size', 0)
+    batch_size = loader_config.get(f'{prefix_id}_batch_size', base_batch_size)
+    max_seq_length = loader_config['max_seq_length']
 
     prefix = config.get(f'{prefix_id}_file_prefix', prefix_id)
 
@@ -121,19 +126,28 @@ def build_datasource(datasource_type: str,
         'processors': processors
     }
 
-    if "nextit" == datasource_type:
-        dataset_config['nip_index_file'] = f'{base_path}{prefix}.nip.idx'
+    nip_type = 'nip'
 
-    loader_config = {
+    if config.get('leave_one_out', False):
+        nip_type = 'loo'
+
+    if "nextit" == datasource_type:
+        dataset_config['nip_index_file'] = f'{base_path}{prefix}.{nip_type}.idx'
+
+    loader_config_dict = {
         'dataset': dataset_config,
         'batch_size': batch_size,
         'max_seq_length': max_seq_length
     }
 
-    max_seq_step_length = config.get('max_seq_step_length')
+    max_seq_step_length = loader_config.get('max_seq_step_length')
     if max_seq_step_length is not None:
-        loader_config['max_seq_step_length'] = max_seq_step_length
+        loader_config_dict['max_seq_step_length'] = max_seq_step_length
+
+    num_workers = loader_config.get('num_workers')
+    if num_workers is not None:
+        loader_config_dict['num_workers'] = num_workers
 
     return {
-        'loader': loader_config
+        'loader': loader_config_dict
     }
