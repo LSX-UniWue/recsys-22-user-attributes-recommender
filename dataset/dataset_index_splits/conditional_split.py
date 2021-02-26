@@ -32,15 +32,6 @@ def get_position_with_offset_two(session: Dict[str, Any]) -> Iterable[int]:
     return _get_position_with_offset(session, offset=2)
 
 
-def get_position_with_offset_three(session: Dict[str, Any]) -> Iterable[int]:
-    """
-    Helper method for training index
-    :param session: session that the target is to be extracted from
-    :return: index within session where testing target is stored
-    """
-    return _get_position_with_offset(session, offset=3)
-
-
 def create_conditional_index_using_extractor(data_file_path: Path,
                                              session_index_path: Path,
                                              output_file_path: Path,
@@ -60,7 +51,7 @@ def create_conditional_index_using_extractor(data_file_path: Path,
     :param delimiter: delimiter used in original data file
     :param additional_features: FixMe I need a description
     :param target_positions_extractor: FixMe I need a description
-    :return: None, Side effect: new index file is stored at :param output_file_path:
+    :return: None, Side effect: new index file is stored at output_file_path
     """
     session_parser = ItemSessionParser(
         create_indexed_header(read_csv_header(data_file_path, delimiter)),
