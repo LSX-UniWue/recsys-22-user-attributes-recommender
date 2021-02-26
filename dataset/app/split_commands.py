@@ -27,15 +27,7 @@ def next_item(
     :return: None, Side effect: Test and Validation indices are written
     """
     additional_features = {}
-    # Create training index with target item n-2
-    conditional_split.create_conditional_index_using_extractor(data_file_path,
-                                                               session_index_path,
-                                                               output_dir_path / 'train.idx',
-                                                               item_header,
-                                                               minimum_session_length,
-                                                               delimiter,
-                                                               additional_features,
-                                                               conditional_split.get_position_with_offset_three)
+
     # Create validation index with target item n-1
     conditional_split.create_conditional_index_using_extractor(data_file_path,
                                                                session_index_path,
@@ -61,6 +53,8 @@ def ratios(
         session_index_path: Path = typer.Argument(..., help="Path to session index for the data file"),
         output_dir_path: Path = typer.Argument(..., help="path that the splits should be written to"),
         session_key: List[str] = typer.Argument(..., help="session key"),
+        item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
+        minimum_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
         train_ratio: float = typer.Argument(0.9, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
         validation_ratio: float = typer.Argument(0.05, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
         testing_ratio: float = typer.Argument(0.05, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
@@ -73,6 +67,8 @@ def ratios(
     :param session_index_path: session index belonging to the data file
     :param output_dir_path: output directory where the data and index files for the splits are written to
     :param session_key: Session key used to uniquely identify sessions
+    :param minimum_session_length: Minimum length that sessions need to be in order to be included
+    :param item_header_name: data set key that the item-ids are stored under
     :param train_ratio: share of session used for training
     :param validation_ratio: share of session used for validation
     :param testing_ratio: share of session used for testing
@@ -89,9 +85,12 @@ def ratios(
                     session_key=session_key,
                     split_ratios=splits,
                     delimiter=delimiter,
-                    seed=seed)
+                    seed=seed,
+                    item_header_name=item_header_name,
+                    minimum_session_length=minimum_session_length)
 
 
+# Todo Find better name
 @app.command()
 def create_conditional_index(
         data_file_path: Path = typer.Argument(..., exists=True, help="path to the input file in CSV format"),
@@ -115,7 +114,7 @@ def create_conditional_index(
     :param target_feature:
     :return:
     """
-
+    # Builds
     target_positions_extractor = conditional_split._build_target_position_extractor(target_feature)
     additional_features = {}
     if target_feature is not None:

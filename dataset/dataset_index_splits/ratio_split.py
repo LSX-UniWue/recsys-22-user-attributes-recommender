@@ -7,6 +7,7 @@ from numpy.random._generator import default_rng
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 
 from dataset.app import index_command
+from dataset.app.split_commands import create_conditional_index
 
 
 def run(data_file_path: Path,
@@ -15,6 +16,8 @@ def run(data_file_path: Path,
         session_key: List[str],
         split_ratios: Dict[Text, float],
         delimiter: str,
+        item_header_name: str,
+        minimum_session_length: int,
         seed: int):
     """
     ToDo
@@ -24,6 +27,8 @@ def run(data_file_path: Path,
     :param session_key: Session identifier name in data set header
     :param split_ratios:
     :param delimiter: Delimiter used in original data file
+    :param minimum_session_length: Minimum length that sessions need to be in order to be included
+    :param item_header_name: data set key that the item-ids are stored under
     :param seed:
     :return:
     """
@@ -44,16 +49,23 @@ def run(data_file_path: Path,
         write_split(reader, output_dir_path, header, split_name, sample_indices)
 
     # Index newly written splits
-    for split in ["train", "test", "valid"]:
+    for split in tqdm(["train", "test", "valid"], desc="Index new splits"):
         data_file = output_dir_path.joinpath(split + ".csv")
-        index_file = output_dir_path.joinpath(split + ".idx")
-        index_command.index_csv(data_file_path=data_file, index_file_path=index_file,
+        split_index_file = output_dir_path.joinpath(split + ".session.idx")
+        next_item_index_file = output_dir_path.joinpath(split + ".nextitem.idx")
+        index_command.index_csv(data_file_path=data_file, index_file_path=split_index_file,
                                 session_key=session_key, delimiter=delimiter)
+        create_conditional_index(data_file_path=data_file,
+                                 session_index_path=split_index_file,
+                                 output_file_path=next_item_index_file,
+                                 item_header_name=item_header_name,
+                                 min_session_length=minimum_session_length,
+                                 delimiter="\t")
 
 
 def perform_ratio_split(split_ratios: Dict[Text, float], sample_indices: List[int]) -> Dict[Text, List[int]]:
     """
-    ToDo
+    ToDo Document me
     :param split_ratios:
     :param sample_indices:
     :return:
@@ -79,7 +91,7 @@ def perform_ratio_split(split_ratios: Dict[Text, float], sample_indices: List[in
 def write_split(reader: CsvDatasetReader, output_dir_path: Path, header: Text, split_name: Text,
                 sample_indices: List[int]):
     """
-    ToDo
+    ToDo Document me
     :param reader:
     :param output_dir_path:
     :param header:
