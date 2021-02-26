@@ -6,6 +6,7 @@ local metrics =  {
     ndcg: [1, 3, 5]
 };
 {
+    output_directory: "/tmp/experiments/bert4rec",
     mask_data_sources: {
         parser: {
             item_column_name: "item_id",
@@ -62,16 +63,12 @@ local metrics =  {
     },
     trainer: {
         logger: {
-            type: "tensorboard",
-            save_dir: "/tmp/bert4rec",
-            name: "bert4rec",
-            version: ""
+            type: "tensorboard"
         },
         checkpoint: {
             monitor: "recall@5",
             save_top_k: 3,
-            mode: 'max',
-            dirpath: "/tmp/bert4rec/checkpoints"
+            mode: 'max'
         }
     }
 }

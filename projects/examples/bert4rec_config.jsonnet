@@ -65,8 +65,7 @@ local metrics =  {
         checkpoint: {
             monitor: "recall@5",
             save_top_k: 3,
-            mode: 'max',
-            #dirpath: "/tmp/bert4rec/checkpoints"
+            mode: 'max'
         }
     }
 }

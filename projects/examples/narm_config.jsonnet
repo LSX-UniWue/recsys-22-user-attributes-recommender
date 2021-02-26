@@ -6,6 +6,7 @@ local metrics =  {
     ndcg: [1, 3, 5]
 };
 {
+    output_directory: "/tmp/experiments/narm",
     next_sequence_step_data_sources: {
         parser: {
             item_column_name: "item_id"
@@ -58,15 +59,12 @@ local metrics =  {
         },
     trainer: {
         logger: {
-            type: "tensorboard",
-            save_dir: "/tmp/caser",
-            name: "caser",
+            type: "tensorboard"
         },
         checkpoint: {
             monitor: "recall@5",
             save_top_k: 3,
-            mode: 'max',
-            dirpath: "/tmp/caser/checkpoints"
+            mode: 'max'
         }
     }
 }

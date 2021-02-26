@@ -4,6 +4,11 @@ from init.templating.config_utils import config_entry_exists, get_config_value, 
 from init.templating.template_processor import TemplateProcessor
 
 
+CHECKPOINT_PATH = ['trainer', 'checkpoint']
+LOGGER_PATH = ["trainer", "logger"]
+LOGGER_TYPE_PATH = LOGGER_PATH + ['type']
+
+
 class OutputDirectoryProcessor(TemplateProcessor):
     """
     Sets all output directories and files based on a common output directory.
@@ -37,11 +42,9 @@ class OutputDirectoryProcessor(TemplateProcessor):
         template_present = "output_directory" in config
 
         # check if user specified output directories on her own
-        if config_entry_exists(config, ["trainer", "logger", "save_dir"]):
-            raise KeyError('trainer.logger.save_dir is set to a custom value. Can not apply template.')
-
-        if config_entry_exists(config, ["trainer", "checkpoint", "dirpath"]):
-            raise KeyError('trainer.checkpoint.dirpath is set to a custom value. Can not apply template.')
+        if config_entry_exists(config, LOGGER_PATH + ["save_dir"]) or\
+                config_entry_exists(config, CHECKPOINT_PATH + ["dirpath"]):
+            return False
 
         return template_present
 
@@ -53,41 +56,43 @@ class OutputDirectoryProcessor(TemplateProcessor):
 
         return config
 
-    def _modify_logger(self, config: Dict[str, Any], output_base_dir: str):
-        logger_element_exists = config_entry_exists(config, ["trainer", "logger"])
+    def _modify_logger(self,
+                       config: Dict[str, Any],
+                       output_base_dir: str):
+        logger_element_exists = config_entry_exists(config, LOGGER_PATH)
         # TODO refactor logic logger-type wise
         if logger_element_exists:
-            logger_type = get_config_value(config, ["trainer", "logger", "type"])
+            logger_type = get_config_value(config, LOGGER_TYPE_PATH)
 
             if logger_type is None:
                 print(f"No logger type specified. Configuring a tensorboard logger...")
-                set_config_value(config, ["trainer", "logger", "type"], "tensorboard")
+                set_config_value(config, LOGGER_TYPE_PATH, "tensorboard")
                 logger_type = "tensorboard"
 
             if logger_type == "tensorboard" or "mlflow":
-                set_config_value(config, ["trainer", "logger", "save_dir"], output_base_dir)
+                set_config_value(config, LOGGER_PATH + ["save_dir"], output_base_dir)
             else:
                 print(f"Unknown logger {logger_type} I did not set the output directory!!")
 
             # for tensorboard set version & name to empty string ("") to avoid subdirectories
             if logger_type == "tensorboard":
-                logger_name_path = ["trainer", "logger", "name"]
+                logger_name_path = LOGGER_PATH + ["name"]
                 if not config_entry_exists(config, logger_name_path):
                     set_config_value(config, logger_name_path, "")
 
-                version_name_path = ["trainer", "logger", "version"]
+                version_name_path = LOGGER_PATH + ["version"]
                 if not config_entry_exists(config, version_name_path):
                     set_config_value(config, version_name_path, "")
         else:
             # configure a default tensorboard logger
             set_config_value(config,
-                             ["trainer", "logger"],
+                             LOGGER_PATH,
                              {"type": "tensorboard", "save_dir": output_base_dir, "name": "", "version": ""})
 
     def _modify_checkpoint(self, config: Dict[str, Any], output_base_dir: str):
         output_checkpoint_dir = f"{output_base_dir}/checkpoints"
 
-        checkpoint_element_exists = config_entry_exists(config, ["trainer", "checkpoint"])
+        checkpoint_element_exists = config_entry_exists(config, CHECKPOINT_PATH)
 
         if checkpoint_element_exists:
-            set_config_value(config, ["trainer", "checkpoint", "dirpath"], output_checkpoint_dir)
+            set_config_value(config, CHECKPOINT_PATH + ["dirpath"], output_checkpoint_dir)

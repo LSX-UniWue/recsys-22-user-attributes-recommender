@@ -121,8 +121,8 @@ def build_datasource(datasource_type: str,
         'processors': processors
     }
 
-    if "nextit" == type:
-        dataset_config['nip_index_file'] = f'{base_path}{prefix}.nip.idx',
+    if "nextit" == datasource_type:
+        dataset_config['nip_index_file'] = f'{base_path}{prefix}.nip.idx'
 
     loader_config = {
         'dataset': dataset_config,
