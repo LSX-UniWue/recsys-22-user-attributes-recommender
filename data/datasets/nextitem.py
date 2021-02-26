@@ -10,6 +10,7 @@ from data.datasets.session import ItemSessionDataset, PlainSessionDataset
 from data.mp import MultiProcessSupport
 
 
+# Todo find better name
 class NextItemDataset(Dataset, MultiProcessSupport):
 
     def __init__(self,

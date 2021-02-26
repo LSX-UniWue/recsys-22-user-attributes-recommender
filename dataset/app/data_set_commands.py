@@ -89,6 +89,8 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
                               validation_ratio=0.05,
                               testing_ratio=0.05,
                               delimiter=delimiter,
+                              item_header_name=YOOCHOOSE_ITEM_ID_KEY,
+                              minimum_session_length=min_seq_length,
                               seed=123456)
 
         print("Create next item split...")
@@ -151,6 +153,8 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
                           validation_ratio=0.05,
                           testing_ratio=0.05,
                           delimiter=AMAZON_DELIMITER,
+                          minimum_session_length=min_seq_length,
+                          item_header_name=AMAZON_ITEM_ID,
                           seed=123456)
 
     print("Create next item split...")
