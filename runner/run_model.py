@@ -2,16 +2,21 @@ import logging
 import logging.handlers
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from tempfile import NamedTemporaryFile
+from typing import Dict, Any, Optional, List, Callable
 
+import optuna
 import typer
-from dependency_injector import containers
+from dependency_injector import containers, providers
+from optuna.structs import StudyDirection
 from pytorch_lightning import seed_everything, Callback
 from pytorch_lightning.utilities import cloud_io
 
 from runner.util.builder import TrainerBuilder, LoggerBuilder, CallbackBuilder
-from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer
-from runner.util.containers import DreamContainer
+from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer,\
+    DreamContainer
+from search.processor import ConfigTemplateProcessor
+from search.resolver import OptunaParameterResolver
 
 app = typer.Typer()
 
@@ -42,11 +47,16 @@ def _config_logging(config: Dict[str, Any]
     logger.addHandler(handler)
 
 
-def _get_base_trainer_builder(config) -> TrainerBuilder:
-    trainer_builder = TrainerBuilder(config.trainer())
-    trainer_builder = trainer_builder.add_checkpoint_callback(config.trainer.checkpoint())
-    trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.trainer.logger()).build())
+def _get_base_trainer_builder(config: providers.Configuration,
+                              callbacks: List[Callback] = None) -> TrainerBuilder:
+    trainer_builder = TrainerBuilder(config())
+    trainer_builder = trainer_builder.add_checkpoint_callback(config.checkpoint())
+    trainer_builder = trainer_builder.add_logger(LoggerBuilder(parameters=config.logger()).build())
+    if callbacks:
+        for callback_logger in callbacks:
+            trainer_builder = trainer_builder.add_callback(callback_logger)
     return trainer_builder
+
 
 @app.command()
 def train(model: str = typer.Argument(..., help="the model to run"),
@@ -64,7 +74,7 @@ def train(model: str = typer.Argument(..., help="the model to run"),
     module = container.module()
 
     config = container.config
-    trainer_builder = _get_base_trainer_builder(config)
+    trainer_builder = _get_base_trainer_builder(config.trainer)
     trainer = trainer_builder.build()
 
     if do_train:
@@ -75,6 +85,74 @@ def train(model: str = typer.Argument(..., help="the model to run"),
             print(f"The model has to be trained before it can be tested!")
             exit(-1)
         trainer.test(test_dataloaders=container.test_loader())
+
+
+@app.command()
+def search(model: str = typer.Argument(..., help="the model to run"),
+           template_file: Path = typer.Argument(..., help='the path to the config file'),
+           study_name: str = typer.Argument(..., help='the study name of an existing optuna study'),
+           study_storage: str = typer.Argument(..., help='the connection string for the study storage'),
+           objective_metric: str = typer.Argument(..., help='the name of the metric to watch during the study'
+                                                            '(e.g. recall_at_5).'),
+           num_trails: int = typer.Option(default=20, help='the number of trails to execute')
+          ) -> None:
+    # XXX: because the dependency injector does not provide a error message when the config file does not exists,
+    # we manually check if the config file exists
+    if not os.path.isfile(template_file):
+        print(f"the config file cannot be found. Please check the path '{template_file}'!")
+        exit(-1)
+
+    def config_from_template(template_file: Path,
+                             config_file_handle,
+                             trial):
+        import yaml
+        resolver = OptunaParameterResolver(trial)
+        processor = ConfigTemplateProcessor(resolver)
+
+        with template_file.open("r") as f:
+            template = yaml.load(f)
+            resolved_config = processor.process(template)
+
+            yaml.dump(resolved_config, config_file_handle)
+            config_file_handle.flush()
+
+    def objective(trial: optuna.Trial):
+        # get the direction to get if we must extract the max or the min value of the metric
+        study_direction = trial.study.direction
+        objective_best = {StudyDirection.MINIMIZE: min, StudyDirection.MAXIMIZE: max}[study_direction]
+
+        with NamedTemporaryFile(mode='wt') as tmp_config_file:
+            config_from_template(template_file, tmp_config_file, trial)
+
+            class MetricsHistoryCallback(Callback):
+
+                def __init__(self):
+                    super().__init__()
+
+                    self.metric_history = []
+
+                def on_validation_end(self, trainer, pl_module):
+                    self.metric_history.append(trainer.callback_metrics)
+
+            metrics_tracker = MetricsHistoryCallback()
+
+            container = build_container(model, tmp_config_file.name)
+
+            module = container.module()
+
+            config = container.config
+            trainer_builder = _get_base_trainer_builder(config.trainer, callbacks=[metrics_tracker])
+            trainer = trainer_builder.build()
+            trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
+
+            def _find_best_value(key: str, best: Callable[[List[float]], float] = min) -> float:
+                values = [history_entry[key] for history_entry in metrics_tracker.metric_history]
+                return best(values)
+
+            return _find_best_value(objective_metric, objective_best)
+
+    study = optuna.load_study(study_name=study_name, storage=study_storage)
+    study.optimize(objective, n_trials=num_trails)
 
 
 @app.command()
@@ -171,7 +249,7 @@ def resume(model: str = typer.Argument(..., help="the model to run."),
     module = container.module()
 
     config = container.config
-    trainer = _get_base_trainer_builder(config).from_checkpoint(checkpoint_file).build()
+    trainer = _get_base_trainer_builder(config.trainer).from_checkpoint(checkpoint_file).build()
 
     train_loader = container.train_loader()
     validation_loader = container.validation_loader()
