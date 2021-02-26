@@ -1,33 +1,25 @@
 from typing import Dict, Any
 
-from init.templating.datasources.mask import build_datasource, build_parser_config
-from init.templating.template_processor import TemplateProcessor
+from init.templating.datasources.datasources import build_datasource, DataSourceTemplateProcessor
 
 
-class NextSequenceStepDataSourcesTemplateProcessor(TemplateProcessor):
+class NextSequenceStepDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
 
-    # FIXME: duplicate code
-    def can_modify(self, config: Dict[str, Any]) -> bool:
-        template_present = "next_sequence_step_data_sources" in config
-        if "data_sources" in config and template_present:
-            raise KeyError('data_sources already specified. Cannot create a templating')
+    """
+     This data sources template processor configs the datasets in the following was:
+    - train: a nextitem datasource with a tokenizer processor
+    - validation: a nextitem datasource with a tokenizer processor
+    - test: a nextitem datasource with a tokenizer processor
+    """
 
-        return template_present
+    def _get_template_key(self) -> str:
+        return 'next_sequence_step_data_sources'
 
-    def modify(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        data = config.pop('next_sequence_step_data_sources')
+    def _build_train_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
+        return build_datasource("nextit", parser, config, 'train')
 
-        parser_config = data['parser']
-        parser = build_parser_config(parser_config)
+    def _build_validation_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
+        return build_datasource("nextit", parser, config, 'validation')
 
-        train_config = build_datasource("nextit", parser, data, 'train')
-        validation_config = build_datasource("nextit", parser, data, 'validation')
-        test_config = build_datasource("nextit", parser, data, 'test')
-
-        config['data_sources'] = {
-            'train': train_config,
-            'test': test_config,
-            'validation': validation_config
-        }
-
-        return config
+    def _build_test_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
+        return build_datasource("nextit", parser, config, 'test')

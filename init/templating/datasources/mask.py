@@ -1,26 +1,28 @@
 from typing import Dict, Any
 
-from init.templating.template_processor import TemplateProcessor
+from init.templating.datasources.datasources import build_datasource, DataSourceTemplateProcessor
 
 
-class MaskDataSourcesTemplateProcessor(TemplateProcessor):
+class MaskDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
 
-    def can_modify(self, config: Dict[str, Any]) -> bool:
-        template_present = "mask_data_sources" in config
-        if "data_sources" in config and template_present:
-            raise KeyError('data_sources already specified. Cannot create a templating')
+    """
+    This data sources template processor configs the datasets in the following was:
+    - train: a nextitem datasource with a tokenizer and cloze processor
+    - validation: a nextitem datasource with a tokenizer and a list item mask processor
+    - test: a nextitem datasource with a tokenizer and a list item mask processor
+    """
 
-        return template_present
+    LAST_ITEM_MASK_PROCESSOR_CONFIG = {
+        'type': 'last_item_mask'
+    }
 
-    def modify(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        data = config.pop('mask_data_sources')
+    def _get_template_key(self) -> str:
+        return 'mask_data_sources'
 
-        parser_config = data['parser']
-        parser = build_parser_config(parser_config)
-
-        mask_probability = data.get('mask_probability', 0.2)
-        only_last_item_mask_prob = data.get('only_last_item_mask_prob', 0.1)
-        seed = data['seed']
+    def _build_train_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
+        mask_probability = config.get('mask_probability', 0.2)
+        only_last_item_mask_prob = config.get('only_last_item_mask_prob', 0.1)
+        seed = config['seed']
         cloze_processor = {
             'type': "cloze",
             'mask_probability': mask_probability,
@@ -28,76 +30,10 @@ class MaskDataSourcesTemplateProcessor(TemplateProcessor):
             'seed': seed
         }
 
-        last_item_mask_processor = {
-            'type': 'last_item_mask'
-        }
+        return build_datasource("nextit", parser, config, 'train', cloze_processor)
 
-        train_config = build_datasource("nextit", parser, data, 'train', cloze_processor)
-        validation_config = build_datasource("nextit", parser, data, 'validation', last_item_mask_processor)
-        test_config = build_datasource("nextit", parser, data, 'test', last_item_mask_processor)
+    def _build_validation_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
+        return build_datasource("nextit", parser, config, 'validation', self.LAST_ITEM_MASK_PROCESSOR_CONFIG)
 
-        config['data_sources'] = {
-            'train': train_config,
-            'test': test_config,
-            'validation': validation_config
-        }
-        return config
-
-
-# FIXME: document
-def build_datasource(datasource_type: str,
-                     parser: Dict[str, Any],
-                     config: Dict[str, Any],
-                     prefix_id: str,
-                     processor: Dict[str, Any] = None
-                     ) -> Dict[str, Any]:
-    base_path = config['path']
-
-    base_batch_size = config.get('batch_size', 0)
-    batch_size = config.get(f'{prefix_id}_batch_size', base_batch_size)
-    max_seq_length = config['max_seq_length']
-
-    prefix = config.get(f'{prefix_id}_file_prefix', prefix_id)
-
-    processors = [
-        {
-            'type': 'tokenizer'
-        }
-    ]
-
-    if processor is not None:
-        processors.append(processor)
-
-    loader_config = {
-        'dataset': {
-            'type': datasource_type,
-            'csv_file': f'{base_path}{prefix}.csv',
-            'csv_file_index': f'{base_path}{prefix}.idx',
-            'nip_index_file': f'{base_path}{prefix}.nip.idx',
-            'parser': parser,
-            'processors': processors
-        },
-        'batch_size': batch_size,
-        'max_seq_length': max_seq_length
-    }
-
-    max_seq_step_length = config.get('max_seq_step_length')
-    if max_seq_step_length is not None:
-        loader_config['max_seq_step_length'] = max_seq_step_length
-    return {
-        'loader': loader_config
-    }
-
-
-def build_parser_config(parser_config: Dict[str, Any]) -> Dict[str, Any]:
-    item_column_name = parser_config['item_column_name']
-
-    parser = {
-        'item_column_name': item_column_name
-    }
-
-    item_separator = parser_config.get('item_separator', None)
-    if item_separator is not None:
-        parser['item_separator'] = item_separator
-
-    return parser
+    def _build_test_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
+        return build_datasource("nextit", parser, config, 'test', self.LAST_ITEM_MASK_PROCESSOR_CONFIG)

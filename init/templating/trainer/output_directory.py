@@ -38,7 +38,7 @@ class OutputDirectoryProcessor(TemplateProcessor):
 
         # check if user specified output directories on her own
         if config_entry_exists(config, ["trainer", "logger", "save_dir"]):
-            raise KeyError('trainer.logger.save_dir is set to acustom value. Can not apply template.')
+            raise KeyError('trainer.logger.save_dir is set to a custom value. Can not apply template.')
 
         if config_entry_exists(config, ["trainer", "checkpoint", "dirpath"]):
             raise KeyError('trainer.checkpoint.dirpath is set to a custom value. Can not apply template.')
