@@ -22,7 +22,7 @@ class MaskDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
     def _build_train_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
         mask_probability = config.get('mask_probability', 0.2)
         only_last_item_mask_prob = config.get('only_last_item_mask_prob', 0.1)
-        seed = config['seed']
+        seed = config['mask_seed']
         cloze_processor = {
             'type': "cloze",
             'mask_probability': mask_probability,

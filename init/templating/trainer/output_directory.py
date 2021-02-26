@@ -39,7 +39,9 @@ class OutputDirectoryProcessor(TemplateProcessor):
 
         :return: True if the processor can modify the configuration, False otherwise.
         """
-        template_present = "output_directory" in config
+        template_config = config.get('templates')
+
+        template_present = "unified_output" in template_config
 
         # check if user specified output directories on her own
         if config_entry_exists(config, LOGGER_PATH + ["save_dir"]) or\
@@ -49,7 +51,9 @@ class OutputDirectoryProcessor(TemplateProcessor):
         return template_present
 
     def modify(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        output_base_dir = config["output_directory"]
+        template_config = config.get('templates')
+        unified_output_config = template_config.get('unified_output')
+        output_base_dir = unified_output_config.get('path')
 
         self._modify_logger(config, output_base_dir)
         self._modify_checkpoint(config, output_base_dir)
