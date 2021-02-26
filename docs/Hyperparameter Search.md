@@ -42,14 +42,19 @@ model:
 Add a hyper_opt config object to the hyperparameter:
 
 ```
-model:
-    num_transformer_heads:
-        hyper_opt:
-            suggest: int
-            params:
-                low: 2
-                high: 8
-                step: 2
+model: {
+     
+    transformer_hidden_size: {
+            hyper_opt: {
+                suggest: "int",
+                params: {
+                    low: 2,
+                    high: 8,
+                    step: 2
+                }
+            }
+        }
+    }
 ```
 
 Possible values for the suggest function are:

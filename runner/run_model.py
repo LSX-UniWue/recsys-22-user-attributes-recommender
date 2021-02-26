@@ -7,18 +7,19 @@ import json
 import _jsonnet
 from tempfile import NamedTemporaryFile
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable, List
 from init.config import Config
 from init.container import Container
 from init.context import Context
 from init.factories.container import ContainerFactory
-from pytorch_lightning import seed_everything
+from pytorch_lightning import seed_everything, Callback
 from pytorch_lightning.utilities import cloud_io
 
+from init.templating.search.processor import SearchTemplateProcessor
+from init.templating.search.resolver import OptunaParameterResolver
 from init.templating.template_engine import TemplateEngine
+from init.templating.template_processor import TemplateProcessor
 from init.trainer_builder import CallbackBuilder
-from search.processor import ConfigTemplateProcessor
-from search.resolver import OptunaParameterResolver
 
 app = typer.Typer()
 
@@ -35,7 +36,7 @@ def _config_logging(config: Dict[str, Any]
     logger.addHandler(handler)
 
 
-def load_config(config_file: Path) -> Config:
+def load_config(config_file: Path, additional_processors: List[TemplateProcessor] = []) -> Config:
     config_file = Path(config_file)
 
     if not config_file.exists():
@@ -46,7 +47,12 @@ def load_config(config_file: Path) -> Config:
 
     loaded_config = json.loads(config_json)
 
-    config_to_use = TemplateEngine().modify(loaded_config)
+    template_engine = TemplateEngine()
+
+    for processor in additional_processors:
+        template_engine.add_processor(processor)
+
+    config_to_use = template_engine.modify(loaded_config)
     return Config(config_to_use)
 
 
@@ -90,44 +96,46 @@ def train(config_file: str = typer.Argument(..., help='the path to the config fi
 
 
 @app.command()
-def search(model: str = typer.Argument(..., help="the model to run"),
-           template_file: Path = typer.Argument(..., help='the path to the config file'),
+def search(template_file: Path = typer.Argument(..., help='the path to the config file'),
            study_name: str = typer.Argument(..., help='the study name of an existing optuna study'),
            study_storage: str = typer.Argument(..., help='the connection string for the study storage'),
+
            objective_metric: str = typer.Argument(..., help='the name of the metric to watch during the study'
-                                                            '(e.g. recall_at_5).'),
+                                                            '(e.g. recall@5).'),
+           study_direction: str = typer.Option(default="maximize", help="minimize / maximize"),
            num_trails: int = typer.Option(default=20, help='the number of trails to execute')
           ) -> None:
-    # XXX: because the dependency injector does not provide a error message when the config file does not exists,
-    # we manually check if the config file exists
-    if not os.path.isfile(template_file):
-        print(f"the config file cannot be found. Please check the path '{template_file}'!")
-        exit(-1)
-
+    # TODO set version string to correctly run parameter study in different directories (logger/checkpoints)
     def config_from_template(template_file: Path,
                              config_file_handle,
                              trial):
-        import yaml
-        resolver = OptunaParameterResolver(trial)
-        processor = ConfigTemplateProcessor(resolver)
+        """
+        Loads the template file and applies all template processors (including the SearchTemplateProcessor). The result
+        is written to the temporary `config_file_handle`.
 
-        with template_file.open("r") as f:
-            template = yaml.load(f)
-            resolved_config = processor.process(template)
+        :param template_file: a config file template path.
+        :param config_file_handle: a file handle for the temporary config file.
+        :param trial: a trial object.
+        :return: nothing.
+        """
+        config = load_config(template_file, [SearchTemplateProcessor(OptunaParameterResolver(trial))])
+        json.dump(config.config, config_file_handle)
+        config_file_handle.flush()
 
-            yaml.dump(resolved_config, config_file_handle)
-            config_file_handle.flush()
-
+    # FIXME (AD) don't rely on capturing of arguments in internal function scope -> make it into a callable object
     def objective(trial: optuna.Trial):
         # get the direction to get if we must extract the max or the min value of the metric
         study_direction = trial.study.direction
         objective_best = {StudyDirection.MINIMIZE: min, StudyDirection.MAXIMIZE: max}[study_direction]
 
         with NamedTemporaryFile(mode='wt') as tmp_config_file:
+            # load config template, apply processors and write to `tmp_config_file`
             config_from_template(template_file, tmp_config_file, trial)
 
             class MetricsHistoryCallback(Callback):
-
+                """
+                Captures the reported metrics after every validation epoch.
+                """
                 def __init__(self):
                     super().__init__()
 
@@ -138,14 +146,18 @@ def search(model: str = typer.Argument(..., help="the model to run"),
 
             metrics_tracker = MetricsHistoryCallback()
 
-            container = build_container(model, tmp_config_file.name)
+            container = load_container(Path(tmp_config_file.name))
 
             module = container.module()
+            trainer_builder = container.trainer()
+            trainer_builder.add_callback(metrics_tracker)
 
-            config = container.config
-            trainer_builder = _get_base_trainer_builder(config.trainer, callbacks=[metrics_tracker])
             trainer = trainer_builder.build()
-            trainer.fit(module, train_dataloader=container.train_loader(), val_dataloaders=container.validation_loader())
+            trainer.fit(
+                module,
+                train_dataloader=container.train_dataloader(),
+                val_dataloaders=container.validation_dataloader()
+            )
 
             def _find_best_value(key: str, best: Callable[[List[float]], float] = min) -> float:
                 values = [history_entry[key] for history_entry in metrics_tracker.metric_history]
@@ -153,7 +165,7 @@ def search(model: str = typer.Argument(..., help="the model to run"),
 
             return _find_best_value(objective_metric, objective_best)
 
-    study = optuna.load_study(study_name=study_name, storage=study_storage)
+    study = optuna.create_study(study_name=study_name, storage=study_storage, load_if_exists=True, direction=study_direction)
     study.optimize(objective, n_trials=num_trails)
 
 

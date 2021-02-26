@@ -1,7 +1,8 @@
 import copy
 from typing import Any, Dict, Union, List
 
-from search.resolver import ParameterResolver, ParameterInfo, key_path_to_str
+from init.templating.search.resolver import ParameterResolver, ParameterInfo, key_path_to_str
+from init.templating.template_processor import TemplateProcessor
 
 
 def _resolve_dependency(parameter_dependency_infos: List[ParameterInfo]) -> List[ParameterInfo]:
@@ -60,17 +61,20 @@ def _parse_parameter_dependency_info(current_key, value: Dict[str, Any]) -> Para
     return ParameterInfo(key_path, suggest_func, suggest_params, depends_on, dependency)
 
 
-class ConfigTemplateProcessor:
+class SearchTemplateProcessor(TemplateProcessor):
 
     def __init__(self, resolver: ParameterResolver):
         self.resolver = resolver
 
-    def process(self, template: Dict[str, Any]) -> Dict[str, Any]:
+    def can_modify(self, config: Dict[str, Any]) -> bool:
+        return True
+
+    def modify(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Processes arbitrary configuration templates and resolves the values for keys reported by the resolver.
         Other values are just copied.
 
-        :param template: a model configuration.
+        :param config: a model configuration.
         :return: a fully resolved configuration.
         """
 
@@ -86,7 +90,7 @@ class ConfigTemplateProcessor:
                     parameter_info.extend(_find_all_resolvable_parameters(value, current_key))
             return parameter_info
 
-        all_resolveable_parameters = _find_all_resolvable_parameters(template)
+        all_resolveable_parameters = _find_all_resolvable_parameters(config)
 
         parameters_to_resolve = _resolve_dependency(all_resolveable_parameters)
 
@@ -124,4 +128,4 @@ class ConfigTemplateProcessor:
                     result[key] = _replace_recursively(value, current_key_path)
             return result
 
-        return _replace_recursively(template)
+        return _replace_recursively(config)
