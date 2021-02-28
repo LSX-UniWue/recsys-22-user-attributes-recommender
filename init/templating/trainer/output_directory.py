@@ -1,5 +1,6 @@
 from typing import Dict, Any
 
+from init.templating import TEMPLATES_CONFIG_KEY
 from init.templating.config_utils import config_entry_exists, get_config_value, set_config_value
 from init.templating.template_processor import TemplateProcessor
 
@@ -39,7 +40,10 @@ class OutputDirectoryProcessor(TemplateProcessor):
 
         :return: True if the processor can modify the configuration, False otherwise.
         """
-        template_config = config.get('templates')
+        if TEMPLATES_CONFIG_KEY not in config:
+            return False
+
+        template_config = config.get(TEMPLATES_CONFIG_KEY)
 
         template_present = "unified_output" in template_config
 

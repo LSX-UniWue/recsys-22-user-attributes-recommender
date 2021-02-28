@@ -129,3 +129,6 @@ class SearchTemplateProcessor(TemplateProcessor):
             return result
 
         return _replace_recursively(config)
+
+    def reads_template_config(self) -> bool:
+        return False

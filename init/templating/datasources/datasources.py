@@ -15,6 +15,9 @@ class DataSourceTemplateProcessor(TemplateProcessor):
     """
 
     def can_modify(self, config: Dict[str, Any]) -> bool:
+        if TEMPLATES_CONFIG_KEY not in config:
+            return False
+
         template_config = config.get(TEMPLATES_CONFIG_KEY)
         template_present = self._get_template_key() in template_config
         if CONFIG_DATASOURCES_KEY in template_config and template_present:
