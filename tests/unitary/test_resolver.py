@@ -2,7 +2,7 @@ import optuna
 import pytest
 from optuna import Trial
 
-from search.resolver import OptunaParameterResolver
+from init.templating.search import OptunaParameterResolver
 
 
 @pytest.fixture

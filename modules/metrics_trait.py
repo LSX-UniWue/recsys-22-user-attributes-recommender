@@ -35,7 +35,7 @@ class MetricsTrait(pl.LightningModule):
         for name, step_value in metrics_step_values.items():
             self.log(f"{name}", step_value, prog_bar=True)
 
-        return {**outputs, **metrics_step_values}
+        return {**metrics_step_values}
 
     def _eval_epoch_end(self, outputs: List[Any]):
         for name, value in self.get_metrics().compute().items():

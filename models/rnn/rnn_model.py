@@ -65,7 +65,7 @@ class LSTMSeqItemRecommenderModule(nn.Module):
         return outputs, final_state[0]
 
 
-class RNNSeqItemRecommenderModel(nn.Module):
+class RNNModel(nn.Module):
 
     def __init__(self,
                  cell_type: str,

@@ -4,8 +4,8 @@ import optuna
 import pytest
 from optuna import Trial
 
-from search.processor import ConfigTemplateProcessor
-from search.resolver import OptunaParameterResolver
+from init.templating.search.processor import SearchTemplateProcessor
+from init.templating.search.resolver import OptunaParameterResolver
 
 
 @pytest.fixture
@@ -13,7 +13,7 @@ def base_processor():
     study = optuna.create_study(optuna.storages.InMemoryStorage())
     trial = Trial(study, study._storage.create_new_trial(study._study_id))
 
-    return ConfigTemplateProcessor(OptunaParameterResolver(trial))
+    return SearchTemplateProcessor(OptunaParameterResolver(trial))
 
 
 @pytest.fixture
@@ -60,8 +60,8 @@ def template():
     }
 
 
-def test_processor(base_processor: ConfigTemplateProcessor, template: Dict[str, Any]):
-    resolved_config = base_processor.process(template)
+def test_processor(base_processor: SearchTemplateProcessor, template: Dict[str, Any]):
+    resolved_config = base_processor.modify(template)
 
     assert type(resolved_config["model"]["layer_size"]) == int
     assert type(resolved_config["trainer"]["optimizer"]["learning_rate"]) == float
