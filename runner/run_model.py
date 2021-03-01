@@ -2,19 +2,20 @@ import logging
 import logging.handlers
 import typer
 import optuna
-from optuna.structs import StudyDirection
 import json
 import _jsonnet
+
 from tempfile import NamedTemporaryFile
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable, List
+from optuna.study import StudyDirection
+from pytorch_lightning import seed_everything, Callback
+from pytorch_lightning.utilities import cloud_io
+
 from init.config import Config
 from init.container import Container
 from init.context import Context
 from init.factories.container import ContainerFactory
-from pytorch_lightning import seed_everything, Callback
-from pytorch_lightning.utilities import cloud_io
-
 from init.templating.search.processor import SearchTemplateProcessor
 from init.templating.search.resolver import OptunaParameterResolver
 from init.templating.template_engine import TemplateEngine
