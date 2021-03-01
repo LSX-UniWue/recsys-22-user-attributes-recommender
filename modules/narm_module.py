@@ -46,6 +46,20 @@ class NarmModule(MetricsTrait, pl.LightningModule):
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
+        """
+        Performs a validation step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
+            * `TARGET_ENTRY_NAME`: a tensor of size (N) with the target items,
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return: A dictionary with entries according to `build_eval_step_return_dict`.
+
+        where N is the batch size and S the max sequence length.
+        """
+
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
 
@@ -75,6 +89,21 @@ class NarmModule(MetricsTrait, pl.LightningModule):
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int
                         ) -> Dict[str, torch.Tensor]:
+        """
+        Performs a validation step on a batch of sequences and returns the entries according
+        to `build_eval_step_return_dict`.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
+            * `TARGET_ENTRY_NAME`: a tensor of size (N) with the target items,
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return: A dictionary with entries according to `build_eval_step_return_dict`.
+
+        where N is the batch size and S the max sequence length.
+        """
+
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
 
