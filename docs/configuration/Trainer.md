@@ -21,10 +21,13 @@ trainer:
 ### wandb
 Under trainer add a logger section:
 ```
-trainer:
+trainer {
     ...
-      logger:
-        type: wandb
-        log_model: False
-        project: test
+      logger: {
+        type: "wandb",
+        log_model: false,
+        project: "test"
+      },
+    ...
+}
 ```

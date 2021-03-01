@@ -1,7 +1,7 @@
 from typing import Union, Any, Dict, List, Type
 
 from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger, MLFlowLogger
+from pytorch_lightning.loggers import TensorBoardLogger, MLFlowLogger, WandbLogger
 
 from init.config import Config
 from init.context import Context
@@ -85,13 +85,18 @@ class TensorboardLoggerFactory(ObjectFactory):
 
 class MLFlowLoggerFactory(KwargsFactory):
     def __init__(self):
-        super(MLFlowLoggerFactory, self).__init__(t=MLFlowLogger, key="logger", selector_key="type", selector_value="mlflow")
+        super().__init__(t=MLFlowLogger, key="logger", selector_key="type", selector_value="mlflow")
+
+
+class WandBLoggerFactory(KwargsFactory):
+    def __init__(self):
+        super().__init__(t=WandbLogger, key="logger", selector_key="type", selector_value="wandb")
 
 
 class CheckpointFactory(KwargsFactory):
 
     def __init__(self):
-        super(CheckpointFactory, self).__init__(t=ModelCheckpoint, key="checkpoint")
+        super().__init__(t=ModelCheckpoint, key="checkpoint")
 
 
 class TrainerBuilderFactory(ObjectFactory):
@@ -99,10 +104,12 @@ class TrainerBuilderFactory(ObjectFactory):
     KEY = "trainer"
 
     def __init__(self):
-        super(TrainerBuilderFactory, self).__init__()
+        super().__init__()
 
         self.dependencies = DependenciesFactory([
-            UnionFactory([TensorboardLoggerFactory(), MLFlowLoggerFactory()], "logger", ["logger"]),
+            UnionFactory([TensorboardLoggerFactory(),
+                          MLFlowLoggerFactory(),
+                          WandBLoggerFactory()], "logger", ["logger"]),
             CheckpointFactory()
         ])
 

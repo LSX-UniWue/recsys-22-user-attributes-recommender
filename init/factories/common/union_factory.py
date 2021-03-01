@@ -34,7 +34,7 @@ class UnionFactory(ObjectFactory):
             if can_build_result.type == CanBuildResultType.CAN_BUILD:
                 return factory.build(config, context)
 
-        raise Exception(f"No factory was able to build the configuration section {config.get_config([])}")
+        raise Exception(f"No factory was able to build the configuration section {config.get_config([]).config}")
 
     def is_required(self, context: Context) -> bool:
         return self.required
