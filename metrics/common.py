@@ -125,6 +125,7 @@ def calc_ndcg(prediction: torch.Tensor,
     idcg = idcg_all * relevant_mask
 
     ndcg = dcg / idcg.sum(dim=1)
+    ndcg[torch.isnan(ndcg)] = 0
     return ndcg
 
 
@@ -146,6 +147,9 @@ def calc_dcg(prediction: torch.Tensor,
     device = prediction.device
 
     tp = get_true_positives(prediction, positive_item_mask, k, metric_mask)
-    dcg_values = _build_dcg_values(k, positive_item_mask.size()[0]).to(device=device)
+
+    num_items = min(k, prediction.size()[1])
+
+    dcg_values = _build_dcg_values(num_items, positive_item_mask.size()[0]).to(device=device)
     dcg = dcg_values * tp * metric_mask
     return dcg.sum(dim=1)

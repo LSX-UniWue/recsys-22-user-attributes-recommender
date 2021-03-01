@@ -19,7 +19,7 @@ class NarmModel(nn.Module):
     """
 
     def __init__(self,
-                 num_items: int,
+                 item_vocab_size: int,
                  item_embedding_size: int,
                  global_encoder_size: int,
                  global_encoder_num_layers: int,
@@ -29,7 +29,7 @@ class NarmModel(nn.Module):
                  embedding_pooling_type: str = None):
 
         """
-        :param num_items: number of items (NI)
+        :param item_vocab_size: number of items (NI)
         :param item_embedding_size: item embedding size (E)
         :param global_encoder_size: hidden size of the GRU used as the encoder (H)
         :param global_encoder_num_layers: number of layers of the encoder GRU
@@ -40,7 +40,7 @@ class NarmModel(nn.Module):
         """
         super(NarmModel, self).__init__()
         self.batch_first = batch_first
-        self.item_embeddings = ItemEmbedding(item_voc_size=num_items,
+        self.item_embeddings = ItemEmbedding(item_voc_size=item_vocab_size,
                                              embedding_size=item_embedding_size,
                                              embedding_pooling_type=embedding_pooling_type)
         self.item_embedding_dropout = nn.Dropout(embedding_dropout)
