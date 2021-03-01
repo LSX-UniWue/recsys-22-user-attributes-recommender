@@ -36,8 +36,6 @@ space, that does not occur in the session or is the successor.
         }
     ]
 }
-
-
 ```
 
 
@@ -64,8 +62,8 @@ pos_neg_data_sources: {
     parser: {
         item_column_name: "column_name"
     },
-    batch_size: 64,
-    max_seq_length: 200,
+    batch_size: BATCH_SIZE,
+    max_seq_length: SEQ_LENGTH,
     path: "/path",
     train_file_prefix: "train"
     validation_file_prefix: "train",
@@ -79,8 +77,8 @@ By default, the template configures the framework to
 
 The following config parameters are available:
 
-- `parser`: configs the parser for the csv file
+- `parser`: configs the parser for the csv file, see parser configuration
 - `batch_size`: the batch size to use, if you want to override this
-  for train, test or validation, add a `_batch_size` element to the
+  for training, validation or test your model, add a `{train,validation,test}_batch_size` element to the
   element
 - `seed`: the seed used to generate negative samples

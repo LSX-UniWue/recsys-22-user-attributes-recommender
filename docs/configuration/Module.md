@@ -6,16 +6,23 @@ The following metrics are implemented in this framework with the keys to use for
 
 - Recall / HR (`recall`)
 - Precision (`precision`)
-- F1 (`f1`)
-- DCG (`dcg`)
-- NDCG (`ndcg`)
-- MRR (`mrr`)
+- F1 (`F1`)
+- DCG (`DCG`)
+- NDCG (`NDCG`)
+- MRR (`MRR`)
 
 For each metric you can provide one or more different `k`s to evaluate the Metric@k value.
+The metrics can be access (e.g. in the checkpoint), via `KEY@k`.
 
-## Supported Metrics
+## Metric Evaluation
 
-### Metrics
+There are three evaluation strategies available in the framework:
+
+- `full`: the metrics are evaluated on the complete item space
+- `sampled`: the metrics are evaluated on the positive item(s) and `s` sampled negative items (given a probability)
+- `fixed`: the metrics are evaluated on a fixed subset of the item space
+
+### Full
 
 If you want to validate your model or evaluate your model how good your model ranks all items
 of the item space, you can specify a metrics section under module.
@@ -61,12 +68,15 @@ module: {
 }
 ```
 
-The configurable file `sample_probability_file` contains in the i-th line the propability of the (i-1) item based
-on the vocabulary file.
+The `sampled` metrics config, requires the following parameters:
 
-Under `metrics` you can define all metrics you can also define using all items of the dataset.
+- `sample_probability_file`: The configurable file contains in the i-th line the probability of the (i-1) item based
+on the vocabulary files.
+- `num_negative_samples`: The number of negative samples to draw from the provided probability file.
+- `metrics` you can define all metrics you can also define using all items of the dataset.
 
 TODO: point to the help script to calculate the file
+
 
 ### Fixed Subset
 
@@ -89,4 +99,7 @@ module: {
 }
 ```
 
-The 
+The `fixed` metrics config, requires the following parameters:
+
+- `item_file`: The configurable file contains the item ids of the subset to evaluate (item id line by line).
+- `metrics` you can define all metrics you can also define using all items of the dataset.
