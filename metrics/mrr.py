@@ -21,7 +21,8 @@ class MRRMetric(RankingMetric):
 
     def _update(self,
                 prediction: torch.Tensor,
-                positive_item_mask: torch.Tensor
+                positive_item_mask: torch.Tensor,
+                metric_mask: torch.Tensor
                 ) -> None:
         """
         :param prediction: the logits for I items :math`(N, I)`

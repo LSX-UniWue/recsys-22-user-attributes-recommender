@@ -15,7 +15,12 @@ class MetricsSample:
 
     positive_item_mask: Tensor
     """
-    A mask that marks the positions of the target items in the :code sampled_predictions tensor.
+    A mask that marks the positions of the positive target items in the :code sampled_predictions tensor.
+    """
+
+    metric_mask: Optional[Tensor]
+    """
+    A mask that masks the positions that should be considered by the calculation of the loss
     """
 
 
@@ -49,7 +54,7 @@ class AllItemsSampler(MetricsSampler):
                predictions: torch.Tensor,
                mask: Optional[torch.Tensor] = None) -> MetricsSample:
         positive_item_mask = _to_multi_hot(predictions.size(), targets)
-        return MetricsSample(predictions, positive_item_mask)
+        return MetricsSample(predictions, positive_item_mask, None)
 
     def suffix_metric_name(self) -> str:
         return ""
@@ -92,10 +97,11 @@ class FixedItemsSampler(MetricsSampler):
         else:
             # here we multi-hot encode the targets (1 for each target in the item space)
             multihot = _to_multi_hot(predictions.size(), targets)
+            multihot[:, 0] = 0
             # and than gather the corresponding indices by the fixed items
             positive_item_mask = multihot.gather(1, fixed_items)
 
-        return MetricsSample(sampled_predictions, positive_item_mask)
+        return MetricsSample(sampled_predictions, positive_item_mask, None)
 
     def suffix_metric_name(self) -> str:
         return "/fixed"
@@ -135,23 +141,38 @@ class NegativeMetricsSampler(MetricsSampler):
         """
         Generates :code weights negative samples for each entry in the batch.
         
-        :param input_seq: the batch of input sequences. 
-        :param targets:  the targets for the provided batch.
-        :param predictions: the predictions for the input_seq made by the model.
-        :param mask: ??? TODO: add documentation
+        :param input_seq: the batch of input sequences. :math (N, S) or (N, S, BS)
+        :param targets:  the targets for the provided batch. :math (N) or (N, BS)
+        :param predictions: the predictions for the input_seq made by the model. :math (N, I)
+        :param mask: the mask of padded target items (only when basket recommendation)
          
-        :return: the negative sample.
-        """
+        :return: the metrics sample containing the predictions to consider and the positive item mask (where a 1 indices
+        that the item was the target)
 
-        weight = torch.tensor(self.weights, device=predictions.device)
+        where N is the batch size, S the max sequence length, BS the max basket size and I the vocab item size
+        """
         batch_size = input_seq.size()[0]
+        weight = torch.tensor(self.weights, device=predictions.device)
         weight = weight.unsqueeze(0).repeat(batch_size, 1)
 
-        # never sample targets
-        batch_indices = torch.arange(0, batch_size)
-        weight[batch_indices, targets] = 0.
+        target_batched = targets
 
-        # we want to use scatter to set the items contained in the input to 0 for every row in the batch
+        # never sample targets
+        is_basket_recommendation = len(targets.size()) == 2
+        if is_basket_recommendation:
+            target_src = torch.ones_like(targets).to(torch.long)
+            target_mask = torch.zeros_like(weight).to(torch.long)
+            target_mask = target_mask.scatter(1, targets, target_src)
+            weight[target_mask.to(dtype=torch.bool)] = 0.
+
+            # we flatten the input sequence so there are all items in all baskets in the second dimension
+            input_seq = input_seq.view(batch_size, -1)
+        else:
+            batch_indices = torch.arange(0, batch_size)
+            weight[batch_indices, targets] = 0.
+            target_batched = targets.unsqueeze(1)
+
+        # we want to use scatter to set the items contained in the sequence to 0 for every row in the batch
         src = torch.ones_like(input_seq).to(torch.long)
         sequence_mask = torch.zeros_like(weight).to(torch.long)
 
@@ -161,14 +182,21 @@ class NegativeMetricsSampler(MetricsSampler):
         weight[sequence_mask.to(dtype=torch.bool)] = 0.
 
         sampled_negatives = torch.multinomial(weight, num_samples=self.sample_size)
-        target_batched = targets.unsqueeze(1)
+
         sampled_items = torch.cat([target_batched, sampled_negatives], dim=1)
 
-        positive_item_mask = sampled_items.eq(target_batched).to(dtype=predictions.dtype)
-        # FIXME: fix positive_item_mask with mask
-        sampled_predictions = predictions.gather(1, sampled_items)
+        metric_mask = torch.ones_like(sampled_items)
+        # now generate the positive item mask
+        if is_basket_recommendation:
+            negative_items_mask = torch.zeros_like(sampled_negatives)
+            positive_item_mask = torch.cat([mask, negative_items_mask], dim=1)
+            metric_mask = torch.cat([mask, torch.ones_like(sampled_negatives)], dim=1)
+        else:
+            positive_item_mask = sampled_items.eq(target_batched).to(dtype=predictions.dtype)
 
-        return MetricsSample(sampled_predictions, positive_item_mask)
+        # gather the predictions of all consider items
+        sampled_predictions = predictions.gather(1, sampled_items)
+        return MetricsSample(sampled_predictions, positive_item_mask, metric_mask)
 
     def suffix_metric_name(self) -> str:
         return f"/sampled({self.sample_size})"
