@@ -11,7 +11,7 @@ TODO
 ### Positive Negative Datasource
 
 This datasource returns the session excluding the last item as sequence (key: `TOOD`) together with
-the successor for each sequence step (positive example; key: `TODO``) and a negative sampled item from the item
+the successor for each sequence step (positive example; key: `TODO`), and a negative sampled item from the item
 space, that does not occur in the session or is the successor.
 
 
@@ -80,4 +80,4 @@ The following config parameters are available:
 - `batch_size`: the batch size to use, if you want to override this
   for train, test or validation, add a `_batch_size` element to the
   element
-- `seed`: the seed to use to generate negative samples
+- `seed`: the seed used to generate negative samples
