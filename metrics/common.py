@@ -112,6 +112,7 @@ def calc_ndcg(prediction: torch.Tensor,
     idcg = idcg_all * relevant_mask
 
     ndcg = dcg / idcg.sum(dim=1)
+    ndcg[torch.isnan(ndcg)] = 0
     return ndcg
 
 
