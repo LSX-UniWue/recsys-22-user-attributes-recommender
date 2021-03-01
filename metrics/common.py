@@ -90,9 +90,9 @@ def calc_precision(prediction: torch.Tensor,
 def _build_dcg_values(end: int,
                       batch_size: int
                       ) -> torch.Tensor:
-    range = torch.arange(2, end + 2).to(dtype=torch.float)
+    steps = torch.arange(2, end + 2).to(dtype=torch.float)
 
-    dcg_values = 1 / torch.log2(range)
+    dcg_values = 1 / torch.log2(steps)
     return dcg_values.unsqueeze(0).repeat(batch_size, 1)
 
 
@@ -103,6 +103,7 @@ def calc_ndcg(prediction: torch.Tensor,
               ) -> torch.Tensor:
     """
     calculates the NDCG given the predictions and positive item mask
+    :param metric_mask: the metrics mask
     :param positive_item_mask: a mask, where 1 at index i indicates that item i in predictions is relevant
     :param prediction: the prediction logits :math`(N, I)
     :param k: the k
@@ -151,5 +152,5 @@ def calc_dcg(prediction: torch.Tensor,
     num_items = min(k, prediction.size()[1])
 
     dcg_values = _build_dcg_values(num_items, positive_item_mask.size()[0]).to(device=device)
-    dcg = dcg_values * tp * metric_mask
+    dcg = dcg_values * tp
     return dcg.sum(dim=1)
