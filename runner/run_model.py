@@ -62,10 +62,6 @@ def create_container(config: Config) -> Container:
     context = Context()
 
     container_factory = ContainerFactory()
-    can_build = container_factory.can_build(config, context)
-    if can_build.type != CanBuildResultType.CAN_BUILD:
-        message = can_build.message
-        raise ValueError(message if message is not None else "invalid config file, please check")
     container = container_factory.build(config, context)
 
     return container

@@ -56,7 +56,10 @@ class ContainerFactory(ObjectFactory):
 
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
-    def build(self, config: Config, context: Context) -> Container:
+    def build(self,
+              config: Config,
+              context: Context
+              ) -> Container:
         # we need the tokenizers in the context because many objects have dependencies
         tokenizers_config = config.get_config(self.tokenizers_factory.config_path())
         tokenizers = self.tokenizers_factory.build(tokenizers_config, context)

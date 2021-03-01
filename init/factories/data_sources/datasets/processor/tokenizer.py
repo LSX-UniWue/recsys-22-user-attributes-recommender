@@ -1,10 +1,9 @@
 from typing import List
 
-from data.datasets.processors.last_item_mask import LastItemMaskProcessor
 from data.datasets.processors.tokenizer import TokenizerProcessor
 from init.config import Config
 from init.context import Context
-from init.factories.tokenizer.tokenizer_factory import TokenizerFactory, get_tokenizer_key_for_voc
+from init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
 
