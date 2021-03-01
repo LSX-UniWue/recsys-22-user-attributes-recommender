@@ -6,7 +6,6 @@ from typing import Union, Dict, Optional
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
-from data.collate import PadDirection
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
 from metrics.container.metrics_container import MetricsContainer
 from modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TEST_LOSS, LOG_KEY_TRAINING_LOSS
@@ -29,20 +28,16 @@ class BERT4RecModule(MetricsTrait, pl.LightningModule):
 
     def __init__(self,
                  model: BERT4RecModel,
-                 mask_probability: float,
-                 learning_rate: float,
-                 beta_1: float,
-                 beta_2: float,
-                 weight_decay: float,
-                 num_warmup_steps: int,
-                 tokenizer: Tokenizer,
-                 pad_direction: PadDirection,
-                 metrics: MetricsContainer
+                 item_tokenizer: Tokenizer,
+                 metrics: MetricsContainer,
+                 learning_rate: float = 0.001,
+                 beta_1: float = 0.99,
+                 beta_2: float = 0.998,
+                 weight_decay: float = 0.001,
+                 num_warmup_steps: int = 10000
                  ):
         super().__init__()
         self.model = model
-
-        self.mask_probability = mask_probability
 
         self.learning_rate = learning_rate
         self.beta_1 = beta_1
@@ -50,8 +45,7 @@ class BERT4RecModule(MetricsTrait, pl.LightningModule):
         self.weight_decay = weight_decay
         self.num_warmup_steps = num_warmup_steps
 
-        self.tokenizer = tokenizer
-        self.pad_direction = pad_direction
+        self.item_tokenizer = item_tokenizer
         self.metrics = metrics
 
     def get_metrics(self) -> MetricsContainer:
@@ -83,7 +77,7 @@ class BERT4RecModule(MetricsTrait, pl.LightningModule):
         position_ids = BERT4RecModule.get_position_ids(batch)
 
         # calc the padding mask
-        padding_mask = get_padding_mask(sequence=input_seq, tokenizer=self.tokenizer)
+        padding_mask = get_padding_mask(sequence=input_seq, tokenizer=self.item_tokenizer)
 
         # call the model
         prediction_logits = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
@@ -103,12 +97,12 @@ class BERT4RecModule(MetricsTrait, pl.LightningModule):
         vocab_size = prediction_logits.size()[-1]
         is_basket_recommendation = target_size > 1 if is_eval else target_size > 2
         if is_basket_recommendation:
-            target = convert_target_to_multi_hot(target, vocab_size, self.tokenizer.pad_token_id)
+            target = convert_target_to_multi_hot(target, vocab_size, self.item_tokenizer.pad_token_id)
             loss_fnc = nn.BCEWithLogitsLoss()
             return loss_fnc(prediction_logits, target)
 
         # handle single item per sequence step
-        loss_func = nn.CrossEntropyLoss(ignore_index=self.tokenizer.pad_token_id)
+        loss_func = nn.CrossEntropyLoss(ignore_index=self.item_tokenizer.pad_token_id)
 
         flatten_predictions = prediction_logits.view(-1, vocab_size)
         flatten_targets = target.view(-1)
@@ -145,14 +139,14 @@ class BERT4RecModule(MetricsTrait, pl.LightningModule):
         targets = batch[TARGET_ENTRY_NAME]
 
         position_ids = BERT4RecModule.get_position_ids(batch)
-        target_mask = input_seq.eq(self.tokenizer.mask_token_id)
+        target_mask = input_seq.eq(self.item_tokenizer.mask_token_id)
 
         # handle basket training and evaluation
         if len(target_mask.size()) > 2:
             target_mask = target_mask.max(dim=-1)[0]
 
         # after adding the mask token we can calculate the padding mask
-        padding_mask = get_padding_mask(input_seq, self.tokenizer)
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
 
         # get predictions for all seq steps
         prediction = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
@@ -164,7 +158,7 @@ class BERT4RecModule(MetricsTrait, pl.LightningModule):
 
         # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
         # the target tensor
-        mask = None if len(targets.size()) == 1 else ~ targets.eq(self.tokenizer.pad_token_id)
+        mask = None if len(targets.size()) == 1 else ~ targets.eq(self.item_tokenizer.pad_token_id)
 
         return build_eval_step_return_dict(input_seq, prediction, targets, mask=mask)
 
