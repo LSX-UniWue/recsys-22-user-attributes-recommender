@@ -31,7 +31,7 @@ class MRRMetric(RankingMetric):
         """
         device = prediction.device
 
-        tp = get_true_positives(prediction, positive_item_mask, self._k)
+        tp = get_true_positives(prediction, positive_item_mask, self._k, metric_mask)
 
         num_positions = min(prediction.size()[1], self._k) + 1
         ranks = torch.arange(1, num_positions).unsqueeze(0).repeat(prediction.size()[0], 1).to(device=device)
