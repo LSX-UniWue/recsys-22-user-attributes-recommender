@@ -26,5 +26,5 @@ class Container:
     def trainer(self) -> TrainerBuilder:
         return self._objects["trainer"]
 
-    def tokenizer(self, id: str) -> Tokenizer:
-        return self._objects["tokenizers"][id]
+    def tokenizer(self, tokenizer_id: str) -> Tokenizer:
+        return self._objects["tokenizers"][tokenizer_id]

@@ -71,6 +71,12 @@ local metrics =  {
             monitor: "recall@5",
             save_top_k: 3,
             mode: 'max'
+        },
+        early_stopping: {
+          monitor: 'recall@5',
+          min_delta: 0.00,
+          patience: 10,
+          mode: 'max'
         }
     }
 }
