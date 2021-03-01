@@ -74,17 +74,13 @@ PARSER_ITEM_SEPARATOR = 'item_separator'
 
 
 def build_parser_config(parser_config: Dict[str, Any]) -> Dict[str, Any]:
-    item_column_name = parser_config[PARSER_ITEM_COLUMN_NAME]
-
-    parser = {
-        PARSER_ITEM_COLUMN_NAME: item_column_name
-    }
-
-    item_separator = parser_config.get(PARSER_ITEM_SEPARATOR, None)
-    if item_separator is not None:
-        parser[PARSER_ITEM_SEPARATOR] = item_separator
-
-    return parser
+    """
+    builds the parser config, currently just pass the config, because nothing is currently modified by the datasources
+    templates
+    :param parser_config:
+    :return:
+    """
+    return parser_config
 
 
 def build_datasource(datasource_type: str,
