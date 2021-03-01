@@ -27,7 +27,7 @@ local file_prefix = 'ml-1m';
             train_file_prefix: file_prefix,
             validation_file_prefix: file_prefix,
             test_file_prefix: file_prefix,
-            leave_one_out: true
+            next_step_type: "loo" // leave one out
         }
     },
     module: {

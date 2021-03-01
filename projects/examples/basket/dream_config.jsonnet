@@ -26,7 +26,7 @@ local metrics =  {
         }
     },
     module: {
-        type: "rnn",
+        type: "dream",
         metrics: {
             full: {
                 metrics: metrics

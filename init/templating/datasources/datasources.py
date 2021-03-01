@@ -129,13 +129,11 @@ def build_datasource(datasource_type: str,
         'processors': processors
     }
 
-    nip_type = 'nip'
-
-    if config.get('leave_one_out', False):
-        nip_type = 'loo'
+    next_step_type = config.get('next_seq_step_type', 'nip')
 
     if "nextit" == datasource_type:
-        dataset_config['nip_index_file'] = f'{base_path}{prefix}.{nip_type}.idx'
+        next_prefix = config.get(f'{prefix_id}_index_file_prefix', prefix)
+        dataset_config['nip_index_file'] = f'{base_path}{next_prefix}.{next_step_type}.idx'
 
     loader_config_dict = {
         'dataset': dataset_config,
