@@ -25,7 +25,7 @@ class UnionFactory(ObjectFactory):
 
         return CanBuildResult(
             CanBuildResultType.INVALID_CONFIGURATION,
-            f"None of the configured factories can handle the configuration section {config.get_config([])}"
+            f"None of the configured factories can handle the configuration section {'.'.join(config.base_path)}."
         )
 
     def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
@@ -34,7 +34,7 @@ class UnionFactory(ObjectFactory):
             if can_build_result.type == CanBuildResultType.CAN_BUILD:
                 return factory.build(config, context)
 
-        raise Exception(f"No factory was able to build the configuration section {config.get_config([]).config}")
+        raise Exception(f"No factory was able to build the configuration section {config.get_config([]).config}.")
 
     def is_required(self, context: Context) -> bool:
         return self.required
