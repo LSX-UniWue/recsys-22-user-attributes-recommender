@@ -3,7 +3,8 @@ from typing import List
 
 from init.config import Config
 from init.context import Context
-from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
+from init.factories.util import require_config_keys
+from init.object_factory import ObjectFactory, CanBuildResult
 from tokenization.vocabulary import CSVVocabularyReaderWriter
 
 
@@ -12,18 +13,17 @@ class VocabularyFactory(ObjectFactory):
     Builds a vocabulary.
     """
     KEY = "vocabulary"
-    REQUIRED_KEYS = ["file", "delimiter"]
+    REQUIRED_KEYS = ["file"]
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
-        for key in self.REQUIRED_KEYS:
-            if not config.has_path([key]):
-                return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION, f"missing key <{key}>")
-
-        return CanBuildResult(CanBuildResultType.CAN_BUILD)
+    def can_build(self,
+                  config: Config,
+                  context: Context
+                  ) -> CanBuildResult:
+        return require_config_keys(config, self.REQUIRED_KEYS)
 
     def build(self, config: Config, context: Context):
-        delimiter = config.get_or_default(["delimiter"], "\t")
-        vocab_file = config.get_or_raise(["file"], f"<file> could not be found in vocabulary config section.")
+        delimiter = config.get_or_default("delimiter", "\t")
+        vocab_file = config.get_or_raise("file", f"<file> could not be found in vocabulary config section.")
 
         vocab_reader = CSVVocabularyReaderWriter(delimiter)
 

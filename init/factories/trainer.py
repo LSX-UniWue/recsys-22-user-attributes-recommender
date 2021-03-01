@@ -1,6 +1,6 @@
 from typing import Union, Any, Dict, List, Type
 
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger, MLFlowLogger, WandbLogger
 
 from init.config import Config
@@ -99,6 +99,12 @@ class CheckpointFactory(KwargsFactory):
         super().__init__(t=ModelCheckpoint, key="checkpoint")
 
 
+class EarlyStoppingCallbackFactory(KwargsFactory):
+
+    def __init__(self):
+        super().__init__(t=EarlyStopping, key='early_stopping')
+
+
 class TrainerBuilderFactory(ObjectFactory):
 
     KEY = "trainer"
@@ -110,8 +116,9 @@ class TrainerBuilderFactory(ObjectFactory):
             UnionFactory([TensorboardLoggerFactory(),
                           MLFlowLoggerFactory(),
                           WandBLoggerFactory()], "logger", ["logger"]),
-            CheckpointFactory()
-        ])
+            CheckpointFactory(),
+            EarlyStoppingCallbackFactory()
+        ], optional_based_on_path=True)
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
@@ -128,6 +135,11 @@ class TrainerBuilderFactory(ObjectFactory):
         trainer_builder = TrainerBuilder(trainer_parameters=trainer_params)
         trainer_builder.add_logger(dependencies["logger"])
         trainer_builder.add_callback(dependencies["checkpoint"])
+
+        # add optional early stopping
+        early_stopping_callback = dependencies.get('early_stopping', None)
+        if early_stopping_callback is not None:
+            trainer_builder.add_callback(early_stopping_callback)
 
         return trainer_builder
 

@@ -25,7 +25,7 @@ class DependenciesFactory(ObjectFactory):
         :param required: whether this factory needs to be built.
         :param optional_based_on_path: the dependency should only be called if the path exists
         """
-        super(DependenciesFactory, self).__init__()
+        super().__init__()
         self._required = required
         self._config_path = config_path
         self._config_key = config_key
@@ -55,7 +55,7 @@ class DependenciesFactory(ObjectFactory):
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         for key, factory in self._dependencies.items():
             if not self._optional_based_on_path and not config.has_path(factory.config_path()) and factory.is_required(context):
-                return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION, f"missing path <{factory.config_path}>")
+                return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION, f"missing path <{'.'.join(factory.config_path())}>")
 
             factory_config = config.get_config(factory.config_path())
             factory_can_build_result = factory.can_build(factory_config, context)

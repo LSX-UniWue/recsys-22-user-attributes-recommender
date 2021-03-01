@@ -21,7 +21,8 @@ class NormalizedDiscountedCumulativeGainMetric(RankingMetric):
 
     def _update(self,
                 prediction: torch.Tensor,
-                positive_item_mask: torch.Tensor
+                positive_item_mask: torch.Tensor,
+                metric_mask: torch.Tensor
                 ) -> None:
         """
 
@@ -29,7 +30,7 @@ class NormalizedDiscountedCumulativeGainMetric(RankingMetric):
         :param positive_item_mask: a mask where a 1 indices that the item at this index is relevant :math`(N, I)`
         :return:
         """
-        ndcg = calc_ndcg(prediction, positive_item_mask, self._k)
+        ndcg = calc_ndcg(prediction, positive_item_mask, self._k, metric_mask)
         self.ndcg += ndcg.sum()
         self.count += prediction.size()[0]
 

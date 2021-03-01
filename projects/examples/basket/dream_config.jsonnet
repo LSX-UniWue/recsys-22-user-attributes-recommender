@@ -26,7 +26,7 @@ local metrics =  {
         }
     },
     module: {
-        type: "rnn",
+        type: "dream",
         metrics: {
             full: {
                 metrics: metrics
@@ -46,7 +46,8 @@ local metrics =  {
             item_embedding_dim: 4,
             hidden_size: 4,
             num_layers: 1,
-            dropout: 0.0
+            dropout: 0.0,
+            embedding_pooling_type: 'mean'
         }
     },
     tokenizers: {

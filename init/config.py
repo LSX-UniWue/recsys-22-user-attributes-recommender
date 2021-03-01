@@ -52,8 +52,6 @@ class Config:
 
         return value
 
-
-
     def get(self,
             path: Union[str, List[str]]
             ) -> Optional[Any]:

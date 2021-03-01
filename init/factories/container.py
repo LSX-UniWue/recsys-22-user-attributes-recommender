@@ -39,8 +39,12 @@ class ContainerFactory(ObjectFactory):
             ]
         )
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
-        can_build_result = self.tokenizers_factory.can_build(config, context)
+    def can_build(self,
+                  config: Config,
+                  context: Context
+                  ) -> CanBuildResult:
+        tokenizer_config = config.get_config(self.tokenizers_factory.config_path())
+        can_build_result = self.tokenizers_factory.can_build(tokenizer_config, context)
 
         if can_build_result.type != CanBuildResultType.CAN_BUILD:
             return can_build_result

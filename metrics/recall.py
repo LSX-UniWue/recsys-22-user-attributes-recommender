@@ -21,7 +21,8 @@ class RecallMetric(RankingMetric):
 
     def _update(self,
                 prediction: torch.Tensor,
-                positive_item_mask: torch.Tensor
+                positive_item_mask: torch.Tensor,
+                metric_mask: torch.Tensor
                 ) -> None:
         """
 
@@ -29,7 +30,7 @@ class RecallMetric(RankingMetric):
         :param positive_item_mask: a mask where a 1 indices that the item at this index is relevant :math`(N, I)`
         :return:
         """
-        recall = calc_recall(prediction, positive_item_mask, self._k)
+        recall = calc_recall(prediction, positive_item_mask, self._k, metric_mask)
         self.recall += recall.sum()
         self.count += prediction.size()[0]
 

@@ -11,7 +11,9 @@ class NamedListElementsFactory(ObjectFactory):
         inferred from the `element_factory` object.
     """
 
-    def __init__(self, element_factory: ObjectFactory, required: bool = True):
+    def __init__(self,
+                 element_factory: ObjectFactory,
+                 required: bool = True):
         """
         Creates a named element factory.
 
@@ -23,7 +25,10 @@ class NamedListElementsFactory(ObjectFactory):
         self._config_path = element_factory.config_path()
         self._config_key = element_factory.config_key()
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
+    def can_build(self,
+                  config: Config,
+                  context: Context
+                  ) -> CanBuildResult:
         """
         Checks whether all named elements in the config can be built using the `element_factory`.
 

@@ -74,17 +74,13 @@ PARSER_ITEM_SEPARATOR = 'item_separator'
 
 
 def build_parser_config(parser_config: Dict[str, Any]) -> Dict[str, Any]:
-    item_column_name = parser_config[PARSER_ITEM_COLUMN_NAME]
-
-    parser = {
-        PARSER_ITEM_COLUMN_NAME: item_column_name
-    }
-
-    item_separator = parser_config.get(PARSER_ITEM_SEPARATOR, None)
-    if item_separator is not None:
-        parser[PARSER_ITEM_SEPARATOR] = item_separator
-
-    return parser
+    """
+    builds the parser config, currently just pass the config, because nothing is currently modified by the datasources
+    templates
+    :param parser_config:
+    :return:
+    """
+    return parser_config
 
 
 def build_datasource(datasource_type: str,
@@ -129,13 +125,11 @@ def build_datasource(datasource_type: str,
         'processors': processors
     }
 
-    nip_type = 'nip'
-
-    if config.get('leave_one_out', False):
-        nip_type = 'loo'
+    next_step_type = config.get('next_seq_step_type', 'nip')
 
     if "nextit" == datasource_type:
-        dataset_config['nip_index_file'] = f'{base_path}{prefix}.{nip_type}.idx'
+        next_prefix = config.get(f'{prefix_id}_index_file_prefix', prefix)
+        dataset_config['nip_index_file'] = f'{base_path}{next_prefix}.{next_step_type}.idx'
 
     loader_config_dict = {
         'dataset': dataset_config,

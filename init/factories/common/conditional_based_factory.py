@@ -2,7 +2,7 @@ from typing import List, Union, Any, Dict
 
 from init.config import Config
 from init.context import Context
-from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
+from init.object_factory import ObjectFactory, CanBuildResult
 
 
 class ConditionalFactory(ObjectFactory):

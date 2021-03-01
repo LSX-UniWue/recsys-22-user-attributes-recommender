@@ -17,7 +17,10 @@ class CanBuildResult:
     """
     An object that gives detailed information about the build status of a factory.
     """
-    def __init__(self, type: CanBuildResultType, message: Optional[str] = None):
+    def __init__(self,
+                 type: CanBuildResultType,
+                 message: Optional[str] = None
+                 ):
         """
         The constructor.
 

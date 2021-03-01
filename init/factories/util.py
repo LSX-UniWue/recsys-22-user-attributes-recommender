@@ -25,10 +25,13 @@ def require_config_keys(config: Config,
                         required_key: List[str]
                         ) -> CanBuildResult:
 
-    if not check_config_keys_exist(config, required_key):
+    config_key = set(config.get_keys())
+    missing_keys = set(required_key) - config_key
+    if len(missing_keys) > 0:
         return CanBuildResult(
             CanBuildResultType.MISSING_CONFIGURATION,
-            f"Could not find all required keys ({required_key}) in config."
+            f"Could not find all required keys (missing: {','.join(missing_keys)}) "
+            f"in config (path: {'.'.join(config.base_path)})."
         )
 
     return CanBuildResult(CanBuildResultType.CAN_BUILD)
