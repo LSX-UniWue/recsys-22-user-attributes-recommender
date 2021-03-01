@@ -24,7 +24,7 @@ local metrics =  {
             validation_file_prefix: "train",
             test_file_prefix: "train",
             mask_probability: 0.1,
-            seed: 123456
+            mask_seed: 123456
         }
     },
     module: {

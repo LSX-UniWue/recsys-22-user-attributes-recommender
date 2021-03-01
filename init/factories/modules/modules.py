@@ -6,7 +6,7 @@ from init.config import Config
 from init.context import Context
 from init.factories.metrics.metrics_container import MetricsContainerFactory
 from init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc
-from init.factories.util import check_config_keys_exist
+from init.factories.util import check_config_keys_exist, require_config_keys
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
 
@@ -99,11 +99,8 @@ class GenericModelFactory(ObjectFactory):
                   context: Context
                   ) -> CanBuildResult:
         config_parameters = _get_config_required_config_params(_get_parameters(self._model_cls))
-        config_keys_exist = check_config_keys_exist(config, config_parameters)
-        if not config_keys_exist:
-            return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION)
 
-        return CanBuildResult(CanBuildResultType.CAN_BUILD)
+        return require_config_keys(config, config_parameters)
 
     def build(self,
               config: Config,

@@ -16,6 +16,7 @@ from init.config import Config
 from init.container import Container
 from init.context import Context
 from init.factories.container import ContainerFactory
+from init.object_factory import CanBuildResultType
 from init.templating.search.processor import SearchTemplateProcessor
 from init.templating.search.resolver import OptunaParameterResolver
 from init.templating.template_engine import TemplateEngine
@@ -61,6 +62,10 @@ def create_container(config: Config) -> Container:
     context = Context()
 
     container_factory = ContainerFactory()
+    can_build = container_factory.can_build(config, context)
+    if can_build.type != CanBuildResultType.CAN_BUILD:
+        message = can_build.message
+        raise ValueError(message if message is not None else "invalid config file, please check")
     container = container_factory.build(config, context)
 
     return container
@@ -69,7 +74,6 @@ def create_container(config: Config) -> Container:
 def load_container(config_file: Path) -> Container:
     config_raw = load_config(config_file)
     return create_container(config_raw)
-
 
 
 @app.command()
