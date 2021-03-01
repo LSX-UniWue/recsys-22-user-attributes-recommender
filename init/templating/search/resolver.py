@@ -71,3 +71,24 @@ class OptunaParameterResolver(ParameterResolver):
 
     def can_resolve(self, key: str) -> bool:
         return key == self.OPTUNA_KEY
+
+
+def parse_parameter_dependency_info(current_key: List[str],
+                                    value: Dict[str, Any]
+                                    ) -> ParameterInfo:
+    """
+    parses parameter infos from the dict
+    :param current_key:
+    :param value:
+    :return: the parameter info object
+    """
+    key_path = current_key[:-1]  # here we remove model hyper_opt at the end
+    suggest_func = value['suggest']
+    suggest_params = value['params']
+    depends_on = value.get('depends_on', None)
+    dependency = value.get('dependency')
+
+    if dependency is None and depends_on:
+        raise ValueError(f'no dependency defined for {key_path_to_str(key_path)}')
+
+    return ParameterInfo(key_path, suggest_func, suggest_params, depends_on, dependency)

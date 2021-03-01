@@ -2,7 +2,7 @@ import optuna
 import pytest
 from optuna import Trial
 
-from init.templating.search import OptunaParameterResolver
+from init.templating.search.resolver import OptunaParameterResolver, parse_parameter_dependency_info
 
 
 @pytest.fixture
@@ -15,16 +15,15 @@ def base_resolver():
 
 @pytest.fixture
 def basic_config():
-    return {
-        "suggest_int":
-            {
-                "name": "x",
-                "low": 8,
-                "high": 64
-            }
-    }
+    return parse_parameter_dependency_info([], {
+        "suggest": "int",
+        "params": {
+            "low": 8,
+            "high": 64
+        }
+    })
 
 
 def test_resolve(base_resolver, basic_config):
-    resolved_value = base_resolver.resolve(basic_config)
+    resolved_value = base_resolver.resolve(basic_config, {})
     assert type(resolved_value) == int

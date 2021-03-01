@@ -23,36 +23,32 @@ def template():
             {
                 "batch_size": 32,
                 "layer_size": {
-                    "optuna": {
-                        "suggest_int":
-                            {
-                                "name": "x",
-                                "low": 8,
-                                "high": 64
-                            }
+                    "hyper_opt": {
+                        "suggest": "int",
+                        "params": {
+                            "low": 8,
+                            "high": 64
+                        }
                     }
                 }
             },
         "trainer": {
-            "optimizer": {
-                "learning_rate": {
-                    "optuna": {
-                        "suggest_loguniform":
-                            {
-                                "name": "learning_rate",
-                                "low": 0.00001,
-                                "high": 0.1
-                            }
+            "learning_rate": {
+                "hyper_opt": {
+                    "suggest": "loguniform",
+                    "params": {
+                        "low": 0.00001,
+                        "high": 0.1
                     }
-                },
-                "beta_1": {
-                    "optuna": {
-                        "suggest_loguniform":
-                            {
-                                "name": "beta_1",
-                                "low": 0.00001,
-                                "high": 0.1
-                            }
+                }
+            },
+            "beta_1": {
+                "hyper_opt": {
+                    "suggest": "loguniform",
+                    "params": {
+                        "name": "beta_1",
+                        "low": 0.00001,
+                        "high": 0.1
                     }
                 }
             }
@@ -64,5 +60,5 @@ def test_processor(base_processor: SearchTemplateProcessor, template: Dict[str, 
     resolved_config = base_processor.modify(template)
 
     assert type(resolved_config["model"]["layer_size"]) == int
-    assert type(resolved_config["trainer"]["optimizer"]["learning_rate"]) == float
-    assert type(resolved_config["trainer"]["optimizer"]["beta_1"]) == float
+    assert type(resolved_config["trainer"]["learning_rate"]) == float
+    assert type(resolved_config["trainer"]["beta_1"]) == float

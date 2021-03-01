@@ -1,7 +1,8 @@
 import copy
 from typing import Any, Dict, Union, List
 
-from init.templating.search.resolver import ParameterResolver, ParameterInfo, key_path_to_str
+from init.templating.search.resolver import ParameterResolver, ParameterInfo, key_path_to_str, \
+    parse_parameter_dependency_info
 from init.templating.template_processor import TemplateProcessor
 
 
@@ -48,19 +49,6 @@ def _resolve_dependency(parameter_dependency_infos: List[ParameterInfo]) -> List
     return resolved_dependencies
 
 
-def _parse_parameter_dependency_info(current_key, value: Dict[str, Any]) -> ParameterInfo:
-    key_path = current_key[:-1]  # here we remove model hyper_opt at the end
-    suggest_func = value['suggest']
-    suggest_params = value['params']
-    depends_on = value.get('depends_on', None)
-    dependency = value.get('dependency')
-
-    if dependency is None and depends_on:
-        raise ValueError(f'no dependency defined for {key_path_to_str(key_path)}')
-
-    return ParameterInfo(key_path, suggest_func, suggest_params, depends_on, dependency)
-
-
 class SearchTemplateProcessor(TemplateProcessor):
 
     def __init__(self, resolver: ParameterResolver):
@@ -85,7 +73,7 @@ class SearchTemplateProcessor(TemplateProcessor):
             for key, value in template.items():
                 current_key = current_keys + [key]
                 if self.resolver.can_resolve(key):
-                    parameter_info.append(_parse_parameter_dependency_info(current_key, value))
+                    parameter_info.append(parse_parameter_dependency_info(current_key, value))
                 if isinstance(value, dict):
                     parameter_info.extend(_find_all_resolvable_parameters(value, current_key))
             return parameter_info
