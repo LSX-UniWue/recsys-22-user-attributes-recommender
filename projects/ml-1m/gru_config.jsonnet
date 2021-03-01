@@ -1,4 +1,5 @@
 local base_path = "/scratch/jane-doe-framework/datasets/ml-1m/";
+local output_path = "/scratch/jane-doe-framework/experiments/ml-1m/gru";
 local max_seq_length = 50;
 local metrics =  {
     mrr: [1, 5, 10],
@@ -11,7 +12,7 @@ local file_prefix = 'ml-1m';
 {
     templates: {
         unified_output: {
-            path: "/scratch/jane-doe-framework/experiments/ml-1m/gru"
+            path: output_path
         },
         next_sequence_step_data_sources: {
             parser: {
