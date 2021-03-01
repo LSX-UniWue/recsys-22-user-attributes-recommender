@@ -48,6 +48,9 @@ class CaserModel(nn.Module):
         # user and item embedding
         if self._has_users:
             self.user_embedding = nn.Embedding(self.user_vocab_size, embedding_dim=self.embedding_size)
+        else:
+            print('user vocab size is 0; no user information will be used for training')
+
         self.item_embedding = ItemEmbedding(item_voc_size=self.item_vocab_size,
                                             embedding_size=self.embedding_size,
                                             embedding_pooling_type=self.embedding_pooling_type)
