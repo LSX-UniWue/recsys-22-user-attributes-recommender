@@ -3,7 +3,7 @@ local max_seq_length = 7;
 local metrics =  {
     recall: [1, 3, 5],
     ndcg: [1, 3, 5],
-    f1: [1, 3, 5[
+    f1: [1, 3, 5]
 };
 {
     templates: {

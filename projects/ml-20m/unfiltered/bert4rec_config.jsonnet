@@ -1,9 +1,9 @@
 local base_path = "/ssd/ml-20m/";
 local max_seq_length = 200;
 local metrics =  {
-    mrr: [1, 3, 5],
-    recall: [1, 3, 5],
-    ndcg: [1, 3, 5]
+    mrr: [1, 5, 10],
+    recall: [1, 5, 10],
+    ndcg: [1, 5, 10]
 };
 
 local file_prefix = 'ml-20m';

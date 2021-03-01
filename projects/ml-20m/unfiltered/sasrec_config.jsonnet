@@ -1,15 +1,15 @@
 local base_path = "/scratch/jane-doe-framework/datasets/ml-20m_3_0_0/";
 local max_seq_length = 200;
 local metrics =  {
-    mrr: [1, 3, 5],
-    recall: [1, 3, 5],
-    ndcg: [1, 3, 5]
+    mrr: [1, 5, 10],
+    recall: [1, 5, 10],
+    ndcg: [1, 5, 10]
 };
 {
     templates: {
         unified_output: {
             path: "/scratch/jane-doe-framework/experiments/ml-20m/sasrec"
-        }
+        },
         pos_neg_data_sources: {
             parser: {
                 item_column_name: "title"
@@ -64,7 +64,7 @@ local metrics =  {
             type: "tensorboard"
         },
         checkpoint: {
-            monitor: "recall@5",
+            monitor: "recall@10/sampled(100)",
             save_top_k: 3,
             mode: 'max'
         },

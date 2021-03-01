@@ -1,9 +1,9 @@
 local base_path = "/scratch/jane-doe-framework/datasets/ml-1m/";
 local max_seq_length = 50;
 local metrics =  {
-    mrr: [1, 3, 5],
-    recall: [1, 3, 5],
-    ndcg: [1, 3, 5]
+    mrr: [1, 5, 10],
+    recall: [3, 5, 10],
+    ndcg: [3, 5, 10]
 };
 
 local file_prefix = 'ml-1m';
@@ -69,7 +69,7 @@ local file_prefix = 'ml-1m';
             type: "tensorboard"
         },
         checkpoint: {
-            monitor: "recall@5/sampled(100)",
+            monitor: "recall@10/sampled(100)",
             save_top_k: 3,
             mode: 'max'
         },
