@@ -16,8 +16,12 @@ from tokenization.tokenizer import Tokenizer
 
 
 # FIXME: maybe merge with RNNModule and make loss configurable
+from utils.hyperparameter_utils import save_hyperparameters
+
+
 class DreamModule(MetricsTrait, pl.LightningModule):
 
+    @save_hyperparameters
     def __init__(self,
                  model: RNNModel,
                  item_tokenizer: Tokenizer,
@@ -35,6 +39,8 @@ class DreamModule(MetricsTrait, pl.LightningModule):
         self.weight_decay = weight_decay
 
         self.metrics = metrics
+
+        self.save_hyperparameters(self.hyperparameters)
 
     def get_metrics(self) -> MetricsContainer:
         return self.metrics

@@ -10,6 +10,7 @@ from models.caser.caser_model import CaserModel
 from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
+from utils.hyperparameter_utils import save_hyperparameters
 
 
 class CaserModule(MetricsTrait, pl.LightningModule):
@@ -19,6 +20,7 @@ class CaserModule(MetricsTrait, pl.LightningModule):
                              ) -> Optional[torch.Tensor]:
         return batch[USER_ENTRY_NAME] if USER_ENTRY_NAME in batch else None
 
+    @save_hyperparameters
     def __init__(self,
                  model: CaserModel,
                  item_tokenizer: Tokenizer,
@@ -35,6 +37,8 @@ class CaserModule(MetricsTrait, pl.LightningModule):
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.metrics = metrics
+
+        self.save_hyperparameters(self.hyperparameters)
 
     def get_metrics(self) -> MetricsContainer:
         return self.metrics

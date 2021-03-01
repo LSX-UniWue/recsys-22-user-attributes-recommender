@@ -13,10 +13,12 @@ from modules import LOG_KEY_VALIDATION_LOSS
 from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
+from utils.hyperparameter_utils import save_hyperparameters
 
 
 class RNNModule(MetricsTrait, pl.LightningModule):
 
+    @save_hyperparameters
     def __init__(self,
                  model: RNNModel,
                  item_tokenizer: Tokenizer,
@@ -33,6 +35,8 @@ class RNNModule(MetricsTrait, pl.LightningModule):
         self.beta_2 = beta_2
         self.item_tokenizer = item_tokenizer
         self.metrics = metrics
+
+        self.save_hyperparameters(self.hyperparameters)
 
     def get_metrics(self) -> MetricsContainer:
         return self.metrics

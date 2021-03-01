@@ -13,12 +13,15 @@ from modules.util.module_util import get_padding_mask, convert_target_to_multi_h
 from tokenization.tokenizer import Tokenizer
 from torch import nn
 
+from utils.hyperparameter_utils import save_hyperparameters
+
 
 class NarmModule(MetricsTrait, pl.LightningModule):
     """
     The Narm module for training the Narm model
     """
 
+    @save_hyperparameters
     def __init__(self,
                  model: NarmModel,
                  item_tokenizer: Tokenizer,
@@ -38,6 +41,8 @@ class NarmModule(MetricsTrait, pl.LightningModule):
         self.beta_2 = beta_2
         self.item_tokenizer = item_tokenizer
         self.metrics = metrics
+
+        self.save_hyperparameters(self.hyperparameters)
 
     def get_metrics(self) -> MetricsContainer:
         return self.metrics

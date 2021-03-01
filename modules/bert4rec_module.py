@@ -13,6 +13,7 @@ from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 from models.bert4rec.bert4rec_model import BERT4RecModel
+from utils.hyperparameter_utils import save_hyperparameters
 
 
 class BERT4RecModule(MetricsTrait, pl.LightningModule):
@@ -26,6 +27,7 @@ class BERT4RecModule(MetricsTrait, pl.LightningModule):
                          ) -> Optional[torch.Tensor]:
         return batch[POSITION_IDS] if POSITION_IDS in batch else None
 
+    @save_hyperparameters
     def __init__(self,
                  model: BERT4RecModel,
                  item_tokenizer: Tokenizer,
@@ -47,6 +49,8 @@ class BERT4RecModule(MetricsTrait, pl.LightningModule):
 
         self.item_tokenizer = item_tokenizer
         self.metrics = metrics
+
+        self.save_hyperparameters(self.hyperparameters)
 
     def get_metrics(self) -> MetricsContainer:
         return self.metrics

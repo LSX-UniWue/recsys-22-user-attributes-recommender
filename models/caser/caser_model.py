@@ -7,6 +7,7 @@ from torch import nn
 
 from models.layers.layers import ItemEmbedding
 from models.layers.util_layers import get_activation_layer
+from utils.hyperparameter_utils import save_hyperparameters
 
 
 class CaserModel(nn.Module):
@@ -18,6 +19,7 @@ class CaserModel(nn.Module):
         original pytorch implementation: https://github.com/graytowne/caser_pytorch
     """
 
+    @save_hyperparameters
     def __init__(self,
                  embedding_size: int,
                  item_vocab_size: int,

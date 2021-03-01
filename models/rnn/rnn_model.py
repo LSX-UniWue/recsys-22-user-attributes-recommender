@@ -5,6 +5,7 @@ import torch
 from torch import nn
 
 from models.layers.layers import ItemEmbedding, PROJECT_TYPE_LINEAR, build_projection_layer
+from utils.hyperparameter_utils import save_hyperparameters
 
 
 def _build_rnn_cell(cell_type: str,
@@ -67,6 +68,7 @@ class LSTMSeqItemRecommenderModule(nn.Module):
 
 class RNNModel(nn.Module):
 
+    @save_hyperparameters
     def __init__(self,
                  cell_type: str,
                  item_vocab_size: int,
