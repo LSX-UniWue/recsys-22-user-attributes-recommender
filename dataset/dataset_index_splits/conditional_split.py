@@ -88,3 +88,35 @@ def _build_target_position_extractor(target_feature: str
         return None
 
     return functools.partial(filter_by_sequence_feature, feature_key=target_feature)
+
+
+def create_conditional_index(
+        data_file_path: Path,
+        session_index_path: Path,
+        output_file_path: Path,
+        item_header_name: str,
+        min_session_length: int,
+        delimiter: str,
+        target_feature: Optional[str]
+) -> None:
+    """
+    FixMe I need some documentation
+    :param data_file_path: path to the input file in CSV format
+    :param session_index_path: path to the session index file
+    :param output_file_path: path to the output file
+    :param item_header_name: name of the column that contains the item id
+    :param min_session_length: the minimum acceptable session length
+    :param delimiter: the delimiter used in the CSV file.
+    :param target_feature: the target column name to build the targets against,
+    (default all next subsequences will be considered); the target must be a boolean feature
+    :return:
+    """
+    target_positions_extractor = _build_target_position_extractor(target_feature)
+    additional_features = {}
+    if target_feature is not None:
+        additional_features[target_feature] = {'type': 'bool', 'sequence': True}
+
+    create_conditional_index_using_extractor(data_file_path, session_index_path, output_file_path,
+                                             item_header_name,
+                                             min_session_length, delimiter, additional_features,
+                                             target_positions_extractor)

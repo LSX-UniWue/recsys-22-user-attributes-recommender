@@ -27,7 +27,7 @@ def next_item(
     :return: None, Side effect: Test and Validation indices are written
     """
     additional_features = {}
-    file_prefix: str = data_file_path.name
+    file_prefix: str = data_file_path.stem
 
     # Create validation index with target item n-1
     conditional_split.create_conditional_index_using_extractor(data_file_path,
@@ -79,7 +79,7 @@ def ratios(
      """
     output_dir_path.mkdir(parents=True, exist_ok=True)
     assert train_ratio + validation_ratio + testing_ratio == 1
-    splits = {"train": train_ratio, "valid": validation_ratio, "test": testing_ratio}
+    splits = {"train": train_ratio, "validation": validation_ratio, "test": testing_ratio}
     ratio_split.run(data_file_path=data_file_path,
                     match_index_path=session_index_path,
                     output_dir_path=output_dir_path,
@@ -115,13 +115,6 @@ def create_conditional_index(
     :param target_feature:
     :return:
     """
-    # Builds
-    target_positions_extractor = conditional_split._build_target_position_extractor(target_feature)
-    additional_features = {}
-    if target_feature is not None:
-        additional_features[target_feature] = {'type': 'bool', 'sequence': True}
-
-    conditional_split.create_conditional_index_using_extractor(data_file_path, session_index_path, output_file_path,
-                                                               item_header_name,
-                                                               min_session_length, delimiter, additional_features,
-                                                               target_positions_extractor)
+    conditional_split.create_conditional_index(data_file_path, session_index_path, output_file_path,
+                                               item_header_name,
+                                               min_session_length, delimiter, target_feature)
