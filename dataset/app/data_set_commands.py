@@ -15,11 +15,18 @@ app = typer.Typer()
 @app.command()
 def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_choices=True),
               output_dir: Path = typer.Option("./dataset/", help='directory to save data'),
-              min_seq_length: int = typer.Option(5, help='the minimum feedback the user must have')
+              min_seq_length: int = typer.Option(5, help='the minimum feedback the user must have'),
+              min_user_feedback: int = typer.Option(0, help='the minimum number of feedback a user must have'),
+              min_item_feedback: int = typer.Option(0, help='the minimum number of feedback an item must have received')
               ) -> None:
     # FixMe min_seq_length influences nothing except naming of dataset_dir
-    dataset_dir, extract_dir = download_and_unzip_movielens_data(dataset, output_dir, min_seq_length)
-    main_file = preprocess_movielens_data(extract_dir, dataset_dir, dataset)
+    # ToDo make this conform to naming conventions
+    dataset_dir, extract_dir = download_and_unzip_movielens_data(dataset, output_dir,
+                                                                 min_seq_length=min_seq_length,
+                                                                 min_item_feedback=min_item_feedback,
+                                                                 min_user_feedback=min_user_feedback)
+    main_file = preprocess_movielens_data(extract_dir, dataset_dir, dataset, min_item_feedback=min_item_feedback,
+                                          min_user_feedback=min_user_feedback)
     split_movielens_dataset(dataset_dir, main_file, min_seq_length=min_seq_length)
 
 
@@ -124,7 +131,7 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
     print("Pre-process data...")
     preprocess_amazon_dataset_for_indexing(raw_data_tsv_file_path=raw_data_file_path)
     print("Indexing processed data...")
-    session_index_path = raw_data_file_path.parent.joinpath(file_name+ '.session.idx')
+    session_index_path = raw_data_file_path.parent.joinpath(file_name + '.session.idx')
     index_command.index_csv(data_file_path=raw_data_file_path,
                             index_file_path=session_index_path,
                             session_key=[AMAZON_SESSION_ID],

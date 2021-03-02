@@ -103,11 +103,11 @@ def build_vocabularies(dataframe: pd.DataFrame,
                        split: str = ""
                        ) -> None:
     """
-    Build and write a vocabulary file from a pandas DataFrame
+    Build and write a vocabulary file
     :param dataframe: base dataframe
     :param dataset_dir: folder for saving file
     :param column: column to create vocabulary for
-    :param split: token to split if column need splitting
+    :param split: token to split if column needs splitting
     :return:
     """
     if split != "":
