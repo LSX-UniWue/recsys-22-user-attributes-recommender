@@ -91,7 +91,7 @@ class BERT4RecBaseModel(nn.Module):
         """
 
         # embedding the indexed sequence to sequence of vectors
-        embedded_sequence = self.embedding(sequence, position_ids=position_ids)
+        embedded_sequence = self._embed_input(sequence, position_ids, **kwargs)
 
         attention_mask = None
         if padding_mask is not None:
