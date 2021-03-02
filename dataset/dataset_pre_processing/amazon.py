@@ -23,7 +23,7 @@ AMAZON_SESSION_ID = "customer_id"
 
 
 def download_and_unzip_amazon_dataset(category: str, output_dir: Path):
-    raw_data_dir = output_dir.joinpath("raw")
+    raw_data_dir = output_dir
     download_dataset(AMAZON_DOWNLOAD_URL_MAP[category], raw_data_dir)
     unzip_gzip_file(src_file=raw_data_dir.joinpath(AMAZON_ZIPPED_FILE_NAMES[category]),
                     dest_file=raw_data_dir.joinpath(AMAZON_FILE_NAMES[category]),
