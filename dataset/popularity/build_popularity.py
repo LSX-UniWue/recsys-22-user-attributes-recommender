@@ -5,7 +5,7 @@ from typing import Dict
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME
-from data.datasets.session import PlainSessionDataset, ItemSessionDataset, ItemSessionParser
+from data.datasets.session import PlainSequenceDataset, ItemSessionDataset, ItemSessionParser
 from data.utils import read_csv_header, create_indexed_header
 from tokenization.tokenizer import Tokenizer
 from tokenization.vocabulary import CSVVocabularyReaderWriter
@@ -35,7 +35,7 @@ def build(data_file_path: Path, session_index_path: Path, vocabulary_file_path: 
     session_index = CsvDatasetIndex(session_index_path)
     reader = CsvDatasetReader(data_file_path, session_index)
 
-    plain_dataset = PlainSessionDataset(reader, session_parser)
+    plain_dataset = PlainSequenceDataset(reader, session_parser)
     dataset = ItemSessionDataset(plain_dataset)
 
     # load the tokenizer

@@ -4,9 +4,9 @@ from numpy.random._generator import default_rng
 from torch.utils.data import Dataset, IterableDataset
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, SAMPLE_IDS
-from data.datasets.index import SessionPositionIndex
+from data.datasets.index import SequencePositionIndex
 from data.datasets.processors.processor import Processor
-from data.datasets.session import ItemSessionDataset, PlainSessionDataset
+from data.datasets.session import ItemSessionDataset, PlainSequenceDataset
 from data.mp import MultiProcessSupport
 
 
@@ -14,8 +14,8 @@ from data.mp import MultiProcessSupport
 class NextItemDataset(Dataset, MultiProcessSupport):
 
     def __init__(self,
-                 dataset: PlainSessionDataset,
-                 index: SessionPositionIndex,
+                 dataset: PlainSequenceDataset,
+                 index: SequencePositionIndex,
                  processors: List[Processor] = None,
                  add_target: bool = True,
                  include_target_pos: bool = False
@@ -55,7 +55,7 @@ class NextItemDataset(Dataset, MultiProcessSupport):
 
 
 class NextItemIterableDataset(IterableDataset):
-    def __init__(self, dataset: ItemSessionDataset, index: SessionPositionIndex, seed: int = None):
+    def __init__(self, dataset: ItemSessionDataset, index: SequencePositionIndex, seed: int = None):
         self._dataset = dataset
         self._index = index
         self._seed = seed

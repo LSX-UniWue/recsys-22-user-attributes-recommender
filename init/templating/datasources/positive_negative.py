@@ -25,7 +25,7 @@ class PositiveNegativeDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
         return build_datasource("session", None, parser, config, 'train', pos_neg_sampler_processor)
 
     def _build_validation_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource("nextit", "loo", parser, config, 'validation')
+        return build_datasource("nextit", parser, config, 'validation')
 
     def _build_test_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource("nextit", "loo", parser, config, 'test')
+        return build_datasource("nextit", parser, config, 'test')

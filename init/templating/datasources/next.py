@@ -16,10 +16,10 @@ class NextSequenceStepDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
         return 'next_sequence_step_data_sources'
 
     def _build_train_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource("nextit", "ratio", parser, config, 'train')
+        return build_datasource("nextit", parser, config, 'train')
 
     def _build_validation_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource("nextit", "ratio", parser, config, 'validation')
+        return build_datasource("nextit", parser, config, 'validation')
 
     def _build_test_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource("nextit", "ratio", parser, config, 'test')
+        return build_datasource("nextit", parser, config, 'test')

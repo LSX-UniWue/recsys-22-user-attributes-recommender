@@ -9,6 +9,15 @@ class TokenizerProcessor(Processor):
 
     """
     Tokenizes the configured fields with the tokenizer
+
+    Example:
+        Input:
+            session: [item 1, item 2, item 5, item 22]
+        Output:
+            session:          [1, 5, 7, 8]
+
+        where 1, 5, 7, 8 are the token ids of the corresponding items in the session
+
     """
 
     KEYS_TO_TOKENIZE = [ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME]
@@ -22,7 +31,9 @@ class TokenizerProcessor(Processor):
         super().__init__()
         self._tokenizer = tokenizer
 
-    def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
+    def process(self,
+                parsed_session: Dict[str, Any]
+                ) -> Dict[str, Any]:
         for key in TokenizerProcessor.KEYS_TO_TOKENIZE:
             if key in parsed_session:
                 items = parsed_session[key]

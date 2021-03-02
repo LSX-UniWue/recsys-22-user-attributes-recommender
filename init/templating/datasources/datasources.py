@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from init.templating import TEMPLATES_CONFIG_KEY
 from init.templating.template_processor import TemplateProcessor
@@ -84,7 +84,6 @@ def build_parser_config(parser_config: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def build_datasource(datasource_type: str,
-                     split_type: Optional[str],
                      parser: Dict[str, Any],
                      config: Dict[str, Any],
                      prefix_id: str,
@@ -93,7 +92,6 @@ def build_datasource(datasource_type: str,
     """
     builds a datasource config with the specified parser, processor,
     :param datasource_type: type of data source, can be either `nextit` or `session`.
-    :param split_type: type of split used, can be either `ratio` or `loo`, only necessary iff datasource_type == 'nextit'.
     :param parser:
     :param config:
     :param prefix_id:
@@ -128,15 +126,10 @@ def build_datasource(datasource_type: str,
     }
 
     if "nextit" == datasource_type:
+        general_split_type = config.get('split_type', 'nextitem')
+        split_type = config.get(f'{prefix_id}_split_type', general_split_type)
         next_prefix = config.get(f'{prefix_id}_index_file_prefix', prefix)
-        if split_type is None:
-            raise KeyError("Split type needs to be specified for `nextit` type data sources.")
-        if split_type == "ratio":
-            dataset_config['nip_index_file'] = f'{base_path}{next_prefix}.{prefix_id}.nextitem.idx'
-        elif split_type == "loo":
-            dataset_config['nip_index_file'] = f'{base_path}{next_prefix}.{prefix_id}.loo.idx'
-        else:
-            raise KeyError("Unknown split type.")
+        dataset_config['nip_index_file'] = f'{base_path}{next_prefix}.{split_type}.idx'
 
     loader_config_dict = {
         'dataset': dataset_config,

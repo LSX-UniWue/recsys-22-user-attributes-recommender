@@ -9,7 +9,15 @@ class LastItemMaskProcessor(Processor):
 
     """
     Adds a mask token at the end of the input sequence.
-    This is useful for evaluation purposes in some models, e.g. Bert4Rec.
+    This is useful for evaluation purposes in some models, e.g. BERT4Rec.
+
+    Example:
+        Input:
+            session: [1, 5, 7, 8]
+        Output:
+            session:          [1, 5, 7, 8, 101]
+
+    where 101 is the mask token id
     """
 
     def __init__(self,

@@ -7,19 +7,28 @@ from data.mp import MultiProcessSupport
 
 
 class CsvDatasetIndex(MultiProcessSupport):
+    """
+    Index to get the start position and end position of a sequence in a csv file containing sequences.
+    """
 
     INT_BYTE_SIZE = 8
 
-    def __init__(self, index_file_path: Path):
+    def __init__(self,
+                 index_file_path: Path
+                 ):
+        """
+        inits the CsvDatasetIndex
+        :param index_file_path: the path to the index file for a csv file containing sequences
+        """
         self._index_file_path = index_file_path
 
         self._init()
 
     def _init(self):
         with self._index_file_path.open("rb") as file_handle:
-            self._num_sessions = self._read_num_sessions(file_handle)
+            self._num_sequences = self._read_num_sequences(file_handle)
 
-    def _read_num_sessions(self, file_handle) -> int:
+    def _read_num_sequences(self, file_handle) -> int:
         self._seek_to_header(file_handle)
         return self._read_int(file_handle)
 
@@ -29,11 +38,11 @@ class CsvDatasetIndex(MultiProcessSupport):
     def _read_int(self, file_handle) -> int:
         return int.from_bytes(file_handle.read(self.INT_BYTE_SIZE), byteorder=sys.byteorder, signed=False)
 
-    def num_sessions(self) -> int:
-        return self._num_sessions
+    def num_sequences(self) -> int:
+        return self._num_sequences
 
     def __len__(self):
-        return self.num_sessions()
+        return self.num_sequences()
 
     def get(self, session_num: int) -> Tuple[int, int]:
         """
@@ -56,31 +65,47 @@ class CsvDatasetIndex(MultiProcessSupport):
 
 
 class CsvDatasetReader(MultiProcessSupport):
+
+    """
+    a dataset reader for the csv file
+    """
+
     def __init__(self,
                  data_file_path: Path,
                  index: CsvDatasetIndex
                  ):
+        """
+        inits a CSVDatasetReader
+        :param data_file_path: the path to the csv file containing the sequences
+        :param index: the csv index to use for random access
+        """
         self._data_file_path = data_file_path
         self._index = index
 
         self._init()
 
     def _init(self):
-        self._num_sessions = self._index.num_sessions()
+        self._num_sequences = self._index.num_sequences()
 
     def __len__(self):
-        return self._num_sessions
+        return self._num_sequences
 
-    def get_session(self, idx: int) -> str:
-        if idx >= self._num_sessions:
-            raise Exception(f"{idx} is not a valid index in [0, {self._num_sessions}]")
+    def get_sequence(self,
+                     idx: int
+                     ) -> str:
+        """
+        :param idx: the id of the sequence
+        :return: the sequence with the specified idx in the index
+        """
+        if idx >= self._num_sequences:
+            raise Exception(f"{idx} is not a valid index in [0, {self._num_sequences}]")
 
         start, end = self._index.get(idx)
-        session_raw = self._read_session(start, end)
+        sequence_raw = self._read_sequence(start, end)
 
-        return session_raw
+        return sequence_raw
 
-    def _read_session(self, start: int, end: int) -> str:
+    def _read_sequence(self, start: int, end: int) -> str:
         with self._data_file_path.open("rb") as file_handle:
             file_handle.seek(start)
             return file_handle.read(end - start).decode(encoding="utf-8")

@@ -39,12 +39,12 @@ def _build_converter(converter_info: Dict[str, Any]
                    f'See documentation for more details')
 
 
-class SessionParser:
+class SequenceParser:
     def parse(self, raw_session: str) -> Dict[str, Any]:
         raise NotImplementedError()
 
 
-class ItemSessionParser(SessionParser):
+class ItemSessionParser(SequenceParser):
 
     def __init__(self,
                  indexed_headers: Dict[str, int],
@@ -108,18 +108,23 @@ class ItemSessionParser(SessionParser):
         return entry.split(self._item_separator)
 
 
-class PlainSessionDataset(Dataset, MultiProcessSupport):
+class PlainSequenceDataset(Dataset, MultiProcessSupport):
+    """
+    A dataset implementation that uses the CSVDatasetReader
+    and the a SequenceParser
+
+    """
 
     def __init__(self,
                  reader: CsvDatasetReader,
-                 parser: SessionParser
+                 parser: SequenceParser
                 ):
         super().__init__()
         self._reader = reader
         self._parser = parser
 
     def __getitem__(self, idx):
-        session = self._reader.get_session(idx)
+        session = self._reader.get_sequence(idx)
         parsed_session = self._parser.parse(session)
 
         parsed_session[SAMPLE_IDS] = idx
@@ -137,7 +142,7 @@ class PlainSessionDataset(Dataset, MultiProcessSupport):
 class ItemSessionDataset(Dataset, MultiProcessSupport):
 
     def __init__(self,
-                 plain_session_dataset: PlainSessionDataset,
+                 plain_session_dataset: PlainSequenceDataset,
                  processors: List[Processor] = None
                  ):
         super().__init__()
