@@ -59,7 +59,7 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
         print("Perform pre-processing...")
         preprocessed_data_filepath = pre_process_yoochoose_dataset(input_dir, output_dir_path, file_name=file_name)
         print("Indexing processed data...")
-        session_index_path = output_dir_path.joinpath(file_name + '.idx')
+        session_index_path = output_dir_path.joinpath(file_name + '.session.idx')
         index_command.index_csv(data_file_path=preprocessed_data_filepath,
                                 index_file_path=session_index_path,
                                 session_key=[YOOCHOOSE_SESSION_ID_KEY],
