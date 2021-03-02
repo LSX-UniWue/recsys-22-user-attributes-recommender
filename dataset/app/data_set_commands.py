@@ -120,10 +120,11 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
     # Pre-process yoochoose data
     print("Download dataset...")
     raw_data_file_path = download_and_unzip_amazon_dataset(category=category, output_dir=output_dir_path)
+    file_name: str = raw_data_file_path.stem
     print("Pre-process data...")
     preprocess_amazon_dataset_for_indexing(raw_data_tsv_file_path=raw_data_file_path)
     print("Indexing processed data...")
-    session_index_path = raw_data_file_path.parent.joinpath(raw_data_file_path.name + '.idx')
+    session_index_path = raw_data_file_path.parent.joinpath(file_name+ '.session.idx')
     index_command.index_csv(data_file_path=raw_data_file_path,
                             index_file_path=session_index_path,
                             session_key=[AMAZON_SESSION_ID],
@@ -139,7 +140,7 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
     popularity_command.build(data_file_path=raw_data_file_path,
                              session_index_path=session_index_path,
                              vocabulary_file_path=vocabulary_output_file_path,
-                             output_file_path=output_dir_path.joinpath("popularity/popularity.txt"),
+                             output_file_path=output_dir_path.joinpath(file_name + ".popularity.txt"),
                              item_header_name=AMAZON_ITEM_ID,
                              min_session_length=min_seq_length,
                              delimiter=AMAZON_DELIMITER)
@@ -159,7 +160,7 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
     print("Create next item split...")
     split_commands.next_item(data_file_path=raw_data_file_path,
                              session_index_path=session_index_path,
-                             output_dir_path=output_dir_path.joinpath("next_item_split"),
+                             output_dir_path=output_dir_path,
                              minimum_session_length=min_seq_length,
                              delimiter=AMAZON_DELIMITER,
                              item_header=AMAZON_ITEM_ID)
