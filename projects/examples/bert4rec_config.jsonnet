@@ -19,8 +19,8 @@ local metrics =  {
                 max_seq_length: max_seq_length,
             },
             path: base_path,
-            validation_file_prefix: "train",
-            test_file_prefix: "train",
+            validation_file_prefix: "example",
+            test_file_prefix: "example",
             mask_probability: 0.1,
             mask_seed: 123456
         }
@@ -32,12 +32,12 @@ local metrics =  {
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + "popularity.txt",
+                sample_probability_file: base_path + "example.popularity.item_id.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             },
             fixed: {
-                item_file: base_path + "relevant_items.txt",
+                item_file: base_path + "example.relevant_items.item_id.txt",
                 metrics: metrics
             }
         },
@@ -58,7 +58,7 @@ local metrics =  {
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "vocab.txt"
+                    file: base_path + "example.vocabulary.item_id.txt"
                 }
             }
         }
