@@ -41,6 +41,9 @@ using [Poetry](https://python-poetry.org/docs/#installation).
 
 ````bash
 cd recommender 
+python3 -m venv venv/recommender
+source venv/recommender/bin/activate
+pip install poetry
 poetry install
 ````
 If you are interested in how to use the framwork continue to the [User Guide](./user_guide.md).

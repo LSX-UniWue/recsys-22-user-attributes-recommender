@@ -7,7 +7,7 @@ from numpy.random._generator import default_rng
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 
 from dataset.app import index_command
-from dataset.app.split_commands import create_conditional_index
+from dataset.dataset_index_splits.conditional_split import create_conditional_index
 
 
 def run(data_file_path: Path,
@@ -32,7 +32,7 @@ def run(data_file_path: Path,
     :param seed:
     :return:
     """
-    file_name: str = data_file_path.name
+    file_name: str = data_file_path.stem
     session_index = CsvDatasetIndex(match_index_path)
     reader = CsvDatasetReader(data_file_path, session_index)
 
@@ -47,13 +47,13 @@ def run(data_file_path: Path,
     header = get_header(data_file_path)
 
     for split_name, sample_indices in splits.items():
-        write_split(reader, output_dir_path, header, split_name, sample_indices)
+        write_split(reader, output_dir_path, header, file_name + "." + split_name, sample_indices)
 
     # Index newly written splits
     for split in tqdm(["train", "test", "validation"], desc="Index new splits"):
         file_prefix: str = file_name + "." + split
         data_file = output_dir_path.joinpath(file_prefix + ".csv")
-        split_index_file = output_dir_path.joinpath(file_prefix + split + ".session.idx")
+        split_index_file = output_dir_path.joinpath(file_prefix + ".session.idx")
         next_item_index_file = output_dir_path.joinpath(file_prefix + ".nextitem.idx")
         index_command.index_csv(data_file_path=data_file, index_file_path=split_index_file,
                                 session_key=session_key, delimiter=delimiter)
@@ -62,7 +62,8 @@ def run(data_file_path: Path,
                                  output_file_path=next_item_index_file,
                                  item_header_name=item_header_name,
                                  min_session_length=minimum_session_length,
-                                 delimiter="\t")
+                                 delimiter=delimiter,
+                                 target_feature=None)
 
 
 def perform_ratio_split(split_ratios: Dict[Text, float], sample_indices: List[int]) -> Dict[Text, List[int]]:

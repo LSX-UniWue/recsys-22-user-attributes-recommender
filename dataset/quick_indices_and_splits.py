@@ -42,7 +42,7 @@ def create_splits(dataset: str = typer.Argument(..., help="ml-1m or ml-20m"),
 
     index_csv(path_main_csv, path_main_index, session_key=[session_key])
 
-    splits = {"train": train, "valid": valid, "test": test}
+    splits = {"train": train, "validation": valid, "test": test}
     create_ratio_splits(data_file_path=path_main_csv, match_index_path=path_main_index, output_dir_path=split_dir_path,
                         split_ratios=splits, delimiter=delimiter, session_key=[session_key],
                         item_header_name=item_header, minimum_session_length=min_session_length, seed=seed)
