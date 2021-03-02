@@ -27,11 +27,12 @@ def next_item(
     :return: None, Side effect: Test and Validation indices are written
     """
     additional_features = {}
+    file_prefix: str = data_file_path.name
 
     # Create validation index with target item n-1
     conditional_split.create_conditional_index_using_extractor(data_file_path,
                                                                session_index_path,
-                                                               output_dir_path / 'valid.idx',
+                                                               output_dir_path / (file_prefix + ".validation.loo.idx"),
                                                                item_header,
                                                                minimum_session_length,
                                                                delimiter,
@@ -39,7 +40,7 @@ def next_item(
                                                                conditional_split.get_position_with_offset_one)
     # Create testing index with target item n
     conditional_split.create_conditional_index_using_extractor(data_file_path, session_index_path,
-                                                               output_dir_path / 'test.idx',
+                                                               output_dir_path / (file_prefix + ".test.loo.idx"),
                                                                item_header,
                                                                minimum_session_length,
                                                                delimiter,
