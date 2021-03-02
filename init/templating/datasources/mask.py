@@ -30,7 +30,7 @@ class MaskDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
             'seed': seed
         }
 
-        return build_datasource("nextit", "loo", parser, config, 'validation', cloze_processor)
+        return build_datasource("nextit", "loo", parser, config, 'train', cloze_processor)
 
     def _build_validation_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
         return build_datasource("nextit", "loo", parser, config, 'validation', self.LAST_ITEM_MASK_PROCESSOR_CONFIG)
