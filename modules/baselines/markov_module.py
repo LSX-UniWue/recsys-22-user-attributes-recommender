@@ -57,13 +57,6 @@ class MarkovModule(MetricsTrait, pl.LightningModule):
         self.transition_matrix.fill_(0)
 
     def on_train_end(self) -> None:
-        # If a all entries of a row are zero (i.e. no training data was seen for this item)
-        # we use a uniform distribution. This is slow but only executed once, so it should be fine.
-        for i in range(self.item_vocab_size):
-            row = self.transition_matrix[i]
-            if row.sum() == 0:
-                row.fill_(1 / self.item_vocab_size)
-
         # Normalize the sum of each row to 1 so we can interpret it as a probability distribution
         row_sums = self.transition_matrix.sum(dim=1)
         self.transition_matrix /= row_sums.unsqueeze(dim=1)
@@ -76,9 +69,12 @@ class MarkovModule(MetricsTrait, pl.LightningModule):
         last_items = last_item_in_sequence(input_seq)
         # Sadly PyTorch does not have a "choice" implementation, so we cant do this in a fast way
         transition_probabilities = self.transition_matrix[last_items].numpy()
-        # We simply predict 0's for all but the most frequently seen item
+        # We simply predict 0's for all but the chosen item
         predictions = torch.zeros((batch_size, self.item_vocab_size), device=self.device)
         for i in range(batch_size):
+            # if we did not see the last item during training, we can't predict it and raise an Exception
+            if transition_probabilities[i].sum() == 0:
+                raise Exception("Trying to predict an item never seen during training.")
             index = np.random.choice(self.item_vocab_size, size=1, p=transition_probabilities[i])
             predictions[i, index] = 1
 
@@ -87,7 +83,6 @@ class MarkovModule(MetricsTrait, pl.LightningModule):
     def training_step(self, batch: Dict[str, torch.tensor], batch_idx):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
-        seq_length = input_seq.shape[1]
 
         mask = get_padding_mask(input_seq, self.tokenizer)
         masked = input_seq * mask

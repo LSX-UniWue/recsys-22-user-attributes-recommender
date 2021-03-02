@@ -11,6 +11,7 @@ from models.sasrec.sas_rec_model import SASRecModel
 from modules import BERT4RecModule, CaserModule, SASRecModule
 from modules.baselines.markov_module import MarkovModule
 from modules.baselines.pop_module import PopModule
+from modules.baselines.session_pop_module import SessionPopModule
 from modules.basket.dream_module import DreamModule
 from modules.rnn_module import RNNModule
 from modules.narm_module import NarmModule
@@ -438,6 +439,43 @@ class PopContainer(containers.DeclarativeContainer):
     train_loader = build_session_dataset_provider_factory(tokenizer, train_processors, train_dataset_config)
     validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer, validation_processors)
     test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
+
+
+class SessionPopContainer(containers.DeclarativeContainer):
+
+    config = build_default_config()
+    config.from_dict(MODULE_ADAM_OPTIMIZER_DEFAULT_VALUES)
+
+    # tokenizer
+    tokenizer = build_tokenizer_provider(config)
+
+    model_config = config.model
+
+    module_config = config.module
+
+    metrics_container = build_aggregate_metrics_container(module_config)
+
+    module = providers.Singleton(
+        SessionPopModule,
+        item_vocab_size=module_config.item_vocab_size,
+        tokenizer=tokenizer,
+        metrics=metrics_container
+    )
+
+    train_dataset_config = config.datasets.train
+    validation_dataset_config = config.datasets.validation
+    test_dataset_config = config.datasets.test
+
+    processors_objects = {'tokenizer': tokenizer}
+    train_processors = build_processors_provider(train_dataset_config.dataset.processors, processors_objects)
+    validation_processors = build_processors_provider(validation_dataset_config.dataset.processors, processors_objects)
+    test_processors = build_processors_provider(test_dataset_config.dataset.processors, processors_objects)
+
+    # loaders
+    train_loader = build_session_dataset_provider_factory(tokenizer, train_processors, train_dataset_config)
+    validation_loader = build_nextitem_loader_provider_factory(validation_dataset_config, tokenizer, validation_processors)
+    test_loader = build_nextitem_loader_provider_factory(test_dataset_config, tokenizer, test_processors)
+
 
 class MarkovContainer(containers.DeclarativeContainer):
 

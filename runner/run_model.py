@@ -11,7 +11,7 @@ from pytorch_lightning.utilities import cloud_io
 
 from runner.util.builder import TrainerBuilder, LoggerBuilder, CallbackBuilder
 from runner.util.containers import BERT4RecContainer, CaserContainer, SASRecContainer, NarmContainer, RNNContainer, \
-    PopContainer, MarkovContainer
+    PopContainer, MarkovContainer, SessionPopContainer
 from runner.util.containers import DreamContainer
 
 app = typer.Typer()
@@ -27,6 +27,7 @@ def build_container(model_id: str, config_file: str) -> containers.DeclarativeCo
         "rnn": RNNContainer(),
         'dream': DreamContainer(),
         'pop': PopContainer(),
+        'session_pop': SessionPopContainer(),
         'markov': MarkovContainer()
     }[model_id]
     container.config.from_yaml(config_file)
