@@ -65,25 +65,25 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
                                 session_key=[YOOCHOOSE_SESSION_ID_KEY],
                                 delimiter=delimiter)
         print("Build vocabulary...")
-        vocabulary_output_file_path: Path = output_dir_path.joinpath("vocabulary").joinpath("tokens.txt")
+        vocabulary_output_file_path: Path = output_dir_path.joinpath(file_name + ".vocabulary.txt")
         vocabulary_command.build(item_header_name=YOOCHOOSE_ITEM_ID_KEY,
                                  data_file_path=preprocessed_data_filepath,
                                  session_index_path=session_index_path,
                                  vocabulary_output_file_path=vocabulary_output_file_path,
                                  delimiter=delimiter)
         print("Build popularity...")
+        popularity_output_file_path: Path = output_dir_path.joinpath(file_name + ".popularity.txt")
         popularity_command.build(data_file_path=preprocessed_data_filepath,
                                  session_index_path=session_index_path,
                                  vocabulary_file_path=vocabulary_output_file_path,
-                                 output_file_path=output_dir_path.joinpath("popularity/popularity.txt"),
+                                 output_file_path=popularity_output_file_path,
                                  item_header_name=YOOCHOOSE_ITEM_ID_KEY,
                                  min_session_length=min_seq_length,
                                  delimiter=delimiter)
         print("Create ratios split...")
-        ratio_split_output_dir_path = output_dir_path.joinpath("ratios_split")
         split_commands.ratios(data_file_path=preprocessed_data_filepath,
                               session_index_path=session_index_path,
-                              output_dir_path=ratio_split_output_dir_path,
+                              output_dir_path=output_dir_path,
                               session_key=[YOOCHOOSE_SESSION_ID_KEY],
                               train_ratio=0.9,
                               validation_ratio=0.05,
@@ -96,7 +96,7 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
         print("Create next item split...")
         split_commands.next_item(data_file_path=preprocessed_data_filepath,
                                  session_index_path=session_index_path,
-                                 output_dir_path=output_dir_path.joinpath("next_item_split"),
+                                 output_dir_path=output_dir_path,
                                  minimum_session_length=min_seq_length,
                                  delimiter=delimiter,
                                  item_header=YOOCHOOSE_ITEM_ID_KEY)
@@ -129,7 +129,7 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
                             session_key=[AMAZON_SESSION_ID],
                             delimiter=AMAZON_DELIMITER)
     print("Build vocabulary...")
-    vocabulary_output_file_path: Path = output_dir_path.joinpath("vocabulary/tokens.txt")
+    vocabulary_output_file_path: Path = output_dir_path.joinpath(file_name + ".vocabulary.txt")
     vocabulary_command.build(item_header_name=AMAZON_ITEM_ID,
                              data_file_path=raw_data_file_path,
                              session_index_path=session_index_path,
@@ -144,10 +144,9 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
                              min_session_length=min_seq_length,
                              delimiter=AMAZON_DELIMITER)
     print("Create ratios split...")
-    ratio_split_output_dir_path = output_dir_path.joinpath("ratios_split")
     split_commands.ratios(data_file_path=raw_data_file_path,
                           session_index_path=session_index_path,
-                          output_dir_path=ratio_split_output_dir_path,
+                          output_dir_path=output_dir_path,
                           session_key=[AMAZON_SESSION_ID],
                           train_ratio=0.9,
                           validation_ratio=0.05,

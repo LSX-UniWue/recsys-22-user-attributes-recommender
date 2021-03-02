@@ -32,6 +32,7 @@ def run(data_file_path: Path,
     :param seed:
     :return:
     """
+    file_name: str = data_file_path.name
     session_index = CsvDatasetIndex(match_index_path)
     reader = CsvDatasetReader(data_file_path, session_index)
 
@@ -49,10 +50,11 @@ def run(data_file_path: Path,
         write_split(reader, output_dir_path, header, split_name, sample_indices)
 
     # Index newly written splits
-    for split in tqdm(["train", "test", "valid"], desc="Index new splits"):
-        data_file = output_dir_path.joinpath(split + ".csv")
-        split_index_file = output_dir_path.joinpath(split + ".session.idx")
-        next_item_index_file = output_dir_path.joinpath(split + ".nextitem.idx")
+    for split in tqdm(["train", "test", "validation"], desc="Index new splits"):
+        file_prefix: str = file_name + "." + split
+        data_file = output_dir_path.joinpath(file_prefix + ".csv")
+        split_index_file = output_dir_path.joinpath(file_prefix + split + ".session.idx")
+        next_item_index_file = output_dir_path.joinpath(file_prefix + ".nextitem.idx")
         index_command.index_csv(data_file_path=data_file, index_file_path=split_index_file,
                                 session_key=session_key, delimiter=delimiter)
         create_conditional_index(data_file_path=data_file,
