@@ -3,7 +3,7 @@ from typing import List
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets.processors.processor import Processor
-from data.datasets.session import PlainSequenceDataset, ItemSessionParser
+from data.datasets.sequence import PlainSequenceDataset, ItemSessionParser
 from init.config import Config
 from init.context import Context
 from init.factories.data_sources.datasets.dataset_factory import DatasetFactory

@@ -3,15 +3,10 @@ from io import StringIO
 from pathlib import Path
 from typing import List, BinaryIO, Dict
 import sys
-from dataclasses import dataclass
+
+from data.base.reader import SequenceBoundary
 
 INT_BYTE_SIZE = 8
-
-
-@dataclass
-class SequenceBoundary:
-    start: int
-    end: int
 
 
 class CsvSessionIndexer:

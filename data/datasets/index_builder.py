@@ -5,7 +5,7 @@ from typing import Callable, Dict, Any, Iterable
 from tqdm import tqdm
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, INT_BYTE_SIZE
-from data.datasets.session import ItemSessionDataset
+from data.datasets.sequence import ItemSequenceDataset
 
 
 class SequencePositionIndexBuilder:
@@ -26,7 +26,7 @@ class SequencePositionIndexBuilder:
         self._target_positions_extractor = target_positions_extractor
 
     def build(self,
-              dataset: ItemSessionDataset,
+              dataset: ItemSequenceDataset,
               index_path: Path
               ):
         if not index_path.exists():

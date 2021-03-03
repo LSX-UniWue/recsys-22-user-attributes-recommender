@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, List
 
-from data.datasets.session import ItemSessionParser
+from data.datasets.sequence import ItemSessionParser
 from data.utils import create_indexed_header, read_csv_header
 from init.config import Config
 from init.context import Context

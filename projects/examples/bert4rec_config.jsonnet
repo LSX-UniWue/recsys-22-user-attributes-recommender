@@ -1,5 +1,6 @@
 local base_path = "../tests/example_dataset/";
 local max_seq_length = 7;
+local prefix = 'example';
 local metrics =  {
     mrr: [1, 3, 5],
     recall: [1, 3, 5],
@@ -19,10 +20,12 @@ local metrics =  {
                 max_seq_length: max_seq_length,
             },
             path: base_path,
-            validation_file_prefix: "example",
-            test_file_prefix: "example",
+            train_file_prefix: prefix,
+            validation_file_prefix: prefix,
+            test_file_prefix: prefix,
             mask_probability: 0.1,
-            mask_seed: 123456
+            mask_seed: 123456,
+            split_type: 'leave_one_out'
         }
     },
     module: {

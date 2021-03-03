@@ -1,7 +1,7 @@
 from typing import Any, List
 
 from data.datasets.processors.processor import Processor
-from data.datasets.session import ItemSessionParser, ItemSessionDataset
+from data.datasets.sequence import ItemSessionParser, ItemSequenceDataset
 from init.config import Config
 from init.context import Context
 from init.factories.data_sources.datasets.plain_session import PlainSessionDatasetFactory
@@ -30,4 +30,4 @@ class ItemSessionDatasetFactory(DatasetFactory):
                        processors: List[Processor]) -> Any:
         basic_dataset = self.plain_session_factory.build(config, context)
 
-        return ItemSessionDataset(basic_dataset, processors=processors)
+        return ItemSequenceDataset(basic_dataset, processors=processors)

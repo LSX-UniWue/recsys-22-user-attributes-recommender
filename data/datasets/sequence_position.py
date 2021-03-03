@@ -1,24 +1,29 @@
 from typing import List
 
-from numpy.random._generator import default_rng
-from torch.utils.data import Dataset, IterableDataset
+from torch.utils.data import Dataset
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, SAMPLE_IDS
 from data.datasets.index import SequencePositionIndex
 from data.datasets.processors.processor import Processor
-from data.datasets.session import ItemSessionDataset, PlainSequenceDataset
+from data.datasets.sequence import PlainSequenceDataset
 from data.mp import MultiProcessSupport
 
 
 # Todo find better name
-class NextItemDataset(Dataset, MultiProcessSupport):
+class SequencePositionDataset(Dataset, MultiProcessSupport):
+
+    """
+    A dataset that uses a sequence position index to load all session upon the specified position in the index
+
+    if add_target is set to False, the complete sequence till the position is returned else the sequence excluding the
+    position is returned and the
+    """
 
     def __init__(self,
                  dataset: PlainSequenceDataset,
                  index: SequencePositionIndex,
                  processors: List[Processor] = None,
-                 add_target: bool = True,
-                 include_target_pos: bool = False
+                 add_target: bool = True
                  ):
         super().__init__()
         self._dataset = dataset
@@ -27,7 +32,6 @@ class NextItemDataset(Dataset, MultiProcessSupport):
             processors = []
         self._processors = processors
         self._add_target = add_target
-        self._include_target_pos = include_target_pos
 
     def __len__(self):
         return len(self._index)
@@ -39,7 +43,7 @@ class NextItemDataset(Dataset, MultiProcessSupport):
         parsed_session['pos'] = target_pos
 
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
-        truncated_session = session[:target_pos] if not self._include_target_pos else session[:target_pos + 1]
+        truncated_session = session[:target_pos] if self._add_target else session[:target_pos + 1]
         parsed_session[ITEM_SEQ_ENTRY_NAME] = truncated_session
         if self._add_target:
             parsed_session[TARGET_ENTRY_NAME] = session[target_pos]
@@ -52,31 +56,3 @@ class NextItemDataset(Dataset, MultiProcessSupport):
     def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
         # nothing to do here
         pass
-
-
-class NextItemIterableDataset(IterableDataset):
-    def __init__(self, dataset: ItemSessionDataset, index: SequencePositionIndex, seed: int = None):
-        self._dataset = dataset
-        self._index = index
-        self._seed = seed
-
-        self._start = 0
-        self._stop = len(self._index)
-
-    def __iter__(self):
-        rng = default_rng(self._seed)
-
-        while True:
-            sample_idx = rng.integers(low=self._start, high=self._stop)
-            session_idx, target_idx = self._index[sample_idx]
-
-            session = self._dataset[session_idx][ITEM_SEQ_ENTRY_NAME]
-
-            yield {
-                ITEM_SEQ_ENTRY_NAME: session[:target_idx],
-                TARGET_ENTRY_NAME: session[target_idx],
-                SAMPLE_IDS: sample_idx
-            }
-
-    def __len__(self):
-        return len(self._index)

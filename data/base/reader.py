@@ -1,9 +1,18 @@
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
 import sys
 import io
 
 from data.mp import MultiProcessSupport
+
+
+@dataclass
+class SequenceBoundary:
+    """
+    a dataclass representing the start and end of a sequence
+    """
+    start: int
+    end: int
 
 
 class CsvDatasetIndex(MultiProcessSupport):
@@ -44,7 +53,7 @@ class CsvDatasetIndex(MultiProcessSupport):
     def __len__(self):
         return self.num_sequences()
 
-    def get(self, session_num: int) -> Tuple[int, int]:
+    def get(self, session_num: int) -> SequenceBoundary:
         """
         Returns the boundaries of a specific session as byte positions within the file. The sessions are sequentially
         numbered and 0-based.
@@ -58,7 +67,7 @@ class CsvDatasetIndex(MultiProcessSupport):
             start = self._read_int(file_handle)
             end = self._read_int(file_handle)
 
-            return start, end
+            return SequenceBoundary(start, end)
 
     def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
         self._init()
@@ -100,7 +109,9 @@ class CsvDatasetReader(MultiProcessSupport):
         if idx >= self._num_sequences:
             raise Exception(f"{idx} is not a valid index in [0, {self._num_sequences}]")
 
-        start, end = self._index.get(idx)
+        sequence_boundary = self._index.get(idx)
+        start = sequence_boundary.start
+        end = sequence_boundary.end
         sequence_raw = self._read_sequence(start, end)
 
         return sequence_raw

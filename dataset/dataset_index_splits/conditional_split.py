@@ -5,7 +5,7 @@ from typing import Dict, Any, Iterable, Callable, Optional
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets.index_builder import SequencePositionIndexBuilder
-from data.datasets.session import ItemSessionDataset, ItemSessionParser, PlainSequenceDataset
+from data.datasets.sequence import ItemSequenceDataset, ItemSessionParser, PlainSequenceDataset
 from data.utils import create_indexed_header, read_csv_header
 
 
@@ -64,7 +64,7 @@ def create_conditional_index_using_extractor(data_file_path: Path,
     reader = CsvDatasetReader(data_file_path, session_index)
 
     plain_dataset = PlainSequenceDataset(reader, session_parser)
-    dataset = ItemSessionDataset(plain_dataset)
+    dataset = ItemSequenceDataset(plain_dataset)
 
     builder = SequencePositionIndexBuilder(min_session_length=min_session_length,
                                            target_positions_extractor=target_positions_extractor)

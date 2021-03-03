@@ -73,7 +73,7 @@ class ItemSessionParser(SequenceParser):
 
         entries = list(reader)
         items = [self._get_item(entry) for entry in entries]
-        parsed_session = {
+        parsed_sequence = {
             ITEM_SEQ_ENTRY_NAME: items
         }
 
@@ -85,9 +85,9 @@ class ItemSessionParser(SequenceParser):
                 feature = [self._get_feature(entry, feature_key, info) for entry in entries]
             else:
                 feature = self._get_feature(entries[0], feature_key, info)
-            parsed_session[feature_key] = feature
+            parsed_sequence[feature_key] = feature
 
-        return parsed_session
+        return parsed_sequence
 
     def _get_feature(self,
                      entry: List[str],
@@ -118,18 +118,18 @@ class PlainSequenceDataset(Dataset, MultiProcessSupport):
     def __init__(self,
                  reader: CsvDatasetReader,
                  parser: SequenceParser
-                ):
+                 ):
         super().__init__()
         self._reader = reader
         self._parser = parser
 
     def __getitem__(self, idx):
         session = self._reader.get_sequence(idx)
-        parsed_session = self._parser.parse(session)
+        parsed_sequence = self._parser.parse(session)
 
-        parsed_session[SAMPLE_IDS] = idx
+        parsed_sequence[SAMPLE_IDS] = idx
 
-        return parsed_session
+        return parsed_sequence
 
     def __len__(self):
         return len(self._reader)
@@ -139,28 +139,28 @@ class PlainSequenceDataset(Dataset, MultiProcessSupport):
         pass
 
 
-class ItemSessionDataset(Dataset, MultiProcessSupport):
+class ItemSequenceDataset(Dataset, MultiProcessSupport):
 
     def __init__(self,
-                 plain_session_dataset: PlainSequenceDataset,
+                 plain_sequence_dataset: PlainSequenceDataset,
                  processors: List[Processor] = None
                  ):
         super().__init__()
-        self._plain_session_dataset = plain_session_dataset
+        self._plain_sequence_dataset = plain_sequence_dataset
         if processors is None:
             processors = []
         self._processors = processors
 
     def __len__(self):
-        return len(self._plain_session_dataset)
+        return len(self._plain_sequence_dataset)
 
     def __getitem__(self, idx):
-        parsed_session = self._plain_session_dataset[idx]
+        parsed_sequence = self._plain_sequence_dataset[idx]
 
         for processor in self._processors:
-            parsed_session = processor.process(parsed_session)
+            parsed_sequence = processor.process(parsed_sequence)
 
-        return parsed_session
+        return parsed_sequence
 
     def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
         # nothing to do here
