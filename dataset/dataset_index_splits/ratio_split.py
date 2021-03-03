@@ -107,7 +107,7 @@ def write_split(reader: CsvDatasetReader, output_dir_path: Path, header: Text, s
         file.write(header)
         file.write("\n")
         for idx in tqdm(sample_indices, desc=f"Generating {split_name}"):
-            content = reader.get_session(idx)
+            content = reader.get_sequence(idx)
             file.write(content.strip())
             file.write("\n")
 

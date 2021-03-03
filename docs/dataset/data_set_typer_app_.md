@@ -1,4 +1,5 @@
-## Dataset CLI ##
+# Dataset CLI
+
 The pre-processing of data sets in this project is done with the help of a CLI which provides the following
 functionality:
 0. (Downloading of data sets not available for all data sets)
@@ -8,26 +9,28 @@ functionality:
 
 
 The structure of the CLI (dataset_app.py) is as follows: 
-* index
-    * index-csv
-* pre_process
-    * movielens
-    * yoochoose
-    * amazon
-* split   
-    * next-item
-    * ratios
-* vocabulary
-    * build
-* popularity
-    * build
+- index
+    - index-csv
+- pre_process
+    - movielens
+    - yoochoose
+    - amazon
+- split   
+    - next-item
+    - ratios
+- vocabulary
+    - build
+- popularity
+    - build
     
-### Usage ###
+## Usage
+
 ````bash
 python dataset_app.py [OPTIONS] COMMAND [ARGS]...
 ````
+
 Possible commands and sub-commands are listed above.
 
-### Packaging ###
+## Packaging
 In the future it might be interesting to look at how this could be packaged using poetry 
 (https://typer.tiangolo.com/tutorial/package/).

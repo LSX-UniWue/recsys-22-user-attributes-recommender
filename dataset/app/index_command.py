@@ -1,7 +1,7 @@
 import typer
 from pathlib import Path
 from typing import List
-from data.base.indexer import CsvSessionIndexer
+from data.base.csv_index_builder import CsvSessionIndexer
 
 app = typer.Typer()
 

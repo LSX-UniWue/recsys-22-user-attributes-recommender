@@ -5,13 +5,13 @@ from tqdm import tqdm
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME
-from data.datasets.session import PlainSessionDataset, ItemSessionParser
+from data.datasets.sequence import PlainSequenceDataset, ItemSessionParser
 from data.utils import create_indexed_header, read_csv_header
 from tokenization.vocabulary import VocabularyBuilder, CSVVocabularyReaderWriter
 
 
 def create_session_data_set(item_header_name: str, data_file_path: Path, index_file_path: Path,
-                            delimiter: str) -> PlainSessionDataset:
+                            delimiter: str) -> PlainSequenceDataset:
     """
     Helper method wich returns a PlainSessionDataset for a given data and index file
 
@@ -27,13 +27,15 @@ def create_session_data_set(item_header_name: str, data_file_path: Path, index_f
                                item_header_name=item_header_name,
                                delimiter=delimiter)
 
-    session_data_set = PlainSessionDataset(reader, parser)
+    session_data_set = PlainSequenceDataset(reader, parser)
     return session_data_set
 
 
-def create_token_vocabulary(item_header_name: str, data_file_path: Path, session_index_path: Path,
+def create_token_vocabulary(item_header_name: str, data_file_path: Path,
+                            session_index_path: Path,
                             vocabulary_output_file_path: Path,
-                            custom_tokens: List[str], delimiter: str):
+                            custom_tokens: List[str],
+                            delimiter: str):
     """
     Creates a token vocabulary for the items in the data set in data file path.
 

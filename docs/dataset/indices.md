@@ -1,5 +1,6 @@
-## Indices created in this project ##
-In this project for every session data set file three  indices are created: session indices, next item indices, and 
+# Indices created in this project
+
+In this project for every session data set file three indices are created: session indices, next item indices, and 
 leave one out indices.
 
 ### Session Indices ###
@@ -19,7 +20,7 @@ E.g. for session <br>
 
 where [] denotes the target item
 
-### Leave One Out Indices ###
+### Leave One Out Indices
 Includes entries for the start and end of every session as well as a target item for every session.
 The index is implemented using the SessionPositionIndex in the SessionPositionIndexBuilder class in 
 [index_builder.py](../../data/datasets/index_builder.py).
@@ -28,9 +29,9 @@ E.g. for session <br>
 0 -> 1 -> 2 -> 3<br>
 0 -> 1 -> 2 -> [3]
 
-where [] denotes the target item
+where `[]` denotes the target item
 
-### Data Set File Scheme ###
+### Data Set File Scheme
 In order to use both Leave one out and Next Item recommendation tasks for training on a data setthe following files have
 to be stored/created under \<directory-basepath\>. 
 
