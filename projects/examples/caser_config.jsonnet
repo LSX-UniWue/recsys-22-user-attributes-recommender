@@ -18,7 +18,7 @@ local metrics =  {
                 batch_size: 9,
                 max_seq_length: max_seq_length
             },
-            path: base_path,
+            path: base_path + "ratio_split/",
             train_file_prefix: "example",
             validation_file_prefix: "example",
             test_file_prefix: "example",

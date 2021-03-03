@@ -1,7 +1,7 @@
 from typing import Dict, Any
 
 from init.templating.datasources.datasources import build_datasource, DataSourceTemplateProcessor, \
-    SessionDatasetRatioSplitBuilder, LeaveOneOutSessionDatasetBuilder, NextPositionDatasetBuilder
+    SequenceDatasetRatioSplitBuilder, LeaveOneOutSessionDatasetBuilder, NextPositionDatasetBuilder
 
 
 class MaskDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
@@ -17,7 +17,7 @@ class MaskDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
         'type': 'last_item_mask'
     }
 
-    TRAIN_DATASET_BUILDERS = [SessionDatasetRatioSplitBuilder(), LeaveOneOutSessionDatasetBuilder()]
+    TRAIN_DATASET_BUILDERS = [SequenceDatasetRatioSplitBuilder(), LeaveOneOutSessionDatasetBuilder()]
     TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
 
     def _get_template_key(self) -> str:

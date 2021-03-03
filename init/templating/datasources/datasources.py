@@ -112,15 +112,16 @@ class NextPositionDatasetBuilder(DatasetBuilder):
     def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = config['path']
         prefix = config.get(f'{prefix_id}_file_prefix', prefix_id)
+        next_seq_step_type = config.get('next_seq_step_type', 'nextitem')
         return {
             'type': 'sequence_position',
             'csv_file': f'{base_path}{prefix}.{prefix_id}.csv',
             'csv_file_index': f'{base_path}{prefix}.{prefix_id}.session.idx',
-            'nip_index_file': f'{base_path}{prefix}.{prefix_id}.nextitem.idx'
+            'nip_index_file': f'{base_path}{prefix}.{prefix_id}.{next_seq_step_type}.idx'
         }
 
 
-class SessionDatasetRatioSplitBuilder(DatasetBuilder):
+class SequenceDatasetRatioSplitBuilder(DatasetBuilder):
 
     def can_build_dataset_definition(self, dataset_split_type: DatasetSplit) -> bool:
         return dataset_split_type == DatasetSplit.RATIO_SPLIT
@@ -133,6 +134,25 @@ class SessionDatasetRatioSplitBuilder(DatasetBuilder):
             'csv_file': f'{base_path}{prefix}.{prefix_id}.csv',
             'csv_file_index': f'{base_path}{prefix}.{prefix_id}.session.idx'
         }
+
+
+class ConditionalSequenceOrSequencePositionDatasetBuilder(DatasetBuilder):
+
+    def __init__(self):
+        super().__init__()
+        self._sequence_dataset_builder = SequenceDatasetRatioSplitBuilder()
+        self._sequence_position_dataset_builder = NextPositionDatasetBuilder()
+
+    def can_build_dataset_definition(self, dataset_split_type: DatasetSplit) -> bool:
+        return dataset_split_type == DatasetSplit.RATIO_SPLIT
+
+    def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        if 'next_seq_step_type' in config:
+            dataset_config = self._sequence_position_dataset_builder.build_dataset_definition(prefix_id, config)
+            dataset_config['add_target'] = False
+            return dataset_config
+
+        return self._sequence_dataset_builder.build_dataset_definition(prefix_id, config)
 
 
 class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
