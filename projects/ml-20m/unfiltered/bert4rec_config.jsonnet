@@ -11,7 +11,7 @@ local file_prefix = 'ml-20m';
 {
     templates: {
         unified_output: {
-            path: "/scratch/jane-doe-framework/experiments/ml-20m/bert4rec"
+            path: "/scratch/jane-doe-framework/experiments/ml-20m/bert4rec_new"
         },
         mask_data_sources: {
             parser: {
@@ -35,7 +35,7 @@ local file_prefix = 'ml-20m';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + "popularity.txt",
+                sample_probability_file: base_path + "ml-20m.popularity.title.txt",
                 num_negative_samples: 100,
                 metrics: metrics
             }
@@ -57,7 +57,7 @@ local file_prefix = 'ml-20m';
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "vocab.txt"
+                    file: base_path + "ml-20m.vocabulary.title.txt"
                 }
             }
         }
