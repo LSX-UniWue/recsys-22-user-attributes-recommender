@@ -94,6 +94,14 @@ def build_parser_config(parser_config: Dict[str, Any]) -> Dict[str, Any]:
     return parser_config
 
 
+def _get_prefix(config: Dict[str, Any],
+                prefix_id: str
+                ) -> str:
+    prefix = config.get('file_prefix', prefix_id)
+    prefix = config.get(f'{prefix_id}_file_prefix', prefix)
+    return prefix
+
+
 class DatasetBuilder:
 
     @abstractmethod
@@ -111,7 +119,7 @@ class NextPositionDatasetBuilder(DatasetBuilder):
 
     def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = config['path']
-        prefix = config.get(f'{prefix_id}_file_prefix', prefix_id)
+        prefix = _get_prefix(config, prefix_id)
         next_seq_step_type = config.get('next_seq_step_type', 'nextitem')
         return {
             'type': 'sequence_position',
@@ -128,7 +136,7 @@ class SequenceDatasetRatioSplitBuilder(DatasetBuilder):
 
     def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = config['path']
-        prefix = config.get(f'{prefix_id}_file_prefix', prefix_id)
+        prefix = _get_prefix(config, prefix_id)
         return {
             'type': 'session',
             'csv_file': f'{base_path}{prefix}.{prefix_id}.csv',
@@ -162,7 +170,7 @@ class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
 
     def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = config['path']
-        prefix = config.get(f'{prefix_id}_file_prefix', prefix_id)
+        prefix = _get_prefix(config, prefix_id)
         dataset_config = {
             'type': 'sequence_position',
             'csv_file': f'{base_path}{prefix}.csv',
