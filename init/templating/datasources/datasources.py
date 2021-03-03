@@ -188,7 +188,7 @@ class LeaveOneOutSessionDatasetBuilder(DatasetBuilder):
 
     def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = config['path']
-        prefix = config.get(f'{prefix_id}_file_prefix', prefix_id)
+        prefix = _get_prefix(config, prefix_id)
         index_file_path = f"{prefix}.{prefix_id}"
         is_training = prefix_id == 'train'
         if is_training:
