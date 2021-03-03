@@ -28,7 +28,7 @@ local file_prefix = 'ml-20m';
             test_file_prefix: file_prefix,
             next_step_type: "loo", // leave one out
             mask_probability: 0.2,
-            seed: 42
+            mask_seed: 42
         }
     },
     module: {

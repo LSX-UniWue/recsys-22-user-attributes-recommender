@@ -25,7 +25,7 @@ local file_prefix = 'ml-20m';
             file_prefix: file_prefix,
             split_type: "leave_one_out", // leave one out split
             mask_probability: 0.2,
-            seed: 42
+            mask_seed: 42
         }
     },
     module: {
