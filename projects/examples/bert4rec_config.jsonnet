@@ -20,9 +20,7 @@ local metrics =  {
                 max_seq_length: max_seq_length,
             },
             path: base_path,
-            train_file_prefix: prefix,
-            validation_file_prefix: prefix,
-            test_file_prefix: prefix,
+            file_prefix: prefix,
             mask_probability: 0.1,
             mask_seed: 123456,
             split_type: 'leave_one_out'

@@ -19,9 +19,7 @@ local metrics =  {
                 max_seq_length: max_seq_length
             },
             path: base_path + "ratio_split/",
-            train_file_prefix: "example",
-            validation_file_prefix: "example",
-            test_file_prefix: "example",
+            file_prefix: "example",
             seed: 123456
         }
     },
