@@ -22,10 +22,8 @@ local file_prefix = 'ml-20m';
                 max_seq_length: max_seq_length
             },
             path: base_path,
-            train_file_prefix: file_prefix,
-            validation_file_prefix: file_prefix,
-            test_file_prefix: file_prefix,
-            split_type: "loo", // leave one out split
+            file_prefix: file_prefix,
+            split_type: "leave_one_out", // leave one out split
             mask_probability: 0.2,
             seed: 42
         }
@@ -76,6 +74,6 @@ local file_prefix = 'ml-20m';
         gpus: 8,
         max_epochs: 800,
         accelerator: "ddp",
-        check_val_every_n_epoch: 50
+        check_val_every_n_epoch: 100
     }
 }
