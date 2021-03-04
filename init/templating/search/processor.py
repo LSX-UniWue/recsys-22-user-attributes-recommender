@@ -52,6 +52,7 @@ def _resolve_dependency(parameter_dependency_infos: List[ParameterInfo]) -> List
 class SearchTemplateProcessor(TemplateProcessor):
 
     def __init__(self, resolver: ParameterResolver):
+        super().__init__()
         self.resolver = resolver
 
     def can_modify(self, config: Dict[str, Any]) -> bool:
@@ -78,9 +79,9 @@ class SearchTemplateProcessor(TemplateProcessor):
                     parameter_info.extend(_find_all_resolvable_parameters(value, current_key))
             return parameter_info
 
-        all_resolveable_parameters = _find_all_resolvable_parameters(config)
+        all_resolvable_parameters = _find_all_resolvable_parameters(config)
 
-        parameters_to_resolve = _resolve_dependency(all_resolveable_parameters)
+        parameters_to_resolve = _resolve_dependency(all_resolvable_parameters)
 
         resolved_values = {}
 
@@ -117,6 +118,3 @@ class SearchTemplateProcessor(TemplateProcessor):
             return result
 
         return _replace_recursively(config)
-
-    def reads_template_config(self) -> bool:
-        return False
