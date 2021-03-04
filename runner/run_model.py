@@ -17,6 +17,7 @@ from init.config import Config
 from init.container import Container
 from init.context import Context
 from init.factories.container import ContainerFactory
+from init.factories.metrics.metrics_container import MetricsContainerFactory
 from init.templating.search.configuration import SearchConfigurationTemplateProcessor
 from init.templating.search.processor import SearchTemplateProcessor
 from init.templating.search.resolver import OptunaParameterResolver
@@ -39,7 +40,10 @@ def _config_logging(config: Dict[str, Any]
     logger.addHandler(handler)
 
 
-def load_config(config_file: Path, additional_processors: List[TemplateProcessor] = []) -> Config:
+def load_config(config_file: Path,
+                additional_head_processors: List[TemplateProcessor] = [],
+                additional_tail_processors: List[TemplateProcessor] = []
+                ) -> Config:
     config_file = Path(config_file)
 
     if not config_file.exists():
@@ -50,13 +54,10 @@ def load_config(config_file: Path, additional_processors: List[TemplateProcessor
 
     loaded_config = json.loads(config_json)
 
-    template_engine = TemplateEngine()
-
-    for processor in additional_processors:
-        template_engine.add_processor(processor)
+    template_engine = TemplateEngine(head_processors=additional_head_processors,
+                                     tail_processors=additional_tail_processors)
 
     config_to_use = template_engine.modify(loaded_config)
-    print(config_to_use)
     return Config(config_to_use)
 
 
@@ -110,9 +111,12 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
            ) -> None:
 
     # check if objective_metric is defined
-    test_container = load_container(template_file)
-    test_module = test_container.module()
-    if objective_metric not in test_module.metrics.get_metric_names():
+    test_config = load_config(template_file)
+    test_metrics_config = test_config.get_config(['module', 'metrics'])
+
+    metrics_factors = MetricsContainerFactory()
+    test_metrics_container = metrics_factors.build(test_metrics_config, Context())
+    if objective_metric not in test_metrics_container.get_metric_names():
         raise ValueError(f'{objective_metric} not configured. '
                          f'Can not optimize hyperparameters using the specified objective')
 
@@ -128,8 +132,8 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
         :param trial: a trial object.
         :return: nothing.
         """
-        config = load_config(template_file, [SearchTemplateProcessor(OptunaParameterResolver(trial)),
-                                             SearchConfigurationTemplateProcessor(trial)])
+        config = load_config(template_file, [SearchTemplateProcessor(OptunaParameterResolver(trial))],
+                             [SearchConfigurationTemplateProcessor(trial)])
         json.dump(config.config, config_file_handle)
         config_file_handle.flush()
 

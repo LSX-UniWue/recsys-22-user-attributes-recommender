@@ -22,7 +22,15 @@ local metrics =  {
             path: base_path,
             file_prefix: prefix,
             mask_probability: 0.1,
-            mask_seed: 123456,
+            mask_seed: {
+                hyper_opt: {
+                    suggest: "int",
+                    params: {
+                       low: 0,
+                       high: 21312313
+                    }
+                }
+            },
             split_type: 'leave_one_out'
         }
     },
@@ -44,9 +52,38 @@ local metrics =  {
         },
         model: {
             max_seq_length: max_seq_length,
-            num_transformer_heads: 1,
-            num_transformer_layers: 1,
-            transformer_hidden_size: 2,
+            num_transformer_heads: {
+                hyper_opt: {
+                    suggest: "int",
+                    params: {
+                       low: 2,
+                       high: 8,
+                       step: 2
+                    }
+                }
+            },
+            num_transformer_layers: {
+                hyper_opt: {
+                    suggest: "int",
+                    params: {
+                       low: 2,
+                       high: 8,
+                       step: 2
+                    }
+                }
+            },
+            transformer_hidden_size: {
+                hyper_opt: {
+                   suggest: "int",
+                   params: {
+                      low: 2,
+                      high: 8,
+                      step: 2
+                   },
+                   depends_on: "module.model.num_transformer_heads",
+                   dependency: "multiply"
+                }
+            },
             transformer_dropout: 0.1
         }
     },

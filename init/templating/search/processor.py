@@ -39,12 +39,22 @@ def _resolve_dependency(parameter_dependency_infos: List[ParameterInfo]) -> List
             var_key = parameter_dependency_info.parameter_key
             if var_key in dependency_lists:
                 dependencies = dependency_lists[var_key]
+
+                del dependency_lists[var_key]
+
                 for dependency in dependencies:
                     result.append(dependency)
                     result.extend(_add_dependencies_recursively(dependency))
             return result
 
         resolved_dependencies.extend(_add_dependencies_recursively(dependency_free_parameter))
+
+    if len(dependency_lists) > 0:
+        missing_parameter_names = []
+        for param_infos in dependency_lists.values():
+            missing_parameter_names.extend(map(lambda para_info: para_info.parameter_key, param_infos))
+
+        raise KeyError(f'could not resolve the parameters for: {",".join(missing_parameter_names)}')
 
     return resolved_dependencies
 
