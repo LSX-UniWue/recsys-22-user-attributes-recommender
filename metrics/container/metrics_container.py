@@ -40,21 +40,20 @@ class MetricsContainer(nn.Module):
         """
         pass
 
-
-class NoopMetricsContainer(MetricsContainer):
-
-    def update(self, input_seq: torch.Tensor, targets: torch.Tensor, predictions: torch.Tensor,
-               mask: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
-        return {}
-
-    def compute(self) -> Dict[str, torch.Tensor]:
-        return {}
+    @abstractmethod
+    def get_metric_names(self) -> List[str]:
+        """
+        returns the names of all metrics registered to this container
+        :return: the metric names
+        """
+        pass
 
 
 class RankingMetricsContainer(MetricsContainer):
     """
     A module that can be used as a container for a collection of metrics.
     """
+
     def __init__(self,
                  metrics: List[RankingMetric],
                  sampler: MetricsSampler):
@@ -101,12 +100,16 @@ class RankingMetricsContainer(MetricsContainer):
         """
         return {f'{metric.name()}{self.sampler.suffix_metric_name()}': metric.compute() for metric in self.metrics}
 
+    def get_metric_names(self) -> List[str]:
+        return [f'{metric.name()}{self.sampler.suffix_metric_name()}' for metric in self.metrics]
+
 
 class AggregateMetricsContainer(MetricsContainer):
     """
     Manages a list of containers each managing different metrics.
     Forwards calls to all containers and aggregates results into a single dictionary.
     """
+
     def __init__(self, containers: List[MetricsContainer]):
         super().__init__()
         self.containers = torch.nn.ModuleList(containers)
@@ -133,3 +136,11 @@ class AggregateMetricsContainer(MetricsContainer):
                 results.update(container_results)
 
         return results
+
+    def get_metric_names(self) -> List[str]:
+        merged_list = []
+
+        for container in self.containers.children():
+            merged_list.extend(container.get_metric_names())
+
+        return merged_list

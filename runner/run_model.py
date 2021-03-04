@@ -1,5 +1,6 @@
 import logging
 import logging.handlers
+
 import typer
 import optuna
 import json
@@ -16,7 +17,8 @@ from init.config import Config
 from init.container import Container
 from init.context import Context
 from init.factories.container import ContainerFactory
-from init.object_factory import CanBuildResultType
+from init.factories.metrics.metrics_container import MetricsContainerFactory
+from init.templating.search.configuration import SearchConfigurationTemplateProcessor
 from init.templating.search.processor import SearchTemplateProcessor
 from init.templating.search.resolver import OptunaParameterResolver
 from init.templating.template_engine import TemplateEngine
@@ -38,7 +40,10 @@ def _config_logging(config: Dict[str, Any]
     logger.addHandler(handler)
 
 
-def load_config(config_file: Path, additional_processors: List[TemplateProcessor] = []) -> Config:
+def load_config(config_file: Path,
+                additional_head_processors: List[TemplateProcessor] = [],
+                additional_tail_processors: List[TemplateProcessor] = []
+                ) -> Config:
     config_file = Path(config_file)
 
     if not config_file.exists():
@@ -49,10 +54,8 @@ def load_config(config_file: Path, additional_processors: List[TemplateProcessor
 
     loaded_config = json.loads(config_json)
 
-    template_engine = TemplateEngine()
-
-    for processor in additional_processors:
-        template_engine.add_processor(processor)
+    template_engine = TemplateEngine(head_processors=additional_head_processors,
+                                     tail_processors=additional_tail_processors)
 
     config_to_use = template_engine.modify(loaded_config)
     return Config(config_to_use)
@@ -77,6 +80,9 @@ def train(config_file: str = typer.Argument(..., help='the path to the config fi
           do_train: bool = typer.Option(True, help='flag iff the model should be trained'),
           do_test: bool = typer.Option(False, help='flag iff the model should be tested (after training)')
           ) -> None:
+    if do_test and not do_train:
+        print(f"The model has to be trained before it can be tested!")
+        exit(-1)
 
     config_file_path = Path(config_file)
     config = load_config(config_file_path)
@@ -90,9 +96,6 @@ def train(config_file: str = typer.Argument(..., help='the path to the config fi
                     val_dataloaders=container.validation_dataloader())
 
     if do_test:
-        if not do_train:
-            print(f"The model has to be trained before it can be tested!")
-            exit(-1)
         trainer.test(test_dataloaders=container.test_dataloader())
 
 
@@ -105,11 +108,21 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
                                                             '(e.g. recall@5).'),
            study_direction: str = typer.Option(default="maximize", help="minimize / maximize"),
            num_trails: int = typer.Option(default=20, help='the number of trails to execute')
-          ) -> None:
-    # TODO set version string to correctly run parameter study in different directories (logger/checkpoints)
+           ) -> None:
+
+    # check if objective_metric is defined
+    test_config = load_config(template_file)
+    test_metrics_config = test_config.get_config(['module', 'metrics'])
+
+    metrics_factors = MetricsContainerFactory()
+    test_metrics_container = metrics_factors.build(test_metrics_config, Context())
+    if objective_metric not in test_metrics_container.get_metric_names():
+        raise ValueError(f'{objective_metric} not configured. '
+                         f'Can not optimize hyperparameters using the specified objective')
+
     def config_from_template(template_file: Path,
-                             config_file_handle,
-                             trial):
+                             config_file_handle: NamedTemporaryFile,
+                             trial: optuna.Trial):
         """
         Loads the template file and applies all template processors (including the SearchTemplateProcessor). The result
         is written to the temporary `config_file_handle`.
@@ -119,15 +132,19 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
         :param trial: a trial object.
         :return: nothing.
         """
-        config = load_config(template_file, [SearchTemplateProcessor(OptunaParameterResolver(trial))])
+        config = load_config(template_file, [SearchTemplateProcessor(OptunaParameterResolver(trial))],
+                             [SearchConfigurationTemplateProcessor(trial)])
         json.dump(config.config, config_file_handle)
         config_file_handle.flush()
 
     # FIXME (AD) don't rely on capturing of arguments in internal function scope -> make it into a callable object
     def objective(trial: optuna.Trial):
         # get the direction to get if we must extract the max or the min value of the metric
-        study_direction = trial.study.direction
-        objective_best = {StudyDirection.MINIMIZE: min, StudyDirection.MAXIMIZE: max}[study_direction]
+        trail_study_direction = trial.study.direction
+        objective_best = {
+            StudyDirection.MINIMIZE: min,
+            StudyDirection.MAXIMIZE: max
+        }[trail_study_direction]
 
         with NamedTemporaryFile(mode='wt') as tmp_config_file:
             # load config template, apply processors and write to `tmp_config_file`
@@ -142,8 +159,8 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 
                     self.metric_history = []
 
-                def on_validation_end(self, trainer, pl_module):
-                    self.metric_history.append(trainer.callback_metrics)
+                def on_validation_end(self, pl_trainer, pl_module):
+                    self.metric_history.append(pl_trainer.callback_metrics)
 
             metrics_tracker = MetricsHistoryCallback()
 
@@ -166,7 +183,8 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 
             return _find_best_value(objective_metric, objective_best)
 
-    study = optuna.create_study(study_name=study_name, storage=study_storage, load_if_exists=True, direction=study_direction)
+    study = optuna.create_study(study_name=study_name, storage=study_storage, load_if_exists=True,
+                                direction=study_direction)
     study.optimize(objective, n_trials=num_trails)
 
 
@@ -204,7 +222,7 @@ def predict(config_file: str = typer.Argument(..., help='the path to the config 
     callback_params = {
         "output_file_path": output_file,
         "log_input": log_input,
-        "tokenizer": container.tokenizer("item"), # FIXME we need to build support for multiple tokenizers
+        "tokenizer": container.tokenizer("item"),  # FIXME we need to build support for multiple tokenizers
         "strip_padding_tokens": strip_pad_token
     }
     trainer_builder = container.trainer()

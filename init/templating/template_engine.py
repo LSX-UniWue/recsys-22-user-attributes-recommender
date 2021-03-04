@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from init.templating import TEMPLATES_CONFIG_KEY
 from init.templating.datasources.mask import MaskDataSourcesTemplateProcessor
@@ -13,12 +13,20 @@ class TemplateEngine:
     An engine the consecutively applies template processors to the configuration.
     """
 
-    def __init__(self):
-        super(TemplateEngine, self).__init__()
-        self._template_processors = [MaskDataSourcesTemplateProcessor(),
-                                     PositiveNegativeDataSourcesTemplateProcessor(),
-                                     NextSequenceStepDataSourcesTemplateProcessor(),
-                                     OutputDirectoryProcessor()]
+    def __init__(self,
+                 head_processors: List[TemplateProcessor] = None,
+                 tail_processors: List[TemplateProcessor] = None
+                 ):
+        super().__init__()
+        if head_processors is None:
+            head_processors = []
+
+        if tail_processors is None:
+            tail_processors = []
+        self._template_processors = head_processors + [MaskDataSourcesTemplateProcessor(),
+                                                       PositiveNegativeDataSourcesTemplateProcessor(),
+                                                       NextSequenceStepDataSourcesTemplateProcessor(),
+                                                       OutputDirectoryProcessor()] + tail_processors
 
     def modify(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """
