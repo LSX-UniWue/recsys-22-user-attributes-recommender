@@ -23,10 +23,8 @@ local file_prefix = 'ml-20m';
                 max_seq_length: max_seq_length
             },
             path: base_path,
-            train_file_prefix: file_prefix,
-            validation_file_prefix: file_prefix,
-            test_file_prefix: file_prefix,
-            next_step_type: "loo", // leave one out
+            file_prefix: file_prefix,
+            split_type: "leave_one_out", // leave one out split
             mask_probability: 0.2,
             mask_seed: 42
         }
