@@ -22,14 +22,9 @@ class DiscountedCumulativeGainMetric(RankingMetric):
     def _update(self,
                 prediction: torch.Tensor,
                 target: torch.Tensor,
-                mask: torch.Tensor = None
+                metric_mask: torch.Tensor
                 ) -> None:
-        """
-        :param prediction: the scores of all items, the first one is the positive item, all others are negatives :math `(N, I)`
-        :param target: the target label tensor :math `(N, T)`
-        :return: DCG@k
-        """
-        self.dcg += calc_dcg(prediction, target, self._k).sum()
+        self.dcg += calc_dcg(prediction, target, self._k, metric_mask).sum()
         self.count += target.size()[0]
 
     def compute(self):

@@ -21,9 +21,10 @@ class PrecisionMetric(RankingMetric):
 
     def _update(self,
                 predictions: torch.Tensor,
-                positive_item_mask: torch.Tensor
+                positive_item_mask: torch.Tensor,
+                metric_mask: torch.Tensor
                 ) -> None:
-        precision = calc_precision(predictions, positive_item_mask, self._k)
+        precision = calc_precision(predictions, positive_item_mask, self._k, metric_mask)
 
         self.precision += precision.sum()
         self.count += predictions.size()[0]

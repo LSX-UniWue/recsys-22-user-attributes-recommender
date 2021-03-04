@@ -16,7 +16,6 @@ class PositionTokenProcessor(Processor):
     def _generate_position_tokens(self,
                                   items: List[int]
                                   ) -> List[int]:
-
         counts = list(map(len, items))
 
         positions = []
@@ -34,7 +33,9 @@ class PositionTokenProcessor(Processor):
         assert len(positions) == self._seq_length
         return positions
 
-    def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
+    def process(self,
+                parsed_session: Dict[str, Any]
+                ) -> Dict[str, Any]:
         items = parsed_session[ITEM_SEQ_ENTRY_NAME]
         if not isinstance(items[0], list):
             raise ValueError('sequence items are not list of lists')

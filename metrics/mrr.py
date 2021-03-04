@@ -21,7 +21,8 @@ class MRRMetric(RankingMetric):
 
     def _update(self,
                 prediction: torch.Tensor,
-                positive_item_mask: torch.Tensor
+                positive_item_mask: torch.Tensor,
+                metric_mask: torch.Tensor
                 ) -> None:
         """
         :param prediction: the logits for I items :math`(N, I)`
@@ -30,8 +31,10 @@ class MRRMetric(RankingMetric):
         """
         device = prediction.device
 
-        tp = get_true_positives(prediction, positive_item_mask, self._k)
-        ranks = torch.arange(1, self._k + 1).unsqueeze(0).repeat(prediction.size()[0], 1).to(device=device)
+        tp = get_true_positives(prediction, positive_item_mask, self._k, metric_mask)
+
+        num_positions = min(prediction.size()[1], self._k) + 1
+        ranks = torch.arange(1, num_positions).unsqueeze(0).repeat(prediction.size()[0], 1).to(device=device)
         rank = (ranks * tp).max(dim=-1).values
 
         # mrr will contain 'inf' values if target is not in top k scores -> setting it to 0

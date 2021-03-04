@@ -9,8 +9,19 @@ from tokenization.tokenizer import Tokenizer
 class ClozeMaskProcessor(Processor):
 
     """
-    Replaces with a given probability items in the sequence
-    with a mask token that the model should than predict (e.g. Bert4Rec)
+    A processor, that replaces with a given probability items in the sequence
+    with a mask token that the model should than predict (e.g. BERT4Rec)
+
+    Example:
+        Input:
+            session: [1, 5, 7, 8]
+        Output:
+            session:          [1, 5, 101, 8]
+            targets:          [0, 0, 7,   0]
+
+        where 101 is the mask token id
+        please use 0 in the target for loss masking
+
     """
 
     def __init__(self,
@@ -34,7 +45,9 @@ class ClozeMaskProcessor(Processor):
 
         self.random = random.Random(seed)
 
-    def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
+    def process(self,
+                parsed_session: Dict[str, Any]
+                ) -> Dict[str, Any]:
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
         target = session.copy()
 

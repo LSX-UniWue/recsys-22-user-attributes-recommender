@@ -5,10 +5,12 @@ from torch import nn
 
 from models.layers.layers import build_projection_layer
 from models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
+from utils.hyperparameter_utils import save_hyperparameters
 
 
 class BERT4RecBaseModel(nn.Module):
 
+    @save_hyperparameters
     def __init__(self,
                  transformer_hidden_size: int,
                  num_transformer_heads: int,
@@ -89,7 +91,7 @@ class BERT4RecBaseModel(nn.Module):
         """
 
         # embedding the indexed sequence to sequence of vectors
-        embedded_sequence = self.embedding(sequence, position_ids=position_ids)
+        embedded_sequence = self._embed_input(sequence, position_ids, **kwargs)
 
         attention_mask = None
         if padding_mask is not None:

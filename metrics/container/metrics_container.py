@@ -89,7 +89,7 @@ class RankingMetricsContainer(MetricsContainer):
         results = {}
 
         for metric in self.metrics:
-            step_value = metric(samples.sampled_predictions, samples.positive_item_mask)
+            step_value = metric(samples.sampled_predictions, samples.positive_item_mask, samples.metric_mask)
             results[f'{metric.name()}{self.sampler.suffix_metric_name()}'] = step_value
 
         return results

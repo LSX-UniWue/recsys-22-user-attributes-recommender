@@ -17,7 +17,7 @@ def padded_session_collate(pad_token_id: int,
                            pad_direction: PadDirection = PadDirection.RIGHT
                            ):
     """
-        Pads sequences with a padding token to `max_length`.
+    Pads sequences with a padding token to `max_length`.
 
     :param pad_token_id: the id of the pad token (see Tokenizer).
     :param entries_to_pad: a list of entries in the dictionary that need to be padded.
