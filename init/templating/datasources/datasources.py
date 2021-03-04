@@ -192,7 +192,7 @@ class LeaveOneOutSessionDatasetBuilder(DatasetBuilder):
         index_file_path = f"{prefix}.{prefix_id}"
         is_training = prefix_id == 'train'
         if is_training:
-            validation_prefix = config.get('validation_file_prefix', 'validation')
+            validation_prefix = _get_prefix(config, 'validation')
             index_file_path = f"{validation_prefix}.validation"
         dataset_config = {
             'type': 'sequence_position',
