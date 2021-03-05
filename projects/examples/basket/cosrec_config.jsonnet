@@ -43,7 +43,6 @@ local metrics =  {
         },
         model: {
             user_vocab_size: 0,
-            item_vocab_size: 13,
             max_seq_length: 5,
           # chosen from {10, 20, 30, 50, 100}, ML-1M: 50, Gowalla: 100
             embed_dim: 50,

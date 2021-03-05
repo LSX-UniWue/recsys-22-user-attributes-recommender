@@ -64,8 +64,8 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
         """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         users = CosRecModule.get_users_from_batch(batch)
-        pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]
-        neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
+        pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]  # (N, 3)
+        neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]  # (N, 3)
         items_to_predict = torch.cat((pos_items, neg_items), 1)
         logits = self.model(input_seq, users, items_to_predict)
         (pos_logits, neg_logits) = torch.split(logits,
@@ -97,10 +97,12 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
             * `TARGET_ENTRY_NAME`: a tensor of size (N) with the target items,
         Optional entries are:
             * `USER_ENTRY_NAME` a tensor of size (N) containing the user id for the provided sequences
-        Where N is the batch size and S the max sequence length.
+
         :param batch: the batch
         :param batch_idx: the batch number.
         :return: A dictionary with entries according to `build_eval_step_return_dict`.
+
+        Where N is the batch size and S the max sequence length.
         """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         users = CosRecModule.get_users_from_batch(batch)
