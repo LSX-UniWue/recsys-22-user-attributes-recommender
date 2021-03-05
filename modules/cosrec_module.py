@@ -105,7 +105,7 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         users = CosRecModule.get_users_from_batch(batch)
         targets = batch[TARGET_ENTRY_NAME]
-        prediction = self.model(input_seq, users, input_seq, eval=True)
+        prediction = self.model(input_seq, users, targets, eval=True)
         return build_eval_step_return_dict(input_seq, prediction, targets)
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
