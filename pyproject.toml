@@ -6,7 +6,7 @@ authors = ["Alexander Dallmann <dallman@informatik.uni-wuerzburg.de>"]
 license = "LGPLv3"
 
 [tool.poetry.dependencies]
-python = ">=3.7"
+python = ">=3.7,<4"
 tqdm = "^4.48.2"
 numpy = "^1.19.1"
 scipy = "^1.5.2"
@@ -14,13 +14,17 @@ scikit-learn = "^0.23.2"
 pandas = "^1.1.0"
 pytest = "^6.0.1"
 pyhocon = "^0.3.55"
+jsonnet = "^0.17.0"
 
 torch = "^1.7.1"
 torchvision = "^0.8.2"
-pytorch-lightning = "^1.1.0"
+pytorch-lightning = "1.2.0"
 dependency-injector = "^3.44.0"
 typer = "^0.3.2"
-mlflow = "^1.12.1"
+wandb = "^0.10.19"
+mlflow = "^1.13.1"
+optuna = "^2.5.0"
+redis = "^3.5.3"
 
 [tool.poetry.dev-dependencies]
 

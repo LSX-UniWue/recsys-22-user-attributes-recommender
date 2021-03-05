@@ -10,6 +10,7 @@ from models.caser.caser_model import CaserModel
 from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
+from utils.hyperparameter_utils import save_hyperparameters
 
 
 class CaserModule(MetricsTrait, pl.LightningModule):
@@ -19,22 +20,25 @@ class CaserModule(MetricsTrait, pl.LightningModule):
                              ) -> Optional[torch.Tensor]:
         return batch[USER_ENTRY_NAME] if USER_ENTRY_NAME in batch else None
 
+    @save_hyperparameters
     def __init__(self,
                  model: CaserModel,
-                 tokenizer: Tokenizer,
-                 learning_rate: float,
-                 weight_decay: float,
-                 metrics: MetricsContainer
+                 item_tokenizer: Tokenizer,
+                 metrics: MetricsContainer,
+                 learning_rate: float = 0.001,
+                 weight_decay: float = 0.001
                  ):
         super().__init__()
 
         self.model = model
 
-        self.tokenizer = tokenizer
+        self.item_tokenizer = item_tokenizer
 
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.metrics = metrics
+
+        self.save_hyperparameters(self.hyperparameters)
 
     def get_metrics(self) -> MetricsContainer:
         return self.metrics
@@ -111,7 +115,7 @@ class CaserModule(MetricsTrait, pl.LightningModule):
         # provide items that the target item will be ranked against
         # TODO (AD) refactor this into a composable class to allow different strategies for item selection
         device = input_seq.device
-        items_to_rank = torch.as_tensor(self.tokenizer.get_vocabulary().ids(), dtype=torch.long, device=device)
+        items_to_rank = torch.as_tensor(self.item_tokenizer.get_vocabulary().ids(), dtype=torch.long, device=device)
         items_to_rank = items_to_rank.repeat([batch_size, 1])
 
         prediction = self.model(input_seq, users, items_to_rank)

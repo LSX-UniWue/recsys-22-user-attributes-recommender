@@ -71,7 +71,8 @@ class PositiveNegativeSamplerProcessor(Processor):
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
 
         if len(session) == 1:
-            raise AssertionError(f'{parsed_session[SAMPLE_IDS]} : {parsed_session["pos"]}')
+            print(session)
+            raise AssertionError(f'{parsed_session[SAMPLE_IDS]}')
 
         x = session[:-1]
         pos = session[1:]

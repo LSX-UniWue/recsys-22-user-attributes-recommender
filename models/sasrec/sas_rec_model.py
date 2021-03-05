@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 
 from models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
+from utils.hyperparameter_utils import save_hyperparameters
 
 
 class SASRecModel(nn.Module):
@@ -14,6 +15,7 @@ class SASRecModel(nn.Module):
     see https://github.com/kang205/SASRec for the original Tensorflow implementation
     """
 
+    @save_hyperparameters
     def __init__(self,
                  transformer_hidden_size: int,
                  num_transformer_heads: int,

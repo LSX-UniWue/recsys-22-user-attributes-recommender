@@ -7,29 +7,43 @@ import torch
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME, TARGET_ENTRY_NAME
+from metrics.container.metrics_container import MetricsContainer
 
-from models.rnn.rnn_model import RNNSeqItemRecommenderModel
+from models.rnn.rnn_model import RNNModel
+from modules.metrics_trait import MetricsTrait
 from modules.util.module_util import build_eval_step_return_dict, get_padding_mask
 from tokenization.tokenizer import Tokenizer
 
 
 # FIXME: maybe merge with RNNModule and make loss configurable
-class DreamModule(pl.LightningModule):
+from utils.hyperparameter_utils import save_hyperparameters
 
+
+class DreamModule(MetricsTrait, pl.LightningModule):
+
+    @save_hyperparameters
     def __init__(self,
-                 model: RNNSeqItemRecommenderModel,
-                 tokenizer: Tokenizer,
-                 learning_rate: float,
-                 weight_decay: float
+                 model: RNNModel,
+                 item_tokenizer: Tokenizer,
+                 metrics: MetricsContainer,
+                 learning_rate: float = 0.001,
+                 weight_decay: float = 0.0
                  ):
         super().__init__()
 
         self.model = model
 
-        self.tokenizer = tokenizer
+        self.item_tokenizer = item_tokenizer
 
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
+
+        self.metrics = metrics
+
+        self.save_hyperparameters(self.hyperparameters)
+
+    def get_metrics(self) -> MetricsContainer:
+        return self.metrics
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
@@ -53,7 +67,7 @@ class DreamModule(pl.LightningModule):
         pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
 
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
 
         logits = self.model(input_seq, padding_mask)
 
@@ -77,7 +91,7 @@ class DreamModule(pl.LightningModule):
         pos_logits = logit.gather(1, pos_items)
         neg_logits = logit.gather(1, neg_items)
 
-        mask = ~ pos_items.eq(self.tokenizer.pad_token_id)
+        mask = ~ pos_items.eq(self.item_tokenizer.pad_token_id)
         num_items = mask.sum()
 
         score = F.logsigmoid(pos_logits - neg_logits)
@@ -107,10 +121,10 @@ class DreamModule(pl.LightningModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
-        padding_mask = get_padding_mask(input_seq, self.tokenizer, transposed=False, inverse=True)
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
         prediction = self.model(input_seq, padding_mask)
 
-        mask = ~ targets.eq(self.tokenizer.pad_token_id)
+        mask = ~ targets.eq(self.item_tokenizer.pad_token_id)
         return build_eval_step_return_dict(input_seq, prediction, targets, mask=mask)
 
     def configure_optimizers(self):

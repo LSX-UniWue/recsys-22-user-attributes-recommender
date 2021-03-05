@@ -6,6 +6,7 @@ import torch
 from models.bert4rec.bert4rec_model import BERT4RecBaseModel
 from models.layers.layers import PROJECT_TYPE_LINEAR
 from models.layers.transformer_layers import TransformerEmbedding
+from utils.hyperparameter_utils import save_hyperparameters
 
 
 def _build_embedding_type(embedding_type: str,
@@ -38,6 +39,7 @@ class LinearUpscaler(nn.Module):
 
 class KeBERT4Rec(BERT4RecBaseModel):
 
+    @save_hyperparameters
     def __init__(self,
                  transformer_hidden_size: int,
                  num_transformer_heads: int,
