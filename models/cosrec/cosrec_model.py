@@ -9,6 +9,9 @@ from models.layers.util_layers import get_activation_layer
 class CosRecModel(nn.Module):
     """
     A 2D CNN for sequential Recommendation.
+    Based on paper "CosRec: 2D Convolutional Neural Networks for Sequential Recommendation" which can be found at https://dl.acm.org/doi/10.1145/3357384.3358113.
+    Original code used for this model is available at: https://github.com/zzxslp/CosRec.
+
 
     Args:
         user_vocab_size: number of users.
