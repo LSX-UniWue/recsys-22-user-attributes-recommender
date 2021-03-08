@@ -43,30 +43,35 @@ def _filter_parameters(parameters: Dict[str, ParameterInfo],
 
 
 class GenericModuleFactory(ObjectFactory):
-
     """
 
     this generic factory can build module instances, if the model follows the following conventions:
-    1. that the model parameter is named 'model'
+    1. that the model parameter is named 'model' (if the module does not contain a model, this can be ignored)
     2. that the metrics parameter is named 'metrics'
     3. all tokenizers that are parameters of the module are named x'_tokenizer'
     than the factory will automatically bind the x tokenizer to the 'tokenizers.'x configured tokenizer
 
     """
 
-    def __init__(self, module_cls, model_cls):
+    def __init__(self, module_cls, model_cls=None):
         super().__init__()
 
         self._module_csl = module_cls
+        # This indicates whether the module we want to build contains a model.
+        self.should_build_model = model_cls is not None
 
-        self.model_factory = GenericModelFactory(model_cls)
+        if self.should_build_model:
+            self.model_factory = GenericModelFactory(model_cls)
         self.metrics_container_factory = MetricsContainerFactory()
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
-        metrics_can_build = self.metrics_container_factory.can_build(config.get_config(self.metrics_container_factory.config_path()), context)
+        metrics_can_build = self.metrics_container_factory.can_build(
+            config.get_config(self.metrics_container_factory.config_path()), context)
         if metrics_can_build.type != CanBuildResultType.CAN_BUILD:
             return metrics_can_build
-        return self.model_factory.can_build(config.get_config(self.model_factory.config_path()), context)
+        # If the module does not contain a model, we short circuit here and don't query the model factory.
+        return not self.should_build_model or \
+               self.model_factory.can_build(config.get_config(self.model_factory.config_path()), context)
 
     def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
         # collect the parameters from the config
@@ -77,7 +82,11 @@ class GenericModuleFactory(ObjectFactory):
         tokenizer_parameters = _filter_parameters(parameters,
                                                   lambda param_name: param_name[1].parameter_type == Tokenizer)
         config_parameters = dict([x for x in parameters.items() if x[0] not in tokenizer_parameters])
-        config_parameters.pop(MODEL_PARAM_NAME)
+
+        # Model is only present for modules that contain a model.
+        if self.should_build_model:
+            config_parameters.pop(MODEL_PARAM_NAME)
+
         config_parameters.pop(METRICS_PARAM_NAME)
 
         for parameter, parameter_info in config_parameters.items():
@@ -98,10 +107,11 @@ class GenericModuleFactory(ObjectFactory):
         metrics = self.metrics_container_factory.build(config.get_config(self.metrics_container_factory.config_path()),
                                                        context=context)
 
-        # build the model container
-        model = self.model_factory.build(config.get_config(self.model_factory.config_path()), context)
+        # build the model container if a model class was supplied
+        if self.should_build_model:
+            model = self.model_factory.build(config.get_config(self.model_factory.config_path()), context)
+            named_parameters[MODEL_PARAM_NAME] = model
 
-        named_parameters[MODEL_PARAM_NAME] = model
         named_parameters[METRICS_PARAM_NAME] = metrics
 
         return self._module_csl(**named_parameters)
@@ -117,7 +127,6 @@ class GenericModuleFactory(ObjectFactory):
 
 
 class GenericModelFactory(ObjectFactory):
-
     """
     a generic model factory
     """
@@ -180,5 +189,3 @@ def _get_config_required_config_params(parameters: Dict[str, Optional[Any]]) -> 
             result.append(parameter_name)
 
     return result
-
-
