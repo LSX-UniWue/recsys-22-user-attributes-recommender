@@ -16,7 +16,9 @@ from models.narm.narm_model import NarmModel
 from models.rnn.rnn_model import RNNModel
 from models.sasrec.sas_rec_model import SASRecModel
 from modules import BERT4RecModule, CaserModule, SASRecModule
+from modules.baselines.markov_module import MarkovModule
 from modules.baselines.pop_module import PopModule
+from modules.baselines.session_pop_module import SessionPopModule
 from modules.basket.dream_module import DreamModule
 from modules.narm_module import NarmModule
 from modules.rnn_module import RNNModule
@@ -34,6 +36,9 @@ class ContainerFactory(ObjectFactory):
                                             'sasrec': GenericModuleFactory(SASRecModule, SASRecModel),
                                             'rnn': GenericModuleFactory(RNNModule, RNNModel),
                                             'dream': GenericModuleFactory(DreamModule, RNNModel),
+                                            'pop': GenericModuleFactory(PopModule, None),
+                                            'session_pop': GenericModuleFactory(SessionPopModule, None),
+                                            'markov': GenericModuleFactory(MarkovModule, None)
                                             }, config_key='module',
                                    config_path=['module']),
                 DataSourcesFactory(),
