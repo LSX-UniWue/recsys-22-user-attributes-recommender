@@ -1,11 +1,22 @@
 from abc import abstractmethod
-from typing import Dict, Any
+from enum import Enum
+from typing import Dict, Any, List
 
 from init.templating import TEMPLATES_CONFIG_KEY
 from init.templating.template_processor import TemplateProcessor
 
 
 CONFIG_DATASOURCES_KEY = 'data_sources'
+
+
+class DatasetSplit(Enum):
+
+    """
+    all supported dataset splits
+    """
+
+    RATIO_SPLIT = 1
+    LEAVE_ONE_OUT = 2
 
 
 class DataSourceTemplateProcessor(TemplateProcessor):
@@ -83,7 +94,118 @@ def build_parser_config(parser_config: Dict[str, Any]) -> Dict[str, Any]:
     return parser_config
 
 
-def build_datasource(datasource_type: str,
+def _get_prefix(config: Dict[str, Any],
+                prefix_id: str
+                ) -> str:
+    prefix = config.get('file_prefix', prefix_id)
+    prefix = config.get(f'{prefix_id}_file_prefix', prefix)
+    return prefix
+
+
+class DatasetBuilder:
+
+    @abstractmethod
+    def can_build_dataset_definition(self, dataset_split_type: DatasetSplit) -> bool:
+        pass
+
+    @abstractmethod
+    def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        pass
+
+
+class NextPositionDatasetBuilder(DatasetBuilder):
+    def can_build_dataset_definition(self, dataset_split_type: DatasetSplit) -> bool:
+        return dataset_split_type == DatasetSplit.RATIO_SPLIT
+
+    def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        base_path = config['path']
+        prefix = _get_prefix(config, prefix_id)
+        next_seq_step_type = config.get('next_seq_step_type', 'nextitem')
+        return {
+            'type': 'sequence_position',
+            'csv_file': f'{base_path}{prefix}.{prefix_id}.csv',
+            'csv_file_index': f'{base_path}{prefix}.{prefix_id}.session.idx',
+            'nip_index_file': f'{base_path}{prefix}.{prefix_id}.{next_seq_step_type}.idx'
+        }
+
+
+class SequenceDatasetRatioSplitBuilder(DatasetBuilder):
+
+    def can_build_dataset_definition(self, dataset_split_type: DatasetSplit) -> bool:
+        return dataset_split_type == DatasetSplit.RATIO_SPLIT
+
+    def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        base_path = config['path']
+        prefix = _get_prefix(config, prefix_id)
+        return {
+            'type': 'session',
+            'csv_file': f'{base_path}{prefix}.{prefix_id}.csv',
+            'csv_file_index': f'{base_path}{prefix}.{prefix_id}.session.idx'
+        }
+
+
+class ConditionalSequenceOrSequencePositionDatasetBuilder(DatasetBuilder):
+
+    def __init__(self):
+        super().__init__()
+        self._sequence_dataset_builder = SequenceDatasetRatioSplitBuilder()
+        self._sequence_position_dataset_builder = NextPositionDatasetBuilder()
+
+    def can_build_dataset_definition(self, dataset_split_type: DatasetSplit) -> bool:
+        return dataset_split_type == DatasetSplit.RATIO_SPLIT
+
+    def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        if 'next_seq_step_type' in config:
+            dataset_config = self._sequence_position_dataset_builder.build_dataset_definition(prefix_id, config)
+            dataset_config['add_target'] = False
+            return dataset_config
+
+        return self._sequence_dataset_builder.build_dataset_definition(prefix_id, config)
+
+
+class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
+
+    def can_build_dataset_definition(self, dataset_split_type: DatasetSplit) -> bool:
+        return dataset_split_type == DatasetSplit.LEAVE_ONE_OUT
+
+    def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        base_path = config['path']
+        prefix = _get_prefix(config, prefix_id)
+        dataset_config = {
+            'type': 'sequence_position',
+            'csv_file': f'{base_path}{prefix}.csv',
+            'csv_file_index': f'{base_path}{prefix}.{prefix_id}.session.idx',
+            'nip_index_file': f'{base_path}{prefix}.{prefix_id}.nextitem.idx'
+        }
+
+        return dataset_config
+
+
+class LeaveOneOutSessionDatasetBuilder(DatasetBuilder):
+
+    def can_build_dataset_definition(self, dataset_split_type: DatasetSplit):
+        return dataset_split_type == DatasetSplit.LEAVE_ONE_OUT
+
+    def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        base_path = config['path']
+        prefix = _get_prefix(config, prefix_id)
+        index_file_path = f"{prefix}.{prefix_id}"
+        is_training = prefix_id == 'train'
+        if is_training:
+            validation_prefix = _get_prefix(config, 'validation')
+            index_file_path = f"{validation_prefix}.validation"
+        dataset_config = {
+            'type': 'sequence_position',
+            'csv_file': f'{base_path}{prefix}.csv',
+            'csv_file_index': f'{base_path}{prefix}.session.idx',
+            'nip_index_file': f'{base_path}loo/{index_file_path}.loo.idx'
+        }
+        if is_training:
+            dataset_config['add_target'] = False
+        return dataset_config
+
+
+def build_datasource(dataset_builders: List[DatasetBuilder],
                      parser: Dict[str, Any],
                      config: Dict[str, Any],
                      prefix_id: str,
@@ -91,22 +213,17 @@ def build_datasource(datasource_type: str,
                      ) -> Dict[str, Any]:
     """
     builds a datasource config with the specified parser, processor,
-    :param datasource_type:
+    :param dataset_builders: the builders to use to build the dataset config
     :param parser:
     :param config:
     :param prefix_id:
     :param processor:
     :return:
     """
-    base_path = config['path']
-
     loader_config = config['loader']
-
     base_batch_size = loader_config.get('batch_size', 0)
     batch_size = loader_config.get(f'{prefix_id}_batch_size', base_batch_size)
     max_seq_length = loader_config['max_seq_length']
-
-    prefix = config.get(f'{prefix_id}_file_prefix', prefix_id)
 
     processors = [
         {
@@ -117,19 +234,17 @@ def build_datasource(datasource_type: str,
     if processor is not None:
         processors.append(processor)
 
-    dataset_config = {
-        'type': datasource_type,
-        'csv_file': f'{base_path}{prefix}.csv',
-        'csv_file_index': f'{base_path}{prefix}.idx',
-        'parser': parser,
-        'processors': processors
-    }
+    dataset_split_type = DatasetSplit[config.get('split_type', DatasetSplit.RATIO_SPLIT.name).upper()]
 
-    next_step_type = config.get('next_seq_step_type', 'nip')
+    def _build_dataset_config() -> Dict[str, Any]:
+        for datasource_builder in dataset_builders:
+            if datasource_builder.can_build_dataset_definition(dataset_split_type):
+                return datasource_builder.build_dataset_definition(prefix_id, config)
+        raise ValueError('no datasource builder found')
 
-    if "nextit" == datasource_type:
-        next_prefix = config.get(f'{prefix_id}_index_file_prefix', prefix)
-        dataset_config['nip_index_file'] = f'{base_path}{next_prefix}.{next_step_type}.idx'
+    dataset_config = _build_dataset_config()
+    dataset_config['parser'] = parser
+    dataset_config['processors'] = processors
 
     loader_config_dict = {
         'dataset': dataset_config,

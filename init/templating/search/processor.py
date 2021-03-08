@@ -39,6 +39,9 @@ def _resolve_dependency(parameter_dependency_infos: List[ParameterInfo]) -> List
             var_key = parameter_dependency_info.parameter_key
             if var_key in dependency_lists:
                 dependencies = dependency_lists[var_key]
+
+                del dependency_lists[var_key]
+
                 for dependency in dependencies:
                     result.append(dependency)
                     result.extend(_add_dependencies_recursively(dependency))
@@ -46,12 +49,20 @@ def _resolve_dependency(parameter_dependency_infos: List[ParameterInfo]) -> List
 
         resolved_dependencies.extend(_add_dependencies_recursively(dependency_free_parameter))
 
+    if len(dependency_lists) > 0:
+        missing_parameter_names = []
+        for param_infos in dependency_lists.values():
+            missing_parameter_names.extend(map(lambda para_info: para_info.parameter_key, param_infos))
+
+        raise KeyError(f'could not resolve the parameters for: {",".join(missing_parameter_names)}')
+
     return resolved_dependencies
 
 
 class SearchTemplateProcessor(TemplateProcessor):
 
     def __init__(self, resolver: ParameterResolver):
+        super().__init__()
         self.resolver = resolver
 
     def can_modify(self, config: Dict[str, Any]) -> bool:
@@ -78,9 +89,9 @@ class SearchTemplateProcessor(TemplateProcessor):
                     parameter_info.extend(_find_all_resolvable_parameters(value, current_key))
             return parameter_info
 
-        all_resolveable_parameters = _find_all_resolvable_parameters(config)
+        all_resolvable_parameters = _find_all_resolvable_parameters(config)
 
-        parameters_to_resolve = _resolve_dependency(all_resolveable_parameters)
+        parameters_to_resolve = _resolve_dependency(all_resolvable_parameters)
 
         resolved_values = {}
 
@@ -117,6 +128,3 @@ class SearchTemplateProcessor(TemplateProcessor):
             return result
 
         return _replace_recursively(config)
-
-    def reads_template_config(self) -> bool:
-        return False

@@ -8,6 +8,11 @@ from tokenization.tokenizer import Tokenizer
 
 
 class Container:
+
+    """
+    a container class holding necessary objects for training, testing, prediction
+    """
+
     def __init__(self, objects: Dict[str, Any]):
         self._objects = objects
 

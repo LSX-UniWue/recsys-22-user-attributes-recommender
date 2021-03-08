@@ -1,6 +1,7 @@
 from typing import Dict, Any
 
-from init.templating.datasources.datasources import build_datasource, DataSourceTemplateProcessor
+from init.templating.datasources.datasources import build_datasource, DataSourceTemplateProcessor, \
+    SequenceDatasetRatioSplitBuilder, LeaveOneOutSessionDatasetBuilder, NextPositionDatasetBuilder
 
 
 class MaskDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
@@ -16,6 +17,9 @@ class MaskDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
         'type': 'last_item_mask'
     }
 
+    TRAIN_DATASET_BUILDERS = [SequenceDatasetRatioSplitBuilder(), LeaveOneOutSessionDatasetBuilder()]
+    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
+
     def _get_template_key(self) -> str:
         return 'mask_data_sources'
 
@@ -30,10 +34,10 @@ class MaskDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
             'seed': seed
         }
 
-        return build_datasource("nextit", parser, config, 'train', cloze_processor)
+        return build_datasource(self.TRAIN_DATASET_BUILDERS, parser, config, 'train', cloze_processor)
 
     def _build_validation_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource("nextit", parser, config, 'validation', self.LAST_ITEM_MASK_PROCESSOR_CONFIG)
+        return build_datasource(self.TEST_VALID_DATASET_BUILDERS, parser, config, 'validation', self.LAST_ITEM_MASK_PROCESSOR_CONFIG)
 
     def _build_test_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource("nextit", parser, config, 'test', self.LAST_ITEM_MASK_PROCESSOR_CONFIG)
+        return build_datasource(self.TEST_VALID_DATASET_BUILDERS, parser, config, 'test', self.LAST_ITEM_MASK_PROCESSOR_CONFIG)

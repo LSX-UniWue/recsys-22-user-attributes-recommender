@@ -22,7 +22,8 @@ local metrics =  {
             path: base_path,
             validation_file_prefix: "train",
             test_file_prefix: "train",
-            seed: 123456
+            seed: 123456,
+            split_type: "loo", // leave one out split for evaluation
         }
     },
     module: {

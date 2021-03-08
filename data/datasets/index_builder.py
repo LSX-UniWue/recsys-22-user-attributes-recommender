@@ -5,15 +5,15 @@ from typing import Callable, Dict, Any, Iterable
 from tqdm import tqdm
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, INT_BYTE_SIZE
-from data.datasets.session import ItemSessionDataset
+from data.datasets.sequence import ItemSequenceDataset
 
 
-class SessionPositionIndexBuilder:
+class SequencePositionIndexBuilder:
     """
-    This index builder builds a session position index. For each session returned by an ItemSessionDataset,
-    this builder can generate m different positions for the session.
-    For example you will test every position of a session, you return a range from 1 to the session length.
-    Than the session will be used session length - 1 times with different targets
+    This index builder builds a sequence position index. For each sequence returned by an ItemSessionDataset,
+    this builder can generate m different positions for the sequence.
+    For example you will test every position of a sequence, you return a range from 1 to the sequence length.
+    Than the sequence will be used sequence length - 1 times with different targets
     """
 
     def __init__(self,
@@ -26,7 +26,7 @@ class SessionPositionIndexBuilder:
         self._target_positions_extractor = target_positions_extractor
 
     def build(self,
-              dataset: ItemSessionDataset,
+              dataset: ItemSequenceDataset,
               index_path: Path
               ):
         if not index_path.exists():

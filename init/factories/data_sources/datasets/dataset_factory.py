@@ -1,7 +1,7 @@
 from typing import List, Union, Any, Dict
 
 from data.datasets.processors.processor import Processor
-from data.datasets.session import ItemSessionParser
+from data.datasets.sequence import ItemSessionParser
 from init.config import Config
 from init.context import Context
 from init.factories.common.dependencies_factory import DependenciesFactory

@@ -11,7 +11,7 @@ local file_prefix = 'ml-20m';
 {
     templates: {
         unified_output: {
-            path: "/scratch/jane-doe-framework/experiments/ml-20m/bert4rec"
+            path: "/scratch/jane-doe-framework/experiments/ml-20m/bert4rec_new"
         },
         mask_data_sources: {
             parser: {
@@ -22,12 +22,10 @@ local file_prefix = 'ml-20m';
                 max_seq_length: max_seq_length
             },
             path: base_path,
-            train_file_prefix: file_prefix,
-            validation_file_prefix: file_prefix,
-            test_file_prefix: file_prefix,
-            next_step_type: "loo", // leave one out
+            file_prefix: file_prefix,
+            split_type: "leave_one_out", // leave one out split
             mask_probability: 0.2,
-            seed: 42
+            mask_seed: 42
         }
     },
     module: {
@@ -37,7 +35,7 @@ local file_prefix = 'ml-20m';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + "popularity.txt",
+                sample_probability_file: base_path + "ml-20m.popularity.title.txt",
                 num_negative_samples: 100,
                 metrics: metrics
             }
@@ -59,7 +57,7 @@ local file_prefix = 'ml-20m';
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "vocab.txt"
+                    file: base_path + "ml-20m.vocabulary.title.txt"
                 }
             }
         }
@@ -76,6 +74,6 @@ local file_prefix = 'ml-20m';
         gpus: 8,
         max_epochs: 800,
         accelerator: "ddp",
-        check_val_every_n_epoch: 50
+        check_val_every_n_epoch: 100
     }
 }
