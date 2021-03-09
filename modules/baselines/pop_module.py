@@ -11,16 +11,18 @@ from pytorch_lightning import core as pl
 
 from modules.util.module_util import  build_eval_step_return_dict
 from modules.util.noop_optimizer import NoopOptimizer
+from tokenization.tokenizer import Tokenizer
 
 
 class PopModule(MetricsTrait, pl.LightningModule):
 
     def __init__(self,
-                 item_vocab_size: int,
+                 item_tokenizer: Tokenizer,
                  metrics: MetricsContainer):
 
         super(PopModule, self).__init__()
-        self.item_vocab_size = item_vocab_size
+        self.item_tokenizer = item_tokenizer
+        self.item_vocab_size = len(item_tokenizer)
         self.metrics = metrics
 
         # We artificially promote this Tensor to a parameter to make PL save it in the model checkpoints

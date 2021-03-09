@@ -33,12 +33,11 @@ class MarkovModule(MetricsTrait, pl.LightningModule):
 
     def __init__(self,
                  tokenizer: Tokenizer,
-                 item_vocab_size: int,
                  metrics: MetricsContainer):
 
         super(MarkovModule, self).__init__()
         self.tokenizer = tokenizer
-        self.item_vocab_size = item_vocab_size
+        self.item_vocab_size = len(tokenizer)
         self.metrics = metrics
 
         # Transition matrix of dimension item_vocab_size x item_vocab_size. The entry at index (i,j) denotes the
@@ -59,6 +58,7 @@ class MarkovModule(MetricsTrait, pl.LightningModule):
     def on_train_end(self) -> None:
         # Normalize the sum of each row to 1 so we can interpret it as a probability distribution
         row_sums = self.transition_matrix.sum(dim=1)
+        row_sums[row_sums == 0] = 1
         self.transition_matrix /= row_sums.unsqueeze(dim=1)
 
     def get_metrics(self) -> MetricsContainer:
