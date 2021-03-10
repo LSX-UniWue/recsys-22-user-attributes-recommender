@@ -74,7 +74,7 @@ class BERT4RecBaseModule(MetricsTrait, pl.LightningModule):
         target = batch[TARGET_ENTRY_NAME]
 
         # call the model
-        prediction_logits = self.model(batch, batch_idx)
+        prediction_logits = self(batch, batch_idx)
 
         masked_lm_loss = self._calc_loss(prediction_logits, target)
         self.log(LOG_KEY_TRAINING_LOSS, masked_lm_loss, prog_bar=False)
