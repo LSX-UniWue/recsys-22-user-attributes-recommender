@@ -10,6 +10,7 @@ from init.factories.modules.modules import GenericModuleFactory
 from init.factories.tokenizer.tokenizer_factory import TokenizersFactory
 from init.factories.trainer import TrainerBuilderFactory
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
+from models.basket.nnrec.nnrec_model import NNRecModel
 from models.bert4rec.bert4rec_model import BERT4RecModel
 from models.caser.caser_model import CaserModel
 from models.narm.narm_model import NarmModel
@@ -18,6 +19,7 @@ from models.sasrec.sas_rec_model import SASRecModel
 from models.kebert4rec.kebert4rec_model import KeBERT4RecModel
 from modules import BERT4RecModule, CaserModule, SASRecModule, KeBERT4RecModule
 from modules.basket.dream_module import DreamModule
+from modules.basket.nnrec_module import NNRecModule
 from modules.narm_module import NarmModule
 from modules.rnn_module import RNNModule
 
@@ -34,7 +36,9 @@ class ContainerFactory(ObjectFactory):
                                             'narm': GenericModuleFactory(NarmModule, NarmModel),
                                             'sasrec': GenericModuleFactory(SASRecModule, SASRecModel),
                                             'rnn': GenericModuleFactory(RNNModule, RNNModel),
-                                            'dream': GenericModuleFactory(DreamModule, RNNModel)}, config_key='module',
+                                            'dream': GenericModuleFactory(DreamModule, RNNModel),
+                                            'nnrec': GenericModuleFactory(NNRecModule, NNRecModel)},
+                                   config_key='module',
                                    config_path=['module']),
                 DataSourcesFactory(),
                 TrainerBuilderFactory()
