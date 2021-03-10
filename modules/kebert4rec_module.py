@@ -1,18 +1,11 @@
-from abc import abstractmethod
-
 import torch
-import pytorch_lightning as pl
 
 from typing import Union, Dict, Optional, List
 
-from torch import nn
-from torch.optim.lr_scheduler import LambdaLR
-
-from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from metrics.container.metrics_container import MetricsContainer
 from modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TEST_LOSS, LOG_KEY_TRAINING_LOSS
-from modules.metrics_trait import MetricsTrait
-from modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
+from modules.util.module_util import get_padding_mask, build_eval_step_return_dict
 from tokenization.tokenizer import Tokenizer
 from models.kebert4rec.kebert4rec_model import KeBERT4RecModel
 from modules.bert4rec_module import BERT4RecBaseModule
