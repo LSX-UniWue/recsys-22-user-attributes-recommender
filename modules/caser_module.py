@@ -31,7 +31,6 @@ class CaserModule(MetricsTrait, pl.LightningModule):
         super().__init__()
 
         self.model = model
-
         self.item_tokenizer = item_tokenizer
 
         self.learning_rate = learning_rate

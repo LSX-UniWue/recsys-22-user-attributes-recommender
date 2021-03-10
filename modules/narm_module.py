@@ -40,6 +40,7 @@ class NarmModule(MetricsTrait, pl.LightningModule):
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.item_tokenizer = item_tokenizer
+
         self.metrics = metrics
 
         self.save_hyperparameters(self.hyperparameters)
