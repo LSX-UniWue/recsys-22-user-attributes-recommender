@@ -8,11 +8,17 @@ import _jsonnet
 
 from tempfile import NamedTemporaryFile
 from pathlib import Path
-from typing import Dict, Any, Optional, Callable, List
+from typing import Dict, Any, Optional, Callable, List, Iterator
 from optuna.study import StudyDirection
-from pytorch_lightning import seed_everything, Callback
+from pytorch_lightning import seed_everything, Callback, LightningModule
+from pytorch_lightning.trainer.configuration_validator import ConfigValidator
 from pytorch_lightning.utilities import cloud_io
+from torch.utils.data import DataLoader, Sampler
+from torch.utils.data.dataset import T_co
 
+import numpy as np
+
+from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME
 from init.config import Config
 from init.container import Container
 from init.context import Context
@@ -23,7 +29,8 @@ from init.templating.search.processor import SearchTemplateProcessor
 from init.templating.search.resolver import OptunaParameterResolver
 from init.templating.template_engine import TemplateEngine
 from init.templating.template_processor import TemplateProcessor
-from init.trainer_builder import CallbackBuilder
+from tokenization.tokenizer import Tokenizer
+from writer.prediction.prediction_writer import build_prediction_writer
 
 
 app = typer.Typer()
@@ -110,7 +117,6 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
            study_direction: str = typer.Option(default="maximize", help="minimize / maximize"),
            num_trails: int = typer.Option(default=20, help='the number of trails to execute')
            ) -> None:
-
     # check if objective_metric is defined
     test_config = load_config(template_file)
     test_metrics_config = test_config.get_config(['module', 'metrics'])
@@ -155,6 +161,7 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
                 """
                 Captures the reported metrics after every validation epoch.
                 """
+
                 def __init__(self):
                     super().__init__()
 
@@ -193,12 +200,12 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 def predict(config_file: str = typer.Argument(..., help='the path to the config file'),
             checkpoint_file: str = typer.Argument(..., help='path to the checkpoint file'),
             output_file: Path = typer.Argument(..., help='path where output is written'),
+            num_predictions: int = typer.Option(default=20, help='number of predictions to export'),
             gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
             overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
-            log_input: Optional[bool] = typer.Option(default=False, help='enable input logging.'),
-            strip_pad_token: Optional[bool] = typer.Option(default=True, help='strip pad token, if input is logged.')
+            log_input: Optional[bool] = typer.Option(default=True, help='enable input logging.')
             ):
-
+    # checking if the file already exists
     if not overwrite and output_file.exists():
         print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
         exit(-1)
@@ -216,22 +223,102 @@ def predict(config_file: str = typer.Argument(..., help='the path to the config 
 
     # load parameters and freeze the model
     module.load_state_dict(state_dict)
-    module.freeze()
 
     test_loader = container.test_dataloader()
-
-    callback_params = {
-        "output_file_path": output_file,
-        "log_input": log_input,
-        "tokenizer": container.tokenizer("item"),  # FIXME we need to build support for multiple tokenizers
-        "strip_padding_tokens": strip_pad_token
-    }
     trainer_builder = container.trainer()
-    trainer_builder = trainer_builder.add_callback(CallbackBuilder("prediction_logger", callback_params).build())
     trainer_builder = trainer_builder.set("gpus", gpu)
     trainer = trainer_builder.build()
 
-    trainer.test(module, test_dataloaders=test_loader)
+    # XXX: currently a bug in pytorch lightning
+    # remove as soon the bug is fixed
+    class MyConfigValidator(ConfigValidator):
+        def __init__(self, trainer):
+            super(MyConfigValidator, self).__init__(trainer)
+
+        def verify_loop_configurations(self, model: LightningModule):
+            return
+
+    config_validator = MyConfigValidator(trainer)
+    trainer.config_validator = config_validator
+
+    # open the file and build the writer
+    with open(output_file, 'w') as result_file:
+        output_writer = build_prediction_writer(result_file, log_input)
+
+        # XXX: currently the predict method returns all batches at once, this is not RAM efficient
+        # so we loop through the loader and use only one batch to call the predict method of pytorch lightning
+        # replace as soon as this is fixed in pytorch lighting
+        class FixedBatchSampler(Sampler):
+
+            def __init__(self, batch_start, batch_size):
+                super().__init__(None)
+                self.batch_start = batch_start
+                self.batch_size = batch_size
+
+            def __iter__(self) -> Iterator[T_co]:
+                return iter([range(self.batch_start, self.batch_start + self.batch_size)])
+
+            def __len__(self):
+                return 1
+
+        item_tokenizer = container.tokenizer('item')
+
+        for index, batch in enumerate(test_loader):
+            sequences = batch[ITEM_SEQ_ENTRY_NAME]
+            batch_size = sequences.size()[0]
+            batch_start = index * batch_size
+
+            batch_loader = DataLoader(test_loader.dataset, batch_sampler=FixedBatchSampler(batch_start, batch_size),
+                                      collate_fn=test_loader.collate_fn)
+            prediction_results = trainer.predict(module, dataloaders=batch_loader)
+
+            predictions = prediction_results[0]
+
+            sample_ids = batch[SAMPLE_IDS]
+            sequence_position_ids = None
+            if 'pos' in batch:
+                sequence_position_ids = batch['pos']
+            targets = batch[TARGET_ENTRY_NAME]
+
+            def _softmax(array: np.array) -> np.array:
+                return np.exp(array) / sum(np.exp(array))
+
+            def _generate_sample_id(sample_ids, sequence_position_ids, sample_index) -> str:
+                sample_id = sample_ids[sample_index].item()
+                if sequence_position_ids is None:
+                    return sample_id
+
+                return f'{sample_id}_{sequence_position_ids[sample_index].item()}'
+
+            for i in range(predictions.shape[0]):
+                prediction = predictions[i]
+
+                scores = _softmax(prediction)
+
+                item_indices = scores[::-1].argsort()[:num_predictions]
+
+                tokens = item_tokenizer.convert_ids_to_tokens(item_indices.tolist())
+                scores[::-1].sort()
+                scores = scores.tolist()[:num_predictions]
+
+                sample_id = _generate_sample_id(sample_ids, sequence_position_ids, i)
+                true_target = targets[i].item()
+                true_target = item_tokenizer.convert_ids_to_tokens(true_target)
+                sequence = None
+                if log_input:
+                    sequence = sequences[i].tolist()
+
+                    # remove padding tokens
+                    # TODO: move method
+                    def _remove_special_tokens(sequence: List[int], tokenizer: Tokenizer) -> List[int]:
+                        for special_token_id in tokenizer.get_special_token_ids():
+                            sequence = list(filter(special_token_id.__ne__, sequence))
+                        return sequence
+
+                    sequence = _remove_special_tokens(sequence, item_tokenizer)
+                    sequence = item_tokenizer.convert_ids_to_tokens(sequence)
+
+                output_writer.write_values(f'{sample_id}', tokens, scores, true_target, sequence)
 
 
 @app.command()
@@ -242,7 +329,6 @@ def evaluate(config_file: str = typer.Argument(..., help='the path to the config
              overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
              seed: Optional[int] = typer.Option(default=42, help='seed for rng')
              ):
-
     if not overwrite and output_file.exists():
         print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
         exit(-1)

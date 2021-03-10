@@ -5,8 +5,6 @@ from pytorch_lightning import Trainer, Callback
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import LightningLoggerBase, TensorBoardLogger, MLFlowLogger, WandbLogger
 
-from callbacks.prediction_logger import PredictionLoggerCallback
-
 TRAINER_INIT_KEYS = ['logger',
                      'checkpoint_callback',
                      'callbacks',
@@ -177,17 +175,8 @@ class LoggerBuilder:
         return LOGGER_REGISTRY[self.type.lower()](self.parameters)
 
 
-def _build_prediction_logger_callback(parameters: Dict[str, Any]) -> Callback:
-    return PredictionLoggerCallback(
-        output_file_path=parameters["output_file_path"],
-        log_input=parameters["log_input"],
-        tokenizer=parameters["tokenizer"],
-        strip_padding_tokens=parameters["strip_padding_tokens"]
-    )
-
-
 CALLBACK_REGISTRY = {
-    "prediction_logger": _build_prediction_logger_callback
+
 }
 
 

@@ -48,6 +48,16 @@ class NarmModule(MetricsTrait, pl.LightningModule):
     def get_metrics(self) -> MetricsContainer:
         return self.metrics
 
+    def forward(self,
+                batch: Dict[str, torch.Tensor],
+                batch_idx: int
+                ) -> torch.Tensor:
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
+
+        return self.model(input_seq, padding_mask)
+
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
@@ -66,12 +76,9 @@ class NarmModule(MetricsTrait, pl.LightningModule):
         where N is the batch size and S the max sequence length.
         """
 
-        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
 
-        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
-
-        logits = self.model(input_seq, padding_mask)
+        logits = self(batch, batch_idx)
         loss = self._calc_loss(logits, target)
 
         return {
@@ -113,10 +120,7 @@ class NarmModule(MetricsTrait, pl.LightningModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
 
-        # calc the padding mask
-        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
-
-        logits = self.model(input_seq, padding_mask)
+        logits = self(batch, batch_idx)
 
         loss = self._calc_loss(logits, target)
         self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
@@ -127,6 +131,13 @@ class NarmModule(MetricsTrait, pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         self.validation_step(batch, batch_idx)
+
+    def predict(self,
+                batch:  Dict[str, torch.Tensor],
+                batch_idx: int,
+                dataloader_idx: Optional[int] = None
+                ) -> torch.Tensor:
+        return self(batch, batch_idx)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(),

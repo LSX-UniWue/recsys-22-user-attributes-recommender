@@ -1,4 +1,4 @@
-from typing import Union, Dict, Optional
+from typing import Union, Dict, Optional, Tuple
 
 import pytorch_lightning as pl
 import torch
@@ -14,6 +14,11 @@ from utils.hyperparameter_utils import save_hyperparameters
 
 
 class CaserModule(MetricsTrait, pl.LightningModule):
+    """
+
+    The module for caser, that defines the training for the Caser model
+
+    """
 
     @staticmethod
     def get_users_from_batch(batch: Dict[str, torch.Tensor]
@@ -41,6 +46,15 @@ class CaserModule(MetricsTrait, pl.LightningModule):
 
     def get_metrics(self) -> MetricsContainer:
         return self.metrics
+
+    def forward(self,
+                sequence: torch.Tensor,
+                user: torch.Tensor,
+                pos_items: torch.Tensor,
+                neg_items: Optional[torch.Tensor] = None
+                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+
+        return self.model(sequence, user, pos_items, neg_items)
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
@@ -106,8 +120,18 @@ class CaserModule(MetricsTrait, pl.LightningModule):
         :return: A dictionary with entries according to `build_eval_step_return_dict`.
         """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        users = CaserModule.get_users_from_batch(batch)
         targets = batch[TARGET_ENTRY_NAME]
+        prediction = self.predict(batch, batch_idx)
+
+        return build_eval_step_return_dict(input_seq, prediction, targets)
+
+    def predict(self,
+                batch: Dict[str, torch.Tensor],
+                batch_idx: int,
+                dataloader_idx: Optional[int] = None
+                ) -> torch.Tensor:
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        users = CaserModule.get_users_from_batch(batch)
 
         batch_size = input_seq.size()[0]
 
@@ -117,9 +141,7 @@ class CaserModule(MetricsTrait, pl.LightningModule):
         items_to_rank = torch.as_tensor(self.item_tokenizer.get_vocabulary().ids(), dtype=torch.long, device=device)
         items_to_rank = items_to_rank.repeat([batch_size, 1])
 
-        prediction = self.model(input_seq, users, items_to_rank)
-
-        return build_eval_step_return_dict(input_seq, prediction, targets)
+        return self(input_seq, users, items_to_rank)
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
         return self.validation_step(batch, batch_idx)

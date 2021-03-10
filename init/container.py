@@ -32,4 +32,4 @@ class Container:
         return self._objects["trainer"]
 
     def tokenizer(self, tokenizer_id: str) -> Tokenizer:
-        return self._objects["tokenizers"][tokenizer_id]
+        return self._objects["tokenizers." + tokenizer_id]

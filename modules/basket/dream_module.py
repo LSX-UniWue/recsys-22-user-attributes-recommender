@@ -15,11 +15,15 @@ from modules.util.module_util import build_eval_step_return_dict, get_padding_ma
 from tokenization.tokenizer import Tokenizer
 
 
-# FIXME: maybe merge with RNNModule and make loss configurable
 from utils.hyperparameter_utils import save_hyperparameters
 
 
+# FIXME: maybe merge with RNNModule and make loss configurable
 class DreamModule(MetricsTrait, pl.LightningModule):
+
+    """
+    module for training a DREAM model (which is a special RNN model)
+    """
 
     @save_hyperparameters
     def __init__(self,
@@ -63,13 +67,10 @@ class DreamModule(MetricsTrait, pl.LightningModule):
         :param batch_idx: the batch number.
         :return: the total loss
         """
-        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
 
-        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
-
-        logits = self.model(input_seq, padding_mask)
+        logits = self.predict(batch, batch_idx)
 
         loss = self._calc_loss(logits, pos_items, neg_items)
         return {
@@ -121,11 +122,21 @@ class DreamModule(MetricsTrait, pl.LightningModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
-        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
-        prediction = self.model(input_seq, padding_mask)
+        prediction = self.predict(batch, batch_idx)
 
         mask = ~ targets.eq(self.item_tokenizer.pad_token_id)
         return build_eval_step_return_dict(input_seq, prediction, targets, mask=mask)
+
+    def predict(self,
+                batch: Dict[str, torch.Tensor],
+                batch_idx: int,
+                dataloader_idx: Optional[int] = None
+                ) -> torch.Tensor:
+
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
+        return self.model(input_seq, padding_mask)
 
     def configure_optimizers(self):
         return torch.optim.Adam(
