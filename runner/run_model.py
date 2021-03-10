@@ -25,8 +25,8 @@ from init.templating.template_engine import TemplateEngine
 from init.templating.template_processor import TemplateProcessor
 from init.trainer_builder import CallbackBuilder
 
-app = typer.Typer()
 
+app = typer.Typer()
 
 # FIXME: progress bar is not logged :(
 def _config_logging(config: Dict[str, Any]
@@ -97,6 +97,7 @@ def train(config_file: str = typer.Argument(..., help='the path to the config fi
 
     if do_test:
         trainer.test(test_dataloaders=container.test_dataloader())
+
 
 
 @app.command()

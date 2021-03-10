@@ -1,12 +1,14 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.processors.processor import Processor
 from tokenization.tokenizer import Tokenizer
 
+TOKENIZER_PREFIX = 'tokenizers.'
+ITEM_TOKENIZER = 'tokenizers.item'
+
 
 class LastItemMaskProcessor(Processor):
-
     """
     Adds a mask token at the end of the input sequence.
     This is useful for evaluation purposes in some models, e.g. BERT4Rec.
@@ -21,20 +23,35 @@ class LastItemMaskProcessor(Processor):
     """
 
     def __init__(self,
-                 tokenizer: Tokenizer,
+                 tokenizers: Dict[str, Tokenizer],
+                 masking_targets: List[str] = [ITEM_SEQ_ENTRY_NAME]
+
                  ):
         super().__init__()
 
-        self.tokenizer = tokenizer
+        self.tokenizers = tokenizers
+        self.masking_targets = masking_targets
 
     def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
-        session = parsed_session[ITEM_SEQ_ENTRY_NAME]
-        # just add a mask token at the end of the sequence
-        mask_token = self.tokenizer.mask_token_id
 
-        # check for basket recommendation
-        # TODO: maybe config another processor?
-        if isinstance(session[0], list):
-            mask_token = [mask_token]
-        session.append(mask_token)
+        def get_tokenizer(target):
+            if target in [ITEM_SEQ_ENTRY_NAME]:
+                return self.tokenizers[ITEM_TOKENIZER]
+            else:
+                return self.tokenizers[TOKENIZER_PREFIX + target]
+
+        def get_mask(target, session):
+            tokenizer = get_tokenizer(target)
+            return format_if_list(tokenizer.mask_token_id, session)
+
+        def format_if_list(item, session):
+            if isinstance(session[0], list):
+                return [item]
+            return item
+
+        for target in self.masking_targets:
+            session = parsed_session[target]
+            mask_token = get_mask(target, session)
+            session.append(mask_token)
+
         return parsed_session

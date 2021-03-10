@@ -8,7 +8,6 @@ from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultTyp
 
 
 class LastItemMaskProcessorFactory(ObjectFactory):
-    #FIXME make this configurable for other tokenizers, e.g. keywords
     TOKENIZER_KEY = TokenizerFactory.KEY + '.item'
 
     """
@@ -28,9 +27,10 @@ class LastItemMaskProcessorFactory(ObjectFactory):
               config: Config,
               context: Context
               ) -> LastItemMaskProcessor:
-        tokenizer = context.get(get_tokenizer_key_for_voc("item"))
+        tokenizers = context.as_dict()
+        masking_targets = config.get("masking_targets")
 
-        return LastItemMaskProcessor(tokenizer)
+        return LastItemMaskProcessor(tokenizers, masking_targets)
 
     def is_required(self, context: Context) -> bool:
         return False

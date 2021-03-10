@@ -5,6 +5,7 @@ from init.config import Config
 from init.context import Context
 from init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
+from data.datasets.processors.processor import DelegatingProcessor, Processor
 
 
 class TokenizerProcessorFactory(ObjectFactory):
@@ -25,10 +26,20 @@ class TokenizerProcessorFactory(ObjectFactory):
     def build(self,
               config: Config,
               context: Context
-              ) -> TokenizerProcessor:
-        tokenizer = context.get(get_tokenizer_key_for_voc("item"))
+              ) -> Processor:
 
-        return TokenizerProcessor(tokenizer)
+        tokenizers = context.as_dict()
+
+        tokenizer_processors = []
+        for name, tokenizer in tokenizers.items():
+            if name.startswith("tokenizers."):
+                keys_to_tokenize = name.replace("tokenizers.","")
+                if keys_to_tokenize == "item":
+                    tokenizer_processors.append(TokenizerProcessor(tokenizer))
+                else:
+                    tokenizer_processors.append(TokenizerProcessor(tokenizer, [keys_to_tokenize]))
+
+        return DelegatingProcessor(tokenizer_processors)
 
     def is_required(self, context: Context) -> bool:
         return False

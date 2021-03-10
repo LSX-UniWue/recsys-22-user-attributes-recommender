@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from data.datasets.processors.processor import Processor
@@ -20,21 +20,22 @@ class TokenizerProcessor(Processor):
 
     """
 
-    KEYS_TO_TOKENIZE = [ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME]
-
     def __init__(self,
-                 tokenizer: Tokenizer
+                 tokenizer: Tokenizer,
+                 keys_to_tokenize: List[str] = [ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME]
                  ):
         """
         :param tokenizer: the tokenizer to use for the tokenization
+        :param keys_to_tokenize:
         """
+
+
         super().__init__()
         self._tokenizer = tokenizer
+        self._keys_to_tokenize = keys_to_tokenize
 
-    def process(self,
-                parsed_session: Dict[str, Any]
-                ) -> Dict[str, Any]:
-        for key in TokenizerProcessor.KEYS_TO_TOKENIZE:
+    def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
+        for key in self._keys_to_tokenize:
             if key in parsed_session:
                 items = parsed_session[key]
                 tokenized_items = self._tokenizer.convert_tokens_to_ids(items)
