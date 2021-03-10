@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Dict
+from typing import Any, List, Optional, Dict, Union
 
 from torch.utils.data import DataLoader
 
@@ -92,7 +92,10 @@ class LoaderFactory(ObjectFactory):
             )
         )
 
-    def _build_entries_to_pad(self, max_seq_length: int, max_seq_step_length: Dict[str, int], context: Context
+    def _build_entries_to_pad(self,
+                              max_seq_length: int,
+                              max_seq_step_length: Union[Dict[str, int], int],
+                              context: Context
                               ) -> Dict[str, PadInformation]:
 
         tokenizer = context.get(self.TOKENIZER_CONTEXT_KEY)
@@ -107,7 +110,11 @@ class LoaderFactory(ObjectFactory):
         }
 
         if max_seq_step_length is not None:
-            for key, max_length in max_seq_step_length.items():
+            max_seq_step_length_info = max_seq_step_length
+
+            if isinstance(max_seq_step_length, int):
+                max_seq_step_length_info = {"item": max_seq_step_length}
+            for key, max_length in max_seq_step_length_info.items():
                 if key == "item":
                     for entry_key in [ITEM_SEQ_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME,
                                       TARGET_ENTRY_NAME]:

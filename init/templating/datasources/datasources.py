@@ -174,7 +174,7 @@ class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
         dataset_config = {
             'type': 'sequence_position',
             'csv_file': f'{base_path}{prefix}.csv',
-            'csv_file_index': f'{base_path}{prefix}.{prefix_id}.session.idx',
+            'csv_file_index': f'{base_path}{prefix}.session.idx',
             'nip_index_file': f'{base_path}{prefix}.{prefix_id}.nextitem.idx'
         }
 
