@@ -1,4 +1,4 @@
-# User Guide #
+# User Guide
 Pre-Requisites:
 * Built the virtual environment as described in the [Project Overview](./project_overview.md)
 

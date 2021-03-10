@@ -32,7 +32,7 @@ E.g. for session <br>
 where `[]` denotes the target item
 
 ### Data Set File Scheme
-In order to use both Leave one out and Next Item recommendation tasks for training on a data setthe following files have
+In order to use both Leave one out and Next Item recommendation tasks for training on a data set the following files have
 to be stored/created under \<directory-basepath\>. 
 
 \<prefix\>.csv - The original data file containing the raw data.

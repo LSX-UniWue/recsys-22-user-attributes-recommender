@@ -100,8 +100,8 @@ local additional_attributes_list = ['genres'];
         },
     },
     trainer: {
-        logger: {
-            type: "tensorboard",
+        loggers: {
+            tensorboard: {}
         },
         checkpoint: {
             monitor: "recall@10/sampled(100)",

@@ -60,8 +60,8 @@ local metrics =  {
         }
     },
     trainer: {
-        logger: {
-            type: "tensorboard"
+        loggers: {
+            tensorboard: {}
         },
         checkpoint: {
             monitor: "recall@10/sampled(100)",
