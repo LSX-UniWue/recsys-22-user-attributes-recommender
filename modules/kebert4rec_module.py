@@ -50,8 +50,7 @@ class KeBERT4RecModule(BERT4RecBaseModule):
         attribute_sequences = self._get_attribute_sequences(batch)
 
         # calc the padding mask
-        padding_mask = get_padding_mask(input_seq,
-                                        tokenizer=self.item_tokenizer)
+        padding_mask = get_padding_mask(input_seq, tokenizer=self.item_tokenizer)
         return self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids, **attribute_sequences)
 
     def _get_attribute_sequences(self,
