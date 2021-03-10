@@ -1,4 +1,4 @@
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Union
 
 import torch
 
@@ -16,7 +16,7 @@ class CaserModel(nn.Module):
         Personalized Top-N Sequential Recommendation via Convolutional Sequence Embedding, Jiaxi Tang and Ke Wang, WSDM'18
         see https://doi.org/10.1145/3159652.3159656 for more details
 
-        original pytorch implementation: https://github.com/graytowne/caser_pytorch
+        adapted from the original pytorch implementation: https://github.com/graytowne/caser_pytorch
     """
 
     @save_hyperparameters
@@ -105,14 +105,15 @@ class CaserModel(nn.Module):
                 sequence: torch.Tensor,
                 user: torch.Tensor,
                 pos_items: torch.Tensor,
-                neg_items: Optional[torch.Tensor] = None):
+                neg_items: Optional[torch.Tensor] = None
+                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
-        forward pass for the
+        forward pass
         :param sequence: the sequences :math`(N, S)`
-        :param user: the users for each batch :math `(N)`
+        :param user: the users for each batch :math `(N)` optional
         :param pos_items: the positive (next) items of the sequence `(N)`
         :param neg_items: the negative items (sampled) `(N, X)`, only required for training
-        :return:
+        :return: the logits of the pos_items and if provided the logits of the neg_items
 
         Where B is the batch size, S the max sequence length (of the current batch)
         """

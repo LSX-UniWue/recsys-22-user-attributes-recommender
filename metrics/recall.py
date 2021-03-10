@@ -17,7 +17,7 @@ class RecallMetric(RankingMetric):
         self._k = k
 
         self.add_state("recall", torch.tensor(0.), dist_reduce_fx="sum")
-        self.add_state('count', torch.tensor(0.), dist_reduce_fx="sum")
+        self.add_state('count', torch.tensor(0), dist_reduce_fx="sum")
 
     def _update(self,
                 prediction: torch.Tensor,

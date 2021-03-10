@@ -3,7 +3,7 @@ from abc import abstractmethod
 import torch
 import pytorch_lightning as pl
 
-from typing import Union, Dict, Optional
+from typing import Union, Dict, Optional, Any
 
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
@@ -117,7 +117,6 @@ class BERT4RecBaseModule(MetricsTrait, pl.LightningModule):
         :param batch_idx: the batch number.
         :return: A dictionary with entries according to `build_eval_step_return_dict`.
         """
-
         return self._eval_step(batch, batch_idx)
 
     def _eval_step(self,
@@ -125,8 +124,32 @@ class BERT4RecBaseModule(MetricsTrait, pl.LightningModule):
                    batch_idx: int,
                    is_test: bool = False
                    ) -> Dict[str, torch.Tensor]:
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        targets = batch[TARGET_ENTRY_NAME]
 
-        pass
+        position_ids = BERT4RecModule.get_position_ids(batch)
+        target_mask = input_seq.eq(self.item_tokenizer.mask_token_id)
+
+        # handle basket training and evaluation
+        if len(target_mask.size()) > 2:
+            target_mask = target_mask.max(dim=-1)[0]
+
+        # after adding the mask token we can calculate the padding mask
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
+
+        # get predictions for all seq steps
+        prediction = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
+        # extract the relevant seq steps, where the mask was set, here only one mask per sequence steps exists
+        prediction = prediction[target_mask]
+
+        loss = self._calc_loss(prediction, targets, is_eval=True)
+        self.log(LOG_KEY_TEST_LOSS if is_test else LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
+
+        # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
+        # the target tensor
+        mask = None if len(targets.size()) == 1 else ~ targets.eq(self.item_tokenizer.pad_token_id)
+
+        return build_eval_step_return_dict(input_seq, prediction, targets, mask=mask)
 
     def test_step(self, batch, batch_idx):
         return self._eval_step(batch, batch_idx, is_test=True)
@@ -183,6 +206,19 @@ class BERT4RecModule(BERT4RecBaseModule):
                          weight_decay=weight_decay,
                          num_warmup_steps=num_warmup_steps)
 
+    def forward(self,
+                batch: Dict[str, torch.Tensor],
+                batch_idx: int
+                ) -> torch.Tensor:
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        position_ids = BERT4RecModule.get_position_ids(batch)
+
+        # calc the padding mask
+        padding_mask = get_padding_mask(sequence=input_seq, tokenizer=self.item_tokenizer)
+
+        # call the model
+        return self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
+
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
@@ -203,6 +239,19 @@ class BERT4RecModule(BERT4RecBaseModule):
             'loss': masked_lm_loss
         }
 
+    def _get_prediction_for_masked_item(self, batch: Any, batch_idx: int) -> torch.Tensor:
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+
+        position_ids = BERT4RecModule.get_position_ids(batch)
+        target_mask = input_seq.eq(self.item_tokenizer.mask_token_id)
+        # after adding the mask token we can calculate the padding mask
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
+
+        # get predictions for all seq steps
+        prediction = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
+        # extract the relevant seq steps, where the mask was set, here only one mask per sequence steps exists
+        return prediction[target_mask]
+
     def _eval_step(self,
                    batch: Dict[str, torch.Tensor],
                    batch_idx: int,
@@ -211,20 +260,7 @@ class BERT4RecModule(BERT4RecBaseModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
-        position_ids = BERT4RecModule.get_position_ids(batch)
-        target_mask = input_seq.eq(self.item_tokenizer.mask_token_id)
-
-        # handle basket training and evaluation
-        if len(target_mask.size()) > 2:
-            target_mask = target_mask.max(dim=-1)[0]
-
-        # after adding the mask token we can calculate the padding mask
-        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
-
-        # get predictions for all seq steps
-        prediction = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
-        # extract the relevant seq steps, where the mask was set, here only one mask per sequence steps exists
-        prediction = prediction[target_mask]
+        prediction = self._get_prediction_for_masked_item(batch, batch_idx)
 
         loss = self._calc_loss(prediction, targets, is_eval=True)
         self.log(LOG_KEY_TEST_LOSS if is_test else LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
@@ -234,3 +270,6 @@ class BERT4RecModule(BERT4RecBaseModule):
         mask = None if len(targets.size()) == 1 else ~ targets.eq(self.item_tokenizer.pad_token_id)
 
         return build_eval_step_return_dict(input_seq, prediction, targets, mask=mask)
+
+    def predict(self, batch: Any, batch_idx: int, dataloader_idx: Optional[int] = None):
+        return self._get_prediction_for_masked_item(batch, batch_idx)
