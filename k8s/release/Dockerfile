@@ -13,13 +13,16 @@ ENV PYTHONUNBUFFERED=1
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 
-COPY / /jdf
-WORKDIR /jdf
-RUN poetry export -o /jdf/requirements.txt --without-hashes
-RUN pip install -r /jdf/requirements.txt
+RUN pip install torch==1.7.1+cu110 torchvision==0.8.2+cu110 torchaudio==0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
+
+COPY k8s/release/requirements.txt /requirements.txt
+RUN pip install -r /requirements.txt
 
 COPY /k8s/release/entrypoint.sh /entrypoint.sh
 
 RUN chmod ugo+rx /entrypoint.sh
+
+COPY / /jdf
+WORKDIR /jdf
 
 ENTRYPOINT ["/entrypoint.sh" ]
