@@ -1,12 +1,11 @@
 from typing import Union, Any, Dict, List, Type
 
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from pytorch_lightning.loggers import TensorBoardLogger, MLFlowLogger, WandbLogger
+from pytorch_lightning.loggers import TensorBoardLogger, MLFlowLogger, WandbLogger, LightningLoggerBase, CSVLogger
 
 from init.config import Config
 from init.context import Context
 from init.factories.common.dependencies_factory import DependenciesFactory
-from init.factories.common.union_factory import UnionFactory
 from init.factories.util import require_config_keys
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from init.trainer_builder import TrainerBuilder
@@ -14,27 +13,19 @@ from init.trainer_builder import TrainerBuilder
 
 class KwargsFactory(ObjectFactory):
 
-    def __init__(self, t: Type, key: str, selector_key: str = None, selector_value: str = None):
-        super(KwargsFactory, self).__init__()
-        self.t = t
+    def __init__(self,
+                 class_type: Type,
+                 key: str
+                 ):
+        super().__init__()
+        self.class_type = class_type
         self.key = key
-        self.selector_key = selector_key
-        self.selector_value = selector_value
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
-        if self.selector_key and config.get(self.selector_key) != self.selector_value:
-            return CanBuildResult(CanBuildResultType.INVALID_CONFIGURATION, f"Can't build for type {config.get(self.selector_key)}")
-
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
     def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
-        config_keys = config.get_keys()
-        if self.selector_key:
-            kwargs = {key: config.get(key) for key in config_keys if key != self.selector_key}
-        else:
-            kwargs = {key: config.get(key) for key in config_keys}
-
-        return self.t(**kwargs)
+        return self.class_type(**config.config)
 
     def is_required(self, context: Context) -> bool:
         return True
@@ -48,7 +39,7 @@ class KwargsFactory(ObjectFactory):
 
 class TensorboardLoggerFactory(ObjectFactory):
 
-    KEY = "logger"
+    KEY = "tensorboard"
     REQUIRED_KEYS = ["save_dir"]
 
     def __init__(self):
@@ -85,24 +76,57 @@ class TensorboardLoggerFactory(ObjectFactory):
 
 class MLFlowLoggerFactory(KwargsFactory):
     def __init__(self):
-        super().__init__(t=MLFlowLogger, key="logger", selector_key="type", selector_value="mlflow")
+        super().__init__(class_type=MLFlowLogger, key="mlflow")
 
 
 class WandBLoggerFactory(KwargsFactory):
     def __init__(self):
-        super().__init__(t=WandbLogger, key="logger", selector_key="type", selector_value="wandb")
+        super().__init__(class_type=WandbLogger, key="wandb")
+
+
+class CSVLoggerFactory(KwargsFactory):
+    
+    def __init__(self):
+        super().__init__(class_type=CSVLogger, key="csv")
 
 
 class CheckpointFactory(KwargsFactory):
 
     def __init__(self):
-        super().__init__(t=ModelCheckpoint, key="checkpoint")
+        super().__init__(class_type=ModelCheckpoint, key="checkpoint")
 
 
 class EarlyStoppingCallbackFactory(KwargsFactory):
 
     def __init__(self):
-        super().__init__(t=EarlyStopping, key='early_stopping')
+        super().__init__(class_type=EarlyStopping, key='early_stopping')
+
+
+class LoggersFactors(ObjectFactory):
+
+    def __init__(self):
+        super().__init__()
+        self.dependency_factors = DependenciesFactory([TensorboardLoggerFactory(),
+                                                       MLFlowLoggerFactory(),
+                                                       WandBLoggerFactory(),
+                                                       CSVLoggerFactory()],
+                                                      optional_based_on_path=True)
+
+    def can_build(self, config: Config, context: Context) -> CanBuildResult:
+        return self.dependency_factors.can_build(config, context)
+
+    def build(self, config: Config, context: Context) -> List[LightningLoggerBase]:
+        loggers_dict = self.dependency_factors.build(config, context)
+        return list(loggers_dict.values())
+
+    def is_required(self, context: Context) -> bool:
+        return False
+
+    def config_path(self) -> List[str]:
+        return ["loggers"]
+
+    def config_key(self) -> str:
+        return "loggers"
 
 
 class TrainerBuilderFactory(ObjectFactory):
@@ -113,9 +137,7 @@ class TrainerBuilderFactory(ObjectFactory):
         super().__init__()
 
         self.dependencies = DependenciesFactory([
-            UnionFactory([TensorboardLoggerFactory(),
-                          MLFlowLoggerFactory(),
-                          WandBLoggerFactory()], "logger", ["logger"]),
+            LoggersFactors(),
             CheckpointFactory(),
             EarlyStoppingCallbackFactory()
         ], optional_based_on_path=True)
@@ -133,7 +155,7 @@ class TrainerBuilderFactory(ObjectFactory):
         trainer_params = {key: config.get(key) for key in trainer_params_names}
 
         trainer_builder = TrainerBuilder(trainer_parameters=trainer_params)
-        trainer_builder.add_logger(dependencies["logger"])
+        trainer_builder.add_logger(dependencies["loggers"])
         trainer_builder.add_callback(dependencies["checkpoint"])
 
         # add optional early stopping
