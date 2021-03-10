@@ -71,15 +71,10 @@ class BERT4RecBaseModule(MetricsTrait, pl.LightningModule):
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
                       ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
-        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target = batch[TARGET_ENTRY_NAME]
-        position_ids = BERT4RecModule.get_position_ids(batch)
-
-        # calc the padding mask
-        padding_mask = get_padding_mask(sequence=input_seq, tokenizer=self.item_tokenizer)
 
         # call the model
-        prediction_logits = self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)
+        prediction_logits = self.model(batch, batch_idx)
 
         masked_lm_loss = self._calc_loss(prediction_logits, target)
         self.log(LOG_KEY_TRAINING_LOSS, masked_lm_loss, prog_bar=False)
