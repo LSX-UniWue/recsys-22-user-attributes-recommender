@@ -41,6 +41,13 @@ class MetricsContainer(nn.Module):
         pass
 
     @abstractmethod
+    def reset(self):
+        """
+        Call reset on all metrics in this container.
+        """
+        pass
+
+    @abstractmethod
     def get_metric_names(self) -> List[str]:
         """
         returns the names of all metrics registered to this container
@@ -100,6 +107,10 @@ class RankingMetricsContainer(MetricsContainer):
         """
         return {f'{metric.name()}{self.sampler.suffix_metric_name()}': metric.compute() for metric in self.metrics}
 
+    def reset(self):
+        for metric in self.metrics:
+            metric.reset()
+
     def get_metric_names(self) -> List[str]:
         return [f'{metric.name()}{self.sampler.suffix_metric_name()}' for metric in self.metrics]
 
@@ -136,6 +147,10 @@ class AggregateMetricsContainer(MetricsContainer):
                 results.update(container_results)
 
         return results
+
+    def reset(self):
+        for container in self.containers:
+            container.reset()
 
     def get_metric_names(self) -> List[str]:
         merged_list = []

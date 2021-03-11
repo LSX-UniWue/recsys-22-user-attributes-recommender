@@ -40,6 +40,8 @@ class MetricsTrait(pl.LightningModule):
         for name, value in self.get_metrics().compute().items():
             self.log(f"{name}", value, prog_bar=True)
 
+        self.get_metrics().reset()
+
     def test_step_end(self, outputs: Dict[str, torch.Tensor]):
         return self._eval_step_end(outputs)
 
