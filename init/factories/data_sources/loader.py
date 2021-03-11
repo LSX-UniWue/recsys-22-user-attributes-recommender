@@ -1,4 +1,5 @@
-from typing import Any, List, Optional, Dict, Union
+import multiprocessing
+from typing import Any, List, Dict, Union
 
 from torch.utils.data import DataLoader
 
@@ -72,7 +73,7 @@ class LoaderFactory(ObjectFactory):
 
         dataset = dependencies[self.DATASET_DEPENDENCY_KEY]
 
-        num_workers = config.get_or_default("num_workers", 0)
+        num_workers = config.get_or_default("num_workers", multiprocessing.cpu_count() - 1)
 
         init_worker_fn = None if num_workers == 0 else mp_worker_init_fn
 
