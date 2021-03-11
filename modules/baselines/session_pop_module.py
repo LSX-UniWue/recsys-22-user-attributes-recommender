@@ -16,12 +16,12 @@ from tokenization.tokenizer import Tokenizer
 class SessionPopModule(MetricsTrait, pl.LightningModule):
 
     def __init__(self,
-                 tokenizer: Tokenizer,
+                 item_tokenizer: Tokenizer,
                  metrics: MetricsContainer):
 
         super(SessionPopModule, self).__init__()
-        self.item_vocab_size = len(tokenizer)
-        self.tokenizer = tokenizer
+        self.item_vocab_size = len(item_tokenizer)
+        self.tokenizer = item_tokenizer
         self.metrics = metrics
 
     def on_train_start(self) -> None:
