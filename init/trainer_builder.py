@@ -70,7 +70,7 @@ class TrainerBuilder:
         if trainer_parameters is not None:
             self.load_dict(trainer_parameters)
 
-    def from_checkpoint(self, checkpoint_path: str):
+    def from_checkpoint(self, checkpoint_path: Union[str, Path]):
         return self.set("resume_from_checkpoint", checkpoint_path)
 
     def get(self, key: str) -> Optional[Any]:
@@ -106,7 +106,8 @@ class TrainerBuilder:
         if "dirpath" not in parameters and "default_root_dir" in self.kwargs:
             parameters["dirpath"] = Path(self.kwargs["default_root_dir"]) / "checkpoints"
         if "filename" not in parameters:
-            parameters['filename'] = "{epoch}"
+            monitored_metric = parameters["monitor"]
+            parameters['filename'] = f"{monitored_metric}"+"{epoch}"
         checkpoint = ModelCheckpoint(**parameters)
         return self.add_callback(checkpoint)
 

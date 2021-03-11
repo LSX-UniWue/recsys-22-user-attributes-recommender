@@ -1,3 +1,9 @@
+import logging
+import logging.handlers
+import math
+import os
+import re
+
 import numpy as np
 import typer
 import optuna
@@ -7,23 +13,30 @@ from tempfile import NamedTemporaryFile
 from pathlib import Path
 from typing import Optional, Callable, List, Iterator
 from optuna.study import StudyDirection
-from pytorch_lightning import seed_everything, Callback, LightningModule
+from pytorch_lightning import seed_everything, Callback, Trainer, LightningModule
+from pytorch_lightning.loggers import LoggerCollection
 from pytorch_lightning.trainer.configuration_validator import ConfigValidator
 from pytorch_lightning.utilities import cloud_io
 from torch.utils.data import Sampler, DataLoader
 from torch.utils.data.dataset import T_co
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME
+from init.config import Config
 from init.context import Context
 from init.factories.metrics.metrics_container import MetricsContainerFactory
 from init.templating.search.configuration import SearchConfigurationTemplateProcessor
 from init.templating.search.processor import SearchTemplateProcessor
 from init.templating.search.resolver import OptunaParameterResolver
+from init.templating.template_engine import TemplateEngine
+from init.templating.template_processor import TemplateProcessor
 from runner.util.run_utils import load_config, create_container, load_container
 from tokenization.tokenizer import Tokenizer
-from utils.ioutils import load_file_with_item_ids
+from utils import ioutils
+from utils.ioutils import load_file_with_item_ids, determine_log_dir, save_config, save_finished_flag, \
+    finished_flag_exists
 from writer.prediction.prediction_writer import build_prediction_writer
 from writer.results.results_writer import build_result_writer
+
 
 app = typer.Typer()
 
@@ -43,10 +56,16 @@ def train(config_file: str = typer.Argument(..., help='the path to the config fi
     container = create_container(config)
     trainer = container.trainer().build()
 
+    # save plain json config to the log dir/root dir of the trainer
+    log_dir = Path(determine_log_dir(trainer))
+    save_config(config, log_dir)
+
     if do_train:
         trainer.fit(container.module(),
                     train_dataloader=container.train_dataloader(),
                     val_dataloaders=container.validation_dataloader())
+
+    save_finished_flag(log_dir)
 
     if do_test:
         trainer.test(test_dataloaders=container.test_dataloader())
@@ -117,18 +136,26 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 
             metrics_tracker = MetricsHistoryCallback()
 
-            container = load_container(Path(tmp_config_file.name))
+            config = load_config(Path(tmp_config_file.name))
+            container = create_container(config)
 
             module = container.module()
             trainer_builder = container.trainer()
             trainer_builder.add_callback(metrics_tracker)
 
             trainer = trainer_builder.build()
+            log_dir = Path(determine_log_dir(trainer))
+
+            # save config of current run to its log dir
+            save_config(config, log_dir)
+
             trainer.fit(
                 module,
                 train_dataloader=container.train_dataloader(),
                 val_dataloaders=container.validation_dataloader()
             )
+
+            save_finished_flag(log_dir)
 
             def _find_best_value(key: str, best: Callable[[List[float]], float] = min) -> float:
                 values = [history_entry[key] for history_entry in metrics_tracker.metric_history]
@@ -350,19 +377,48 @@ def evaluate(config_file: str = typer.Argument(..., help='the path to the config
 
 
 @app.command()
-def resume(config_file: str = typer.Argument(..., help='the path to the config file'),
-           checkpoint_file: str = typer.Argument(..., help="path to the checkpoint file.")):
-    container = load_container(Path(config_file))
+def resume(log_dir: str = typer.Argument(..., help='the path to the logging directory of the run to be resumed'),
+           checkpoint_file: Optional[str] = typer.Option(default=None, help="the name of the checkpoint file to resume from")):
+    log_dir = Path(log_dir)
 
+    # check for finished flag
+    if finished_flag_exists(log_dir):
+        print(f"Found a finished flag in '{log_dir}'. Training has finished and will not be resumed.")
+        exit(-1)
+
+    # check for config file
+    config_file = log_dir / ioutils.PROCESSED_CONFIG_NAME
+    if not os.path.isfile(config_file):
+        print(f"Could not find '{ioutils.PROCESSED_CONFIG_NAME} in path {log_dir}.")
+        exit(-1)
+
+    raw_config = load_config(Path(config_file))
+    # determine checkpoint dir:
+    checkpoint_dir = Path(
+        raw_config.get_config(["trainer", "checkpoint"]).get_or_default("dirpath", log_dir / "checkpoints"))
+    # if no checkpoint file is provided we use the last checkpoint.
+    if checkpoint_file is None:
+        checkpoint_file = "last.ckpt"
+
+    checkpoint_path = checkpoint_dir / checkpoint_file
+    if not os.path.isfile(checkpoint_path):
+        print("Could not determine the last checkpoint. "
+              "You can specify a particular checkpoint via the --checkpoint-file option.")
+        exit(-1)
+
+    container = create_container(raw_config)
     module = container.module()
 
     trainer_builder = container.trainer()
-    trainer = trainer_builder.from_checkpoint(checkpoint_file).build()
+    trainer = trainer_builder.from_checkpoint(checkpoint_path).build()
 
     train_loader = container.train_dataloader()
     validation_loader = container.validation_dataloader()
 
     trainer.fit(module, train_dataloader=train_loader, val_dataloaders=validation_loader)
+
+    # Save finished flag
+    save_finished_flag(log_dir)
 
 
 if __name__ == "__main__":
