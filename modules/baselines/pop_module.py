@@ -46,7 +46,8 @@ class PopModule(MetricsTrait, pl.LightningModule):
         return predictions
 
     def training_step(self, batch: Dict[str, torch.tensor], batch_idx):
-        input_seq = torch.tensor(batch[ITEM_SEQ_ENTRY_NAME])
+        input_seq = torch.flatten(batch[ITEM_SEQ_ENTRY_NAME])
+        input_seq = input_seq[input_seq > 0]
         self.item_frequencies += torch.bincount(input_seq, minlength=self.item_vocab_size)
 
         return {'loss': torch.tensor(0., device=self.device)}

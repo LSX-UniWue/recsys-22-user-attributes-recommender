@@ -3,6 +3,7 @@ from typing import Dict, Any, List
 from init.templating import TEMPLATES_CONFIG_KEY
 from init.templating.datasources.mask import MaskDataSourcesTemplateProcessor
 from init.templating.datasources.next import NextSequenceStepDataSourcesTemplateProcessor
+from init.templating.datasources.plain_training import PlainTrainingSourcesTemplateProcessor
 from init.templating.datasources.positive_negative import PositiveNegativeDataSourcesTemplateProcessor
 from init.templating.template_processor import TemplateProcessor
 from init.templating.trainer.output_directory import OutputDirectoryProcessor
@@ -26,6 +27,7 @@ class TemplateEngine:
         self._template_processors = head_processors + [MaskDataSourcesTemplateProcessor(),
                                                        PositiveNegativeDataSourcesTemplateProcessor(),
                                                        NextSequenceStepDataSourcesTemplateProcessor(),
+                                                       PlainTrainingSourcesTemplateProcessor(),
                                                        OutputDirectoryProcessor()] + tail_processors
 
     def modify(self, config: Dict[str, Any]) -> Dict[str, Any]:

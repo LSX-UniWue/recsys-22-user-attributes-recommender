@@ -11,66 +11,17 @@ local metrics =  {
         unified_output: {
             path: "/tmp/experiments/pop"
         },
-    },
-    data_sources: {
-        train: {
+        plain_training_next_item_test_and_validation_data_sources: {
+            parser: {
+                item_column_name: "item_id"
+            },
             loader: {
                 batch_size: 8,
                 max_seq_length: max_seq_length,
-                dataset: {
-                    type: 'session',
-                    csv_file: base_path + 'ratio_split/example.train.csv',
-                    csv_file_index: base_path + 'ratio_split/example.train.session.idx',
-                    parser: {
-                        item_column_name: 'item_id',
-                        delimiter: '\t'
-                    },
-                    processors: [
-                        {
-                            type: 'tokenizer'
-                        }],
-                    },
-            }
-        },
-        validation: {
-            loader: {
-                batch_size: 8,
-                max_seq_length: max_seq_length,
-                dataset: {
-                    type: 'sequence_position',
-                    csv_file: base_path + 'ratio_split/example.validation.csv',
-                    csv_file_index: base_path + 'ratio_split/example.validation.nextitem.idx',
-                    nip_index_file: self.csv_file_index,
-                    parser: {
-                        item_column_name: 'item_id',
-                        delimiter: '\t'
-                    },
-                    processors: [
-                        {
-                            type: 'tokenizer'
-                        }],
-                    },
-            }
-        },
-        test: {
-            loader: {
-                batch_size: 8,
-                max_seq_length: max_seq_length,
-                dataset: {
-                    type: 'sequence_position',
-                    csv_file: base_path + 'ratio_split/example.test.csv',
-                    csv_file_index: base_path + 'ratio_split/example.test.nextitem.idx',
-                    nip_index_file: self.csv_file_index,
-                    parser: {
-                        item_column_name: 'item_id',
-                        delimiter: '\t'
-                    },
-                    processors: [
-                        {
-                            type: 'tokenizer'
-                        }],
-                    },
-            }
+            },
+            path: base_path + 'ratio_split/',
+            file_prefix: prefix,
+            split_type: 'ratio_split'
         }
     },
     module: {
@@ -105,6 +56,7 @@ local metrics =  {
         }
     },
     trainer: {
+        max_epochs: 1,
         logger: {
             type: "tensorboard",
         },
@@ -113,11 +65,5 @@ local metrics =  {
             save_top_k: 3,
             mode: 'max'
         },
-        early_stopping: {
-          monitor: 'recall@5',
-          min_delta: 0.00,
-          patience: 10,
-          mode: 'max'
-        }
     }
 }
