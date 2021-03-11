@@ -85,15 +85,35 @@ class WandBLoggerFactory(KwargsFactory):
 
 
 class CSVLoggerFactory(KwargsFactory):
-    
+
     def __init__(self):
         super().__init__(class_type=CSVLogger, key="csv")
 
 
-class CheckpointFactory(KwargsFactory):
+class CheckpointFactory(ObjectFactory):
+
+    def can_build(self, config: Config, context: Context) -> CanBuildResult:
+        return CanBuildResult(CanBuildResultType.CAN_BUILD)
+
+    def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
+        if not config.has_path("filename"):
+            monitored_metric = config.get("monitor")
+            config.set("filename", "{epoch}-" + f"{{{monitored_metric}}}")
+        if not config.has_path("save_last"):
+            config.set("save_last", True)
+        return ModelCheckpoint(**config.config)
+
+    def is_required(self, context: Context) -> bool:
+        return True
+
+    def config_path(self) -> List[str]:
+        return ["checkpoint"]
+
+    def config_key(self) -> str:
+        return "checkpoint"
 
     def __init__(self):
-        super().__init__(class_type=ModelCheckpoint, key="checkpoint")
+        super().__init__()
 
 
 class EarlyStoppingCallbackFactory(KwargsFactory):
