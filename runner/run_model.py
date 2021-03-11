@@ -1,85 +1,31 @@
-import logging
-import logging.handlers
-
+import numpy as np
 import typer
 import optuna
 import json
-import _jsonnet
 
 from tempfile import NamedTemporaryFile
 from pathlib import Path
-from typing import Dict, Any, Optional, Callable, List, Iterator
+from typing import Optional, Callable, List, Iterator
 from optuna.study import StudyDirection
 from pytorch_lightning import seed_everything, Callback, LightningModule
 from pytorch_lightning.trainer.configuration_validator import ConfigValidator
 from pytorch_lightning.utilities import cloud_io
-from torch.utils.data import DataLoader, Sampler
+from torch.utils.data import Sampler, DataLoader
 from torch.utils.data.dataset import T_co
 
-import numpy as np
-
 from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME
-from init.config import Config
-from init.container import Container
 from init.context import Context
-from init.factories.container import ContainerFactory
 from init.factories.metrics.metrics_container import MetricsContainerFactory
 from init.templating.search.configuration import SearchConfigurationTemplateProcessor
 from init.templating.search.processor import SearchTemplateProcessor
 from init.templating.search.resolver import OptunaParameterResolver
-from init.templating.template_engine import TemplateEngine
-from init.templating.template_processor import TemplateProcessor
+from runner.util.run_utils import load_config, create_container, load_container
 from tokenization.tokenizer import Tokenizer
+from utils.ioutils import load_file_with_item_ids
 from writer.prediction.prediction_writer import build_prediction_writer
-
+from writer.results.results_writer import build_result_writer
 
 app = typer.Typer()
-
-# FIXME: progress bar is not logged :(
-def _config_logging(config: Dict[str, Any]
-                    ) -> None:
-    logger = logging.getLogger("lightning")
-    handler = logging.handlers.RotatingFileHandler(
-        Path(config['trainer']['default_root_dir']) / 'run.log', maxBytes=(1048576 * 5), backupCount=7
-    )
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-
-def load_config(config_file: Path,
-                additional_head_processors: List[TemplateProcessor] = [],
-                additional_tail_processors: List[TemplateProcessor] = []
-                ) -> Config:
-    config_file = Path(config_file)
-
-    if not config_file.exists():
-        print(f"the config file cannot be found. Please check the path '{config_file}'!")
-        exit(-1)
-
-    config_json = _jsonnet.evaluate_file(str(config_file))
-
-    loaded_config = json.loads(config_json)
-
-    template_engine = TemplateEngine(head_processors=additional_head_processors,
-                                     tail_processors=additional_tail_processors)
-
-    config_to_use = template_engine.modify(loaded_config)
-    return Config(config_to_use)
-
-
-def create_container(config: Config) -> Container:
-    context = Context()
-
-    container_factory = ContainerFactory()
-    container = container_factory.build(config, context)
-
-    return container
-
-
-def load_container(config_file: Path) -> Container:
-    config_raw = load_config(config_file)
-    return create_container(config_raw)
 
 
 @app.command()
@@ -104,7 +50,6 @@ def train(config_file: str = typer.Argument(..., help='the path to the config fi
 
     if do_test:
         trainer.test(test_dataloaders=container.test_dataloader())
-
 
 
 @app.command()
@@ -202,9 +147,24 @@ def predict(config_file: str = typer.Argument(..., help='the path to the config 
             output_file: Path = typer.Argument(..., help='path where output is written'),
             num_predictions: int = typer.Option(default=20, help='number of predictions to export'),
             gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
+            selected_items_file: Optional[Path] = typer.Option(default=None,
+                                                               help='only use the item ids for prediction'),
             overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
             log_input: Optional[bool] = typer.Option(default=True, help='enable input logging.')
             ):
+    """
+
+    writes the predictions of model (restored from a checkpoint file) to a output file
+
+    :param config_file: the config file used while training the model
+    :param checkpoint_file: the checkpoint file of the model
+    :param output_file: the path to write the output to
+    :param num_predictions: number of predictions
+    :param gpu: the number of gpus to use
+    :param selected_items_file: the item that should only be considered
+    :param overwrite: override the output file
+    :param log_input: write the input sequence also to the file
+    """
     # checking if the file already exists
     if not overwrite and output_file.exists():
         print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
@@ -240,6 +200,19 @@ def predict(config_file: str = typer.Argument(..., help='the path to the config 
 
     config_validator = MyConfigValidator(trainer)
     trainer.config_validator = config_validator
+
+    def _noop_filter(sample_predictions: np.ndarray):
+        return sample_predictions
+
+    filter_predictions = _noop_filter
+    selected_items = None
+
+    if selected_items_file is not None:
+        selected_items = load_file_with_item_ids(selected_items_file)
+
+        def _selected_items_filter(sample_predictions: np.ndarray):
+            return sample_predictions[selected_items]
+        filter_predictions = _selected_items_filter
 
     # open the file and build the writer
     with open(output_file, 'w') as result_file:
@@ -291,13 +264,21 @@ def predict(config_file: str = typer.Argument(..., help='the path to the config 
                 return f'{sample_id}_{sequence_position_ids[sample_index].item()}'
 
             for i in range(predictions.shape[0]):
-                prediction = predictions[i]
+                prediction = filter_predictions(predictions[i])
 
                 scores = _softmax(prediction)
 
                 item_indices = scores[::-1].argsort()[:num_predictions]
 
-                tokens = item_tokenizer.convert_ids_to_tokens(item_indices.tolist())
+                item_ids = item_indices.tolist()
+
+                # when we only want the predictions of selected items
+                # the indices are not the item ids anymore, so we have to update them here
+                if selected_items is not None:
+                    selected_item_ids = [selected_items[i] for i in item_ids]
+                    item_ids = selected_item_ids
+
+                tokens = item_tokenizer.convert_ids_to_tokens(item_ids)
                 scores[::-1].sort()
                 scores = scores.tolist()[:num_predictions]
 
@@ -324,16 +305,18 @@ def predict(config_file: str = typer.Argument(..., help='the path to the config 
 @app.command()
 def evaluate(config_file: str = typer.Argument(..., help='the path to the config file'),
              checkpoint_file: str = typer.Argument(..., help='path to the checkpoint file'),
-             output_file: Path = typer.Argument(..., help='path where output is written'),
+             output_file: Optional[Path] = typer.Option(default=None, help='path where output is written'),
              gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
              overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
-             seed: Optional[int] = typer.Option(default=42, help='seed for rng')
+             seed: Optional[int] = typer.Option(default=None, help='seed used eg for the sampled evaluation')
              ):
-    if not overwrite and output_file.exists():
+    write_results_to_file = output_file is not None
+    if write_results_to_file and not overwrite and output_file.exists():
         print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
         exit(-1)
 
-    seed_everything(seed)
+    if seed is not None:
+        seed_everything(seed)
 
     container = load_container(Path(config_file))
     module = container.module()
@@ -356,7 +339,14 @@ def evaluate(config_file: str = typer.Argument(..., help='the path to the config
     trainer_builder.set("gpus", gpu)
 
     trainer = trainer_builder.build()
-    trainer.test(module, test_dataloaders=test_loader)
+    eval_results = trainer.test(module, test_dataloaders=test_loader, verbose=not write_results_to_file)
+
+    if write_results_to_file:
+        with open(output_file, 'w') as output_file_handle:
+            result_writer = build_result_writer(output_file_handle)
+            # FIXME: currently we have for every model a corresponding module
+            # get the first eval results, only one test_dataloader was provided
+            result_writer.write_overall_results(type(module).__name__, eval_results[0])
 
 
 @app.command()

@@ -17,7 +17,7 @@ local metrics =  {
             loader: {
                 batch_size: 64,
                 max_seq_length: max_seq_length,
-                num_workers: 4
+                num_workers: 10
             },
             path: base_path,
             validation_file_prefix: "train",

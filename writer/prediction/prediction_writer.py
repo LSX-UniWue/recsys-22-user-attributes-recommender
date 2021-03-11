@@ -112,7 +112,7 @@ class CSVPredictionWriter(PredictionWriter):
         header_to_write = self.HEADER
         if log_input:
             header_to_write += [self.INPUT_HEADER_NAME]
-        self.csv_writer.writerow(self.HEADER)
+        self.csv_writer.writerow(header_to_write)
 
     def write_values(self, sample_id: str, recommendations: List[str], scores: List[float],
                      targets: Union[str, List[str]], input_sequence: Optional[Union[List[str], List[List[str]]]]):
