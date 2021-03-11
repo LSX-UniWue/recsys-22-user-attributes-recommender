@@ -1,14 +1,17 @@
-local base_path = "/scratch/jane-doe-framework/datasets/ml-20m_3_0_0/";
+local base_path = "/ssd/ml-20m/";
 local max_seq_length = 200;
 local metrics =  {
     mrr: [1, 5, 10],
     recall: [1, 5, 10],
     ndcg: [1, 5, 10]
 };
+
+local file_prefix = 'ml-20m';
+
 {
     templates: {
         unified_output: {
-            path: "/scratch/jane-doe-framework/experiments/ml-20m/sasrec"
+            path: "/scratch/jane-doe-framework/experiments/ml-20m/sasrec_new"
         },
         pos_neg_data_sources: {
             parser: {
@@ -17,13 +20,12 @@ local metrics =  {
             loader: {
                 batch_size: 64,
                 max_seq_length: max_seq_length,
-                num_workers: 4
+                num_workers: 10
             },
             path: base_path,
-            validation_file_prefix: "train",
-            test_file_prefix: "train",
+            file_prefix: file_prefix,
             seed: 123456,
-            split_type: "loo", // leave one out split for evaluation
+            split_type: "leave_one_out", // leave one out split for evaluation
         }
     },
     module: {
@@ -33,7 +35,7 @@ local metrics =  {
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + "popularity.txt",
+                sample_probability_file: base_path + "ml-20m.popularity.title.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             }
@@ -55,7 +57,7 @@ local metrics =  {
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "vocab.txt"
+                    file: base_path + "ml-20m.vocabulary.title.txt"
                 }
             }
         }
