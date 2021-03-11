@@ -36,7 +36,7 @@ local file_prefix = 'ml-20m';
             },
             sampled: {
                 sample_probability_file: base_path + "ml-20m.popularity.title.txt",
-                num_negative_samples: 2,
+                num_negative_samples: 100,
                 metrics: metrics
             }
         },

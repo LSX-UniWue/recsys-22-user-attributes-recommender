@@ -33,7 +33,7 @@ local metrics =  {
             },
             sampled: {
                 sample_probability_file: base_path + "popularity.txt",
-                num_negative_samples: 2,
+                num_negative_samples: 100,
                 metrics: metrics
             }
         },
