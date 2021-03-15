@@ -9,9 +9,9 @@ local metrics =  {
 {
     templates: {
         unified_output: {
-            path: "/tmp/experiments/markov"
+            path: "/tmp/experiments/bpr"
         },
-        next_sequence_step_data_sources: {
+        pos_neg_data_sources: {
             parser: {
                 item_column_name: "item_id"
             },
@@ -20,10 +20,15 @@ local metrics =  {
                 max_seq_length: max_seq_length
             },
             path: base_path + "ratio_split/",
-            file_prefix: "example"
+            file_prefix: "example",
+            seed: 123456
+        }
     },
     module: {
-        type: "markov",
+        type: "bpr",
+        num_users: 1000,
+        embedding_size: 16,
+        regularization_factor: 0.1,
         metrics: {
             full: {
                 metrics: metrics
@@ -55,6 +60,7 @@ local metrics =  {
     },
     trainer: {
         max_epochs: 1,
+        num_sanity_val_steps: 0,
         logger: {
             type: "tensorboard",
         },
