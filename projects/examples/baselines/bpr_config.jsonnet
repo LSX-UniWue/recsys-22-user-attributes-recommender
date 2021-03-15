@@ -78,8 +78,8 @@ local metrics =  {
     trainer: {
         max_epochs: 1,
         num_sanity_val_steps: 0,
-        logger: {
-            type: "tensorboard",
+        loggers: {
+            tensorboard: {}
         },
         checkpoint: {
             monitor: "recall@5",
