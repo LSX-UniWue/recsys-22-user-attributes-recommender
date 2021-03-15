@@ -187,4 +187,5 @@ def _get_config_required_config_params(parameters: Dict[str, Optional[Any]]) -> 
         default_value = parameter_info.default_value
         if default_value is inspect._empty and not parameter_name.endswith(VOCAB_SIZE_SUFFIX):
             result.append(parameter_name)
+
     return result

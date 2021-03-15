@@ -9,7 +9,6 @@ from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultTyp
 
 
 class ClozeProcessorFactory(ObjectFactory):
-
     """
     factory for the ClozeMaskProcessor
     """
@@ -32,12 +31,15 @@ class ClozeProcessorFactory(ObjectFactory):
               config: Config,
               context: Context
               ) -> ClozeMaskProcessor:
-        tokenizer = context.get(get_tokenizer_key_for_voc("item"))
+
+        tokenizers = context.as_dict()
+
         mask_probability = config.get('mask_probability')
         only_last_item_mask_prob = config.get('only_last_item_mask_prob')
         seed = config.get('seed')
+        masking_targets = config.get("masking_targets")
 
-        return ClozeMaskProcessor(tokenizer, mask_probability, only_last_item_mask_prob, seed)
+        return ClozeMaskProcessor(tokenizers, mask_probability, only_last_item_mask_prob, seed, masking_targets)
 
     def is_required(self, context: Context) -> bool:
         return False

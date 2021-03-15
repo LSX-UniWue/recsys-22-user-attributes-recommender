@@ -18,7 +18,7 @@ jsonnet = "^0.17.0"
 
 torch = "^1.7.1"
 torchvision = "^0.8.2"
-pytorch-lightning = "1.2.0"
+pytorch-lightning = "1.2.1"
 dependency-injector = "^3.44.0"
 typer = "^0.3.2"
 wandb = "^0.10.19"

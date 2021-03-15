@@ -17,7 +17,7 @@ local metrics =  {
             loader: {
                 batch_size: 64,
                 max_seq_length: max_seq_length,
-                num_workers: 4
+                num_workers: 10
             },
             path: base_path,
             validation_file_prefix: "train",
@@ -33,7 +33,7 @@ local metrics =  {
             },
             sampled: {
                 sample_probability_file: base_path + "popularity.txt",
-                num_negative_samples: 2,
+                num_negative_samples: 100,
                 metrics: metrics
             }
         },
@@ -60,8 +60,8 @@ local metrics =  {
         }
     },
     trainer: {
-        logger: {
-            type: "tensorboard"
+        loggers: {
+            tensorboard: {}
         },
         checkpoint: {
             monitor: "recall@10/sampled(100)",

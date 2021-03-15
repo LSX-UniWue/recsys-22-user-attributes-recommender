@@ -1,10 +1,11 @@
-from typing import Dict
+from typing import Dict, Any
 from torch import nn
 
 import torch
 
 from models.bert4rec.bert4rec_model import BERT4RecBaseModel
 from models.layers.layers import PROJECT_TYPE_LINEAR
+from models.layers.layers import build_projection_layer
 from models.layers.transformer_layers import TransformerEmbedding
 from utils.hyperparameter_utils import save_hyperparameters
 
@@ -37,7 +38,7 @@ class LinearUpscaler(nn.Module):
         return self.linear(multi_hot)
 
 
-class KeBERT4Rec(BERT4RecBaseModel):
+class KeBERT4RecModel(BERT4RecBaseModel):
 
     @save_hyperparameters
     def __init__(self,
@@ -47,48 +48,57 @@ class KeBERT4Rec(BERT4RecBaseModel):
                  item_vocab_size: int,
                  max_seq_length: int,
                  transformer_dropout: float,
-                 additional_attributes: Dict[str, (str, int)],
-                 embedding_pooling_type: str = None):
+                 additional_attributes: Dict[str, Dict[str, Any]]):
+
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
                          num_transformer_layers=num_transformer_layers,
                          transformer_dropout=transformer_dropout,
                          item_vocab_size=item_vocab_size,
                          max_seq_length=max_seq_length,
-                         project_layer_type=PROJECT_TYPE_LINEAR,
-                         embedding_pooling_type=embedding_pooling_type)
+                         project_layer_type=PROJECT_TYPE_LINEAR)
 
-        self.item_vocab_size = item_vocab_size
-        self.max_seq_length = max_seq_length + 1
         self.additional_attributes = additional_attributes
-
-        # here we set the dropout to 0 and norm to false because we want to norm and drop after applying
-        # the additional embeddings
-        self.embedding = TransformerEmbedding(item_voc_size=self.item_vocab_size,
-                                              max_seq_len=self.max_seq_length,
-                                              embedding_size=self.transformer_hidden_size,
-                                              dropout=0.0,
-                                              norm_embedding=False)
-
-        # build all additional attribute embeddings
         additional_attribute_embeddings = {}
-        for key, (embedding_type, vocab_size) in self.additional_attributes.items():
-            additional_attribute_embeddings[key] = _build_embedding_type(embedding_type=embedding_type,
+        for attribute_name, attribute_infos in additional_attributes.items():
+            embedding_type = attribute_infos['embedding_type']
+            vocab_size = attribute_infos['vocab_size']
+            additional_attribute_embeddings[attribute_name] = _build_embedding_type(embedding_type=embedding_type,
                                                                          vocab_size=vocab_size,
                                                                          hidden_size=transformer_hidden_size)
-
         self.additional_attribute_embeddings = nn.ModuleDict(additional_attribute_embeddings)
+        self.dropout_embedding = nn.Dropout(transformer_dropout)
+        self.norm_embedding = nn.LayerNorm(transformer_hidden_size)
+        self.apply(self._init_weights)
 
-        self.embedding_norm = nn.LayerNorm(self.transformer_hidden_size)
-        self.dropout_layer = nn.Dropout(p=self.transformer_dropout)
+    def _init_internal(self,
+                       transformer_hidden_size: int,
+                       num_transformer_heads: int,
+                       num_transformer_layers: int,
+                       item_vocab_size: int,
+                       max_seq_length: int,
+                       transformer_dropout: float,
+                       embedding_mode: str = None):
+        self.embedding = TransformerEmbedding(item_voc_size=item_vocab_size, max_seq_len=max_seq_length,
+                                              embedding_size=transformer_hidden_size, dropout=transformer_dropout,
+                                              embedding_pooling_type=embedding_mode, norm_embedding=False)
+
+    def _build_projection_layer(self,
+                                project_layer_type: str,
+                                transformer_hidden_size: int,
+                                item_vocab_size: int
+                                ) -> nn.Module:
+        return build_projection_layer(project_layer_type, transformer_hidden_size, item_vocab_size,
+                                      self.embedding.item_embedding.embedding)
 
     def _embed_input(self,
-                     input_sequence: torch.Tensor,
+                     sequence: torch.Tensor,
                      position_ids: torch.Tensor,
                      **kwargs
                      ) -> torch.Tensor:
-        embedding = self.embedding(input_sequence, position_ids)
-        for input_key, module in self.additional_attribute_embeddings:
+        embedding = self.embedding(sequence, position_ids)
+        for input_key, module in self.additional_attribute_embeddings.items():
             embedding += module(kwargs[input_key])
-        embedding = self.dropout_layer(embedding)
+        embedding = self.norm_embedding(embedding)
+        embedding = self.dropout_embedding(embedding)
         return embedding

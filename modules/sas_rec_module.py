@@ -15,8 +15,9 @@ from utils.hyperparameter_utils import save_hyperparameters
 
 
 class SASRecModule(MetricsTrait, pl.LightningModule):
+
     """
-    the module for the SASRec model
+    the module for training a SASRec model
     """
 
     @save_hyperparameters
@@ -112,24 +113,33 @@ class SASRecModule(MetricsTrait, pl.LightningModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
 
-        batch_size = input_seq.size()[0]
+        prediction = self.predict(batch, batch_idx)
 
+        return build_eval_step_return_dict(input_seq, prediction, targets)
+
+    def test_step(self,
+                  batch: Dict[str, torch.Tensor],
+                  batch_idx: int
+                  ) -> Dict[str, torch.Tensor]:
+        return self.validation_step(batch, batch_idx)
+
+    def predict(self,
+                batch: Dict[str, torch.Tensor],
+                batch_idx: int,
+                dataloader_idx: Optional[int] = None
+                ) -> torch.Tensor:
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         # calc the padding mask
         padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
 
         # provide items that the target item will be ranked against
         # TODO (AD) refactor this into a composable class to allow different strategies for item selection
+        batch_size = input_seq.size()[0]
         device = input_seq.device
         items_to_rank = torch.as_tensor(self.item_tokenizer.get_vocabulary().ids(), dtype=torch.long, device=device)
         items_to_rank = items_to_rank.repeat([batch_size, 1])
 
-        prediction = self.model(input_seq, items_to_rank, padding_mask=padding_mask)
-        prediction = prediction
-
-        return build_eval_step_return_dict(input_seq, prediction, targets)
-
-    def test_step(self, batch, batch_idx):
-        return self.validation_step(batch, batch_idx)
+        return self.model(input_seq, items_to_rank, padding_mask=padding_mask)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(),

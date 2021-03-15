@@ -10,17 +10,21 @@ from init.factories.modules.modules import GenericModuleFactory
 from init.factories.tokenizer.tokenizer_factory import TokenizersFactory
 from init.factories.trainer import TrainerBuilderFactory
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
+from models.basket.nnrec.nnrec_model import NNRecModel
 from models.bert4rec.bert4rec_model import BERT4RecModel
 from models.caser.caser_model import CaserModel
 from models.narm.narm_model import NarmModel
 from models.rnn.rnn_model import RNNModel
 from models.sasrec.sas_rec_model import SASRecModel
+from models.kebert4rec.kebert4rec_model import KeBERT4RecModel
+from modules import BERT4RecModule, CaserModule, SASRecModule, KeBERT4RecModule
 from modules import BERT4RecModule, CaserModule, SASRecModule
 from modules.baselines.bpr_module import BprModule
 from modules.baselines.markov_module import MarkovModule
 from modules.baselines.pop_module import PopModule
 from modules.baselines.session_pop_module import SessionPopModule
 from modules.basket.dream_module import DreamModule
+from modules.basket.nnrec_module import NNRecModule
 from modules.narm_module import NarmModule
 from modules.rnn_module import RNNModule
 
@@ -31,17 +35,19 @@ class ContainerFactory(ObjectFactory):
         self.tokenizers_factory = TokenizersFactory()
         self.dependencies = DependenciesFactory(
             [
-                ConditionalFactory('type', {'bert4rec': GenericModuleFactory(BERT4RecModule, BERT4RecModel),
+                ConditionalFactory('type', {'kebert4rec': GenericModuleFactory(KeBERT4RecModule, KeBERT4RecModel),
+                                            'bert4rec': GenericModuleFactory(BERT4RecModule, BERT4RecModel),
                                             'caser': GenericModuleFactory(CaserModule, CaserModel),
                                             'narm': GenericModuleFactory(NarmModule, NarmModel),
                                             'sasrec': GenericModuleFactory(SASRecModule, SASRecModel),
                                             'rnn': GenericModuleFactory(RNNModule, RNNModel),
                                             'dream': GenericModuleFactory(DreamModule, RNNModel),
+                                            'nnrec': GenericModuleFactory(NNRecModule, NNRecModel),
                                             'pop': GenericModuleFactory(PopModule, None),
                                             'session_pop': GenericModuleFactory(SessionPopModule, None),
                                             'markov': GenericModuleFactory(MarkovModule, None),
-                                            'bpr' : GenericModuleFactory(BprModule, None)
-                                            }, config_key='module',
+                                            'bpr' : GenericModuleFactory(BprModule, None),},
+                                   config_key='module',
                                    config_path=['module']),
                 DataSourcesFactory(),
                 TrainerBuilderFactory()
@@ -71,6 +77,7 @@ class ContainerFactory(ObjectFactory):
               ) -> Container:
         # we need the tokenizers in the context because many objects have dependencies
         tokenizers_config = config.get_config(self.tokenizers_factory.config_path())
+
         tokenizers = self.tokenizers_factory.build(tokenizers_config, context)
 
         for key, tokenizer in tokenizers.items():

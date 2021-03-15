@@ -17,7 +17,7 @@ class F1Metric(RankingMetric):
         self._k = k
 
         self.add_state("f1", torch.tensor(0.), dist_reduce_fx="sum")
-        self.add_state('count', torch.tensor(0.), dist_reduce_fx="sum")
+        self.add_state('count', torch.tensor(0), dist_reduce_fx="sum")
 
     def _update(self,
                 predictions: torch.Tensor,
