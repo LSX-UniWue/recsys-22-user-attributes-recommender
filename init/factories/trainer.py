@@ -133,7 +133,8 @@ class TrainerBuilderFactory(ObjectFactory):
         trainer_params = {key: config.get(key) for key in trainer_params_names}
 
         trainer_builder = TrainerBuilder(trainer_parameters=trainer_params)
-        trainer_builder.add_logger(dependencies["logger"])
+        if "logger" in dependencies:
+            trainer_builder.add_logger(dependencies["logger"])
         trainer_builder.add_callback(dependencies["checkpoint"])
 
         # add optional early stopping

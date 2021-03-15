@@ -123,7 +123,7 @@ class CosRecModel(nn.Module):
             x = out
 
         # FIXME: remove
-        unsqueeze = item_to_predict.unsqueeze(1)
+        unsqueeze = item_to_predict
         w2 = self.W2(unsqueeze)
         b2 = self.b2(unsqueeze)
         # TODO: should not be necessary for eval, please check

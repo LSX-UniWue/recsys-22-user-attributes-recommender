@@ -20,14 +20,14 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
 
     def __init__(self,
                  model: CosRecModel,
-                 tokenizer: Tokenizer,
+                 item_tokenizer: Tokenizer,
                  learning_rate: float,
                  weight_decay: float,
-                 metrics: MetricsContainer
+                 metrics: MetricsContainer,
                  ):
         super().__init__()
         self.model = model
-        self.tokenizer = tokenizer
+        self.item_tokenizer = item_tokenizer
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.metrics = metrics
@@ -69,8 +69,8 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
         items_to_predict = torch.cat((pos_items, neg_items), 1)
         logits = self.model(input_seq, users, items_to_predict)
         (pos_logits, neg_logits) = torch.split(logits,
-                                   [pos_items.size(1),
-                                    neg_items.size(1)], dim=1)
+                                               [pos_items.size(1),
+                                                neg_items.size(1)], dim=1)
         loss = self._calc_loss(pos_logits, neg_logits)
         return {
             'loss': loss
@@ -104,10 +104,17 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
 
         Where N is the batch size and S the max sequence length.
         """
+
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         users = CosRecModule.get_users_from_batch(batch)
         targets = batch[TARGET_ENTRY_NAME]
-        prediction = self.model(input_seq, users, targets, eval=True)
+        batch_size = input_seq.size()[0]
+
+        # TODO (AD) refactor this into a composable class to allow different strategies for item selection
+        device = input_seq.device
+        items_to_rank = torch.as_tensor(self.item_tokenizer.get_vocabulary().ids(), dtype=torch.long, device=device)
+        items_to_rank = items_to_rank.repeat([batch_size, 1])
+        prediction = self.model(input_seq, users, items_to_rank, eval=True)
         return build_eval_step_return_dict(input_seq, prediction, targets)
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
