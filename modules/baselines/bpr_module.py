@@ -1,7 +1,7 @@
 import torch
 from torch.nn.parameter import Parameter
 
-from data.datasets import USER_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
+from data.datasets import USER_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME, SAMPLE_IDS
 from metrics.container.metrics_container import MetricsContainer
 from modules.metrics_trait import MetricsTrait
 from pytorch_lightning import core as pl
@@ -20,6 +20,7 @@ class BprModule(MetricsTrait, pl.LightningModule):
                  metrics: MetricsContainer):
         super(BprModule, self).__init__()
         self.item_tokenizer = item_tokenizer
+        self.user_tokenizer = user_tokenizer
         self.embedding_size = embedding_size
         self.num_users = len(user_tokenizer)
         self.num_items = len(item_tokenizer)
@@ -62,7 +63,6 @@ class BprModule(MetricsTrait, pl.LightningModule):
 
         loss = -F.logsigmoid(x_uij).mean() + self.calculate_regularization_penalty(x_ui, x_uj)
         return {'loss': loss}
-
 
     def validation_step(self, batch, batch_idx):
         pass

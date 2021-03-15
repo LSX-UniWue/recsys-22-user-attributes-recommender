@@ -53,7 +53,17 @@ local metrics =  {
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "example.vocabulary.item_id.txt"
+                    file: base_path + prefix +".vocabulary.item_id.txt"
+                }
+            }
+        },
+        user: {
+            tokenizer: {
+                special_tokens: {
+
+                },
+                vocabulary: {
+                    file: base_path + prefix + ".vocabulary.user_id.txt"
                 }
             }
         }
