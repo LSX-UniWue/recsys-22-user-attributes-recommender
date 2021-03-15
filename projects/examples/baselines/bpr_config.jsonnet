@@ -13,7 +13,14 @@ local metrics =  {
         },
         pos_neg_data_sources: {
             parser: {
-                item_column_name: "item_id"
+                item_column_name: "item_id",
+                additional_attributes: {
+                    user_id: {
+                        type: "int",
+                        sequence: false,
+                    }
+                }
+
             },
             loader: {
                 batch_size: 9,

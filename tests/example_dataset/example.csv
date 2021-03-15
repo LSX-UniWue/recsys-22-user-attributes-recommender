@@ -1,18 +1,18 @@
-session_id	item_id
-1	Item 1
-1	Item 14
-1	Item 12
-1	Item 9
-2	Item 1
-2	Item 14
-2	Item 3
-2	Item 2
-3	Item 4
-3	Item 5
-3	Item 6
-3	Item 7
-4	Item 2
-4	Item 7
-5	Item 3
-5	Item 2
-5	Item 1
+session_id	item_id user_id
+1	Item 1  1
+1	Item 14 1
+1	Item 12 1
+1	Item 9  1
+2	Item 1  2
+2	Item 14 2
+2	Item 3  2
+2	Item 2  2
+3	Item 4  3
+3	Item 5  3
+3	Item 6  3
+3	Item 7  3
+4	Item 2  4
+4	Item 7  4
+5	Item 3  5
+5	Item 2  5
+5	Item 1  5
