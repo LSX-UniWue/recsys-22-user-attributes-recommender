@@ -54,7 +54,7 @@ class ParameterizedPositiveNegativeSamplerProcessor(Processor):
 
         if isinstance(session[0], list):
             results = []
-            for seq_step in session[:self.t]:  # skip last t sequence steps
+            for seq_step in session[:3]:  # skip last t sequence steps
                 neg_samples = torch.multinomial(weights, num_samples=3, replacement=True).tolist()
                 results.append(neg_samples)
             return results
@@ -73,12 +73,12 @@ class ParameterizedPositiveNegativeSamplerProcessor(Processor):
     def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
 
-        if len(session) < (self.t + 1):
+        if len(session) < (3 + 1):
             print(session)
             raise AssertionError(f'{parsed_session[SAMPLE_IDS]}')
 
-        x = session[:-self.t]
-        pos = session[-self.t:]
+        x = session[:-3]
+        pos = session[-3:]
         neg = self._sample_negative_target(session)
 
         parsed_session[ITEM_SEQ_ENTRY_NAME] = x
