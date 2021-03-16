@@ -13,15 +13,13 @@ local metrics =  {
                 item_column_name: "title"
             },
             loader: {
-                batch_size: 64,
+                batch_size: 4,
                 max_seq_length: max_seq_length,
                 num_workers: 4
 
             },
             path: base_path,
-            train_file_prefix: "ml-1m",
-            validation_file_prefix: "ml-1m",
-            test_file_prefix: "ml-1m",
+            file_prefix: "ml-1m",
             split_type: "leave_one_out",
             seed: 123456
         }
@@ -30,7 +28,6 @@ local metrics =  {
         type: "cosrec",
         learning_rate: 0.001,
         weight_decay: 0.01,
-
         metrics: {
             full: {
                 metrics: metrics

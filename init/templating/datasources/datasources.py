@@ -124,7 +124,7 @@ class NextPositionDatasetBuilder(DatasetBuilder):
         return {
             'type': 'sequence_position',
             'csv_file': f'{base_path}{prefix}.{prefix_id}.csv',
-            'csv_file_index': f'{base_path}{prefix}.{prefix_id}.session.idx',
+            'csv_file_index': f'{base_path}{prefix}.{prefix_id}.idx',
             'nip_index_file': f'{base_path}{prefix}.{prefix_id}.{next_seq_step_type}.idx'
         }
 
@@ -140,7 +140,7 @@ class SequenceDatasetRatioSplitBuilder(DatasetBuilder):
         return {
             'type': 'session',
             'csv_file': f'{base_path}{prefix}.{prefix_id}.csv',
-            'csv_file_index': f'{base_path}{prefix}.{prefix_id}.session.idx'
+            'csv_file_index': f'{base_path}{prefix}.{prefix_id}.idx'
         }
 
 
@@ -174,7 +174,7 @@ class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
         dataset_config = {
             'type': 'sequence_position',
             'csv_file': f'{base_path}{prefix}.csv',
-            'csv_file_index': f'{base_path}{prefix}.{prefix_id}.session.idx',
+            'csv_file_index': f'{base_path}{prefix}.{prefix_id}.idx',
             'nip_index_file': f'{base_path}{prefix}.{prefix_id}.nextitem.idx'
         }
 
@@ -197,7 +197,7 @@ class LeaveOneOutSessionDatasetBuilder(DatasetBuilder):
         dataset_config = {
             'type': 'sequence_position',
             'csv_file': f'{base_path}{prefix}.csv',
-            'csv_file_index': f'{base_path}{prefix}.session.idx',
+            'csv_file_index': f'{base_path}{prefix}.idx',
             'nip_index_file': f'{base_path}loo/{index_file_path}.loo.idx'
         }
         if is_training:
