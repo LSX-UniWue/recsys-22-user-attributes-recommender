@@ -6,7 +6,7 @@ from init.templating.template_processor import TemplateProcessor
 
 
 CHECKPOINT_PATH = ['trainer', 'checkpoint']
-LOGGER_PATH = ["trainer", "logger"]
+LOGGER_PATH = ["trainer", "loggers"]
 LOGGER_TYPE_PATH = LOGGER_PATH + ['type']
 
 
@@ -27,7 +27,7 @@ class OutputDirectoryProcessor(TemplateProcessor):
        defined and no dirpath is set.
 
     2) the trainer.logger section and sets `save_dir` to {output_directory} if the logger is of type mlflow or
-       tensorboard.
+       tensorboard or csv.
        If no logger is specified a tensorboard logger will be created with `save_dir` set to {output_directory}.
     """
     def can_modify(self, config: Dict[str, Any]) -> bool:
@@ -59,43 +59,40 @@ class OutputDirectoryProcessor(TemplateProcessor):
         unified_output_config = template_config.get('unified_output')
         output_base_dir = unified_output_config.get('path')
 
-        self._modify_logger(config, output_base_dir)
+        self._modify_loggers(config, output_base_dir)
         self._modify_checkpoint(config, output_base_dir)
 
         return config
 
-    def _modify_logger(self,
-                       config: Dict[str, Any],
-                       output_base_dir: str):
+    def _modify_loggers(self,
+                        config: Dict[str, Any],
+                        output_base_dir: str):
         logger_element_exists = config_entry_exists(config, LOGGER_PATH)
-        # TODO refactor logic logger-type wise
+
         if logger_element_exists:
-            logger_type = get_config_value(config, LOGGER_TYPE_PATH)
+            loggers_config = get_config_value(config, LOGGER_PATH)
+            if len(loggers_config) > 0:
+                # TODO refactor logic logger-type wise
+                for logger_type in loggers_config.keys():
+                    if logger_type == "tensorboard" or "mlflow" or "csv":
+                        set_config_value(config, LOGGER_PATH + [logger_type, "save_dir"], output_base_dir)
+                    else:
+                        print(f"Unknown logger {logger_type} I did not set the output directory!!")
 
-            if logger_type is None:
-                print(f"No logger type specified. Configuring a tensorboard logger...")
-                set_config_value(config, LOGGER_TYPE_PATH, "tensorboard")
-                logger_type = "tensorboard"
+                    # for tensorboard set version & name to empty string ("") to avoid subdirectories
+                    if logger_type == "tensorboard" or "csv":
+                        logger_name_path = LOGGER_PATH + [logger_type, "name"]
+                        if not config_entry_exists(config, logger_name_path):
+                            set_config_value(config, logger_name_path, "")
 
-            if logger_type == "tensorboard" or "mlflow":
-                set_config_value(config, LOGGER_PATH + ["save_dir"], output_base_dir)
+                        version_name_path = LOGGER_PATH + [logger_type, "version"]
+                        if not config_entry_exists(config, version_name_path):
+                            set_config_value(config, version_name_path, "")
             else:
-                print(f"Unknown logger {logger_type} I did not set the output directory!!")
-
-            # for tensorboard set version & name to empty string ("") to avoid subdirectories
-            if logger_type == "tensorboard":
-                logger_name_path = LOGGER_PATH + ["name"]
-                if not config_entry_exists(config, logger_name_path):
-                    set_config_value(config, logger_name_path, "")
-
-                version_name_path = LOGGER_PATH + ["version"]
-                if not config_entry_exists(config, version_name_path):
-                    set_config_value(config, version_name_path, "")
-        else:
-            # configure a default tensorboard logger
-            set_config_value(config,
-                             LOGGER_PATH,
-                             {"type": "tensorboard", "save_dir": output_base_dir, "name": "", "version": ""})
+                # configure a default tensorboard logger
+                set_config_value(config,
+                                 LOGGER_PATH + ["tensorboard"],
+                                 {"save_dir": output_base_dir, "name": "", "version": ""})
 
     def _modify_checkpoint(self, config: Dict[str, Any], output_base_dir: str):
         output_checkpoint_dir = f"{output_base_dir}/checkpoints"

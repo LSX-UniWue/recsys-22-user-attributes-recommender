@@ -10,14 +10,17 @@ from init.factories.modules.modules import GenericModuleFactory
 from init.factories.tokenizer.tokenizer_factory import TokenizersFactory
 from init.factories.trainer import TrainerBuilderFactory
 from init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
+from models.basket.nnrec.nnrec_model import NNRecModel
 from models.bert4rec.bert4rec_model import BERT4RecModel
 from models.caser.caser_model import CaserModel
 from models.narm.narm_model import NarmModel
 from models.rnn.rnn_model import RNNModel
 from models.sasrec.sas_rec_model import SASRecModel
-from models.cosrec.cosrec_model import CosRecModel
-from modules import BERT4RecModule, CaserModule, SASRecModule, CosRecModule
+from models.kebert4rec.kebert4rec_model import KeBERT4RecModel
+from models.hgn.hgn_model import HGNModel
+from modules import BERT4RecModule, CaserModule, SASRecModule, KeBERT4RecModule, HGNModule
 from modules.basket.dream_module import DreamModule
+from modules.basket.nnrec_module import NNRecModule
 from modules.narm_module import NarmModule
 from modules.rnn_module import RNNModule
 
@@ -28,15 +31,19 @@ class ContainerFactory(ObjectFactory):
         self.tokenizers_factory = TokenizersFactory()
         self.dependencies = DependenciesFactory(
             [
-                ConditionalFactory('type', {'bert4rec': GenericModuleFactory(BERT4RecModule, BERT4RecModel),
+                ConditionalFactory('type', {'kebert4rec': GenericModuleFactory(KeBERT4RecModule, KeBERT4RecModel),
+                                            'bert4rec': GenericModuleFactory(BERT4RecModule, BERT4RecModel),
                                             'caser': GenericModuleFactory(CaserModule, CaserModel),
                                             'narm': GenericModuleFactory(NarmModule, NarmModel),
                                             'sasrec': GenericModuleFactory(SASRecModule, SASRecModel),
                                             'rnn': GenericModuleFactory(RNNModule, RNNModel),
+                                            'hgn': GenericModuleFactory(HGNModule, HGNModel),
                                             'dream': GenericModuleFactory(DreamModule, RNNModel),
-                                            'cosrec': GenericModuleFactory(CosRecModule, CosRecModel)}, config_key='module',
-
+                                            'nnrec': GenericModuleFactory(NNRecModule, NNRecModel)},
+                                   config_key='module',
                                    config_path=['module']),
+
+
                 DataSourcesFactory(),
                 TrainerBuilderFactory()
             ]
@@ -65,6 +72,7 @@ class ContainerFactory(ObjectFactory):
               ) -> Container:
         # we need the tokenizers in the context because many objects have dependencies
         tokenizers_config = config.get_config(self.tokenizers_factory.config_path())
+
         tokenizers = self.tokenizers_factory.build(tokenizers_config, context)
 
         for key, tokenizer in tokenizers.items():

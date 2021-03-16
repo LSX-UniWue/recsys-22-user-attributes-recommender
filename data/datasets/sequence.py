@@ -21,6 +21,10 @@ def _parse_timestamp(text: str,
                      ) -> datetime.datetime:
     return datetime.datetime.strptime(text, date_format)
 
+def _parse_strlist(text: str,
+                   delimiter: str) -> List[str]:
+    return text.split(sep=delimiter)
+
 
 # TODO: move to provider utils?
 def _build_converter(converter_info: Dict[str, Any]
@@ -34,6 +38,9 @@ def _build_converter(converter_info: Dict[str, Any]
 
     if feature_type == 'timestamp':
         return functools.partial(_parse_timestamp, date_format=converter_info['format'])
+
+    if feature_type == 'strlist':
+        return functools.partial(_parse_strlist, delimiter=converter_info['delimiter'])
 
     raise KeyError(f'{feature_type} not supported. Currently only bool, timestamp and int are supported.'
                    f'See documentation for more details')

@@ -17,6 +17,11 @@ from utils.hyperparameter_utils import save_hyperparameters
 
 
 class RNNModule(MetricsTrait, pl.LightningModule):
+    """
+
+    module for training a RNN model
+
+    """
 
     @save_hyperparameters
     def __init__(self,
@@ -41,6 +46,31 @@ class RNNModule(MetricsTrait, pl.LightningModule):
     def get_metrics(self) -> MetricsContainer:
         return self.metrics
 
+    @auto_move_data
+    def forward(self,
+                batch: Dict[str, torch.Tensor],
+                batch_idx: int
+                ) -> torch.Tensor:
+        """
+        Applies the RNN model on a batch of sequences and returns logits for every sample in the batch.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
+
+        A padding mask will be calculated on the fly, based on the `self.tokenizer` of the module.
+
+        :param batch: a batch.
+        :param batch_idx: the batch number.
+
+        :return: a tensor with logits for every batch of size (N, I)
+
+        Where N is the batch size, S the max sequence length, and I the item vocabulary size.
+        """
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
+
+        return self.model(input_seq, padding_mask)
+
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
@@ -61,7 +91,7 @@ class RNNModule(MetricsTrait, pl.LightningModule):
 
         :return: A dictionary with the loss.
         """
-        logits = self.forward(batch, batch_idx)
+        logits = self(batch, batch_idx)
 
         target = batch[TARGET_ENTRY_NAME]
         loss = self._calc_loss(logits, target)
@@ -106,9 +136,9 @@ class RNNModule(MetricsTrait, pl.LightningModule):
         """
 
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        target = batch[TARGET_ENTRY_NAME]
 
         logits = self(batch, batch_idx)
-        target = batch[TARGET_ENTRY_NAME]
 
         loss = self._calc_loss(logits, target)
         self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
@@ -123,30 +153,12 @@ class RNNModule(MetricsTrait, pl.LightningModule):
                   ):
         return self.validation_step(batch, batch_idx)
 
-    @auto_move_data
-    def forward(self,
+    def predict(self,
                 batch: Dict[str, torch.Tensor],
-                batch_idx: int
+                batch_idx: int,
+                dataloader_idx: Optional[int] = None
                 ) -> torch.Tensor:
-        """
-        Applies the RNN model on a batch of sequences and returns logits for every sample in the batch.
-
-        `batch` must be a dictionary containing the following entries:
-            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S),
-
-        A padding mask will be calculated on the fly, based on the `self.tokenizer` of the module.
-
-        :param batch: a batch.
-        :param batch_idx: the batch number.
-
-        :return: a tensor with logits for every batch of size (N, I)
-
-        Where N is the batch size, S the max sequence length, and I the item vocabulary size.
-        """
-        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
-
-        return self.model(input_seq, padding_mask)
+        return self(batch, batch_idx)
 
     def configure_optimizers(self):
         return torch.optim.Adam(

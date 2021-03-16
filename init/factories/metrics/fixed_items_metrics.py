@@ -8,11 +8,7 @@ from init.factories.util import require_config_keys
 from init.object_factory import ObjectFactory, CanBuildResult
 from metrics.container.metrics_sampler import FixedItemsSampler
 from metrics.container.metrics_container import RankingMetricsContainer
-
-
-def _load_items_file(path: str) -> List[int]:
-    with open(path) as item_file:
-        return [int(line) for line in item_file.readlines()]
+from utils.ioutils import load_file_with_item_ids
 
 
 class FixedItemsMetricsFactory(ObjectFactory):
@@ -32,7 +28,7 @@ class FixedItemsMetricsFactory(ObjectFactory):
 
     def build(self, config: Config, context: Context) -> RankingMetricsContainer:
         metrics = self.metrics_factory.build(config.get_config(self.metrics_factory.config_path()), context)
-        items = _load_items_file(config.get('item_file'))
+        items = load_file_with_item_ids(Path(config.get('item_file')))
 
         sampler = FixedItemsSampler(items)
         return RankingMetricsContainer(metrics, sampler)

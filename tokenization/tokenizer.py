@@ -5,6 +5,11 @@ from typing import List, Optional, Union
 
 
 class Tokenizer:
+    """
+
+    TODO: add docu
+
+    """
 
     def __init__(self,
                  vocabulary: Vocabulary,
@@ -54,6 +59,10 @@ class Tokenizer:
         return self.convert_tokens_to_ids(self.cls_token)
 
     def get_special_token_ids(self) -> List[int]:
+        """
+        returns a list of all special token ids
+        :return: list of all special token ids
+        """
         special_token_ids = []
         for key in SPECIAL_TOKENS_ATTRIBUTES:
             token = getattr(self, key)
@@ -64,7 +73,24 @@ class Tokenizer:
         return special_token_ids
 
     def get_vocabulary(self) -> Vocabulary:
+        """
+        :return: the vocabulary of the tokenizer
+        """
         return self.vocabulary
+
+    def convert_ids_to_tokens(self,
+                              token_ids: Union[int, List[int], List[List[int]]]
+                              ) -> Union[Optional[str], List[str], List[List[str]]]:
+        if token_ids is None:
+            return None
+
+        if isinstance(token_ids, int):
+            return self._convert_id_to_item(token_ids)
+
+        items = []
+        for token_id in token_ids:
+            items.append(self._convert_id_to_item(token_id))
+        return items
 
     def convert_tokens_to_ids(self,
                               items: Union[str, List[str], List[List[str]]]
@@ -80,26 +106,35 @@ class Tokenizer:
             ids.append(self._convert_item_to_id(item))
         return ids
 
-    #TODO (AD) this should be a separate class
-    def get_special_tokens_mask(self,
-                                token_ids: List[int],
-                                second_item_ids: List[int] = None,
-                                already_has_special_tokens: bool = False
-                                ) -> List[bool]:
-        if already_has_special_tokens:
-            if second_item_ids is not None:
-                raise ValueError("You should not supply a second sequence if the provided sequence of "
-                                 "ids is already formatted with special tokens for the model.")
-            return list(map(lambda x: x in [self.sep_token_id, self.cls_token_id], token_ids))
+    def _convert_id_to_item(self,
+                            token_id: Union[int, List[int]]
+                            ) -> Union[Optional[str], List[str]]:
+        """
+        Converts the token_id into its token.
 
-        if second_item_ids is None:
-            return [True] + ([False] * len(token_ids)) + [True]
-        return [True] + ([False] * len(token_ids)) + [True, True] + ([False] * len(second_item_ids)) + [True]
+        :param token_id: a token_id
+        :return: the token if the token is part of the vocabulary
+        """
+        if token_id is None:
+            return None
+
+        if isinstance(token_id, int):
+            token = self.vocabulary.get_token(token_id)
+            if token is None:
+                return None
+            return token
+
+        # here we assume it is a list
+        tokens = []
+        for t_id in token_id:
+            token = self._convert_id_to_item(t_id)
+            tokens.append(token)
+        return tokens
 
     # FIXME (AD) if the vocabulary does not contain an UNK token, this will cause an endless recursion.
     def _convert_item_to_id(self,
                             token: Union[str, List[str]]
-                            ) -> Optional[int]:
+                            ) -> Union[Optional[int], List[int]]:
         """
         Converts the token into its id. If the token is not part of the vocabulary and the unk_token property is set,
         the id for the unk_token will be returned. Otherwise if the token can not be found, None is returned.

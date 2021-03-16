@@ -26,16 +26,40 @@ TODO
 
 ## Loggers
 
+### Tensorboard
+
+### CSV
+
+The CSV logger logs the hyperparameters into a hparams.yaml file and the metrics into the metrics.csv file under the save_dir.
+
+```
+trainer: {
+    ...
+    loggers: {
+        ...
+        csv: {},
+        ...
+    },
+    ...
+}
+```
+
+
+See [PyTorch Lightning Docu for CSVLogger](https://pytorch-lightning.readthedocs.io/en/0.9.0/api/pytorch_lightning.loggers.csv_logs.html) for all parameters that can be configured.
+
 ### mlflow
 Under trainer add a logger section:
 
 ```
 trainer: {
     ...
-      logger: {
-        type: mlflow,
-        experiment_name: test,
-        tracking_uri: http://localhost:5000
+    loggers: {
+        ...
+        mlflow {
+            experiment_name: test,
+            tracking_uri: http://localhost:5000
+        },
+        ...
     }
     ...
 }
@@ -46,11 +70,14 @@ Under trainer add a logger section:
 ```
 trainer {
     ...
-      logger: {
-        type: "wandb",
-        log_model: false,
-        project: "test"
-      },
+    loggers: {
+        ...
+        "wandb": {
+            log_model: false,
+            project: "test"
+        },
+        ...
+    },
     ...
 }
 ```
