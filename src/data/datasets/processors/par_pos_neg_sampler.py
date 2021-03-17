@@ -1,12 +1,13 @@
 import torch
 
-from typing import Union, List, Dict, Any, Set
+from typing import Union, List, Dict, Any, Set, Optional
 from numpy.random._generator import default_rng
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
 from data.datasets.processors.processor import Processor
 from asme.tokenization.tokenizer import Tokenizer
 
+DEFAULT_SAMPLE_SIZE = 3
 
 class ParameterizedPositiveNegativeSamplerProcessor(Processor):
     """
@@ -30,12 +31,12 @@ class ParameterizedPositiveNegativeSamplerProcessor(Processor):
     def __init__(self,
                  tokenizer: Tokenizer,
                  seed: int = 42,
-                 t: int = 3
+                 t: Optional[int] = DEFAULT_SAMPLE_SIZE
                  ):
         super().__init__()
         self._tokenizer = tokenizer
         self._rng = default_rng(seed=seed)
-        self.t = t
+        self.t = DEFAULT_SAMPLE_SIZE if t is None else t
 
     def _sample_negative_target(self,
                                 session: Union[List[int], List[List[int]]]
@@ -54,12 +55,12 @@ class ParameterizedPositiveNegativeSamplerProcessor(Processor):
 
         if isinstance(session[0], list):
             results = []
-            for seq_step in session[:3]:  # skip last t sequence steps
-                neg_samples = torch.multinomial(weights, num_samples=3, replacement=True).tolist()
+            for seq_step in session[:self.t]:  # skip last t sequence steps
+                neg_samples = torch.multinomial(weights, num_samples=self.t, replacement=True).tolist()
                 results.append(neg_samples)
             return results
 
-        return torch.multinomial(weights, num_samples=3, replacement=True).tolist()
+        return torch.multinomial(weights, num_samples=self.t, replacement=True).tolist()
 
     def _get_all_tokens_of_session(self, session: Union[List[int], List[List[int]]],
                                    ) -> Set[int]:
@@ -73,12 +74,12 @@ class ParameterizedPositiveNegativeSamplerProcessor(Processor):
     def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
 
-        if len(session) < (3 + 1):
+        if len(session) < (self.t + 1):
             print(session)
             raise AssertionError(f'{parsed_session[SAMPLE_IDS]}')
 
-        x = session[:-3]
-        pos = session[-3:]
+        x = session[:-self.t]
+        pos = session[-self.t:]
         neg = self._sample_negative_target(session)
 
         parsed_session[ITEM_SEQ_ENTRY_NAME] = x
