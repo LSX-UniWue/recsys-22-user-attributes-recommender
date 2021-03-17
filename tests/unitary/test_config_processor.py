@@ -4,8 +4,8 @@ import optuna
 import pytest
 from optuna import Trial
 
-from init.templating.search.processor import SearchTemplateProcessor
-from init.templating.search.resolver import OptunaParameterResolver
+from asme.init.templating.search import SearchTemplateProcessor
+from asme.init.templating.search import OptunaParameterResolver
 
 
 @pytest.fixture

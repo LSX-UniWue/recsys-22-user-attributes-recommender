@@ -12,7 +12,7 @@ poetry shell
 source recommender/venv/recommender/bin/activate
 ````
 
-The components of this framework can be executed using the [Runner](./../runner).
+The components of this framework can be executed using the [Runner](../asme/runner).
 
 ## Pre-Processing Data Sets ##
 For all data sets a CLI is provided via [Typer](https://typer.tiangolo.com/).

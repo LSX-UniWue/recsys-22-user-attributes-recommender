@@ -4,7 +4,7 @@ import pytest
 import torch
 from util import build_sample, EPSILON
 
-from metrics.mrr import MRRMetric
+from asme.metrics.mrr import MRRMetric
 
 
 def get_single_item_recommendation_samples():
