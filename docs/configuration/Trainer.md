@@ -5,7 +5,8 @@
 
 If you want to early stop training based on a metric or the loss, add the following to the trainer config:
 
-```
+``` json
+...
 trainer: {
     ...
     early_stopping: {
@@ -15,7 +16,8 @@ trainer: {
       mode: MODE
     },
     ...
-}
+},
+...
 ```
 
 See [Pytorch Lightning Docu](https://pytorch-lightning.readthedocs.io/en/stable/common/early_stopping.html?highlight=early%20stopping#early-stopping-based-on-metric-using-the-earlystopping-callback) for more details.
@@ -32,7 +34,8 @@ TODO
 
 The CSV logger logs the hyperparameters into a hparams.yaml file and the metrics into the metrics.csv file under the save_dir.
 
-```
+``` json
+...
 trainer: {
     ...
     loggers: {
@@ -41,7 +44,8 @@ trainer: {
         ...
     },
     ...
-}
+},
+...
 ```
 
 
@@ -50,24 +54,27 @@ See [PyTorch Lightning Docu for CSVLogger](https://pytorch-lightning.readthedocs
 ### mlflow
 Under trainer add a logger section:
 
-```
+``` json
+...
 trainer: {
     ...
     loggers: {
         ...
         mlflow {
-            experiment_name: test,
-            tracking_uri: http://localhost:5000
+            experiment_name: "test",
+            tracking_uri: "http://localhost:5000"
         },
         ...
     }
     ...
-}
+},
+...
 ```
 
 ### wandb
 Under trainer add a logger section:
-```
+``` json
+...
 trainer {
     ...
     loggers: {
@@ -79,5 +86,6 @@ trainer {
         ...
     },
     ...
-}
+},
+...
 ```

@@ -21,8 +21,9 @@ def _resolve_dependency(parameter_dependency_infos: List[ParameterInfo]) -> List
     dependency_lists = {}
 
     for parameter_dependency_info in parameter_dependency_infos:
-        depends_on = parameter_dependency_info.depends_on
-        if depends_on:
+        dependency = parameter_dependency_info.dependency
+        if dependency is not None:
+            depends_on = dependency.depends_on
             dependency_list = dependency_lists.get(depends_on, [])
             dependency_list.append(parameter_dependency_info)
             dependency_lists[depends_on] = dependency_list
@@ -97,8 +98,8 @@ class SearchTemplateProcessor(TemplateProcessor):
 
         for parameter_to_resolve in parameters_to_resolve:
             value_key = parameter_to_resolve.parameter_key
-            value = self.resolver.resolve(parameter_to_resolve, resolved_values)
-            resolved_values[value_key] = value
+            resolved_value = self.resolver.resolve(parameter_to_resolve, resolved_values)
+            resolved_values[value_key] = resolved_value
 
         # now replace the resolver directives in the template
         def _replace_recursively(template: Dict[str, Any], key_path: List[str] = None) -> Union[Any, Dict[str, Any]]:
@@ -118,7 +119,7 @@ class SearchTemplateProcessor(TemplateProcessor):
             for key, value in template.items():
                 current_key_path = key_path + [key]
                 if self.resolver.can_resolve(key):
-                    # we use only the keypath, we removed hyper_opt from the param info
+                    # we use only the key path, we removed hyper_opt from the param info
                     value_to_resolve = key_path_to_str(key_path)
                     result = resolved_values[value_to_resolve]
                 elif not isinstance(value, dict):

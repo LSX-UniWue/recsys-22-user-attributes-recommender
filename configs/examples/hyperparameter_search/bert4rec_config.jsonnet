@@ -57,7 +57,7 @@ local metrics =  {
                     suggest: "int",
                     params: {
                        low: 2,
-                       high: 8,
+                       high: 2,
                        step: 2
                     }
                 }
@@ -80,11 +80,29 @@ local metrics =  {
                       high: 8,
                       step: 2
                    },
-                   depends_on: "module.model.num_transformer_heads",
-                   dependency: "multiply"
+                   dependency: {
+                      type: "multiply",
+                      on: "module.model.num_transformer_heads"
+                   }
                 }
             },
-            transformer_dropout: 0.1
+            transformer_dropout: 0.1,
+            nonlinearity: {
+               hyper_opt: {
+                   suggest: "categorical",
+                   params: {
+                        choices: ['relu', 'tanh']
+                   },
+                   dependency: {
+                       on: "module.model.num_transformer_heads",
+                       type: "optimize_iff",
+                       conditions: [{
+                          type: 'equal',
+                          compare_value: 5
+                       }]
+                   }
+               }
+            }
         }
     },
     tokenizers: {

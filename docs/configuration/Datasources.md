@@ -18,7 +18,7 @@ the successor for each sequence step (positive example; key: `TODO`), and a nega
 space, that does not occur in the session or is the successor.
 
 
-```
+``` json
 {
     type: 'session',
     csv_file: '../tests/example_dataset/train.csv',

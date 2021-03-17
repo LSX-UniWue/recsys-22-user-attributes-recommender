@@ -28,7 +28,7 @@ If you want to validate your model or evaluate your model how good your model ra
 of the item space, you can specify a metrics section under module.
 For each metric you can specify which `k`s should be evaluated.
 
-```
+``` json
 ...
 module: {
         ...
@@ -50,7 +50,7 @@ module: {
 In contrast to metrics the sampled metrics configuration only samples items from the item space
 to evaluate it with target item(s).
 
-```
+``` json
 ...
 module: {
         ...
@@ -82,7 +82,7 @@ TODO: point to the help script to calculate the file
 
 This metric only evaluates a fixed set of items.
 
-```
+``` json
 ...
 module: {
         ...
