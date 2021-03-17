@@ -10,4 +10,4 @@ fi
 # now run the configuration using poetry
 
 export PYTHONPATH=/jdf
-/bin/bash -c "cd /jdf && python -u -m runner.run_model $*"
+/bin/bash -c "asme $*"

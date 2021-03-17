@@ -25,4 +25,4 @@ fi
 # now run the configuration using poetry
 
 export PYTHONPATH=${PROJECT_DIR}/recommender
-/bin/bash -c "cd ${PROJECT_DIR}/recommender && poetry run python -m runner.run_model $*"
+/bin/bash -c "cd ${PROJECT_DIR}/recommender && poetry run python -m asme.main $*"
