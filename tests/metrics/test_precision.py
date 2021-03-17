@@ -4,7 +4,7 @@ import pytest
 import torch
 from util import build_sample, EPSILON
 
-from metrics.precision import PrecisionMetric
+from asme.metrics.precision import PrecisionMetric
 
 
 def get_multiple_item_recommendation_samples():

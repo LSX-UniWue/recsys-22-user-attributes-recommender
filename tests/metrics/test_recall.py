@@ -4,7 +4,7 @@ import pytest
 import torch
 from util import build_sample, EPSILON
 
-from metrics.recall import RecallMetric
+from asme.metrics.recall import RecallMetric
 
 
 def get_single_item_recommendation_samples():

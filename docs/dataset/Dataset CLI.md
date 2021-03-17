@@ -26,14 +26,14 @@ The structure of the CLI (dataset_app.py) is as follows:
 ## Usage
 
 ````bash
-python dataset_app.py [OPTIONS] COMMAND [ARGS]...
+python main.py [OPTIONS] COMMAND [ARGS]...
 ````
 Possible commands and sub-commands are listed above.
 
 For example to generate the MovieLens 1m dataset, execute the following command:
 
 ````bash
-python dataset_app.py pre_process movielens ml-1m
+python main.py pre_process movielens ml-1m
 ````
 
 ## Packaging
