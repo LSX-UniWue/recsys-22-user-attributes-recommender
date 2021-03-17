@@ -40,7 +40,7 @@ def next_item(
                                                                conditional_split.get_position_with_offset_one)
     # Create testing index with target item n
     conditional_split.create_conditional_index_using_extractor(data_file_path, session_index_path,
-                                                               output_dir_path / (file_prefix + ".test.loo.idx"),
+                                                               output_dir_path / (file_prefix + ".ml-1m.test.loo.idx"),
                                                                item_header,
                                                                minimum_session_length,
                                                                delimiter,

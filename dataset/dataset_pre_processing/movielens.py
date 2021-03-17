@@ -147,13 +147,13 @@ def split_movielens_dataset(dataset_dir: Path,
 
     additional_features = {}
 
-    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'train.nip.idx', item_header,
+    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'ml-1m.session.idx', item_header,
                                              min_seq_length, delimiter, additional_features, _all_remaining_positions)
 
-    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'valid.loo.idx', item_header,
+    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'ml-1m.validation.loo.idx', item_header,
                                              min_seq_length, delimiter, additional_features,
                                              functools.partial(_get_position_with_offset, offset=2))
-    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'test.loo.idx', item_header,
+    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'ml-1m.test.loo.idx', item_header,
                                              min_seq_length, delimiter, additional_features,
                                              functools.partial(_get_position_with_offset, offset=1))
 
