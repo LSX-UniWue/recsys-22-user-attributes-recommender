@@ -39,6 +39,9 @@ class ItemEmbedding(nn.Module):
             'mean': partial(torch.mean, dim=-2)
         }[self.embedding_mode]
 
+    def get_weight(self) -> torch.Tensor:
+        return self.embedding.weight
+
     def forward(self,
                 items: torch.Tensor,
                 flatten: bool = True

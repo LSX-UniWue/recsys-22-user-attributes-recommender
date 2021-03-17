@@ -10,21 +10,21 @@ datasets:
       csv_file: /ssd/ml-20m/ml-20m.csv
       csv_file_index: /ssd/ml-20m/ml-20m.idx
       parser: *parser
-      nip_index_file: /ssd/ml-20m/test.loo.idx
+      nip_index_file: /ssd/ml-20m/ml-1m.test.loo.idx
     loader: *loader
   train:
     dataset:
       csv_file: /ssd/ml-20m/ml-20m.csv
       csv_file_index: /ssd/ml-20m/ml-20m.idx
       # FIXME this is the wrong index for validation only
-      nip_index_file: /ssd/ml-20m/valid.loo.idx
+      nip_index_file: /ssd/ml-20m/ml-1m.validation.loo.idx
       parser: *parser
     loader: *loader
   validation:
     dataset:
       csv_file: /ssd/ml-20m/ml-20m.csv
       csv_file_index: /ssd/ml-20m/ml-20m.idx
-      nip_index_file: /ssd/ml-20m/valid.loo.idx
+      nip_index_file: /ssd/ml-20m/ml-1m.validation.loo.idx
       parser: *parser
     loader: *loader
 model:

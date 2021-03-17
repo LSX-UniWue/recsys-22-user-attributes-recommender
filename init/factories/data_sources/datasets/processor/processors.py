@@ -7,6 +7,8 @@ from init.factories.common.conditional_based_factory import ConditionalFactory
 from init.factories.common.config_based_factory import ListFactory
 from init.factories.data_sources.datasets.processor.cloze_mask import ClozeProcessorFactory
 from init.factories.data_sources.datasets.processor.last_item_mask import LastItemMaskProcessorFactory
+from init.factories.data_sources.datasets.processor.par_pos_neg_sampler import \
+    ParameterizedPositiveNegativeSamplerProcessorFactory
 from init.factories.data_sources.datasets.processor.pos_neg_sampler import PositiveNegativeSamplerProcessorFactory
 from init.factories.data_sources.datasets.processor.position_token import PositionTokenProcessorFactory
 from init.factories.data_sources.datasets.processor.tokenizer import TokenizerProcessorFactory
@@ -24,6 +26,7 @@ class ProcessorsFactory(ObjectFactory):
             ConditionalFactory('type', {
                 'cloze': ClozeProcessorFactory(),
                 'pos_neg': PositiveNegativeSamplerProcessorFactory(),
+                'par_pos_neg': ParameterizedPositiveNegativeSamplerProcessorFactory(),
                 'last_item_mask': LastItemMaskProcessorFactory(),
                 'position_token': PositionTokenProcessorFactory(),
                 'tokenizer': TokenizerProcessorFactory()

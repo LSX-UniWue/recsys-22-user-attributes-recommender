@@ -17,8 +17,8 @@ from models.narm.narm_model import NarmModel
 from models.rnn.rnn_model import RNNModel
 from models.sasrec.sas_rec_model import SASRecModel
 from models.kebert4rec.kebert4rec_model import KeBERT4RecModel
-from modules import BERT4RecModule, CaserModule, SASRecModule, KeBERT4RecModule
-from modules import BERT4RecModule, CaserModule, SASRecModule
+from models.hgn.hgn_model import HGNModel
+from modules import BERT4RecModule, CaserModule, SASRecModule, KeBERT4RecModule, HGNModule
 from modules.baselines.bpr_module import BprModule
 from modules.baselines.markov_module import MarkovModule
 from modules.baselines.pop_module import PopModule
@@ -41,6 +41,7 @@ class ContainerFactory(ObjectFactory):
                                             'narm': GenericModuleFactory(NarmModule, NarmModel),
                                             'sasrec': GenericModuleFactory(SASRecModule, SASRecModel),
                                             'rnn': GenericModuleFactory(RNNModule, RNNModel),
+                                            'hgn': GenericModuleFactory(HGNModule, HGNModel),
                                             'dream': GenericModuleFactory(DreamModule, RNNModel),
                                             'nnrec': GenericModuleFactory(NNRecModule, NNRecModel),
                                             'pop': GenericModuleFactory(PopModule, None),
