@@ -14,10 +14,12 @@ class ListFactory(ObjectFactory):
     def __init__(self,
                  object_factory: ObjectFactory,
                  config_key: str = "",
-                 config_path: List[str] = [],
+                 config_path: List[str] = None,
                  is_required: bool = True,
                  ):
         super().__init__()
+        if config_path is None:
+            config_path = []
         self._object_factory = object_factory
 
         self._is_required = is_required

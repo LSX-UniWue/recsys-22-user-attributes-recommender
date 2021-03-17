@@ -12,7 +12,7 @@ class DependenciesFactory(ObjectFactory):
     def __init__(self,
                  dependencies: List[ObjectFactory],
                  config_key: str = "",
-                 config_path: List[str] = [],
+                 config_path: List[str] = None,
                  required: bool = True,
                  optional_based_on_path: bool = False):
         """
@@ -26,6 +26,8 @@ class DependenciesFactory(ObjectFactory):
         :param optional_based_on_path: the dependency should only be called if the path exists
         """
         super().__init__()
+        if config_path is None:
+            config_path = []
         self._required = required
         self._config_path = config_path
         self._config_key = config_key

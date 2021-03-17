@@ -1,6 +1,6 @@
 from typing import List, Union, Any, Dict
 
-import asme.init.config
+from asme.init.config import Config
 from asme.init.context import Context
 from asme.init.object_factory import ObjectFactory, CanBuildResult
 
@@ -16,10 +16,12 @@ class ConditionalFactory(ObjectFactory):
                  key: str,
                  factory_dict: Dict[str, ObjectFactory],
                  config_key: str = "",
-                 config_path: List[str] = [],
+                 config_path: List[str] = None,
                  is_required: bool = True,
                  ):
         super().__init__()
+        if config_path is None:
+            config_path = []
         self._key = key
         self._factory_dict = factory_dict
 
@@ -28,18 +30,23 @@ class ConditionalFactory(ObjectFactory):
         self._config_key = config_key
 
     def can_build(self,
-                  config: asme.init.config.Config,
+                  config: Config,
                   context: Context
                   ) -> CanBuildResult:
         factory = self._get_factory(config)
         return factory.can_build(config, context)
 
-    def build(self, config: asme.init.config.Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
+    def build(self,
+              config: Config,
+              context: Context
+              ) -> Union[Any, Dict[str, Any], List[Any]]:
         factory = self._get_factory(config)
         result = factory.build(config, context)
         return result
 
-    def _get_factory(self, config):
+    def _get_factory(self,
+                     config: Config
+                     ) -> ObjectFactory:
         config_value = config.get(self._key)
         if config_value not in self._factory_dict:
             raise ValueError(f'no factory found for {config_value}')
