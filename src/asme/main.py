@@ -9,8 +9,7 @@ from tempfile import NamedTemporaryFile
 from pathlib import Path
 from typing import Optional, Callable, List, Iterator
 from optuna.study import StudyDirection
-from pytorch_lightning import seed_everything, Callback, LightningModule
-from pytorch_lightning.trainer.configuration_validator import ConfigValidator
+from pytorch_lightning import seed_everything, Callback
 from pytorch_lightning.utilities import cloud_io
 from torch.utils.data import Sampler, DataLoader
 from torch.utils.data.dataset import T_co
@@ -207,18 +206,6 @@ def predict(config_file: str = typer.Argument(..., help='the path to the config 
     trainer_builder = container.trainer()
     trainer_builder = trainer_builder.set("gpus", gpu)
     trainer = trainer_builder.build()
-
-    # XXX: currently a bug in pytorch lightning
-    # remove as soon the bug is fixed
-    class MyConfigValidator(ConfigValidator):
-        def __init__(self, trainer):
-            super(MyConfigValidator, self).__init__(trainer)
-
-        def verify_loop_configurations(self, model: LightningModule):
-            return
-
-    config_validator = MyConfigValidator(trainer)
-    trainer.config_validator = config_validator
 
     def _noop_filter(sample_predictions: np.ndarray):
         return sample_predictions
