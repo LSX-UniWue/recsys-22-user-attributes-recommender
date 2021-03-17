@@ -19,6 +19,10 @@ from models.sasrec.sas_rec_model import SASRecModel
 from models.kebert4rec.kebert4rec_model import KeBERT4RecModel
 from models.hgn.hgn_model import HGNModel
 from modules import BERT4RecModule, CaserModule, SASRecModule, KeBERT4RecModule, HGNModule
+from modules.baselines.bpr_module import BprModule
+from modules.baselines.markov_module import MarkovModule
+from modules.baselines.pop_module import PopModule
+from modules.baselines.session_pop_module import SessionPopModule
 from modules.basket.dream_module import DreamModule
 from modules.basket.nnrec_module import NNRecModule
 from modules.narm_module import NarmModule
@@ -39,11 +43,13 @@ class ContainerFactory(ObjectFactory):
                                             'rnn': GenericModuleFactory(RNNModule, RNNModel),
                                             'hgn': GenericModuleFactory(HGNModule, HGNModel),
                                             'dream': GenericModuleFactory(DreamModule, RNNModel),
-                                            'nnrec': GenericModuleFactory(NNRecModule, NNRecModel)},
+                                            'nnrec': GenericModuleFactory(NNRecModule, NNRecModel),
+                                            'pop': GenericModuleFactory(PopModule, None),
+                                            'session_pop': GenericModuleFactory(SessionPopModule, None),
+                                            'markov': GenericModuleFactory(MarkovModule, None),
+                                            'bpr' : GenericModuleFactory(BprModule, None),},
                                    config_key='module',
                                    config_path=['module']),
-
-
                 DataSourcesFactory(),
                 TrainerBuilderFactory()
             ]
