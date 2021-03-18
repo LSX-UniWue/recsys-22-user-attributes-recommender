@@ -56,7 +56,7 @@ sample.
 
 It can be triggered by adding the following element instead of `data_sources`:
 
-```
+``` json
 ...
 pos_neg_data_sources: {
     parser: {
