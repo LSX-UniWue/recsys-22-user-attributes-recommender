@@ -36,7 +36,7 @@ Create a run config.
 
 Instead of config a fixed value for a hyperparameter:
 
-```
+``` json
 model: {
     ...
     num_transformer_heads: 4,
@@ -46,7 +46,7 @@ model: {
 
 Add a hyper_opt config object to the hyperparameter:
 
-```
+``` json
 model: {
     ...
     transformer_hidden_size: {
@@ -77,7 +77,7 @@ Please refer to the Optuna documentation for the available parameters for each s
 
 If a hyperparameter depends on another hyperparameter you can specify this also in the config:
 
-```
+``` json
 model {
     ...
     transformer_hidden_size: {
@@ -87,9 +87,11 @@ model {
             low: 2
             high: 8
             step: 2
+          },
+          dependency: {
+            type: "multiply",
+            on: "model.num_transformer_heads"
           }
-          depends_on: "model.num_transformer_heads",
-          dependency: "multiply"
         }
     },
     ...
@@ -99,6 +101,31 @@ model {
 Currently, we support the following dependencies:
 
 * multiply: the suggested value is multiplied with the dependent value
+* optimize_iff: the hyperparameter will only be generated if a condition is satisfied based on another hyperparameter
 
+``` json
+model {
+    ...
+    transformer_hidden_size: {
+        hyper_opt: {
+          suggest: "int",
+          params: {
+            low: 2
+            high: 8
+            step: 2
+          },
+          dependency: {
+            on: "module.model.num_transformer_heads",
+            type: "optimize_iff",
+            conditions: [{
+              type: 'equal',
+              compare_value: 5
+            }]
+          }
+        }
+    },
+    ...
+}
+```
 
 ## 4. Step: Run Study

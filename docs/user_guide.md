@@ -14,7 +14,7 @@ source recommender/venv/recommender/bin/activate
 
 The components of this framework can be executed using the [Runner](../asme/runner).
 
-## Pre-Processing Data Sets ##
+## Pre-Processing Data Sets
 For all data sets a CLI is provided via [Typer](https://typer.tiangolo.com/).
 ### MovieLens Data Set ###
 To download and pre-process the MovieLens data set use the following commands:

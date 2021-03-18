@@ -22,7 +22,8 @@ class ParameterizedPositiveNegativeDataSourcesTemplateProcessor(DataSourceTempla
     def _build_train_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
         par_pos_neg_sampler_processor = {
             'type': "par_pos_neg",
-            'seed': config['seed']
+            'seed': config['seed'],
+            't': config['t']
         }
 
         return build_datasource(self.TRAIN_DATASET_BUILDERS, parser, config, 'train', par_pos_neg_sampler_processor)
