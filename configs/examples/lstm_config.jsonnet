@@ -1,4 +1,4 @@
-local base_path = "../tests/example_dataset/";
+wlocal base_path = "../tests/example_dataset/";
 local max_seq_length = 7;
 local metrics =  {
     mrr: [1, 3, 5],

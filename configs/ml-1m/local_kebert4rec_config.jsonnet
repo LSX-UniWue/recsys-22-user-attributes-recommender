@@ -104,7 +104,7 @@ local additional_attributes_list = ['genres'];
             tensorboard: {}
         },
         checkpoint: {
-            monitor: "recall@10/sampled(100)",
+            monitor: "recall@10_sampled(100)",
             save_top_k: 3,
             mode: 'max'
         },

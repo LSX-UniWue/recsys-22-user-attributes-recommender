@@ -1,5 +1,5 @@
-local base_path = "/scratch/jane-doe-framework/datasets/ml-1m/";
-local output_path = "/scratch/jane-doe-framework/experiments/ml-1m/gru";
+local base_path = "/ssd/ml-20m/";
+local output_path = "/scratch/jane-doe-framework/experiments/ml-20m/gru";
 local max_seq_length = 50;
 local metrics =  {
     mrr: [1, 5, 10],
@@ -24,9 +24,7 @@ local file_prefix = 'ml-1m';
                 num_workers: 4
             },
             path: base_path,
-            train_file_prefix: file_prefix,
-            validation_file_prefix: file_prefix,
-            test_file_prefix: file_prefix,
+            file_prefix: file_prefix,
             next_step_type: "loo" // leave one out
         }
     },
@@ -44,10 +42,46 @@ local file_prefix = 'ml-1m';
         },
         model: {
             cell_type: "gru",
-            item_embedding_dim: 64,
-            hidden_size: 64,
-            num_layers: 2,
-            dropout: 0.2
+            item_embedding_dim: {
+              hyper_opt: {
+                suggest: "int",
+                params: {
+                  low: 2,
+                  high: 64,
+                  step: 2
+                }
+              }
+            },
+            hidden_size: {
+                hyper_opt: {
+                    suggest: "int",
+                    params: {
+                        low: 2,
+                        high: 64,
+                        step: 2
+                    }
+                }
+            },
+            num_layers: {
+                hyper_opt: {
+                    suggest: "int",
+                    params: {
+                        low: 1,
+                        high: 4,
+                        step: 1
+                    }
+                }
+            },
+            dropout: {
+                hyper_opt: {
+                    suggest: "float",
+                    params: {
+                        low: 0.0,
+                        high: 0.5,
+                        step: 0.1
+                    }
+                }
+            }
         }
     },
     tokenizers: {

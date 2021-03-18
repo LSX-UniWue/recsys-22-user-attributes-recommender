@@ -71,7 +71,7 @@ local file_prefix = 'ml-1m';
             tensorboard: {}
         },
         checkpoint: {
-            monitor: "recall@10/sampled(100)",
+            monitor: "recall@10_ssampled(100)",
             save_top_k: 3,
             mode: 'max'
         },

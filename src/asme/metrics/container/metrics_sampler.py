@@ -104,7 +104,7 @@ class FixedItemsSampler(MetricsSampler):
         return MetricsSample(sampled_predictions, positive_item_mask, None)
 
     def suffix_metric_name(self) -> str:
-        return "/fixed"
+        return "_fixed"
 
 
 class NegativeMetricsSampler(MetricsSampler):
@@ -199,4 +199,4 @@ class NegativeMetricsSampler(MetricsSampler):
         return MetricsSample(sampled_predictions, positive_item_mask, metric_mask)
 
     def suffix_metric_name(self) -> str:
-        return f"/sampled({self.sample_size})"
+        return f"_sampled({self.sample_size})"

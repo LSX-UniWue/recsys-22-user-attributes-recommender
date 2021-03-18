@@ -70,12 +70,12 @@ local metrics =  {
             csv: {}
         },
         checkpoint: {
-            monitor: "recall@5",
+            monitor: "recall@5_fixed",
             save_top_k: 3,
             mode: 'max'
         },
         early_stopping: {
-          monitor: 'recall@5',
+          monitor: 'recall@5_fixed',
           min_delta: 0.00,
           patience: 10,
           mode: 'max'
