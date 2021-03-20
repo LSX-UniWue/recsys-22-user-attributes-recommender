@@ -1,0 +1,82 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ml-20m-bert4rec-bugfix
+  labels:
+    app: ds4rec
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      containers:
+        - name: ds4rec
+          image: gitlab2.informatik.uni-wuerzburg.de:4567/dmir/dallmann/recommender/jane-doe-gpu:latest
+          imagePullPolicy: "Always"
+          resources:
+            requests: &resources
+              cpu: "24"
+              memory: "64Gi"
+              nvidia.com/gpu: 8
+            limits: *resources
+          env:
+            - name: HOME
+              value: /home/ls6/zoller
+            - name: PROJECT_DIR
+              value: /home/ls6/zoller/seq_recommendation/project_bugfixbert4rec
+            - name: REPO_USER
+              value: daz65be
+            - name: REPO_BRANCH
+              value: bugfix/bert4rec
+            - name: PREPARE_SCRIPT
+              value: /home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/copy_to_cache.sh
+            - name: GIT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: gitlab-token
+          args: ["train", "/home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/bert4rec_config.jsonnet"]
+          volumeMounts:
+            - mountPath: /home/ls6/zoller
+              name: home
+            - mountPath: /scratch
+              name: scratch
+            - mountPath: /dev/shm
+              name: dshm
+            - mountPath: /ssd
+              name: cache
+          ports:
+            - containerPort: 8880
+      tolerations:
+        - effect: NoSchedule
+          key: network
+          operator: Exists
+      nodeSelector:
+        gputype: "2080ti"
+      imagePullSecrets:
+        - name: regcred
+      restartPolicy: "Never"
+      volumes:
+        - name: home
+          cephfs:
+            monitors:
+              - 132.187.14.16,132.187.14.17,132.187.14.19,132.187.14.20
+            user: zoller
+            path: "/home/ls6/zoller"
+            secretRef:
+              name: ceph-secret-zoller
+        - name: scratch
+          cephfs:
+            monitors:
+              - 132.187.14.16,132.187.14.17,132.187.14.19,132.187.14.20
+            user: zoller
+            path: "/scratch"
+            secretRef:
+              name: ceph-secret-zoller
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: "4Gi"
+        - name: cache
+          emptyDir:
+            medium: Memory
+            sizeLimit: "4Gi"

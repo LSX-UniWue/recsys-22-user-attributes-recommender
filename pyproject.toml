@@ -1,26 +1,31 @@
 [tool.poetry]
-name = "recommender"
-version = "0.0.1"
+name = "asme"
+version = "0.5.0"
 description = "A framework for training and evaluating item prediction recommender models."
 authors = ["Alexander Dallmann <dallman@informatik.uni-wuerzburg.de>"]
 license = "LGPLv3"
 
+packages = [
+    { include = "asme", from = "src"},
+    { include = "data", from = "src"},
+    { include = "datasets", from = "src"}
+]
+
 [tool.poetry.dependencies]
-python = ">=3.7"
-tqdm = "^4.48.2"
-numpy = "^1.19.1"
-scipy = "^1.5.2"
+python = ">=3.7,<4"
+tqdm = "^4.59.0"
+numpy = "~1.19.5"
+scipy = "^1.6.1"
 scikit-learn = "^0.23.2"
 pandas = "^1.1.0"
 pytest = "^6.0.1"
-pyhocon = "^0.3.55"
-
-torch = "^1.7.1"
-torchvision = "^0.8.2"
-pytorch-lightning = "1.2.0"
-dependency-injector = "^3.44.0"
+jsonnet = "^0.17.0"
+torch = "~1.7.1"
+torchvision = "~0.8.2"
+pytorch-lightning = "1.2.4"
 typer = "^0.3.2"
-mlflow = "^1.13.1"
+wandb = "^0.10.22"
+mlflow = "^1.14.1"
 optuna = "^2.5.0"
 redis = "^3.5.3"
 
@@ -29,3 +34,6 @@ redis = "^3.5.3"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+asme = 'asme.main:app'

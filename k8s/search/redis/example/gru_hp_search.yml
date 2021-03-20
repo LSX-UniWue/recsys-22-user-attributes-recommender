@@ -24,7 +24,7 @@ spec:
             - name: REPO_USER
               value: daz65be
             - name: REPO_BRANCH
-              value: feature/hpsearch
+              value: master
             - name: PREPARE_SCRIPT
               value: /home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/unfiltered/copy_to_cache.sh
             - name: GIT_TOKEN
@@ -35,7 +35,7 @@ spec:
           args:
             - "search"
             - "rnn"
-            - "/home/ls6/zoller/seq_recommendation/gru_hp_search/recommender/k8s/search/redis/example/gru_config_hp.yaml"
+            - "/home/ls6/zoller/seq_recommendation/gru_hp_search/recommender/k8s/search/redis/example/gru_config_hp.jsonnet"
             - "test"
             - "redis://redis-optuna"
             - "recall_at_10/sampled"
