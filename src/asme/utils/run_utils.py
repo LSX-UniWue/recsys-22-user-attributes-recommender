@@ -11,6 +11,9 @@ from asme.init.factories.container import ContainerFactory
 from asme.init.templating.template_engine import TemplateEngine
 from asme.init.templating.template_processor import TemplateProcessor
 
+""" key to retrieve the object metric used in hyperparameter study """
+OBJECTIVE_METRIC_KEY = 'objective_metric'
+
 
 def load_config(config_file: Path,
                 additional_head_processors: List[TemplateProcessor] = [],

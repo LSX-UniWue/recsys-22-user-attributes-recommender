@@ -20,7 +20,7 @@ from asme.init.factories.metrics.metrics_container import MetricsContainerFactor
 from asme.init.templating.search.configuration import SearchConfigurationTemplateProcessor
 from asme.init.templating.search.processor import SearchTemplateProcessor
 from asme.init.templating.search.resolver import OptunaParameterResolver
-from asme.utils.run_utils import load_config, create_container, load_container
+from asme.utils.run_utils import load_config, create_container, load_container, OBJECTIVE_METRIC_KEY
 from asme.tokenization.tokenizer import Tokenizer
 from asme.utils import ioutils
 from asme.utils.ioutils import load_file_with_item_ids, determine_log_dir, save_config, save_finished_flag, \
@@ -156,6 +156,7 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 
     study = optuna.create_study(study_name=study_name, storage=study_storage, load_if_exists=True,
                                 direction=study_direction)
+    study.set_user_attr(OBJECTIVE_METRIC_KEY, objective_metric)
     study.optimize(objective, n_trials=num_trails)
 
 
