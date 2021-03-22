@@ -72,7 +72,7 @@ class CSVResultWriter(ResultWriter):
         self.csv_writer.writerow(self.HEADER)
 
     def write_overall_results(self, recommender_name: str, metrics: Dict[str, float]):
-        metrics_to_write = [[metric_name, metric_value] for metric_name, metric_value in metrics.values()]
+        metrics_to_write = [[metric_name, metric_value] for metric_name, metric_value in metrics.items()]
         rows_to_write = metrics_to_write + [["recommender_id", recommender_name]]
         self.csv_writer.writerows(rows_to_write)
 

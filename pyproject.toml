@@ -26,7 +26,7 @@ pytorch-lightning = "1.2.4"
 typer = "^0.3.2"
 wandb = "^0.10.22"
 mlflow = "^1.14.1"
-optuna = "^2.5.0"
+optuna = "2.6.0"
 redis = "^3.5.3"
 
 [tool.poetry.dev-dependencies]
