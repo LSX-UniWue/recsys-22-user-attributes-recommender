@@ -7,7 +7,7 @@ from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets.index_builder import SequencePositionIndexBuilder
 from data.datasets.sequence import ItemSequenceDataset, ItemSessionParser, PlainSequenceDataset
 from data.utils import create_indexed_header, read_csv_header
-from datasets.data_structures.DatasetMetadata import DatasetMetadata
+from datasets.data_structures.dataset_metadata import DatasetMetadata
 
 
 def all_remaining_positions(session: Dict[str, Any]

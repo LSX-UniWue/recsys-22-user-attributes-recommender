@@ -7,7 +7,7 @@ from datasets.dataset_pre_processing.utils import read_csv, download_dataset, un
 from datasets.dataset_index_splits.conditional_split import _get_position_with_offset, \
     create_conditional_index_using_extractor, all_remaining_positions
 from datasets.app.index_command import index_csv
-from datasets.data_structures.DatasetMetadata import DatasetMetadata
+from datasets.data_structures.dataset_metadata import DatasetMetadata
 
 RATING_USER_COLUMN_NAME = 'userId'
 RATING_MOVIE_COLUMN_NAME = 'movieId'

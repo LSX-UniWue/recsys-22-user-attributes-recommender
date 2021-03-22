@@ -2,15 +2,15 @@ from pathlib import Path
 from tqdm import tqdm
 from typing import List, Optional, Callable, Any
 
-from datasets.data_structures.DatasetMetadata import DatasetMetadata
+from datasets.data_structures.dataset_metadata import DatasetMetadata
 from datasets.app import index_command
 from datasets.dataset_index_splits.conditional_split import all_remaining_positions, \
     create_conditional_index_using_extractor, run_loo_split
 from datasets.dataset_index_splits import strategy_split
 from datasets.vocabulary.create_vocabulary import create_token_vocabulary
 from datasets.popularity.build_popularity import build as build_popularity
-from datasets.dataset_index_splits import SplitStrategiesFactory
-from datasets.data_structures.SplitStrategy import SplitStrategy
+from datasets.dataset_index_splits import split_strategies_factory
+from datasets.data_structures.split_strategy import SplitStrategy
 
 
 def generic_process_dataset(dataset_metadata: DatasetMetadata, min_seq_length: int
@@ -30,10 +30,10 @@ def generic_process_dataset(dataset_metadata: DatasetMetadata, min_seq_length: i
                             delimiter=dataset_metadata.delimiter)
 
     print("Create ratios split...")
-    ratio_split_strategy: SplitStrategy = SplitStrategiesFactory.get_ratio_strategy(train_ratio=0.9,
-                                                                                    validation_ratio=0.05,
-                                                                                    test_ratio=0.05,
-                                                                                    seed=123456)
+    ratio_split_strategy: SplitStrategy = split_strategies_factory.get_ratio_strategy(train_ratio=0.9,
+                                                                                      validation_ratio=0.05,
+                                                                                      test_ratio=0.05,
+                                                                                      seed=123456)
     generic_strategy_split(dataset_metadata=dataset_metadata,
                            split_strategy=ratio_split_strategy,
                            minimum_session_length=min_seq_length)
@@ -88,7 +88,6 @@ def generic_leave_one_out_split(
 
     print("Create next item index...")
     # Create session index for training with all session having the form session[:k-2]
-    # Todo Is this correct?
     training_session_index_file: Path = loo_output_dir_path / f"{dataset_metadata.file_prefix}.train.nextitem.idx"
     create_conditional_index_using_extractor(dataset_metadata=dataset_metadata,
                                              output_file_path=training_session_index_file,
@@ -101,7 +100,6 @@ def generic_leave_one_out_split(
                   minimum_session_length=minimum_session_length)
 
     print("Write vocabularies and popularities...")
-    # Todo is this correct?
     generic_create_vocabularies_and_popularities(dataset_metadata=dataset_metadata,
                                                  processed_data_file_path=dataset_metadata.data_file_path,
                                                  index_path=dataset_metadata.session_index_path,

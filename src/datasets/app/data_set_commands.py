@@ -2,7 +2,7 @@ import os
 import typer
 from pathlib import Path
 
-from datasets.data_structures.DatasetMetadata import DatasetMetadata
+from datasets.data_structures.dataset_metadata import DatasetMetadata
 from datasets.dataset_pre_processing.generic import generic_process_dataset
 
 from datasets.dataset_pre_processing.movielens_preprocessing import download_and_unzip_movielens_data, \

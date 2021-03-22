@@ -2,9 +2,9 @@ import typer
 from pathlib import Path
 from typing import List
 from datasets.dataset_index_splits import conditional_split, strategy_split
-from datasets.data_structures.DatasetMetadata import DatasetMetadata
-from datasets.data_structures.SplitStrategy import SplitStrategy
-from datasets.dataset_index_splits import SplitStrategiesFactory
+from datasets.data_structures.dataset_metadata import DatasetMetadata
+from datasets.data_structures.split_strategy import SplitStrategy
+from datasets.dataset_index_splits import split_strategies_factory
 
 
 app = typer.Typer()
@@ -74,10 +74,10 @@ def ratios(
                                                         session_key=session_key,
                                                         item_header_name=item_header_name, delimiter=delimiter,
                                                         session_index_path=session_index_path)
-    ratio_split_strategy: SplitStrategy = SplitStrategiesFactory.get_ratio_strategy(train_ratio=train_ratio,
-                                                                                    validation_ratio=validation_ratio,
-                                                                                    test_ratio=testing_ratio,
-                                                                                    seed=seed)
+    ratio_split_strategy: SplitStrategy = split_strategies_factory.get_ratio_strategy(train_ratio=train_ratio,
+                                                                                      validation_ratio=validation_ratio,
+                                                                                      test_ratio=testing_ratio,
+                                                                                      seed=seed)
     strategy_split.run_strategy_split(dataset_metadata=dataset_metadata,
                                       split_strategy=ratio_split_strategy,
                                       output_dir_path=output_dir_path,

@@ -8,10 +8,10 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME
 
 from datasets.app import index_command
 from datasets.dataset_index_splits.conditional_split import create_conditional_index, read_csv_header
-from datasets.data_structures.DatasetMetadata import DatasetMetadata
-from datasets.data_structures.TrainValidationTestSplitsIndices import TrainValidationTestSplitIndices
-from datasets.data_structures.SplitNames import SplitNames
-from datasets.data_structures.SplitStrategy import SplitStrategy
+from datasets.data_structures.dataset_metadata import DatasetMetadata
+from datasets.data_structures.train_validation_test_splits_indices import TrainValidationTestSplitIndices
+from datasets.data_structures.split_names import SplitNames
+from datasets.data_structures.split_strategy import SplitStrategy
 
 
 def run_strategy_split(dataset_metadata: DatasetMetadata,

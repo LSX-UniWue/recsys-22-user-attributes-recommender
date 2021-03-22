@@ -3,10 +3,10 @@ import numpy as np
 
 from typing import Dict
 from data.base.reader import CsvDatasetIndex
-from datasets.data_structures.DatasetMetadata import DatasetMetadata
-from datasets.data_structures.SplitStrategy import SplitStrategy
-from datasets.data_structures.SplitNames import SplitNames
-from datasets.data_structures.TrainValidationTestSplitsIndices import TrainValidationTestSplitIndices
+from datasets.data_structures.dataset_metadata import DatasetMetadata
+from datasets.data_structures.split_strategy import SplitStrategy
+from datasets.data_structures.split_names import SplitNames
+from datasets.data_structures.train_validation_test_splits_indices import TrainValidationTestSplitIndices
 
 
 class RatioSplitStrategy(SplitStrategy):

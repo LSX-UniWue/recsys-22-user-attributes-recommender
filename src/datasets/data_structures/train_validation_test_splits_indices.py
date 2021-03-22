@@ -1,5 +1,5 @@
 from typing import List
-from datasets.data_structures.SplitNames import SplitNames
+from datasets.data_structures.split_names import SplitNames
 
 
 class TrainValidationTestSplitIndices:

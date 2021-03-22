@@ -1,4 +1,4 @@
-from datasets.dataset_index_splits.RatioSplitStrategy import RatioSplitStrategy
+from datasets.dataset_index_splits.ratio_split_strategy import RatioSplitStrategy
 
 
 def get_ratio_strategy(train_ratio: float, test_ratio: float, validation_ratio: float, seed: int):
