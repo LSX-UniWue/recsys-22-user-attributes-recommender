@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Callable, Any, Optional
 from tqdm import tqdm
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
@@ -35,7 +35,8 @@ def create_token_vocabulary(item_header_name: str, data_file_path: Path,
                             session_index_path: Path,
                             vocabulary_output_file_path: Path,
                             custom_tokens: List[str],
-                            delimiter: str):
+                            delimiter: str,
+                            strategy_function: Optional[Callable[[List[Any]], List[Any]]] = None):
     """
     Creates a token vocabulary for the items in the data set in data file path.
 
@@ -45,6 +46,7 @@ def create_token_vocabulary(item_header_name: str, data_file_path: Path,
     :param item_header_name: Name of the item key in the data set, e.g, "ItemId"
     :param custom_tokens: FixMe I need documentation
     :param delimiter: delimiter used in data file
+    :param strategy_function: function selecting which items of a session are used in the vocabulary
     :return: None, Side Effect: vocabulary for data file is written to vocabulary_output_file_path
     """
     vocab_builder = VocabularyBuilder()
@@ -55,10 +57,13 @@ def create_token_vocabulary(item_header_name: str, data_file_path: Path,
                                        data_file_path=data_file_path,
                                        index_file_path=session_index_path,
                                        delimiter=delimiter)
+    if strategy_function is None:
+        def strategy_function(x: List[Any]) -> List[Any]:
+            return x
 
     for idx in tqdm(range(len(data_set)), desc=f"Tokenizing items from: {data_file_path}"):
         session = data_set[idx]
-        session_tokens = session[ITEM_SEQ_ENTRY_NAME]
+        session_tokens = strategy_function(session[ITEM_SEQ_ENTRY_NAME])
 
         for token in session_tokens:
             vocab_builder.add_token(token)

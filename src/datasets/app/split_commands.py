@@ -1,7 +1,11 @@
 import typer
 from pathlib import Path
 from typing import List
-from datasets.dataset_index_splits import conditional_split, ratio_split
+from datasets.dataset_index_splits import conditional_split, strategy_split
+from datasets.data_structures.DatasetMetadata import DatasetMetadata
+from datasets.data_structures.SplitStrategy import SplitStrategy
+from datasets.dataset_index_splits import SplitStrategiesFactory
+
 
 app = typer.Typer()
 
@@ -26,26 +30,15 @@ def next_item(
     :param item_header: data set key that the item-ids are stored under
     :return: None, Side effect: Test and Validation indices are written
     """
-    additional_features = {}
-    file_prefix: str = data_file_path.stem
-
-    # Create validation index with target item n-1
-    conditional_split.create_conditional_index_using_extractor(data_file_path,
-                                                               session_index_path,
-                                                               output_dir_path / (file_prefix + ".validation.loo.idx"),
-                                                               item_header,
-                                                               minimum_session_length,
-                                                               delimiter,
-                                                               additional_features,
-                                                               conditional_split.get_position_with_offset_one)
-    # Create testing index with target item n
-    conditional_split.create_conditional_index_using_extractor(data_file_path, session_index_path,
-                                                               output_dir_path / (file_prefix + ".ml-1m.test.loo.idx"),
-                                                               item_header,
-                                                               minimum_session_length,
-                                                               delimiter,
-                                                               additional_features,
-                                                               conditional_split.get_position_with_offset_two)
+    dataset_metadata: DatasetMetadata = DatasetMetadata(
+        data_file_path=data_file_path,
+        session_index_path=session_index_path,
+        session_key=None,
+        delimiter=delimiter,
+        item_header_name=item_header
+    )
+    conditional_split.run_loo_split(dataset_metadata=dataset_metadata, output_dir_path=output_dir_path,
+                                    minimum_session_length=minimum_session_length)
 
 
 @app.command()
@@ -77,18 +70,18 @@ def ratios(
     :param seed: Seed for random sampling
     :return: None, Side effects: CSV Files for splits are written
      """
-    output_dir_path.mkdir(parents=True, exist_ok=True)
-    assert train_ratio + validation_ratio + testing_ratio == 1
-    splits = {"train": train_ratio, "validation": validation_ratio, "test": testing_ratio}
-    ratio_split.run(data_file_path=data_file_path,
-                    match_index_path=session_index_path,
-                    output_dir_path=output_dir_path,
-                    session_key=session_key,
-                    split_ratios=splits,
-                    delimiter=delimiter,
-                    seed=seed,
-                    item_header_name=item_header_name,
-                    minimum_session_length=minimum_session_length)
+    dataset_metadata: DatasetMetadata = DatasetMetadata(data_file_path=data_file_path,
+                                                        session_key=session_key,
+                                                        item_header_name=item_header_name, delimiter=delimiter,
+                                                        session_index_path=session_index_path)
+    ratio_split_strategy: SplitStrategy = SplitStrategiesFactory.get_ratio_strategy(train_ratio=train_ratio,
+                                                                                    validation_ratio=validation_ratio,
+                                                                                    test_ratio=testing_ratio,
+                                                                                    seed=seed)
+    strategy_split.run_strategy_split(dataset_metadata=dataset_metadata,
+                                      split_strategy=ratio_split_strategy,
+                                      output_dir_path=output_dir_path,
+                                      minimum_session_length=minimum_session_length)
 
 
 # Todo Find better name
@@ -115,6 +108,12 @@ def create_conditional_index(
     :param target_feature:
     :return:
     """
-    conditional_split.create_conditional_index(data_file_path, session_index_path, output_file_path,
-                                               item_header_name,
-                                               min_session_length, delimiter, target_feature)
+    dataset_metadata: DatasetMetadata = DatasetMetadata(
+        data_file_path=data_file_path,
+        session_index_path=session_index_path,
+        delimiter=delimiter,
+        item_header_name=item_header_name,
+        session_key=None
+    )
+    conditional_split.create_conditional_index(dataset_metadata=dataset_metadata, output_file_path=output_file_path,
+                                               min_session_length=min_session_length, target_feature=target_feature)

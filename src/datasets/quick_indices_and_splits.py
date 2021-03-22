@@ -2,7 +2,10 @@ import typer
 from pathlib import Path
 
 from datasets.app.index_command import index_csv
-from datasets.dataset_index_splits.ratio_split import run as create_ratio_splits
+from datasets.dataset_index_splits.strategy_split import run_strategy_split
+from datasets.data_structures.DatasetMetadata import DatasetMetadata
+from datasets.data_structures.SplitStrategy import SplitStrategy
+from datasets.dataset_index_splits import SplitStrategiesFactory
 
 app = typer.Typer()
 
@@ -42,10 +45,21 @@ def create_splits(dataset: str = typer.Argument(..., help="ml-1m or ml-20m"),
 
     index_csv(path_main_csv, path_main_index, session_key=[session_key])
 
-    splits = {"train": train, "validation": valid, "test": test}
-    create_ratio_splits(data_file_path=path_main_csv, match_index_path=path_main_index, output_dir_path=split_dir_path,
-                        split_ratios=splits, delimiter=delimiter, session_key=[session_key],
-                        item_header_name=item_header, minimum_session_length=min_session_length, seed=seed)
+    ratio_split_strategy: SplitStrategy = SplitStrategiesFactory.get_ratio_strategy(train_ratio=train,
+                                                                                    validation_ratio=valid,
+                                                                                    test_ratio=test,
+                                                                                    seed=seed)
+    dataset_metadata: DatasetMetadata = DatasetMetadata(
+        data_file_path=path_main_csv,
+        session_index_path=path_main_index,
+        session_key=[session_key],
+        delimiter=delimiter,
+        item_header_name=item_header
+    )
+    run_strategy_split(dataset_metadata=dataset_metadata,
+                       output_dir_path=split_dir_path,
+                       split_strategy=ratio_split_strategy,
+                       minimum_session_length=min_session_length)
 
 
 if __name__ == "__main__":

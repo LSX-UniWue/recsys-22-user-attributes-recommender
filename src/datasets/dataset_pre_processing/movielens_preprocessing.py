@@ -2,17 +2,20 @@ import os
 import functools
 import pandas as pd
 from pathlib import Path
-from typing import Dict, Iterable, Any
 
-from data.datasets import ITEM_SEQ_ENTRY_NAME
-from datasets.dataset_pre_processing.utils import build_vocabularies, read_csv, download_dataset, unzip_file
+from datasets.dataset_pre_processing.utils import read_csv, download_dataset, unzip_file
 from datasets.dataset_index_splits.conditional_split import _get_position_with_offset, \
-    create_conditional_index_using_extractor
+    create_conditional_index_using_extractor, all_remaining_positions
 from datasets.app.index_command import index_csv
+from datasets.data_structures.DatasetMetadata import DatasetMetadata
 
 RATING_USER_COLUMN_NAME = 'userId'
 RATING_MOVIE_COLUMN_NAME = 'movieId'
 RATING_TIMESTAMP_COLUMN_NAME = 'timestamp'
+
+MOVIELENS_SESSION_KEY = RATING_USER_COLUMN_NAME
+MOVIELENS_ITEM_HEADER_NAME = "title"
+MOVIELENS_DELIMITER = "\t"
 
 DOWNLOAD_URL_MAP = {
     'ml-1m': 'http://files.grouplens.org/datasets/movielens/ml-1m.zip',
@@ -28,7 +31,7 @@ def download_and_unzip_movielens_data(dataset: str, output_dir: Path, min_seq_le
 
     downloaded_file = download_dataset(url, download_dir)
 
-    extract_dir = download_dir / 'raw'
+    extract_dir = download_dir / 'raw' / dataset
     if not os.path.exists(extract_dir):
         extract_dir.mkdir(parents=True, exist_ok=True)
 
@@ -84,6 +87,7 @@ def preprocess_movielens_data(dataset_dir: Path,
         sep = ","
 
     # read and merge data
+    print("Dataset dir", dataset_dir)
     ratings_df = read_csv(dataset_dir, "ratings", file_type, sep, header)
 
     movielens_1m = name == 'ml-1m'
@@ -117,16 +121,6 @@ def preprocess_movielens_data(dataset_dir: Path,
     main_file = output_dir / f"{name}.csv"
     merged_df.to_csv(main_file, sep=delimiter, index=False)
 
-    # build vocabularies
-    build_vocabularies(merged_df, output_dir, "title")
-    build_vocabularies(movies_df, output_dir, "genres", split="|")
-    # for the ml-1m also export the vocabularies for the attributes
-    if users_df is not None:
-        build_vocabularies(users_df, output_dir, "gender")
-        build_vocabularies(users_df, output_dir, "age")
-        build_vocabularies(users_df, output_dir, "occupation")
-        build_vocabularies(users_df, output_dir, "zip")
-
     return main_file
 
 
@@ -147,17 +141,23 @@ def split_movielens_dataset(dataset_dir: Path,
 
     additional_features = {}
 
-    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'ml-1m.session.idx', item_header,
-                                             min_seq_length, delimiter, additional_features, _all_remaining_positions)
+    dataset_metadata: DatasetMetadata = DatasetMetadata(
+        data_file_path=main_file,
+        session_key=[session_key],
+        session_index_path=index_file,
+        delimiter=delimiter,
+        item_header_name=item_header
+    )
 
-    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'ml-1m.validation.loo.idx', item_header,
-                                             min_seq_length, delimiter, additional_features,
-                                             functools.partial(_get_position_with_offset, offset=2))
-    create_conditional_index_using_extractor(main_file, index_file, dataset_dir / 'ml-1m.test.loo.idx', item_header,
-                                             min_seq_length, delimiter, additional_features,
-                                             functools.partial(_get_position_with_offset, offset=1))
+    create_conditional_index_using_extractor(dataset_metadata, output_file_path=dataset_dir / 'train.nip.idx',
+                                             min_session_length=min_seq_length, additional_features=additional_features,
+                                             target_positions_extractor=all_remaining_positions)
 
-
-def _all_remaining_positions(session: Dict[str, Any]
-                             ) -> Iterable[int]:
-    return range(1, len(session[ITEM_SEQ_ENTRY_NAME]) - 2)
+    create_conditional_index_using_extractor(dataset_metadata, output_file_path=dataset_dir / 'valid.loo.idx',
+                                             min_session_length=min_seq_length, additional_features=additional_features,
+                                             target_positions_extractor=functools.partial(_get_position_with_offset,
+                                                                                          offset=2))
+    create_conditional_index_using_extractor(dataset_metadata, output_file_path=dataset_dir / 'test.loo.idx',
+                                             min_session_length=min_seq_length, additional_features=additional_features,
+                                             target_positions_extractor=functools.partial(_get_position_with_offset,
+                                                                                          offset=1))
