@@ -48,7 +48,7 @@ def train(config_file: str = typer.Argument(..., help='the path to the config fi
     trainer = container.trainer().build()
 
     # save plain json config to the log dir/root dir of the trainer
-    log_dir = Path(determine_log_dir(trainer))
+    log_dir = determine_log_dir(trainer)
     save_config(config, log_dir)
 
     if do_train:
@@ -135,7 +135,7 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
             trainer_builder.add_callback(metrics_tracker)
 
             trainer = trainer_builder.build()
-            log_dir = Path(determine_log_dir(trainer))
+            log_dir = determine_log_dir(trainer)
 
             # save config of current run to its log dir
             save_config(config, log_dir)
