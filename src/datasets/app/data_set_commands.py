@@ -1,13 +1,17 @@
 import os
 import typer
 from pathlib import Path
-from datasets.dataset_pre_processing.movielens import download_and_unzip_movielens_data, preprocess_movielens_data, \
-    split_movielens_dataset
-from datasets.dataset_pre_processing.yoochoose import pre_process_yoochoose_dataset, YOOCHOOSE_CLICKS_FILE_NAME, \
-    YOOCHOOSE_SESSION_ID_KEY, YOOCHOOSE_ITEM_ID_KEY, YOOCHOOSE_BUYS_FILE_NAME
-from datasets.dataset_pre_processing.amazon import download_and_unzip_amazon_dataset, AMAZON_ITEM_ID, \
+
+from datasets.data_structures.dataset_metadata import DatasetMetadata
+from datasets.dataset_pre_processing.generic import generic_process_dataset
+
+from datasets.dataset_pre_processing.movielens_preprocessing import download_and_unzip_movielens_data, \
+    preprocess_movielens_data, MOVIELENS_DELIMITER, MOVIELENS_ITEM_HEADER_NAME, MOVIELENS_SESSION_KEY
+from datasets.dataset_pre_processing.yoochoose_preprocessing import pre_process_yoochoose_dataset, \
+    YOOCHOOSE_CLICKS_FILE_NAME, YOOCHOOSE_SESSION_ID_KEY, YOOCHOOSE_ITEM_ID_KEY, YOOCHOOSE_BUYS_FILE_NAME, \
+    YOOCHOOSE_DELIMITER
+from datasets.dataset_pre_processing.amazon_preprocessing import download_and_unzip_amazon_dataset, AMAZON_ITEM_ID, \
     AMAZON_SESSION_ID, AMAZON_DELIMITER, preprocess_amazon_dataset_for_indexing
-from datasets.app import split_commands, popularity_command, vocabulary_command, index_command
 
 app = typer.Typer()
 
@@ -19,15 +23,27 @@ def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_ch
               min_user_feedback: int = typer.Option(0, help='the minimum number of feedback a user must have'),
               min_item_feedback: int = typer.Option(0, help='the minimum number of feedback an item must have received')
               ) -> None:
-    # FixMe min_seq_length influences nothing except naming of dataset_dir
-    # ToDo make this conform to naming conventions
     dataset_dir, extract_dir = download_and_unzip_movielens_data(dataset, output_dir,
                                                                  min_seq_length=min_seq_length,
                                                                  min_item_feedback=min_item_feedback,
                                                                  min_user_feedback=min_user_feedback)
     main_file = preprocess_movielens_data(extract_dir, dataset_dir, dataset, min_item_feedback=min_item_feedback,
                                           min_user_feedback=min_user_feedback)
-    split_movielens_dataset(dataset_dir, main_file, min_seq_length=min_seq_length)
+    stats_columns = ["title", "genres"]
+    if dataset == "ml-1m":
+        stats_columns += ["gender", "age", "occupation", "zip"]
+
+    custom_tokens = ["<PAD>", "<MASK>", "<UNK>"]
+
+    dataset_metadata: DatasetMetadata = DatasetMetadata(
+        data_file_path=main_file,
+        session_key=[MOVIELENS_SESSION_KEY],
+        item_header_name=MOVIELENS_ITEM_HEADER_NAME,
+        delimiter=MOVIELENS_DELIMITER,
+        custom_tokens=custom_tokens,
+        stats_columns=stats_columns
+    )
+    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length)
 
 
 @app.command()
@@ -48,7 +64,6 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
     :param min_seq_length: Minimum length of a session in order to be included in the next item split
     :return:
     """
-    delimiter = ","
     if category == "buys":
         file_name = YOOCHOOSE_BUYS_FILE_NAME
     elif category == "clicks":
@@ -65,48 +80,16 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
         # Pre-process yoochoose data
         print("Perform pre-processing...")
         preprocessed_data_filepath = pre_process_yoochoose_dataset(input_dir, output_dir_path, file_name=file_name)
-        print("Indexing processed data...")
-        session_index_path = output_dir_path.joinpath(file_name + '.session.idx')
-        index_command.index_csv(data_file_path=preprocessed_data_filepath,
-                                index_file_path=session_index_path,
-                                session_key=[YOOCHOOSE_SESSION_ID_KEY],
-                                delimiter=delimiter)
-        print("Build vocabulary...")
-        vocabulary_output_file_path: Path = output_dir_path.joinpath(file_name + ".vocabulary.txt")
-        vocabulary_command.build(item_header_name=YOOCHOOSE_ITEM_ID_KEY,
-                                 data_file_path=preprocessed_data_filepath,
-                                 session_index_path=session_index_path,
-                                 vocabulary_output_file_path=vocabulary_output_file_path,
-                                 delimiter=delimiter)
-        print("Build popularity...")
-        popularity_output_file_path: Path = output_dir_path.joinpath(file_name + ".popularity.txt")
-        popularity_command.build(data_file_path=preprocessed_data_filepath,
-                                 session_index_path=session_index_path,
-                                 vocabulary_file_path=vocabulary_output_file_path,
-                                 output_file_path=popularity_output_file_path,
-                                 item_header_name=YOOCHOOSE_ITEM_ID_KEY,
-                                 min_session_length=min_seq_length,
-                                 delimiter=delimiter)
-        print("Create ratios split...")
-        split_commands.ratios(data_file_path=preprocessed_data_filepath,
-                              session_index_path=session_index_path,
-                              output_dir_path=output_dir_path,
-                              session_key=[YOOCHOOSE_SESSION_ID_KEY],
-                              train_ratio=0.9,
-                              validation_ratio=0.05,
-                              testing_ratio=0.05,
-                              delimiter=delimiter,
-                              item_header_name=YOOCHOOSE_ITEM_ID_KEY,
-                              minimum_session_length=min_seq_length,
-                              seed=123456)
 
-        print("Create next item split...")
-        split_commands.next_item(data_file_path=preprocessed_data_filepath,
-                                 session_index_path=session_index_path,
-                                 output_dir_path=output_dir_path,
-                                 minimum_session_length=min_seq_length,
-                                 delimiter=delimiter,
-                                 item_header=YOOCHOOSE_ITEM_ID_KEY)
+        print("Creating necessary files for training and evaluation...")
+        dataset_metadata: DatasetMetadata = DatasetMetadata(
+            data_file_path=preprocessed_data_filepath,
+            session_key=[YOOCHOOSE_SESSION_ID_KEY],
+            item_header_name=YOOCHOOSE_ITEM_ID_KEY,
+            delimiter=YOOCHOOSE_DELIMITER,
+        )
+        generic_process_dataset(dataset_metadata=dataset_metadata,
+                                min_seq_length=min_seq_length)
 
 
 @app.command()
@@ -127,47 +110,14 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
     # Pre-process yoochoose data
     print("Download dataset...")
     raw_data_file_path = download_and_unzip_amazon_dataset(category=category, output_dir=output_dir_path)
-    file_name: str = raw_data_file_path.stem
     print("Pre-process data...")
-    preprocess_amazon_dataset_for_indexing(raw_data_tsv_file_path=raw_data_file_path)
-    print("Indexing processed data...")
-    session_index_path = raw_data_file_path.parent.joinpath(file_name + '.session.idx')
-    index_command.index_csv(data_file_path=raw_data_file_path,
-                            index_file_path=session_index_path,
-                            session_key=[AMAZON_SESSION_ID],
-                            delimiter=AMAZON_DELIMITER)
-    print("Build vocabulary...")
-    vocabulary_output_file_path: Path = output_dir_path.joinpath(file_name + ".vocabulary.txt")
-    vocabulary_command.build(item_header_name=AMAZON_ITEM_ID,
-                             data_file_path=raw_data_file_path,
-                             session_index_path=session_index_path,
-                             vocabulary_output_file_path=vocabulary_output_file_path,
-                             delimiter=AMAZON_DELIMITER)
-    print("Build popularity...")
-    popularity_command.build(data_file_path=raw_data_file_path,
-                             session_index_path=session_index_path,
-                             vocabulary_file_path=vocabulary_output_file_path,
-                             output_file_path=output_dir_path.joinpath(file_name + ".popularity.txt"),
-                             item_header_name=AMAZON_ITEM_ID,
-                             min_session_length=min_seq_length,
-                             delimiter=AMAZON_DELIMITER)
-    print("Create ratios split...")
-    split_commands.ratios(data_file_path=raw_data_file_path,
-                          session_index_path=session_index_path,
-                          output_dir_path=output_dir_path,
-                          session_key=[AMAZON_SESSION_ID],
-                          train_ratio=0.9,
-                          validation_ratio=0.05,
-                          testing_ratio=0.05,
-                          delimiter=AMAZON_DELIMITER,
-                          minimum_session_length=min_seq_length,
-                          item_header_name=AMAZON_ITEM_ID,
-                          seed=123456)
-
-    print("Create next item split...")
-    split_commands.next_item(data_file_path=raw_data_file_path,
-                             session_index_path=session_index_path,
-                             output_dir_path=output_dir_path,
-                             minimum_session_length=min_seq_length,
-                             delimiter=AMAZON_DELIMITER,
-                             item_header=AMAZON_ITEM_ID)
+    processed_data_file_path: Path = preprocess_amazon_dataset_for_indexing(
+        raw_data_tsv_file_path=raw_data_file_path)
+    print("Creating necessary files for training and evaluation...")
+    dataset_metadata: DatasetMetadata = DatasetMetadata(
+        data_file_path=processed_data_file_path,
+        session_key=[AMAZON_SESSION_ID],
+        item_header_name=AMAZON_ITEM_ID,
+        delimiter=AMAZON_DELIMITER,
+    )
+    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length)

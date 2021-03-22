@@ -35,3 +35,4 @@ def preprocess_amazon_dataset_for_indexing(raw_data_tsv_file_path: Path):
     raw_df = pd.read_csv(filepath_or_buffer=raw_data_tsv_file_path, delimiter=AMAZON_DELIMITER, error_bad_lines=False)
     raw_df = raw_df.sort_values(AMAZON_SESSION_ID)
     raw_df.to_csv(raw_data_tsv_file_path, sep=AMAZON_DELIMITER)
+    return raw_data_tsv_file_path

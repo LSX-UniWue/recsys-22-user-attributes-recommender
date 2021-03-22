@@ -63,7 +63,7 @@ def unzip_file(src_file: Path,
 
         file_path = Path(file)
         root_path = file_path.parent
-        if root_path != Path('.'):
+        if root_path != Path('../dataset_pre_processing'):
             root_paths.add(root_path)
 
     if len(root_paths) == 1:
