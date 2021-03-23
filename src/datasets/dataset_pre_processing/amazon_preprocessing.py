@@ -23,12 +23,14 @@ AMAZON_SESSION_ID = "customer_id"
 
 
 def download_and_unzip_amazon_dataset(category: str, output_dir: Path):
-    raw_data_dir = output_dir
-    download_dataset(AMAZON_DOWNLOAD_URL_MAP[category], raw_data_dir)
-    unzip_gzip_file(src_file=raw_data_dir.joinpath(AMAZON_ZIPPED_FILE_NAMES[category]),
-                    dest_file=raw_data_dir.joinpath(AMAZON_FILE_NAMES[category]),
+    csv_file_path = output_dir / AMAZON_FILE_NAMES[category]
+    download_dataset(AMAZON_DOWNLOAD_URL_MAP[category], output_dir)
+    unzip_gzip_file(src_file=output_dir.joinpath(AMAZON_ZIPPED_FILE_NAMES[category]),
+                    dest_file=csv_file_path,
                     delete_src_file=False)
-    return raw_data_dir.joinpath(AMAZON_FILE_NAMES[category])  # Remove .gz since its unzipped
+
+    csv_file_path = csv_file_path.rename(csv_file_path.with_suffix(".csv"))
+    return csv_file_path
 
 
 def preprocess_amazon_dataset_for_indexing(raw_data_tsv_file_path: Path):
