@@ -10,7 +10,7 @@ spec:
     spec:
       containers:
         - name: ds4rec
-          image: gitlab2.informatik.uni-wuerzburg.de:4567/dmir/dallmann/recommender/jane-doe-gpu:latest
+          image: gitlab2.informatik.uni-wuerzburg.de:4567/dmir/dallmann/recommender/asme-dev:latest
           imagePullPolicy: "Always"
           resources:
             requests: &resources
@@ -46,10 +46,6 @@ spec:
               name: cache
           ports:
             - containerPort: 8880
-      tolerations:
-        - effect: NoSchedule
-          key: network
-          operator: Exists
       nodeSelector:
         gputype: "2080ti"
       imagePullSecrets:
