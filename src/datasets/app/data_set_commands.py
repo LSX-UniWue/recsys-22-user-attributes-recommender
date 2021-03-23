@@ -114,10 +114,14 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
     processed_data_file_path: Path = preprocess_amazon_dataset_for_indexing(
         raw_data_tsv_file_path=raw_data_file_path)
     print("Creating necessary files for training and evaluation...")
+
+    custom_tokens = ["<PAD>", "<MASK>", "<UNK>"]
+
     dataset_metadata: DatasetMetadata = DatasetMetadata(
         data_file_path=processed_data_file_path,
         session_key=[AMAZON_SESSION_ID],
         item_header_name=AMAZON_ITEM_ID,
         delimiter=AMAZON_DELIMITER,
+        custom_tokens=custom_tokens
     )
     generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length)
