@@ -11,7 +11,7 @@ local file_prefix = 'ml-20m';
 {
     templates: {
         unified_output: {
-            path: "/scratch/jane-doe-framework/experiments/ml-20m/sasrec_new"
+            path: "/scratch/jane-doe-framework/experiments/ml-20m/sasrec_new256"
         },
         pos_neg_data_sources: {
             parser: {
@@ -41,7 +41,7 @@ local file_prefix = 'ml-20m';
             }
         },
         model: {
-            transformer_hidden_size: 64,
+            transformer_hidden_size: 256,
             num_transformer_heads: 2,
             num_transformer_layers: 2,
             max_seq_length: max_seq_length,
