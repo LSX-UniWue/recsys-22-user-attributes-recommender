@@ -95,13 +95,16 @@ class GenericModuleFactory(ObjectFactory):
             named_parameters[parameter] = config.get_or_default(parameter, default_value)
 
         # bind the tokenizers
-        for tokenizer_parameter in tokenizer_parameters.keys():
-            tokenizer_to_use = tokenizer_parameter.replace(TOKENIZER_SUFFIX, '')
+        for tokenizer_parameter_name, tokenizer_parameter_info in tokenizer_parameters.items():
+            tokenizer_to_use = tokenizer_parameter_name.replace(TOKENIZER_SUFFIX, '')
             tokenizer = context.get(get_tokenizer_key_for_voc(tokenizer_to_use))
 
             if tokenizer is None:
-                raise KeyError(f'no with id "{tokenizer_to_use}" configured.')
-            named_parameters[tokenizer_parameter] = tokenizer
+                if tokenizer_parameter_info.default_value == inspect._empty:
+                    raise KeyError(f'No tokenizer with id "{tokenizer_to_use}" configured and no default value set.')
+                else:
+                    tokenizer = tokenizer_parameter_info.default_value
+            named_parameters[tokenizer_parameter_name] = tokenizer
 
         # build the metrics container
         metrics = self.metrics_container_factory.build(config.get_config(self.metrics_container_factory.config_path()),
