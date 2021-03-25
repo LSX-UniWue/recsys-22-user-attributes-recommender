@@ -147,7 +147,18 @@ def index_splits(dataset_metadata: DatasetMetadata, output_dir_path: Path, minim
         next_item_index_file = output_dir_path.joinpath(file_prefix + ".nextitem.idx")
         index_command.index_csv(data_file_path=data_file, index_file_path=split_index_file,
                                 session_key=dataset_metadata.session_key, delimiter=dataset_metadata.delimiter)
-        create_conditional_index(dataset_metadata=dataset_metadata,
+
+        #FIXME (AD) This is a quick fix to force the conditional index to use the correct session index
+        split_metadata = DatasetMetadata(
+            data_file_path=data_file,
+            session_key=dataset_metadata.session_key,
+            item_header_name=dataset_metadata.item_header_name,
+            delimiter=dataset_metadata.delimiter,
+            session_index_path=split_index_file,
+            custom_tokens=dataset_metadata.custom_tokens,
+            stats_columns=dataset_metadata.stats_columns
+        )
+        create_conditional_index(dataset_metadata=split_metadata,
                                  output_file_path=next_item_index_file,
                                  min_session_length=minimum_session_length,
                                  target_feature=None)
