@@ -10,7 +10,7 @@ from datasets.dataset_pre_processing.movielens_preprocessing import download_and
 from datasets.dataset_pre_processing.yoochoose_preprocessing import pre_process_yoochoose_dataset, \
     YOOCHOOSE_CLICKS_FILE_NAME, YOOCHOOSE_SESSION_ID_KEY, YOOCHOOSE_ITEM_ID_KEY, YOOCHOOSE_BUYS_FILE_NAME, \
     YOOCHOOSE_DELIMITER
-from datasets.dataset_pre_processing.amazon_preprocessing import download_and_unzip_amazon_dataset, AMAZON_ITEM_ID, \
+from datasets.dataset_pre_processing.amazon_preprocessing import download_and_convert_amazon_dataset, AMAZON_ITEM_ID, \
     AMAZON_SESSION_ID, AMAZON_DELIMITER, preprocess_amazon_dataset_for_indexing
 
 app = typer.Typer()
@@ -95,8 +95,8 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
 @app.command()
 def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
                                                   help='Output directory for indices, splits, and vocabulary.'),
-           category: str = typer.Option(..., help="beatuy or games"),
-           min_seq_length: int = typer.Option(5, help='The minimum length of a session for the next item split')
+           category: str = typer.Option(..., help="beauty or games"),
+           min_seq_length: int = typer.Option(5, help='The minimum acceptable lenght of a session')
            ) -> None:
     """
     Handles pre-processing, splitting, storing and indexing of amazon data sets.
@@ -109,10 +109,14 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
     output_dir_path = output_dir_path / category
     # Pre-process yoochoose data
     print("Download dataset...")
-    raw_data_file_path = download_and_unzip_amazon_dataset(category=category, output_dir=output_dir_path)
+    raw_data_file_path = download_and_convert_amazon_dataset(category=category, output_dir=output_dir_path)
+
     print("Pre-process data...")
     processed_data_file_path: Path = preprocess_amazon_dataset_for_indexing(
-        raw_data_tsv_file_path=raw_data_file_path)
+        input_file_path=raw_data_file_path,
+        min_occurrences=min_seq_length
+    )
+
     print("Creating necessary files for training and evaluation...")
 
     custom_tokens = ["<PAD>", "<MASK>", "<UNK>"]
