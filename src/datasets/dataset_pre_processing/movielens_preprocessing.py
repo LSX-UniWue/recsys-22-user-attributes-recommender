@@ -27,11 +27,11 @@ def download_and_unzip_movielens_data(dataset: str, output_dir: Path, min_seq_le
                                       min_item_feedback: int) -> (Path, Path):
     url = DOWNLOAD_URL_MAP[dataset]
     dataset_dir = output_dir / f'{dataset}_{min_seq_length}_{min_user_feedback}_{min_item_feedback}'
-    download_dir = output_dir / dataset
+    download_dir = output_dir
 
     downloaded_file = download_dataset(url, download_dir)
 
-    extract_dir = download_dir / 'raw' / dataset
+    extract_dir = download_dir / 'raw'
     if not os.path.exists(extract_dir):
         extract_dir.mkdir(parents=True, exist_ok=True)
 
@@ -86,6 +86,7 @@ def preprocess_movielens_data(dataset_dir: Path,
         header = 0
         sep = ","
 
+    dataset_dir = dataset_dir / name
     # read and merge data
     print("Dataset dir", dataset_dir)
     ratings_df = read_csv(dataset_dir, "ratings", file_type, sep, header)
@@ -122,42 +123,3 @@ def preprocess_movielens_data(dataset_dir: Path,
     merged_df.to_csv(main_file, sep=delimiter, index=False)
 
     return main_file
-
-
-def split_movielens_dataset(dataset_dir: Path,
-                            main_file: Path,
-                            session_key: str = 'userId',
-                            delimiter: str = '\t',
-                            item_header: str = 'title',
-                            min_seq_length: int = 3
-                            ):
-    # we use leave one out evaluation: the last watched movie for each users is in the test set, the second last is in
-    # the valid set and the rest in the train set
-    # we generate the session position index for validation and test (for train the validation index can be used
-    # with the configuration that the target is not exposed to the training module)
-    index_file = dataset_dir / f'{main_file.stem}.idx'
-
-    index_csv(main_file, index_file, [session_key], delimiter)
-
-    additional_features = {}
-
-    dataset_metadata: DatasetMetadata = DatasetMetadata(
-        data_file_path=main_file,
-        session_key=[session_key],
-        session_index_path=index_file,
-        delimiter=delimiter,
-        item_header_name=item_header
-    )
-
-    create_conditional_index_using_extractor(dataset_metadata, output_file_path=dataset_dir / 'train.nip.idx',
-                                             min_session_length=min_seq_length, additional_features=additional_features,
-                                             target_positions_extractor=all_remaining_positions)
-
-    create_conditional_index_using_extractor(dataset_metadata, output_file_path=dataset_dir / 'valid.loo.idx',
-                                             min_session_length=min_seq_length, additional_features=additional_features,
-                                             target_positions_extractor=functools.partial(_get_position_with_offset,
-                                                                                          offset=2))
-    create_conditional_index_using_extractor(dataset_metadata, output_file_path=dataset_dir / 'test.loo.idx',
-                                             min_session_length=min_seq_length, additional_features=additional_features,
-                                             target_positions_extractor=functools.partial(_get_position_with_offset,
-                                                                                          offset=1))
