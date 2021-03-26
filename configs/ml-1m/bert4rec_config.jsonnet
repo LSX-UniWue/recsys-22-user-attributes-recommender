@@ -1,6 +1,6 @@
 local base_path = "/ssd/ml-1m/";
 local output_path = "/scratch/jane-doe-framework/experiments/ml-1m/bert4rec/";
-local loo_path = basepath + "loo/";
+local loo_path = base_path + "loo/";
 local hidden_size = 128;
 local max_seq_length = 200;
 local metrics =  {
