@@ -1,5 +1,5 @@
 local base_path = "/ssd/ml-1m/";
-local loo_path = basepath + "loo/";
+local loo_path = base_path + "loo/";
 local output_path = "/scratch/jane-doe-framework/experiments/ml-1m/sasrec";
 local max_seq_length = 200;
 local metrics =  {
@@ -27,6 +27,7 @@ local file_prefix = 'ml-1m';
             path: base_path,
             file_prefix: file_prefix,
             split_type: "leave_one_out", // leave one out split for evaluation
+            seed: 42 // not used
         }
     },
     module: {
