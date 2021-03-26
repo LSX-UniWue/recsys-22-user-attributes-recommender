@@ -74,7 +74,7 @@ local file_prefix = 'ml-1m';
             mode: 'max'
         },
         gpus: 1,
-        max_epochs: 100,
+        max_epochs: 800,
         check_val_every_n_epoch: 10
     }
 }
