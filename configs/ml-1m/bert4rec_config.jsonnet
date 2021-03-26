@@ -1,6 +1,6 @@
 local base_path = "/ssd/ml-1m/";
 local output_path = "/scratch/jane-doe-framework/experiments/ml-1m/bert4rec/";
-local max_seq_length = 200;
+local max_seq_length = 50;
 local metrics =  {
     mrr: [1, 5, 10],
     recall: [1, 5, 10],
