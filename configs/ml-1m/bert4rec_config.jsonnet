@@ -20,7 +20,8 @@ local file_prefix = 'ml-1m';
             },
             loader: {
                 batch_size: 64,
-                max_seq_length: max_seq_length
+                max_seq_length: max_seq_length,
+                num_workers: 8
             },
             path: base_path,
             file_prefix: file_prefix,
