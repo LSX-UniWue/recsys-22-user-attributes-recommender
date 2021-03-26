@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: ml-1m-sasrec
+  name: ml-1m-bert4rec
   labels:
     app: ds4rec
 spec:
@@ -28,13 +28,13 @@ spec:
             - name: REPO_BRANCH
               value: master
             - name: PREPARE_SCRIPT
-              value: /home/ls6/zoller/seq_recommendation/recommender/configs/amazon-beauty/copy_to_cache.sh
+              value: /home/ls6/zoller/seq_recommendation/recommender/configs/amazon-games/copy_to_cache.sh
             - name: GIT_TOKEN
               valueFrom:
                 secretKeyRef:
                   key: token
                   name: gitlab-token
-          args: ["train", "/home/ls6/zoller/seq_recommendation/recommender/configs/amazon-beauty/sasrec.jsonnet"]
+          args: ["train", "/home/ls6/zoller/seq_recommendation/recommender/configs/amazon-games/bert4rec.jsonnet"]
           volumeMounts:
             - mountPath: /home/ls6/zoller
               name: home

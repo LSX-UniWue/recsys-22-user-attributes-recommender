@@ -28,7 +28,7 @@ spec:
             - name: REPO_BRANCH
               value: master
             - name: PREPARE_SCRIPT
-              value: /home/ls6/zoller/seq_recommendation/recommender/configs/ml-1m/copy_to_cache.sh
+              value: /home/ls6/zoller/seq_recommendation/recommender/configs/amazon-beauty/copy_to_cache.sh
             - name: GIT_TOKEN
               valueFrom:
                 secretKeyRef:
