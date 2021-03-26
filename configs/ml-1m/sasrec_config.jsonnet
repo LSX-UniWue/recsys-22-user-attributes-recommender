@@ -27,6 +27,7 @@ local file_prefix = 'ml-1m';
             path: base_path,
             file_prefix: file_prefix,
             split_type: "leave_one_out", // leave one out split for evaluation
+            seed: 42 // not used
         }
     },
     module: {
