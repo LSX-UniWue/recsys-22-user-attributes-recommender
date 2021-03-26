@@ -1,4 +1,6 @@
-local base_path = "/ssd/ml-20m/";
+local base_path = "/ssd/ml-1m/";
+local loo_path = basepath + "loo/";
+local output_path = "/scratch/jane-doe-framework/experiments/ml-1m/sasrec";
 local max_seq_length = 200;
 local metrics =  {
     mrr: [1, 5, 10],
@@ -11,7 +13,7 @@ local file_prefix = 'ml-1m';
 {
     templates: {
         unified_output: {
-            path: "/scratch/jane-doe-framework/experiments/ml-1m/sasrec"
+            path: output_path
         },
         pos_neg_data_sources: {
             parser: {
@@ -34,7 +36,7 @@ local file_prefix = 'ml-1m';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + "ml-1m.popularity.title.txt",
+                sample_probability_file: loo_path + file_prefix + ".popularity.title.txt",
                 num_negative_samples: 100,
                 metrics: metrics
             }
@@ -56,7 +58,7 @@ local file_prefix = 'ml-1m';
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "ml-1m.vocabulary.title.txt"
+                    file: loo_path + file_prefix + ".vocabulary.title.txt"
                 }
             }
         }
