@@ -7,11 +7,12 @@ from datasets.dataset_pre_processing.generic import generic_process_dataset
 
 from datasets.dataset_pre_processing.movielens_preprocessing import download_and_unzip_movielens_data, \
     preprocess_movielens_data, MOVIELENS_DELIMITER, MOVIELENS_ITEM_HEADER_NAME, MOVIELENS_SESSION_KEY
+from datasets.dataset_pre_processing.utils import download_dataset
 from datasets.dataset_pre_processing.yoochoose_preprocessing import pre_process_yoochoose_dataset, \
     YOOCHOOSE_CLICKS_FILE_NAME, YOOCHOOSE_SESSION_ID_KEY, YOOCHOOSE_ITEM_ID_KEY, YOOCHOOSE_BUYS_FILE_NAME, \
     YOOCHOOSE_DELIMITER
 from datasets.dataset_pre_processing.amazon_preprocessing import download_and_convert_amazon_dataset, AMAZON_ITEM_ID, \
-    AMAZON_SESSION_ID, AMAZON_DELIMITER, preprocess_amazon_dataset_for_indexing
+    AMAZON_SESSION_ID, AMAZON_DELIMITER, preprocess_amazon_dataset_for_indexing, filter_category_occurrences
 
 app = typer.Typer()
 
@@ -42,6 +43,80 @@ def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_ch
         delimiter=MOVIELENS_DELIMITER,
         custom_tokens=custom_tokens,
         stats_columns=stats_columns
+    )
+    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length)
+
+
+@app.command()
+def steam(dataset_path: Path = typer.Argument("./dataset/steam", help="directory where the dataset will be stored."),
+          min_seq_length: int = typer.Option(5, help="The minimum length of a session to be considered for the dataset.")):
+
+    # download data if necessary
+    reviews_url = "http://cseweb.ucsd.edu/~wckang/steam_reviews.json.gz"
+    game_info_url = "http://cseweb.ucsd.edu/~wckang/steam_games.json.gz"
+
+    reviews_file_path = dataset_path / "steam_reviews.json.gz"
+    game_info_file_path = dataset_path / "steam_games.json.gz"
+
+    if not reviews_file_path.exists():
+        print("Downloading reviews file")
+        download_dataset(reviews_url, dataset_path)
+
+    if not game_info_file_path.exists():
+        print("Downloading game info file")
+        download_dataset(game_info_url, dataset_path)
+
+    # create csv dataset
+    def create_csv_dataset(input_file_path: Path, output_file_path: Path):
+        """
+        Parses the file with reviews and extracts `username`, `product_id` and `date` of each entry into a csv file.
+
+        :param input_file_path: the file with steam reviews (not really json).
+        :param output_file_path: the csv file where the dataset is written.
+        """
+        import gzip
+        import csv
+        with gzip.open(input_file_path, mode="rt") as input_file, output_file_path.open("w") as output_file:
+            writer = csv.writer(output_file, dialect="excel")
+            writer.writerow(["username", "product_id", "timestamp"])
+            for record in input_file:
+                parsed_record = eval(record)
+                username = parsed_record["username"]
+                product_id = int(parsed_record["product_id"])
+                timestamp = parsed_record["date"]
+
+                row = [username, product_id, timestamp]
+                writer.writerow(row)
+
+    output_file_path = dataset_path / "steam.csv"
+    if not output_file_path.exists():
+        print("Extracting review sessions")
+        create_csv_dataset(reviews_file_path, output_file_path)
+
+    # preprocess dataset
+    def preprocess_dataset(input_file_path: Path, output_file_path: Path, min_occurrences: int):
+        import pandas as pd
+        raw_df = pd.read_csv(input_file_path, delimiter=",", usecols=["username", "product_id", "timestamp"])
+        df = raw_df.sort_values(by=["username", "timestamp"])
+        df = filter_category_occurrences(df, "product_id", min_occurrences = min_occurrences)
+        df = filter_category_occurrences(df, "username", min_occurrences = min_occurrences)
+
+        df.to_csv(output_file_path, sep=",", index=False)
+
+    preprocessed_output_file_path = dataset_path / f"preprocessed-{output_file_path.name}"
+    if not preprocessed_output_file_path.exists():
+        preprocess_dataset(output_file_path, preprocessed_output_file_path, min_seq_length)
+
+    # split and generate indices
+    custom_tokens = ["<PAD>", "<MASK>", "<UNK>"]
+
+    dataset_metadata: DatasetMetadata = DatasetMetadata(
+        data_file_path=preprocessed_output_file_path,
+        session_key=["username"],
+        item_header_name="product_id",
+        delimiter=",",
+        custom_tokens=custom_tokens,
+        stats_columns=["product_id"]
     )
     generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length)
 
