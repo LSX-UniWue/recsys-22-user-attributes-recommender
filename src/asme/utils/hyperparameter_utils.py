@@ -1,5 +1,6 @@
 import inspect
 from functools import wraps
+from torch import nn
 
 
 def _get_hyperparameters(args, kwargs, init_func):
@@ -16,15 +17,18 @@ def _get_hyperparameters(args, kwargs, init_func):
     hyperparameters.update(kwargs)
 
     # special handling of the model parameter
-    model = hyperparameters.get('model', None)
-    if model:
-        hyperparameters.update(model.hyperparameters)
+
+    for index, arg in enumerate(hyperparameters):
+        # index + 1 because self is the first parameter of init
+        model = hyperparameters.get(arg, None)
+        if isinstance(model, nn.Module) and arg != 'metrics':
+            model_hyperparameters = model.hyperparameters
+            hyperparameters[arg] = model_hyperparameters
 
     return hyperparameters
 
 
 def save_hyperparameters(init):
-
     """
     overrides init to set the init values as hyperparameters of the model
     FIXME: currently the module must call self.save_hyperparameters(self.hyperparameters) by itself
