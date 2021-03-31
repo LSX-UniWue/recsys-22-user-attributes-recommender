@@ -275,7 +275,7 @@ def predict(config_file: str = typer.Argument(..., help='the path to the config 
 
                 scores = _softmax(prediction)
 
-                item_indices = scores[::-1].argsort()[:num_predictions]
+                item_indices = scores.argsort()[::-1][:num_predictions]
 
                 item_ids = item_indices.tolist()
 
@@ -286,8 +286,8 @@ def predict(config_file: str = typer.Argument(..., help='the path to the config 
                     item_ids = selected_item_ids
 
                 tokens = item_tokenizer.convert_ids_to_tokens(item_ids)
-                scores[::-1].sort()
-                scores = scores.tolist()[:num_predictions]
+                scores.sort()
+                scores = scores[::-1].tolist()[:num_predictions]
 
                 sample_id = _generate_sample_id(sample_ids, sequence_position_ids, i)
                 true_target = targets[i].item()
