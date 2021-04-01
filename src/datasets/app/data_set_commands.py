@@ -77,7 +77,7 @@ def steam(dataset_path: Path = typer.Argument("./dataset/steam", help="directory
         import gzip
         import csv
         with gzip.open(input_file_path, mode="rt") as input_file, output_file_path.open("w") as output_file:
-            writer = csv.writer(output_file, dialect="excel")
+            writer = csv.writer(output_file, delimiter="\t")
             writer.writerow(["username", "product_id", "timestamp"])
             for record in input_file:
                 parsed_record = eval(record)
@@ -96,12 +96,12 @@ def steam(dataset_path: Path = typer.Argument("./dataset/steam", help="directory
     # preprocess dataset
     def preprocess_dataset(input_file_path: Path, output_file_path: Path, min_occurrences: int):
         import pandas as pd
-        raw_df = pd.read_csv(input_file_path, delimiter=",", usecols=["username", "product_id", "timestamp"])
+        raw_df = pd.read_csv(input_file_path, delimiter="\t", usecols=["username", "product_id", "timestamp"])
         df = raw_df.sort_values(by=["username", "timestamp"])
         df = filter_category_occurrences(df, "product_id", min_occurrences = min_occurrences)
         df = filter_category_occurrences(df, "username", min_occurrences = min_occurrences)
 
-        df.to_csv(output_file_path, sep=",", index=False)
+        df.to_csv(output_file_path, sep="\t", index=False)
 
     preprocessed_output_file_path = dataset_path / f"preprocessed-{output_file_path.name}"
     if not preprocessed_output_file_path.exists():
@@ -114,7 +114,7 @@ def steam(dataset_path: Path = typer.Argument("./dataset/steam", help="directory
         data_file_path=preprocessed_output_file_path,
         session_key=["username"],
         item_header_name="product_id",
-        delimiter=",",
+        delimiter="\t",
         custom_tokens=custom_tokens,
         stats_columns=["product_id"]
     )
