@@ -171,12 +171,23 @@ class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
     def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = config['path']
         prefix = _get_prefix(config, prefix_id)
-        dataset_config = {
-            'type': 'sequence_position',
-            'csv_file': f'{base_path}{prefix}.csv',
-            'csv_file_index': f'{base_path}{prefix}.session.idx',
-            'nip_index_file': f'{base_path}{prefix}.{prefix_id}.nextitem.idx'
-        }
+
+        #FIXME (AD) we need to reiterate our  dataset schema for loo
+        if prefix_id == "train":
+            # (AD) we should rename the index file to conform to validation/test
+            dataset_config = {
+                'type': 'sequence_position',
+                'csv_file': f'{base_path}{prefix}.csv',
+                'csv_file_index': f'{base_path}{prefix}.session.idx',
+                'nip_index_file': f'{base_path}/loo/{prefix}.{prefix_id}.nextitem.idx'
+            }
+        else:
+            dataset_config = {
+                'type': 'sequence_position',
+                'csv_file': f'{base_path}{prefix}.csv',
+                'csv_file_index': f'{base_path}{prefix}.session.idx',
+                'nip_index_file': f'{base_path}/loo/{prefix}.{prefix_id}.loo.idx'
+            }
 
         return dataset_config
 
