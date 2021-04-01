@@ -12,7 +12,8 @@ from datasets.dataset_pre_processing.yoochoose_preprocessing import pre_process_
     YOOCHOOSE_CLICKS_FILE_NAME, YOOCHOOSE_SESSION_ID_KEY, YOOCHOOSE_ITEM_ID_KEY, YOOCHOOSE_BUYS_FILE_NAME, \
     YOOCHOOSE_DELIMITER
 from datasets.dataset_pre_processing.amazon_preprocessing import download_and_convert_amazon_dataset, AMAZON_ITEM_ID, \
-    AMAZON_SESSION_ID, AMAZON_DELIMITER, preprocess_amazon_dataset_for_indexing, filter_category_occurrences
+    AMAZON_SESSION_ID, AMAZON_DELIMITER, preprocess_amazon_dataset_for_indexing, filter_category_occurrences, \
+    FilterStrategy
 
 app = typer.Typer()
 
@@ -171,14 +172,16 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
 def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
                                                   help='Output directory for indices, splits, and vocabulary.'),
            category: str = typer.Option(..., help="beauty or games"),
-           min_seq_length: int = typer.Option(5, help='The minimum acceptable lenght of a session')
+           min_occurrences: int = typer.Option(5, help='The minimum number of occurrences used to filter infrequently used items and short sessions.'),
+           filter_strategy: FilterStrategy = typer.Option(FilterStrategy.pipelined, help="the strategy used to apply filters to the dataset.")
            ) -> None:
     """
     Handles pre-processing, splitting, storing and indexing of amazon data sets.
 
     :param output_dir_path: Directory under which the processed data is stored after successful execution.
     :param category: Amazon reviews category
-    :param min_seq_length: Minimum length of a session in order to be included in the next item split
+    :param min_occurrences: The minimum number of occurrences used to filter infrequently used items and short sessions.
+    :param filter_strategy: the strategy used to apply filters to the dataset.
     :return:
     """
     output_dir_path = output_dir_path / category
@@ -189,7 +192,8 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
     print("Pre-process data...")
     processed_data_file_path: Path = preprocess_amazon_dataset_for_indexing(
         input_file_path=raw_data_file_path,
-        min_occurrences=min_seq_length
+        filter_strategy=filter_strategy,
+        min_occurrences=min_occurrences
     )
 
     print("Creating necessary files for training and evaluation...")
@@ -203,4 +207,4 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
         delimiter=AMAZON_DELIMITER,
         custom_tokens=custom_tokens
     )
-    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length)
+    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_occurrences)
