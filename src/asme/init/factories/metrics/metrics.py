@@ -3,11 +3,13 @@ from typing import List, Any
 from asme.init.config import Config
 from asme.init.context import Context
 from asme.init.factories.common.dependencies_factory import DependenciesFactory
-from asme.init.factories.metrics.ranking_metric import RankingMetricFactory
+from asme.init.factories.metrics.topn_metric import TopNMetricFactory
+from asme.init.factories.metrics.metric import MetricFactory
 from asme.init.object_factory import ObjectFactory, CanBuildResult
 from asme.metrics.dcg import DiscountedCumulativeGainMetric
 from asme.metrics.f1 import F1Metric
 from asme.metrics.mrr import MRRMetric
+from asme.metrics.mrr_full import MRRFullMetric
 from asme.metrics.ndcg import NormalizedDiscountedCumulativeGainMetric
 from asme.metrics.precision import PrecisionMetric
 from asme.metrics.metric import RankingMetric
@@ -24,12 +26,13 @@ class MetricsFactory(ObjectFactory):
         super().__init__()
 
         # TODO: config this
-        self.metrics = DependenciesFactory([RankingMetricFactory('mrr', MRRMetric),
-                                            RankingMetricFactory('f1', F1Metric),
-                                            RankingMetricFactory('recall', RecallMetric),
-                                            RankingMetricFactory('dcg', DiscountedCumulativeGainMetric),
-                                            RankingMetricFactory('ndcg', NormalizedDiscountedCumulativeGainMetric),
-                                            RankingMetricFactory('precision', PrecisionMetric)],
+        self.metrics = DependenciesFactory([TopNMetricFactory('mrr', MRRMetric),
+                                            TopNMetricFactory('f1', F1Metric),
+                                            TopNMetricFactory('recall', RecallMetric),
+                                            TopNMetricFactory('dcg', DiscountedCumulativeGainMetric),
+                                            TopNMetricFactory('ndcg', NormalizedDiscountedCumulativeGainMetric),
+                                            TopNMetricFactory('precision', PrecisionMetric),
+                                            MetricFactory('mrr_full', MRRFullMetric)],
                                            optional_based_on_path=True)
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
