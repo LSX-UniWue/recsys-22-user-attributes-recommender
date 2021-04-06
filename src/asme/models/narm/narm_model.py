@@ -80,7 +80,7 @@ class NarmModel(nn.Module):
         )
 
         h_i, h_t = self.global_encoder(packed_embedded_session)
-        c_tg = h_t = torch.squeeze(h_t, dim=0)
+        c_tg = h_t = h_t[-1]  # we use the last hidden state of the last layer
 
         # we only use the hidden size and throw away the lengths, since we already have them
         h_i, _ = nn.utils.rnn.pad_packed_sequence(h_i, batch_first=self.batch_first, total_length=max_seq_length)
@@ -108,7 +108,7 @@ class LocalEncoderLayer(nn.Module):
         super(LocalEncoderLayer, self).__init__()
         self.A1 = nn.Linear(hidden_size, latent_size, bias=False)
         self.A2 = nn.Linear(hidden_size, latent_size, bias=False)
-        self.v = torch.nn.Parameter(torch.Tensor(latent_size))
+        self.v = nn.Parameter(torch.Tensor(latent_size))
 
         self.projection_activation = nn.Sigmoid()
         self._init_weights()
