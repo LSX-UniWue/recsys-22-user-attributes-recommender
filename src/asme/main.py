@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Optional, Callable, List, Iterator
 from optuna.study import StudyDirection
 from pytorch_lightning import seed_everything, Callback
-from pytorch_lightning.utilities import cloud_io
 from torch.utils.data import Sampler, DataLoader
 from torch.utils.data.dataset import T_co
 
@@ -20,7 +19,8 @@ from asme.init.factories.metrics.metrics_container import MetricsContainerFactor
 from asme.init.templating.search.configuration import SearchConfigurationTemplateProcessor
 from asme.init.templating.search.processor import SearchTemplateProcessor
 from asme.init.templating.search.resolver import OptunaParameterResolver
-from asme.utils.run_utils import load_config, create_container, load_container, OBJECTIVE_METRIC_KEY
+from asme.utils.run_utils import load_config, create_container, OBJECTIVE_METRIC_KEY, TRAIL_BASE_PATH, \
+    load_and_restore_from_file_or_study
 from asme.tokenization.tokenizer import Tokenizer
 from asme.utils import ioutils
 from asme.utils.ioutils import load_file_with_item_ids, determine_log_dir, save_config, save_finished_flag, \
@@ -29,11 +29,16 @@ from asme.writer.prediction.prediction_writer import build_prediction_writer
 from asme.writer.results.results_writer import build_result_writer
 
 
+_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at least the checkpoint file and config or" \
+                                                    " the study name and study storage to infer the config and " \
+                                                    "checkpoint path"
+
+
 app = typer.Typer()
 
 
 @app.command()
-def train(config_file: str = typer.Argument(..., help='the path to the config file'),
+def train(config_file: Path = typer.Argument(..., help='the path to the config file', exists=True),
           do_train: bool = typer.Option(True, help='flag iff the model should be trained'),
           do_test: bool = typer.Option(False, help='flag iff the model should be tested (after training)')
           ) -> None:
@@ -136,6 +141,7 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 
             trainer = trainer_builder.build()
             log_dir = determine_log_dir(trainer)
+            trial.set_user_attr(TRAIL_BASE_PATH, str(log_dir))
 
             # save config of current run to its log dir
             save_config(config, log_dir)
@@ -161,24 +167,30 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 
 
 @app.command()
-def predict(config_file: str = typer.Argument(..., help='the path to the config file'),
-            checkpoint_file: str = typer.Argument(..., help='path to the checkpoint file'),
-            output_file: Path = typer.Argument(..., help='path where output is written'),
+def predict(output_file: Path = typer.Argument(..., help='path where output is written'),
             num_predictions: int = typer.Option(default=20, help='number of predictions to export'),
             gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
             selected_items_file: Optional[Path] = typer.Option(default=None,
                                                                help='only use the item ids for prediction'),
+            checkpoint_file: Path = typer.Option(default=None, help='path to the checkpoint file'),
+            config_file: Path = typer.Option(default=None, help='the path to the config file'),
+            study_name: str = typer.Option(default=None, help='the study name of an existing study'),
+            study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
             overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
             log_input: Optional[bool] = typer.Option(default=True, help='enable input logging.')
             ):
     """
 
     writes the predictions of model (restored from a checkpoint file) to a output file
+    the checkpoint file can be provided as argument or is automatically inferred from the best trail of
+    the provided study
 
+    :param study_name: the name of the study
+    :param study_storage: the storage uri of the study
     :param config_file: the config file used while training the model
-    :param checkpoint_file: the checkpoint file of the model
     :param output_file: the path to write the output to
     :param num_predictions: number of predictions
+    :param checkpoint_file: the checkpoint file of the model
     :param gpu: the number of gpus to use
     :param selected_items_file: the item that should only be considered
     :param overwrite: override the output file
@@ -187,26 +199,17 @@ def predict(config_file: str = typer.Argument(..., help='the path to the config 
     # checking if the file already exists
     if not overwrite and output_file.exists():
         print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
+        exit(2)
+
+    container = load_and_restore_from_file_or_study(checkpoint_file, config_file, study_name, study_storage,
+                                                    gpus=gpu)
+    if container is None:
+        print(_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY)
         exit(-1)
 
-    container = load_container(Path(config_file))
     module = container.module()
-
-    # FIXME: try to use load_from_checkpoint later
-    # load checkpoint <- we don't use the PL function load_from_checkpoint because it does
-    # not work with our module class system
-    ckpt = cloud_io.load(checkpoint_file)
-
-    # acquire state_dict
-    state_dict = ckpt["state_dict"]
-
-    # load parameters and freeze the model
-    module.load_state_dict(state_dict)
-
+    trainer = container.trainer().build()
     test_loader = container.test_dataloader()
-    trainer_builder = container.trainer()
-    trainer_builder = trainer_builder.set("gpus", gpu)
-    trainer = trainer_builder.build()
 
     def _noop_filter(sample_predictions: np.ndarray):
         return sample_predictions
@@ -310,8 +313,10 @@ def predict(config_file: str = typer.Argument(..., help='the path to the config 
 
 
 @app.command()
-def evaluate(config_file: str = typer.Argument(..., help='the path to the config file'),
-             checkpoint_file: str = typer.Argument(..., help='path to the checkpoint file'),
+def evaluate(config_file: Path = typer.Option(default=None, help='the path to the config file'),
+             checkpoint_file: Path = typer.Option(default=None, help='path to the checkpoint file'),
+             study_name: str = typer.Option(default=None, help='the study name of an existing study'),
+             study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
              output_file: Optional[Path] = typer.Option(default=None, help='path where output is written'),
              gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
              overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
@@ -325,27 +330,16 @@ def evaluate(config_file: str = typer.Argument(..., help='the path to the config
     if seed is not None:
         seed_everything(seed)
 
-    container = load_container(Path(config_file))
+    container = load_and_restore_from_file_or_study(checkpoint_file, config_file, study_name, study_storage,
+                                                    gpus=gpu)
+    if container is None:
+        print(_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY)
+        exit(-1)
+
     module = container.module()
-
-    # FIXME: try to use load_from_checkpoint later
-    # load checkpoint <- we don't use the PL function load_from_checkpoint because it does
-    # not work with our module class system
-    ckpt = cloud_io.load(checkpoint_file)
-
-    # acquire state_dict
-    state_dict = ckpt["state_dict"]
-
-    # load parameters and freeze the model
-    module.load_state_dict(state_dict)
-    module.freeze()
-
+    trainer = container.trainer().build()
     test_loader = container.test_dataloader()
 
-    trainer_builder = container.trainer()
-    trainer_builder.set("gpus", gpu)
-
-    trainer = trainer_builder.build()
     eval_results = trainer.test(module, test_dataloaders=test_loader, verbose=not write_results_to_file)
 
     if write_results_to_file:
@@ -358,7 +352,8 @@ def evaluate(config_file: str = typer.Argument(..., help='the path to the config
 
 @app.command()
 def resume(log_dir: str = typer.Argument(..., help='the path to the logging directory of the run to be resumed'),
-           checkpoint_file: Optional[str] = typer.Option(default=None, help="the name of the checkpoint file to resume from")):
+           checkpoint_file: Optional[str] = typer.Option(default=None,
+                                                         help="the name of the checkpoint file to resume from")):
     log_dir = Path(log_dir)
 
     # check for finished flag
