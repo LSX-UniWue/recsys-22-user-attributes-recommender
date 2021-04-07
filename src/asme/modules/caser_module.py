@@ -3,6 +3,7 @@ from typing import Union, Dict, Optional, Tuple
 import pytorch_lightning as pl
 import torch
 
+from asme.modules import LOG_KEY_TRAINING_LOSS
 from data.datasets import ITEM_SEQ_ENTRY_NAME, USER_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME, TARGET_ENTRY_NAME
 from asme.metrics.container.metrics_container import MetricsContainer
@@ -84,6 +85,7 @@ class CaserModule(MetricsTrait, pl.LightningModule):
         pos_logits, neg_logits = self.model(input_seq, users, pos_items, neg_items)
 
         loss = self._calc_loss(pos_logits, neg_logits)
+        self.log(LOG_KEY_TRAINING_LOSS, loss)
         return {
             'loss': loss
         }

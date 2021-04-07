@@ -3,6 +3,7 @@ from typing import Union, Dict, Optional
 import pytorch_lightning as pl
 import torch
 
+from asme.modules import LOG_KEY_TRAINING_LOSS
 from data.datasets import ITEM_SEQ_ENTRY_NAME, USER_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME, TARGET_ENTRY_NAME
 from asme.metrics.container.metrics_container import MetricsContainer
@@ -72,6 +73,7 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
                                                [pos_items.size(1),
                                                 neg_items.size(1)], dim=1)
         loss = self._calc_loss(pos_logits, neg_logits)
+        self.log(LOG_KEY_TRAINING_LOSS, loss)
         return {
             'loss': loss
         }

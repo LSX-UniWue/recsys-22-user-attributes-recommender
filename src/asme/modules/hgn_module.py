@@ -3,6 +3,7 @@ from typing import Union, Dict, Optional
 import pytorch_lightning as pl
 import torch
 
+from asme.modules import LOG_KEY_TRAINING_LOSS
 from data.datasets import ITEM_SEQ_ENTRY_NAME, USER_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME, TARGET_ENTRY_NAME
 from asme.metrics.container.metrics_container import MetricsContainer
@@ -77,6 +78,9 @@ class HGNModule(MetricsTrait, pl.LightningModule):
         # Compute the BPR loss
         loss = -torch.log(torch.sigmoid(targets_prediction - negatives_prediction) + 1e-8)
         loss = torch.mean(torch.sum(loss))
+
+        self.log(LOG_KEY_TRAINING_LOSS, loss)
+
         return {
             'loss': loss
         }
