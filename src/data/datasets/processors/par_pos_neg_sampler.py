@@ -71,7 +71,9 @@ class ParameterizedPositiveNegativeSamplerProcessor(Processor):
 
         return set(flat_items)
 
-    def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
+    def process(self,
+                parsed_session: Dict[str, Any]
+                ) -> Dict[str, Any]:
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
 
         if len(session) < (self.t + 1):

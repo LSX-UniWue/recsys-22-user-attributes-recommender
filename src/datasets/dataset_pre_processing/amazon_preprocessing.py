@@ -38,7 +38,9 @@ class FilterStrategy(str, Enum):
     pipelined = "sequential"
 
 
-def convert_to_csv(input_file_path: Path, output_file_path: Path, delimiter: str = "\t"):
+def convert_to_csv(input_file_path: Path,
+                   output_file_path: Path,
+                   delimiter: str = "\t"):
     """
     Extracts `reviewerID`, `asin` and `timestamp` from each line of the input file and stores the extracted data in csv
     format.
@@ -55,7 +57,9 @@ def convert_to_csv(input_file_path: Path, output_file_path: Path, delimiter: str
             writer.writerow([parsed["reviewerID"], parsed["asin"], parsed["unixReviewTime"]])
 
 
-def download_and_convert_amazon_dataset(category: str, output_dir: Path) -> Path:
+def download_and_convert_amazon_dataset(category: str,
+                                        output_dir: Path
+                                        ) -> Path:
     """
     Downloads the Amazon dataset for the given category from http://jmcauley.ucsd.edu/data/amazon/links.html, extracts
     the relevant fields for each entry and stores the data in CSV format.
@@ -73,7 +77,10 @@ def download_and_convert_amazon_dataset(category: str, output_dir: Path) -> Path
     return csv_file_path
 
 
-def filter_category_occurrences(df: pd.DataFrame, filter_category: str, min_occurrences: int = 5):
+def filter_category_occurrences(df: pd.DataFrame,
+                                filter_category: str,
+                                min_occurrences: int = 5
+                                ) -> pd.DataFrame:
     # rare products
     df_counts = df.groupby([filter_category]).count()
     df_counts = df_counts[df_counts["timestamp"] >= min_occurrences]
@@ -82,7 +89,9 @@ def filter_category_occurrences(df: pd.DataFrame, filter_category: str, min_occu
     return df[df[filter_category].isin(product_ids)]
 
 
-def filter_pipelined(df: pd.DataFrame, min_occurrences: int = 5):
+def filter_pipelined(df: pd.DataFrame,
+                     min_occurrences: int = 5
+                     ) -> pd.DataFrame:
     """
     Filter min session length and min item occurrence as a pipeline with order: item occurrence, session length
 
@@ -99,7 +108,9 @@ def filter_pipelined(df: pd.DataFrame, min_occurrences: int = 5):
     return df
 
 
-def filter_joined(df: pd.DataFrame, min_occurrences: int = 5):
+def filter_joined(df: pd.DataFrame,
+                  min_occurrences: int = 5
+                  ) -> pd.DataFrame:
     """
     Filter both min session length and min item occurrences in one pass.
 
@@ -118,7 +129,10 @@ def filter_joined(df: pd.DataFrame, min_occurrences: int = 5):
     return df_filtered.drop(columns=[AMAZON_SESSION_COUNTS, AMAZON_ITEM_COUNTS]).sort_values(by=[AMAZON_SESSION_ID])
 
 
-def preprocess_amazon_dataset_for_indexing(input_file_path: Path, filter_strategy: FilterStrategy, output_file_prefix: str = "preprocessed-", min_occurrences: int = 5):
+def preprocess_amazon_dataset_for_indexing(input_file_path: Path,
+                                           filter_strategy: FilterStrategy,
+                                           output_file_prefix: str = "preprocessed-", min_occurrences: int = 5
+                                           ) -> Path:
 
     # read only the data we need into memory
     df = pd.read_csv(filepath_or_buffer=input_file_path,

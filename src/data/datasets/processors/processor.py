@@ -10,11 +10,12 @@ class Processor:
 
     @abstractmethod
     def process(self,
-                input: Dict[str, Any]) -> Dict[str, Any]:
+                parsed_session: Dict[str, Any]
+                ) -> Dict[str, Any]:
         """
         Takes the input and processes/enhances it.
 
-        :param input: input data at this step of the pipeline.
+        :param parsed_session: input data at this step of the pipeline.
         :return: a dictionary with the processed version of the input data.
         """
         pass
@@ -29,8 +30,9 @@ class DelegatingProcessor(Processor):
         self.processors = processors
 
     def process(self,
-                input: Dict[str, Any]) -> Dict[str, Any]:
+                parsed_session: Dict[str, Any]
+                ) -> Dict[str, Any]:
         for processor in self.processors:
-            input = processor.process(input)
+            parsed_session = processor.process(parsed_session)
 
-        return input
+        return parsed_session

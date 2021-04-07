@@ -13,7 +13,8 @@ from datasets.dataset_index_splits import split_strategies_factory
 from datasets.data_structures.split_strategy import SplitStrategy
 
 
-def generic_process_dataset(dataset_metadata: DatasetMetadata, min_seq_length: int
+def generic_process_dataset(dataset_metadata: DatasetMetadata,
+                            min_seq_length: int
                             ) -> None:
     """
     Handles pre-processing, splitting, storing and indexing of a given session data sets.

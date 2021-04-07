@@ -155,7 +155,7 @@ def index_splits(dataset_metadata: DatasetMetadata, output_dir_path: Path, minim
             item_header_name=dataset_metadata.item_header_name,
             delimiter=dataset_metadata.delimiter,
             session_index_path=split_index_file,
-            custom_tokens=dataset_metadata.custom_tokens,
+            special_tokens=dataset_metadata.custom_tokens,
             stats_columns=dataset_metadata.stats_columns
         )
         create_conditional_index(dataset_metadata=split_metadata,
