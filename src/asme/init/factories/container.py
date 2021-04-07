@@ -18,15 +18,19 @@ from asme.models.rnn.rnn_model import RNNModel
 from asme.models.sasrec.sas_rec_model import SASRecModel
 from asme.models.kebert4rec.kebert4rec_model import KeBERT4RecModel
 from asme.models.hgn.hgn_model import HGNModel
-from asme.modules import BERT4RecModule, CaserModule, SASRecModule, KeBERT4RecModule, HGNModule
 from asme.modules.baselines.bpr_module import BprModule
 from asme.modules.baselines.markov_module import MarkovModule
 from asme.modules.baselines.pop_module import PopModule
 from asme.modules.baselines.session_pop_module import SessionPopModule
 from asme.modules.basket.dream_module import DreamModule
 from asme.modules.basket.nnrec_module import NNRecModule
+from asme.modules.bert4rec_module import BERT4RecModule
+from asme.modules.caser_module import CaserModule
+from asme.modules.hgn_module import HGNModule
+from asme.modules.kebert4rec_module import KeBERT4RecModule
 from asme.modules.narm_module import NarmModule
 from asme.modules.rnn_module import RNNModule
+from asme.modules.sas_rec_module import SASRecModule
 
 
 class ContainerFactory(ObjectFactory):
