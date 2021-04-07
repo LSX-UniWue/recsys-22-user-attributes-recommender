@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from asme.metrics.container.metrics_container import MetricsContainer
 from asme.models.narm.narm_model import NarmModel
-from asme.modules import LOG_KEY_VALIDATION_LOSS
+from asme.modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TRAINING_LOSS
 from asme.modules.metrics_trait import MetricsTrait
 from asme.modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
 from asme.tokenization.tokenizer import Tokenizer
@@ -81,6 +81,7 @@ class NarmModule(MetricsTrait, pl.LightningModule):
         logits = self(batch, batch_idx)
         loss = self._calc_loss(logits, target)
 
+        self.log(LOG_KEY_TRAINING_LOSS, loss)
         return {
             "loss": loss
         }
