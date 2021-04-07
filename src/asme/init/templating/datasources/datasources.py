@@ -212,7 +212,9 @@ class LeaveOneOutSessionDatasetBuilder(DatasetBuilder):
             'nip_index_file': f'{base_path}loo/{index_file_path}.loo.idx'
         }
         if is_training:
-            dataset_config['add_target'] = False
+            # (AD) this causes the PosNegProcessor to discard the last two items in the session, if this is set to
+            # False the validation target will be part of the training set.
+            dataset_config['add_target'] = True
         return dataset_config
 
 
