@@ -17,13 +17,7 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))
         timeout(time: 2, unit: 'HOURS')
     }
-    stages {
-        stage('Checkout Git') {
-          steps {
-            git credentialsId: '09d56710-2b3c-423d-bad2-5c52a38c3ec3', url: 'git@gitlab2.informatik.uni-wuerzburg.de:dmir/dallmann/recommender.git'
-          }
-        }
-        
+    stages {        
         stage('Poetry Install') {
           steps {
             sh 'export HOME=`pwd`/env; poetry install --no-root'
