@@ -138,12 +138,12 @@ def run_loo_split(dataset_metadata: DatasetMetadata,
         dataset_metadata=dataset_metadata,
         output_file_path=output_dir_path / (dataset_metadata.file_prefix + ".validation.loo.idx"),
         min_session_length=minimum_session_length,
-        target_positions_extractor=get_position_with_offset_one
+        target_positions_extractor=get_position_with_offset_two
     )
     # Create testing index with target item n
     create_conditional_index_using_extractor(
         dataset_metadata=dataset_metadata,
         output_file_path=output_dir_path / (dataset_metadata.file_prefix + ".test.loo.idx"),
         min_session_length=minimum_session_length,
-        target_positions_extractor=get_position_with_offset_two
+        target_positions_extractor=get_position_with_offset_one
     )
