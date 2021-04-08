@@ -13,7 +13,7 @@ from asme.tokenization.tokenizer import Tokenizer
 from asme.tokenization.vocabulary import CSVVocabularyReaderWriter
 from data.datasets import SAMPLE_IDS, ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 
-TEST_DATASET_BASE_PATH = Path('../../../../example_dataset/')
+TEST_DATASET_BASE_PATH = Path('tests/example_dataset/')
 
 LEAVE_ONE_OUT_TEMPLATE = {
         "templates": {
