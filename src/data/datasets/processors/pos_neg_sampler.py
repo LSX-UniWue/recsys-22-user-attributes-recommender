@@ -1,7 +1,6 @@
 import torch
 
 from typing import Union, List, Dict, Any, Set
-from numpy.random._generator import default_rng
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
 from data.datasets.processors.processor import Processor
@@ -27,15 +26,13 @@ class PositiveNegativeSamplerProcessor(Processor):
 
     """
     def __init__(self,
-                 tokenizer: Tokenizer,
-                 seed: int = 42
+                 tokenizer: Tokenizer
                  ):
         super().__init__()
         self._tokenizer = tokenizer
-        self._rng = default_rng(seed=seed)
 
     def _sample_negative_target(self,
-                                session: Union[List[int], List[List[int]]]
+                                sequence: Union[List[int], List[List[int]]]
                                 ) -> Union[List[int], List[List[int]]]:
 
         # we want to use a multinomial distribution to draw negative samples fast
@@ -46,41 +43,42 @@ class PositiveNegativeSamplerProcessor(Processor):
         weights[self._tokenizer.get_special_token_ids()] = 0.
 
         # prevent sampling of tokens already present in the session
-        used_tokens = self._get_all_tokens_of_session(session)
+        used_tokens = self._get_all_tokens_of_sequence(sequence)
         weights[list(used_tokens)] = 0.
 
-        if isinstance(session[0], list):
+        if isinstance(sequence[0], list):
             results = []
-            for seq_step in session[:-1]:  # skip last target
-                neg_samples = torch.multinomial(weights, num_samples=len(seq_step), replacement=True).tolist()
+            for seq_step in sequence[:-1]:  # skip last target
+                neg_samples = torch.multinomial(weights, num_samples=len(seq_step) - 1, replacement=True).tolist()
                 results.append(neg_samples)
             return results
 
-        return torch.multinomial(weights, num_samples=len(session), replacement=True).tolist()
+        return torch.multinomial(weights, num_samples=len(sequence) - 1, replacement=True).tolist()
 
-    def _get_all_tokens_of_session(self, session: Union[List[int], List[List[int]]]
-                                   ) -> Set[int]:
-        if isinstance(session[0], list):
-            flat_items = [item for sublist in session for item in sublist]
+    def _get_all_tokens_of_sequence(self,
+                                    sequence: Union[List[int], List[List[int]]]
+                                    ) -> Set[int]:
+        if isinstance(sequence[0], list):
+            flat_items = [item for sublist in sequence for item in sublist]
         else:
-            flat_items = session
+            flat_items = sequence
 
         return set(flat_items)
 
     def process(self,
-                parsed_session: Dict[str, Any]
+                parsed_sequence: Dict[str, Any]
                 ) -> Dict[str, Any]:
-        session = parsed_session[ITEM_SEQ_ENTRY_NAME]
+        sequence = parsed_sequence[ITEM_SEQ_ENTRY_NAME]
 
-        if len(session) == 1:
-            print(session)
-            raise AssertionError(f'{parsed_session[SAMPLE_IDS]}')
+        if len(sequence) == 1:
+            print(sequence)
+            raise AssertionError(f'{parsed_sequence[SAMPLE_IDS]}')
 
-        x = session[:-1]
-        pos = session[1:]
-        neg = self._sample_negative_target(session)
+        x = sequence[:-1]
+        pos = sequence[1:]
+        neg = self._sample_negative_target(sequence)
 
-        parsed_session[ITEM_SEQ_ENTRY_NAME] = x
-        parsed_session[POSITIVE_SAMPLES_ENTRY_NAME] = pos
-        parsed_session[NEGATIVE_SAMPLES_ENTRY_NAME] = neg
-        return parsed_session
+        parsed_sequence[ITEM_SEQ_ENTRY_NAME] = x
+        parsed_sequence[POSITIVE_SAMPLES_ENTRY_NAME] = pos
+        parsed_sequence[NEGATIVE_SAMPLES_ENTRY_NAME] = neg
+        return parsed_sequence
