@@ -33,7 +33,10 @@ class ProcessorsFactory(ObjectFactory):
             })
         )
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
+    def can_build(self,
+                  config: Config,
+                  context: Context
+                  ) -> CanBuildResult:
         return self.processors_factories.can_build(config, context)
 
     def build(self,

@@ -5,7 +5,9 @@ from typing import List, Optional, OrderedDict, TextIO, Union
 
 
 class Vocabulary(object):
-    def __init__(self, token_to_id: OrderedDict[str, int]):
+    def __init__(self,
+                 token_to_id: OrderedDict[str, int]
+                 ):
         self.token_to_id = token_to_id
         self.id_to_token = collections.OrderedDict([(id, token) for token, id in token_to_id.items()])
 
@@ -35,7 +37,8 @@ class Vocabulary(object):
 
 
 class VocabularyBuilder(object):
-    def __init__(self, tokens: List[str] = [], start_id: int = 0):
+    def __init__(self,
+                 tokens: List[str] = [], start_id: int = 0):
         self.next_id = start_id + len(tokens)
         self.token_to_id = collections.OrderedDict(zip(tokens, range(start_id, self.next_id)))
 
@@ -54,7 +57,7 @@ class VocabularyReaderWriter(object):
     def write(self, vocabulary: Vocabulary, output: TextIO):
         raise NotImplementedError()
 
-    def read(self, input: TextIO) -> Vocabulary:
+    def read(self, file_input: TextIO) -> Vocabulary:
         raise NotImplementedError()
 
 
@@ -70,8 +73,10 @@ class CSVVocabularyReaderWriter(VocabularyReaderWriter):
         for token in vocabulary.tokens():
             writer.writerow([token, vocabulary.get_id(token)])
 
-    def read(self, input: TextIO) -> Vocabulary:
-        reader = csv.reader(input, delimiter=self.delimiter)
+    def read(self,
+             file_input: TextIO
+             ) -> Vocabulary:
+        reader = csv.reader(file_input, delimiter=self.delimiter)
         vocabulary_entries = [(token, int(id)) for [token, id] in reader]
 
         return Vocabulary(collections.OrderedDict(vocabulary_entries))
@@ -88,8 +93,8 @@ class SequentialIdVocabularyReaderWriter(VocabularyReaderWriter):
             output.write(token)
             output.write("\n")
 
-    def read(self, input: TextIO) -> Vocabulary:
-        tokens = [token.strip() for token in input]
+    def read(self, file_input: TextIO) -> Vocabulary:
+        tokens = [token.strip() for token in file_input]
         token_to_id = zip(tokens, range(len(tokens)))
 
         return Vocabulary(collections.OrderedDict(token_to_id))

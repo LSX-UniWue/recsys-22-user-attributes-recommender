@@ -137,14 +137,13 @@ def get_checkpoint_file_from(config: Config,
 
 
 def load_and_restore_from_file_or_study(checkpoint_file: Optional[Path],
-                                         config_file: Optional[Path],
-                                         study_name: Optional[str],
-                                         study_storage: Optional[str],
-                                         gpus: Optional[int]
-                                         ) -> Optional[Container]:
+                                        config_file: Optional[Path],
+                                        study_name: Optional[str],
+                                        study_storage: Optional[str],
+                                        gpus: Optional[int]
+                                        ) -> Optional[Container]:
     # check if we can get a checkpoint file or not
     if (checkpoint_file is None or config_file is None) and (study_name is None or study_storage is None):
-
         return None
 
     if study_name is not None:

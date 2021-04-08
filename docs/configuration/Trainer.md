@@ -32,7 +32,7 @@ TODO
 
 ### CSV
 
-The CSV logger logs the hyperparameters into a hparams.yaml file and the metrics into the metrics.csv file under the save_dir.
+The CSV logger logs the hyperparameters into a hparams.yaml file and the asme.metrics into the asme.metrics.csv file under the save_dir.
 
 ``` json
 ...

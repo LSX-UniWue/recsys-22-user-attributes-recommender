@@ -35,7 +35,7 @@ from asme.modules.sas_rec_module import SASRecModule
 
 class ContainerFactory(ObjectFactory):
     def __init__(self):
-        super(ContainerFactory, self).__init__()
+        super().__init__()
         self.tokenizers_factory = TokenizersFactory()
         self.dependencies = DependenciesFactory(
             [

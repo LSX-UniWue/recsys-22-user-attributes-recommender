@@ -79,10 +79,11 @@ class LoaderFactory(ObjectFactory):
 
         pad_direction = PadDirection.LEFT if config.get("pad_direction") == "left" else PadDirection.RIGHT
 
+        shuffle_dataset = config.get("shuffle")
         return DataLoader(
             dataset=dataset,
             batch_size=config.get("batch_size"),
-            shuffle=config.get("shuffle"),
+            shuffle=shuffle_dataset,
             num_workers=num_workers,
             worker_init_fn=init_worker_fn,
             collate_fn=padded_session_collate(
