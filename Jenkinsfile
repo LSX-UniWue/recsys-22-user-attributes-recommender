@@ -20,13 +20,7 @@ pipeline {
 	stages {
 		stage('Poetry Install') {
 			steps {
-				updateGitlabCommitStatus name: 'install', state: 'running'
 				sh 'export HOME=`pwd`/env; poetry install --no-root'
-			}
-			post {
-				success {
-					updateGitlabCommitStatus name: 'install', state: 'success'
-				}
 			}
 		}
 		stage('Run Tests') {
