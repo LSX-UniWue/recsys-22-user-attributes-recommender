@@ -1,7 +1,7 @@
 from pytorch_lightning import seed_everything
 
-from asme_test.test_utils import assert_list_equal
-from asme_test.tokenizer_util import create_tokenizer
+from util_test import assert_list_equal
+from util_test_tokenizer import create_tokenizer
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from data.datasets.processors.cloze_mask import ClozeMaskProcessor
 

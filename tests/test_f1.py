@@ -2,7 +2,7 @@ from typing import Tuple
 
 import pytest
 import torch
-from util import build_sample, EPSILON
+from util_test_metric import build_sample, EPSILON
 
 from asme.metrics.f1 import F1Metric
 

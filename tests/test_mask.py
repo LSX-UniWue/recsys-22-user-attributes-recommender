@@ -7,8 +7,8 @@ from asme.init.config import Config
 from asme.init.context import Context
 from asme.init.factories.data_sources.data_sources import DataSourcesFactory
 from asme.init.templating.template_engine import TemplateEngine
-from asme_test.test_utils import assert_list_equal
-from asme_test.tokenizer_util import TEST_DATASET_BASE_PATH, create_tokenizer
+from util_test import assert_list_equal
+from util_test_tokenizer import TEST_DATASET_BASE_PATH, create_tokenizer
 from data.datasets import SAMPLE_IDS, ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 
 
