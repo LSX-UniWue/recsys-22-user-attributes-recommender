@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import List
 
 from datasets.data_structures.dataset_metadata import DatasetMetadata
+from datasets.data_structures.split_strategy import SplitStrategy
+from datasets.dataset_index_splits import split_strategies_factory
 from datasets.dataset_pre_processing.generic import generic_process_dataset
 
 from datasets.dataset_pre_processing.movielens_preprocessing import download_and_unzip_movielens_data, \
@@ -47,7 +49,11 @@ def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_ch
         special_tokens=DEFAULT_SPECIAL_TOKENS,
         stats_columns=stats_columns
     )
-    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length)
+
+    split_strategies = _build_split_strategies(['loo', 'ratio'], 0.95, 0.05, 0.05)
+
+    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length,
+                            split_strategies=split_strategies)
 
 
 @app.command()
@@ -119,7 +125,11 @@ def steam(dataset_path: Path = typer.Argument("./dataset/steam", help="directory
         special_tokens=DEFAULT_SPECIAL_TOKENS,
         stats_columns=["product_id"]
     )
-    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length)
+
+    split_strategies = _build_split_strategies(['loo', 'ratio'], 0.95, 0.05, 0.05)
+
+    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length,
+                            split_strategies=split_strategies)
 
 
 @app.command()
@@ -164,8 +174,29 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
             item_header_name=YOOCHOOSE_ITEM_ID_KEY,
             delimiter=YOOCHOOSE_DELIMITER,
         )
+
+        split_strategies = _build_split_strategies(['loo', 'ratio'], 0.95, 0.05, 0.05)
         generic_process_dataset(dataset_metadata=dataset_metadata,
-                                min_seq_length=min_seq_length)
+                                min_seq_length=min_seq_length,
+                                split_strategies=split_strategies)
+
+
+def _build_split_strategies(splits_to_generate: List[str],
+                            train_ratio: float,
+                            validation_ratio: float,
+                            test_ratio: float
+                            ) -> List[SplitStrategy]:
+    split_strategy = []
+    for split_id in splits_to_generate:
+        if 'loo' == split_id:
+            continue  # TODO: add the loo strategy
+        if 'ratio' == split_id:
+            ratio_split = split_strategies_factory.get_ratio_strategy(train_ratio=train_ratio,
+                                                                      validation_ratio=validation_ratio,
+                                                                      test_ratio=test_ratio,
+                                                                      seed=123456)
+            split_strategy.append(ratio_split)
+    return split_strategy
 
 
 @app.command()
@@ -207,7 +238,11 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
         delimiter=AMAZON_DELIMITER,
         special_tokens=DEFAULT_SPECIAL_TOKENS
     )
-    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_occurrences)
+
+    split_strategies = _build_split_strategies(['loo', 'ratio'], 0.95, 0.05, 0.05)
+
+    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_occurrences,
+                            split_strategies=split_strategies)
 
 
 @app.command()
@@ -216,9 +251,28 @@ def generic_csv_file(csv_file: Path = typer.Argument(..., help='path to the csv 
                      item_header_name: str = typer.Argument(..., help='item header name'),
                      delimiter: str = typer.Option('\t', help='the delimiter to use for csv'),
                      min_seq_length: int = typer.Option(0, help='the delimiter to use for csv'),
+                     splits_to_generate: List[str] = typer.Option(['loo', 'ratio'], help=''),
+                     train_ratio: float = typer.Option(0.8, help='the train ratio'),
+                     validation_ratio: float = typer.Option(0.1, help='the validation ratio'),
+                     test_ratio: float = typer.Option(0.1, help='the test ratio'),
 
             ) -> None:
+    """
+    Generates the configured splits for the specified csv file
 
+    FIXME: min_seq_length not considered
+
+    :param csv_file:
+    :param session_key:
+    :param item_header_name:
+    :param delimiter:
+    :param min_seq_length:
+    :param splits_to_generate:
+    :param train_ratio:
+    :param validation_ratio:
+    :param test_ratio:
+    :return:
+    """
     dataset_metadata = DatasetMetadata(
         data_file_path=csv_file,
         session_key=session_key,
@@ -227,4 +281,7 @@ def generic_csv_file(csv_file: Path = typer.Argument(..., help='path to the csv 
         special_tokens=DEFAULT_SPECIAL_TOKENS
     )
 
-    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length)
+    split_strategies = _build_split_strategies(splits_to_generate, train_ratio, validation_ratio, test_ratio)
+
+    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length,
+                            split_strategies=split_strategies)
