@@ -90,12 +90,12 @@ class ClozeMaskProcessor(Processor):
                     prob = prob / self.mask_prob
 
                     if prob < 0.8:
-                        for mask_target, sequence in sequence:
-                            sequence[index] = _format_item(get_tokenizer(mask_target).mask_token_id)
+                        for mask_target, sequence_to_mask in sequences.items():
+                            sequence_to_mask[index] = _format_item(get_tokenizer(mask_target).mask_token_id)
                     elif prob < 0.9:
-                        for mask_target, sequence in sequences:
+                        for mask_target, sequence_to_mask in sequences.items():
                             random_index = self.random.randint(0, len(get_tokenizer(mask_target)) - 1)
-                            sequence[index] = _format_item(random_index)
+                            sequence_to_mask[index] = _format_item(random_index)
                 else:
                     # we use the padding token as masking the cross entropy loss
                     target[index] = self.tokenizers['tokenizers.item'].pad_token_id
