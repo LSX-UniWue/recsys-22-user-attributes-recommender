@@ -27,16 +27,19 @@ DEFAULT_SPECIAL_TOKENS = ["<PAD>", "<MASK>", "<UNK>"]
 @app.command()
 def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_choices=True),
               output_dir: Path = typer.Option("./dataset/", help='directory to save data'),
-              min_seq_length: int = typer.Option(5, help='the minimum feedback the user must have'),
               min_user_feedback: int = typer.Option(0, help='the minimum number of feedback a user must have'),
               min_item_feedback: int = typer.Option(0, help='the minimum number of feedback an item must have received')
               ) -> None:
-    dataset_dir, extract_dir = download_and_unzip_movielens_data(dataset, output_dir,
-                                                                 min_seq_length=min_seq_length,
+    dataset_dir, extract_dir = download_and_unzip_movielens_data(dataset,
+                                                                 output_dir,
                                                                  min_item_feedback=min_item_feedback,
                                                                  min_user_feedback=min_user_feedback)
-    main_file = preprocess_movielens_data(extract_dir, dataset_dir, dataset, min_item_feedback=min_item_feedback,
+    main_file = preprocess_movielens_data(extract_dir,
+                                          dataset_dir,
+                                          dataset,
+                                          min_item_feedback=min_item_feedback,
                                           min_user_feedback=min_user_feedback)
+
     stats_columns = ["title", "genres"]
     if dataset == "ml-1m":
         stats_columns += ["gender", "age", "occupation", "zip"]
@@ -52,8 +55,7 @@ def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_ch
 
     split_strategies = _build_split_strategies(['loo', 'ratio'], 0.95, 0.05, 0.05)
 
-    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length,
-                            split_strategies=split_strategies)
+    generic_process_dataset(dataset_metadata=dataset_metadata, split_strategies=split_strategies)
 
 
 @app.command()
@@ -128,8 +130,7 @@ def steam(dataset_path: Path = typer.Argument("./dataset/steam", help="directory
 
     split_strategies = _build_split_strategies(['loo', 'ratio'], 0.95, 0.05, 0.05)
 
-    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length,
-                            split_strategies=split_strategies)
+    generic_process_dataset(dataset_metadata=dataset_metadata, split_strategies=split_strategies)
 
 
 @app.command()
@@ -176,9 +177,7 @@ def yoochoose(input_dir: Path = typer.Argument("./dataset/yoochoose-data",
         )
 
         split_strategies = _build_split_strategies(['loo', 'ratio'], 0.95, 0.05, 0.05)
-        generic_process_dataset(dataset_metadata=dataset_metadata,
-                                min_seq_length=min_seq_length,
-                                split_strategies=split_strategies)
+        generic_process_dataset(dataset_metadata=dataset_metadata, split_strategies=split_strategies)
 
 
 def _build_split_strategies(splits_to_generate: List[str],
@@ -241,8 +240,7 @@ def amazon(output_dir_path: Path = typer.Argument("./dataset/amazon/",
 
     split_strategies = _build_split_strategies(['loo', 'ratio'], 0.95, 0.05, 0.05)
 
-    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_occurrences,
-                            split_strategies=split_strategies)
+    generic_process_dataset(dataset_metadata=dataset_metadata, split_strategies=split_strategies)
 
 
 @app.command()
@@ -283,5 +281,4 @@ def generic_csv_file(csv_file: Path = typer.Argument(..., help='path to the csv 
 
     split_strategies = _build_split_strategies(splits_to_generate, train_ratio, validation_ratio, test_ratio)
 
-    generic_process_dataset(dataset_metadata=dataset_metadata, min_seq_length=min_seq_length,
-                            split_strategies=split_strategies)
+    generic_process_dataset(dataset_metadata=dataset_metadata, split_strategies=split_strategies)

@@ -16,11 +16,7 @@ class SequencePositionIndexBuilder:
     Than the sequence will be used sequence length - 1 times with different targets
     """
 
-    def __init__(self,
-                 min_session_length: int = 2,
-                 target_positions_extractor: Callable[[Dict[str, Any]], Iterable[int]] = None
-                 ):
-        self._min_session_length = min_session_length
+    def __init__(self, target_positions_extractor: Callable[[Dict[str, Any]], Iterable[int]] = None):
         if target_positions_extractor is None:
             target_positions_extractor = all_remaining_items
         self._target_positions_extractor = target_positions_extractor
@@ -37,19 +33,16 @@ class SequencePositionIndexBuilder:
             for session_idx in tqdm(range(len(dataset)), desc="Creating Index."):
                 session = dataset[session_idx]
                 items = session[ITEM_SEQ_ENTRY_NAME]
+
                 # remove session with lower min session length
-                if len(items) > self._min_session_length:
-                    target_positions = self._target_positions_extractor(session)
-                    for target_pos in target_positions:
-                        # skip all session with target that do not satisfy the min session length
-                        if target_pos < self._min_session_length - 1:
-                            continue
-                        self._write_entry(index_file, session_idx, target_pos)
-                        current_idx += 1
+                target_positions = self._target_positions_extractor(session)
+                for target_pos in target_positions:
+                    # skip all session with target that do not satisfy the min session length
+
+                    self._write_entry(index_file, session_idx, target_pos)
+                    current_idx += 1
             # write length at the end
             index_file.write(current_idx.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
-            # write minimum length
-            index_file.write(self._min_session_length.to_bytes(INT_BYTE_SIZE, byteorder=sys.byteorder, signed=False))
 
     @staticmethod
     def _write_entry(index_file, session_idx: int, target_pos: int):

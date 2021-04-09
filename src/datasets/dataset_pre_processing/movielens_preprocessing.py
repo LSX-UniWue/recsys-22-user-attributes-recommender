@@ -18,10 +18,12 @@ DOWNLOAD_URL_MAP = {
 }
 
 
-def download_and_unzip_movielens_data(dataset: str, output_dir: Path, min_seq_length: int, min_user_feedback: int,
+def download_and_unzip_movielens_data(dataset: str,
+                                      output_dir: Path,
+                                      min_user_feedback: int,
                                       min_item_feedback: int) -> (Path, Path):
     url = DOWNLOAD_URL_MAP[dataset]
-    dataset_dir = output_dir / f'{dataset}_{min_seq_length}_{min_user_feedback}_{min_item_feedback}'
+    dataset_dir = output_dir / f'{dataset}_{min_user_feedback}_{min_item_feedback}'
     download_dir = output_dir
 
     downloaded_file = download_dataset(url, download_dir)

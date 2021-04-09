@@ -78,10 +78,8 @@ def ratios(
                                                                                       validation_ratio=validation_ratio,
                                                                                       test_ratio=testing_ratio,
                                                                                       seed=seed)
-    strategy_split.run_strategy_split(dataset_metadata=dataset_metadata,
-                                      split_strategy=ratio_split_strategy,
-                                      output_dir_path=output_dir_path,
-                                      minimum_session_length=minimum_session_length)
+    strategy_split.run_strategy_split(dataset_metadata=dataset_metadata, output_dir_path=output_dir_path,
+                                      split_strategy=ratio_split_strategy)
 
 
 # Todo Find better name
@@ -116,4 +114,4 @@ def create_conditional_index(
         session_key=None
     )
     conditional_split.create_conditional_index(dataset_metadata=dataset_metadata, output_file_path=output_file_path,
-                                               min_session_length=min_session_length, target_feature=target_feature)
+                                               target_feature=target_feature)

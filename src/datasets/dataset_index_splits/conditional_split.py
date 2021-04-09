@@ -57,17 +57,13 @@ def _build_target_position_extractor(target_feature: str
     return functools.partial(filter_by_sequence_feature, feature_key=target_feature)
 
 
-def create_conditional_index(
-        dataset_metadata: DatasetMetadata,
-        output_file_path: Path,
-        min_session_length: int,
-        target_feature: Optional[str]
-) -> None:
+def create_conditional_index(dataset_metadata: DatasetMetadata,
+                             output_file_path: Path,
+                             target_feature: Optional[str]) -> None:
     """
     FixMe I need some documentation
     :param dataset_metadata: Data Set Metadata
     :param output_file_path: path to the output file
-    :param min_session_length: the minimum acceptable session length
     :param target_feature: the target column name to build the targets against,
     (default all next subsequences will be considered); the target must be a boolean feature
     :return:
@@ -79,23 +75,18 @@ def create_conditional_index(
 
     create_conditional_index_using_extractor(dataset_metadata=dataset_metadata,
                                              output_file_path=output_file_path,
-                                             min_session_length=min_session_length,
                                              target_positions_extractor=target_positions_extractor,
                                              additional_features=additional_features)
 
 
-def create_conditional_index_using_extractor(
-        dataset_metadata: DatasetMetadata,
-        output_file_path: Path,
-        min_session_length: int,
-        target_positions_extractor: Callable[[Dict[str, Any]], Iterable[int]],
-        additional_features: Optional[Dict[str, Any]] = None
-) -> None:
+def create_conditional_index_using_extractor(dataset_metadata: DatasetMetadata,
+                                             output_file_path: Path,
+                                             target_positions_extractor: Callable[[Dict[str, Any]], Iterable[int]],
+                                             additional_features: Optional[Dict[str, Any]] = None) -> None:
     """
     Create a new conditional Index from an already existing one via target position extractor.
     :param dataset_metadata: Data Set Metadata
     :param output_file_path: file that the index is stored to
-    :param min_session_length: Minimum session length for sessions that are stored in conditional index
     :param additional_features: FixMe I need a description
     :param target_positions_extractor: FixMe I need a description
     :return: None, Side effect: new index file is stored at output_file_path
@@ -116,14 +107,12 @@ def create_conditional_index_using_extractor(
     plain_dataset = PlainSequenceDataset(reader, session_parser)
     dataset = ItemSequenceDataset(plain_dataset)
 
-    builder = SequencePositionIndexBuilder(min_session_length=min_session_length,
-                                          target_positions_extractor=target_positions_extractor)
+    builder = SequencePositionIndexBuilder(target_positions_extractor=target_positions_extractor)
     builder.build(dataset, output_file_path)
 
 
 def run_loo_split(dataset_metadata: DatasetMetadata,
-                  output_dir_path: Path,
-                  minimum_session_length: int):
+                  output_dir_path: Path):
     """
     Creates a next item split, i.e., From every session with length k use sequence[0:k-2] for training,
     sequence[-2] for validation and sequence[-1] for testing.
@@ -134,16 +123,10 @@ def run_loo_split(dataset_metadata: DatasetMetadata,
     :return:
     """
     # Create validation index with target item n-1
-    create_conditional_index_using_extractor(
-        dataset_metadata=dataset_metadata,
-        output_file_path=output_dir_path / (dataset_metadata.file_prefix + ".validation.loo.idx"),
-        min_session_length=minimum_session_length,
-        target_positions_extractor=get_position_with_offset_two
-    )
+    create_conditional_index_using_extractor(dataset_metadata=dataset_metadata, output_file_path=output_dir_path / (
+                dataset_metadata.file_prefix + ".validation.loo.idx"),
+                                             target_positions_extractor=get_position_with_offset_two)
     # Create testing index with target item n
-    create_conditional_index_using_extractor(
-        dataset_metadata=dataset_metadata,
-        output_file_path=output_dir_path / (dataset_metadata.file_prefix + ".test.loo.idx"),
-        min_session_length=minimum_session_length,
-        target_positions_extractor=get_position_with_offset_one
-    )
+    create_conditional_index_using_extractor(dataset_metadata=dataset_metadata, output_file_path=output_dir_path / (
+                dataset_metadata.file_prefix + ".test.loo.idx"),
+                                             target_positions_extractor=get_position_with_offset_one)

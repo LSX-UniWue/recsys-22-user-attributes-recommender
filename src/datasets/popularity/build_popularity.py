@@ -11,8 +11,12 @@ from asme.tokenization.tokenizer import Tokenizer
 from asme.tokenization.vocabulary import CSVVocabularyReaderWriter
 
 
-def build(data_file_path: Path, session_index_path: Path, vocabulary_file_path: Path, output_file_path: Path,
-          item_header_name: str, min_session_length: int, delimiter: str,
+def build(data_file_path: Path,
+          session_index_path: Path,
+          vocabulary_file_path: Path,
+          output_file_path: Path,
+          item_header_name: str,
+          delimiter: str,
           strategy_function: Optional[Callable[[List[Any]], List[Any]]] = None) -> None:
     """
     Builds the popularity distribution of the items in the data set. This enables us to later sample the items
@@ -23,7 +27,6 @@ def build(data_file_path: Path, session_index_path: Path, vocabulary_file_path: 
     :param vocabulary_file_path: vocabulary file belonging to the data file
     :param output_file_path: output file where the popularity should be written to
     :param item_header_name: Name of the item key in the data set, e.g, "ItemId"
-    :param min_session_length: minimum session length determining which sessions should be used
     :param delimiter: delimiter used in data file
     :param strategy_function: function selecting which items of a session are used in the vocabulary
     :return: None, Side Effect: popularity distribution is written to output_file_path
@@ -54,12 +57,11 @@ def build(data_file_path: Path, session_index_path: Path, vocabulary_file_path: 
         session = dataset[session_idx]
         items = strategy_function(session[ITEM_SEQ_ENTRY_NAME])
         # ignore session with lower min session length
-        if len(items) > min_session_length:
-            converted_tokens = tokenizer.convert_tokens_to_ids(items)
-            for token in converted_tokens:
-                count = counts.get(token, 0)
-                count += 1
-                counts[token] = count
+        converted_tokens = tokenizer.convert_tokens_to_ids(items)
+        for token in converted_tokens:
+            count = counts.get(token, 0)
+            count += 1
+            counts[token] = count
     total_count = sum(counts.values())
     # print("Total count", total_count)
     # print("Counts dict", counts)

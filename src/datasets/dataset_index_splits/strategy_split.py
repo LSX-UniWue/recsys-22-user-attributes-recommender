@@ -14,22 +14,17 @@ from datasets.data_structures.split_names import SplitNames
 from datasets.data_structures.split_strategy import SplitStrategy
 
 
-def run_strategy_split(dataset_metadata: DatasetMetadata,
-                       output_dir_path: Path,
-                       split_strategy: SplitStrategy,
-                       minimum_session_length: int):
+def run_strategy_split(dataset_metadata: DatasetMetadata, output_dir_path: Path, split_strategy: SplitStrategy):
     """
     :param dataset_metadata: Data set metadata
     :param output_dir_path: output directory where the data and index files for the splits are written to
     :param split_strategy: Strategy that dictates the training, test, validation split
-    :param minimum_session_length: Minimum length that sessions need to be in order to be included
     :return: None, Side effects: CSV Files for splits are written
     """
     output_dir_path.mkdir(parents=True, exist_ok=True)
     splits = split_strategy.split(dataset_metadata)
     write_all_splits(dataset_metadata=dataset_metadata, splits=splits, output_dir_path=output_dir_path)
-    index_splits(dataset_metadata=dataset_metadata, output_dir_path=output_dir_path,
-                 minimum_session_length=minimum_session_length)
+    index_splits(dataset_metadata=dataset_metadata, output_dir_path=output_dir_path)
 
 
 def write_all_splits(dataset_metadata: DatasetMetadata, splits: TrainValidationTestSplitIndices, output_dir_path: Path):
@@ -138,7 +133,7 @@ def write_split(reader: CsvDatasetReader, output_dir_path: Path, header: Text, o
             file.write("\n")
 
 
-def index_splits(dataset_metadata: DatasetMetadata, output_dir_path: Path, minimum_session_length: int):
+def index_splits(dataset_metadata: DatasetMetadata, output_dir_path: Path):
     # Index newly written splits
     for split in tqdm(SplitNames, desc="Index new splits"):
         file_prefix: str = dataset_metadata.file_prefix + "." + str(split)
@@ -158,9 +153,7 @@ def index_splits(dataset_metadata: DatasetMetadata, output_dir_path: Path, minim
             special_tokens=dataset_metadata.custom_tokens,
             stats_columns=dataset_metadata.stats_columns
         )
-        create_conditional_index(dataset_metadata=split_metadata,
-                                 output_file_path=next_item_index_file,
-                                 min_session_length=minimum_session_length,
+        create_conditional_index(dataset_metadata=split_metadata, output_file_path=next_item_index_file,
                                  target_feature=None)
 
 
