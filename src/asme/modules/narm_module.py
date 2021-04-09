@@ -131,7 +131,7 @@ class NarmModule(MetricsTrait, pl.LightningModule):
         return build_eval_step_return_dict(input_seq, logits, target, mask=mask)
 
     def test_step(self, batch, batch_idx):
-        self.validation_step(batch, batch_idx)
+        return self.validation_step(batch, batch_idx)
 
     def predict(self,
                 batch:  Dict[str, torch.Tensor],
