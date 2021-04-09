@@ -9,11 +9,12 @@ from datasets.dataset_index_splits.conditional_split import all_remaining_positi
 from datasets.dataset_index_splits import strategy_split
 from datasets.vocabulary.create_vocabulary import create_token_vocabulary
 from datasets.popularity.build_popularity import build as build_popularity
-from datasets.dataset_index_splits import split_strategies_factory
 from datasets.data_structures.split_strategy import SplitStrategy
 
 
-def generic_process_dataset(dataset_metadata: DatasetMetadata, min_seq_length: int
+def generic_process_dataset(dataset_metadata: DatasetMetadata,
+                            min_seq_length: int,
+                            split_strategies: List[SplitStrategy]
                             ) -> None:
     """
     Handles pre-processing, splitting, storing and indexing of a given session data sets.
@@ -29,16 +30,13 @@ def generic_process_dataset(dataset_metadata: DatasetMetadata, min_seq_length: i
                             session_key=dataset_metadata.session_key,
                             delimiter=dataset_metadata.delimiter)
 
-    print("Create ratios split...")
-    ratio_split_strategy: SplitStrategy = split_strategies_factory.get_ratio_strategy(train_ratio=0.9,
-                                                                                      validation_ratio=0.05,
-                                                                                      test_ratio=0.05,
-                                                                                      seed=123456)
-    generic_strategy_split(dataset_metadata=dataset_metadata,
-                           split_strategy=ratio_split_strategy,
-                           minimum_session_length=min_seq_length)
+    for split_strategy in split_strategies:
+        generic_strategy_split(dataset_metadata=dataset_metadata,
+                               split_strategy=split_strategy,
+                               minimum_session_length=min_seq_length)
 
-    print("Create Leave One Out split...")
+    # FIXME: add this to the split strategies
+    print("Create Leave-One-Out split...")
     generic_leave_one_out_split(dataset_metadata=dataset_metadata,
                                 minimum_session_length=min_seq_length)
 
@@ -48,6 +46,7 @@ def generic_strategy_split(
         split_strategy: SplitStrategy,
         minimum_session_length: int
 ):
+    print(f'Create split using {type(split_strategy)} strategy')
     """
     Generating ratio_split, as well as corresponding vocabulary and popularity files for a specified data file and index
     :param dataset_metadata: Data set metadata

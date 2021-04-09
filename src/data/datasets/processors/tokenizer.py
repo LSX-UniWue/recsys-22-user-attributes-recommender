@@ -28,13 +28,13 @@ class TokenizerProcessor(Processor):
         :param tokenizer: the tokenizer to use for the tokenization
         :param keys_to_tokenize:
         """
-
-
         super().__init__()
         self._tokenizer = tokenizer
         self._keys_to_tokenize = keys_to_tokenize
 
-    def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
+    def process(self,
+                parsed_session: Dict[str, Any]
+                ) -> Dict[str, Any]:
         for key in self._keys_to_tokenize:
             if key in parsed_session:
                 items = parsed_session[key]

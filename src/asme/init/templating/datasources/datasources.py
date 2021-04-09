@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from enum import Enum
 from typing import Dict, Any, List
+from pathlib import Path
 
 from asme.init.templating import TEMPLATES_CONFIG_KEY
 from asme.init.templating.template_processor import TemplateProcessor
@@ -118,14 +119,17 @@ class NextPositionDatasetBuilder(DatasetBuilder):
         return dataset_split_type == DatasetSplit.RATIO_SPLIT
 
     def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        base_path = config['path']
+        base_path = Path(config['path'])
         prefix = _get_prefix(config, prefix_id)
         next_seq_step_type = config.get('next_seq_step_type', 'nextitem')
+        csv_file_path = base_path / f'{prefix}.{prefix_id}.csv'
+        csv_file_index_path = base_path / f'{prefix}.{prefix_id}.session.idx'
+        position_index_file_path = base_path / f'{prefix}.{prefix_id}.{next_seq_step_type}.idx'
         return {
             'type': 'sequence_position',
-            'csv_file': f'{base_path}{prefix}.{prefix_id}.csv',
-            'csv_file_index': f'{base_path}{prefix}.{prefix_id}.session.idx',
-            'nip_index_file': f'{base_path}{prefix}.{prefix_id}.{next_seq_step_type}.idx'
+            'csv_file': str(csv_file_path),
+            'csv_file_index': str(csv_file_index_path),
+            'nip_index_file': str(position_index_file_path)
         }
 
 
@@ -135,12 +139,14 @@ class SequenceDatasetRatioSplitBuilder(DatasetBuilder):
         return dataset_split_type == DatasetSplit.RATIO_SPLIT
 
     def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        base_path = config['path']
+        base_path = Path(config['path'])
         prefix = _get_prefix(config, prefix_id)
+        csv_file_path = base_path / f'{prefix}.{prefix_id}.csv'
+        csv_file_index_path = base_path / f'{prefix}.{prefix_id}.session.idx'
         return {
             'type': 'session',
-            'csv_file': f'{base_path}{prefix}.{prefix_id}.csv',
-            'csv_file_index': f'{base_path}{prefix}.{prefix_id}.session.idx'
+            'csv_file': str(csv_file_path),
+            'csv_file_index': str(csv_file_index_path)
         }
 
 
@@ -198,18 +204,21 @@ class LeaveOneOutSessionDatasetBuilder(DatasetBuilder):
         return dataset_split_type == DatasetSplit.LEAVE_ONE_OUT
 
     def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        base_path = config['path']
+        base_path = Path(config['path'])
         prefix = _get_prefix(config, prefix_id)
         index_file_path = f"{prefix}.{prefix_id}"
         is_training = prefix_id == 'train'
         if is_training:
             validation_prefix = _get_prefix(config, 'validation')
             index_file_path = f"{validation_prefix}.validation"
+        csv_file = base_path / f'{prefix}.csv'
+        csv_file_index = base_path / f'{prefix}.session.idx'
+        nip_index_file = base_path / 'loo' / f'{index_file_path}.loo.idx'
         dataset_config = {
             'type': 'sequence_position',
-            'csv_file': f'{base_path}{prefix}.csv',
-            'csv_file_index': f'{base_path}{prefix}.session.idx',
-            'nip_index_file': f'{base_path}loo/{index_file_path}.loo.idx'
+            'csv_file': str(csv_file),
+            'csv_file_index': str(csv_file_index),
+            'nip_index_file': str(nip_index_file)
         }
         if is_training:
             # (AD) this causes the PosNegProcessor to discard the last two items in the session, if this is set to
@@ -234,9 +243,11 @@ def build_datasource(dataset_builders: List[DatasetBuilder],
     :return:
     """
     loader_config = config['loader']
+
     base_batch_size = loader_config.get('batch_size', 0)
     batch_size = loader_config.get(f'{prefix_id}_batch_size', base_batch_size)
     max_seq_length = loader_config['max_seq_length']
+    shuffle = loader_config.get('shuffle', prefix_id == 'train')
 
     processors = [
         {
@@ -262,7 +273,8 @@ def build_datasource(dataset_builders: List[DatasetBuilder],
     loader_config_dict = {
         'dataset': dataset_config,
         'batch_size': batch_size,
-        'max_seq_length': max_seq_length
+        'max_seq_length': max_seq_length,
+        'shuffle': shuffle
     }
 
     max_seq_step_length = loader_config.get('max_seq_step_length')
