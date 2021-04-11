@@ -72,19 +72,19 @@ class ParameterizedPositiveNegativeSamplerProcessor(Processor):
         return set(flat_items)
 
     def process(self,
-                parsed_session: Dict[str, Any]
+                parsed_sequence: Dict[str, Any]
                 ) -> Dict[str, Any]:
-        session = parsed_session[ITEM_SEQ_ENTRY_NAME]
+        session = parsed_sequence[ITEM_SEQ_ENTRY_NAME]
 
         if len(session) < (self.t + 1):
             print(session)
-            raise AssertionError(f'{parsed_session[SAMPLE_IDS]}')
+            raise AssertionError(f'{parsed_sequence[SAMPLE_IDS]}')
 
         x = session[:-self.t]
         pos = session[-self.t:]
         neg = self._sample_negative_target(session)
 
-        parsed_session[ITEM_SEQ_ENTRY_NAME] = x
-        parsed_session[POSITIVE_SAMPLES_ENTRY_NAME] = pos
-        parsed_session[NEGATIVE_SAMPLES_ENTRY_NAME] = neg
-        return parsed_session
+        parsed_sequence[ITEM_SEQ_ENTRY_NAME] = x
+        parsed_sequence[POSITIVE_SAMPLES_ENTRY_NAME] = pos
+        parsed_sequence[NEGATIVE_SAMPLES_ENTRY_NAME] = neg
+        return parsed_sequence

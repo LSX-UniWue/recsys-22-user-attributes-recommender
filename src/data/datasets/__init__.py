@@ -2,11 +2,13 @@ INT_BYTE_SIZE = 8
 
 LOADER_INFO = 'loader_info'
 
-ITEM_SEQ_ENTRY_NAME = "session"
+ITEM_SEQ_ENTRY_NAME = "sequence"
 TARGET_SUFFIX = '.target'
 TARGET_ENTRY_NAME = ITEM_SEQ_ENTRY_NAME + TARGET_SUFFIX
+
 USER_ENTRY_NAME = "user"
 POSITION_IDS = 'position_ids'
+
 NEGATIVE_SAMPLES_ENTRY_NAME = "negative_samples"
 POSITIVE_SAMPLES_ENTRY_NAME = "positive_samples"
 SAMPLE_IDS = 'sample_ids'

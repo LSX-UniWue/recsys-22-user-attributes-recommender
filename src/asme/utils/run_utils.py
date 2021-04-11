@@ -1,12 +1,13 @@
 import json
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import _jsonnet
 import optuna
 from optuna import Study
 from optuna.study import StudyDirection
 from pytorch_lightning.utilities import cloud_io
+from torch.utils.data import DataLoader
 
 from asme.init.config import Config
 from asme.init.config_keys import TRAINER_CONFIG_KEY, CHECKPOINT_CONFIG_KEY, CHECKPOINT_CONFIG_DIR_PATH
@@ -15,7 +16,13 @@ from asme.init.context import Context
 from asme.init.factories.container import ContainerFactory
 from asme.init.templating.template_engine import TemplateEngine
 from asme.init.templating.template_processor import TemplateProcessor
+from asme.tokenization.tokenizer import Tokenizer
+from asme.utils import logging
 from asme.utils.ioutils import PROCESSED_CONFIG_NAME, find_all_files
+from data.datasets import ITEM_SEQ_ENTRY_NAME
+from data.examle_logging import ExampleLogger
+
+logger = logging.get_logger(__name__)
 
 """ key to retrieve the object metric used in hyperparameter study """
 OBJECTIVE_METRIC_KEY = 'objective_metric'
@@ -97,7 +104,6 @@ def load_and_restore_container(config_file: Path,
 
 def get_config_of_best_run_from_study(study: Study
                                       ) -> Path:
-
     best_trails = study.best_trials
     if len(best_trails) > 0:
         print('more than one best trail, using the first one')
@@ -152,3 +158,29 @@ def load_and_restore_from_file_or_study(checkpoint_file: Optional[Path],
         config = load_config(config_file)
         checkpoint_file = get_checkpoint_file_from(config, study)
     return load_and_restore_container(config_file, checkpoint_file, gpus=gpus)
+
+
+def log_dataloader_example(dataloader: DataLoader,
+                           tokenizers: Dict[str, Tokenizer],
+                           example_type: str
+                           ) -> None:
+    def _extract_tokenizer_key(example_key: str) -> str:
+        return example_key.split('.')[0]
+
+    dataset = dataloader.dataset
+    if isinstance(dataset, ExampleLogger):
+        logger.info('----------------------------')
+        logger.info(f"{example_type} example")
+        logger.info('----------------------------')
+        for example in dataset.get_data_examples(num_examples=1):
+            logger.info('loaded sequence data')
+            for key, value in example.sequence_data.items():
+                logger.info(f'\t{key} = {value}')
+            logger.info('processed data')
+            for key, value in example.processed_data.items():
+                logger.info(f'\t{key} = {value}')
+                tokenizer_key = 'item' if key.startswith(ITEM_SEQ_ENTRY_NAME) else _extract_tokenizer_key(key)
+                if tokenizer_key in tokenizers:
+                    tokens = tokenizers[tokenizer_key].convert_ids_to_tokens(value)
+                    logger.info(f'\t(tokens) {tokens}')
+            logger.info('')

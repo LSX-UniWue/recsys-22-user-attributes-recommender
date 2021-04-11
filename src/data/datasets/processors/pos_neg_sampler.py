@@ -18,9 +18,9 @@ class PositiveNegativeSamplerProcessor(Processor):
 
     Example:
         Input:
-            session: [1, 5, 7, 8]
+            sequence: [1, 5, 7, 8]
         Output:
-            session:          [1, 5, 7]
+            sequence:         [1, 5, 7]
             positive samples: [5, 7, 8]
             negative samples: [2, 9, 6]
 

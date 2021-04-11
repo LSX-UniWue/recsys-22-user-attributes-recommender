@@ -13,12 +13,12 @@ class TargetExtractorProcessor(Processor):
     """
 
     def process(self,
-                parsed_session: Dict[str, Any]
+                parsed_sequence: Dict[str, Any]
                 ) -> Dict[str, Any]:
 
         processed_information = {}
 
-        for key, value in parsed_session.items():
+        for key, value in parsed_sequence.items():
             if isinstance(value, list):
                 sequence_length = len(value)
                 last_pos = sequence_length - 1

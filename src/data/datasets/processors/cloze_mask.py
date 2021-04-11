@@ -50,12 +50,12 @@ class ClozeMaskProcessor(Processor):
         self.random = random.Random(seed)
 
     def process(self,
-                parsed_session: Dict[str, Any]
+                parsed_sequence: Dict[str, Any]
                 ) -> Dict[str, Any]:
-        sequence = parsed_session[ITEM_SEQ_ENTRY_NAME]
+        sequence = parsed_sequence[ITEM_SEQ_ENTRY_NAME]
         target = sequence.copy()
         sequences = {
-            mask_target: parsed_session[mask_target] for mask_target in self.masking_targets
+            mask_target: parsed_sequence[mask_target] for mask_target in self.masking_targets
         }
 
         basket_recommendation = isinstance(sequence[0], list)
@@ -100,6 +100,6 @@ class ClozeMaskProcessor(Processor):
                     # we use the padding token as masking the cross entropy loss
                     target[index] = self.tokenizers['tokenizers.item'].pad_token_id
 
-        parsed_session[TARGET_ENTRY_NAME] = target
+        parsed_sequence[TARGET_ENTRY_NAME] = target
 
-        return parsed_session
+        return parsed_sequence

@@ -13,7 +13,9 @@ class Container:
     a container class holding necessary objects for training, testing, prediction
     """
 
-    def __init__(self, objects: Dict[str, Any]):
+    def __init__(self,
+                 objects: Dict[str, Any]
+                 ):
         self._objects = objects
 
     def train_dataloader(self) -> DataLoader:
@@ -30,6 +32,13 @@ class Container:
 
     def trainer(self) -> TrainerBuilder:
         return self._objects["trainer"]
+
+    def tokenizers(self) -> Dict[str, Tokenizer]:
+        tokenizers = {}
+        for key, value in self._objects.items():
+            if key.startswith('tokenizers.'):
+                tokenizers[key.replace('tokenizers.', '')] = value
+        return tokenizers
 
     def tokenizer(self, tokenizer_id: str) -> Tokenizer:
         return self._objects["tokenizers." + tokenizer_id]

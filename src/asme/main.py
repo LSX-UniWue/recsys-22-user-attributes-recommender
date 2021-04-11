@@ -20,9 +20,9 @@ from asme.init.templating.search.configuration import SearchConfigurationTemplat
 from asme.init.templating.search.processor import SearchTemplateProcessor
 from asme.init.templating.search.resolver import OptunaParameterResolver
 from asme.utils.run_utils import load_config, create_container, OBJECTIVE_METRIC_KEY, TRAIL_BASE_PATH, \
-    load_and_restore_from_file_or_study
+    load_and_restore_from_file_or_study, log_dataloader_example
 from asme.tokenization.tokenizer import Tokenizer
-from asme.utils import ioutils
+from asme.utils import ioutils, logging
 from asme.utils.ioutils import load_file_with_item_ids, determine_log_dir, save_config, save_finished_flag, \
     finished_flag_exists
 from asme.writer.prediction.prediction_writer import build_prediction_writer
@@ -34,16 +34,19 @@ _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at leas
                                                     "checkpoint path"
 
 
+logger = logging.get_logger(__name__)
 app = typer.Typer()
 
 
 @app.command()
 def train(config_file: Path = typer.Argument(..., help='the path to the config file', exists=True),
           do_train: bool = typer.Option(True, help='flag iff the model should be trained'),
-          do_test: bool = typer.Option(False, help='flag iff the model should be tested (after training)')
+          do_test: bool = typer.Option(False, help='flag iff the model should be tested (after training)'),
+          print_train_val_examples: bool = typer.Option(True, help='print examples of the training'
+                                                                   'and evaluation dataset before starting training')
           ) -> None:
     if do_test and not do_train:
-        print(f"The model has to be trained before it can be tested!")
+        logger.error(f"The model has to be trained before it can be tested!")
         exit(-1)
 
     config_file_path = Path(config_file)
@@ -57,9 +60,16 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
     save_config(config, log_dir)
 
     if do_train:
+        train_dataloader = container.train_dataloader()
+        validation_dataloader = container.validation_dataloader()
+
+        if print_train_val_examples:
+            tokenizers = container.tokenizers()
+            log_dataloader_example(train_dataloader, tokenizers, 'training')
+            log_dataloader_example(validation_dataloader, tokenizers, 'validation')
         trainer.fit(container.module(),
-                    train_dataloader=container.train_dataloader(),
-                    val_dataloaders=container.validation_dataloader())
+                    train_dataloader=train_dataloader,
+                    val_dataloaders=validation_dataloader)
 
     save_finished_flag(log_dir)
 
@@ -198,13 +208,13 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
     """
     # checking if the file already exists
     if not overwrite and output_file.exists():
-        print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
+        logger.error(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
         exit(2)
 
     container = load_and_restore_from_file_or_study(checkpoint_file, config_file, study_name, study_storage,
                                                     gpus=gpu)
     if container is None:
-        print(_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY)
+        logger.error(_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY)
         exit(-1)
 
     module = container.module()
@@ -324,7 +334,7 @@ def evaluate(config_file: Path = typer.Option(default=None, help='the path to th
              ):
     write_results_to_file = output_file is not None
     if write_results_to_file and not overwrite and output_file.exists():
-        print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
+        logger.error(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
         exit(-1)
 
     if seed is not None:
@@ -333,7 +343,7 @@ def evaluate(config_file: Path = typer.Option(default=None, help='the path to th
     container = load_and_restore_from_file_or_study(checkpoint_file, config_file, study_name, study_storage,
                                                     gpus=gpu)
     if container is None:
-        print(_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY)
+        logger.error(_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY)
         exit(-1)
 
     module = container.module()
@@ -358,13 +368,13 @@ def resume(log_dir: str = typer.Argument(..., help='the path to the logging dire
 
     # check for finished flag
     if finished_flag_exists(log_dir):
-        print(f"Found a finished flag in '{log_dir}'. Training has finished and will not be resumed.")
+        logger.error(f"Found a finished flag in '{log_dir}'. Training has finished and will not be resumed.")
         exit(-1)
 
     # check for config file
     config_file = log_dir / ioutils.PROCESSED_CONFIG_NAME
     if not os.path.isfile(config_file):
-        print(f"Could not find '{ioutils.PROCESSED_CONFIG_NAME} in path {log_dir}.")
+        logger.error(f"Could not find '{ioutils.PROCESSED_CONFIG_NAME} in path {log_dir}.")
         exit(-1)
 
     raw_config = load_config(Path(config_file))
@@ -377,8 +387,8 @@ def resume(log_dir: str = typer.Argument(..., help='the path to the logging dire
 
     checkpoint_path = checkpoint_dir / checkpoint_file
     if not os.path.isfile(checkpoint_path):
-        print("Could not determine the last checkpoint. "
-              "You can specify a particular checkpoint via the --checkpoint-file option.")
+        logger.error("Could not determine the last checkpoint. "
+                     "You can specify a particular checkpoint via the --checkpoint-file option.")
         exit(-1)
 
     container = create_container(raw_config)

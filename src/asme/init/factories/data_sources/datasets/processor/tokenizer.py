@@ -1,11 +1,11 @@
 from typing import List
 
+from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.processors.tokenizer import TokenizerProcessor
 from asme.init.config import Config
 from asme.init.context import Context
 from asme.init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
-from data.datasets.processors.processor import DelegatingProcessor, Processor
 
 
 class TokenizerProcessorFactory(ObjectFactory):
@@ -26,20 +26,17 @@ class TokenizerProcessorFactory(ObjectFactory):
     def build(self,
               config: Config,
               context: Context
-              ) -> Processor:
+              ) -> TokenizerProcessor:
 
         tokenizers = context.as_dict()
 
-        tokenizer_processors = []
+        tokenizers_map = {}
         for name, tokenizer in tokenizers.items():
             if name.startswith("tokenizers."):
-                keys_to_tokenize = name.replace("tokenizers.","")
-                if keys_to_tokenize == "item":
-                    tokenizer_processors.append(TokenizerProcessor(tokenizer))
-                else:
-                    tokenizer_processors.append(TokenizerProcessor(tokenizer, [keys_to_tokenize]))
+                keys_to_tokenize = name.replace("tokenizers.", "")
+                tokenizers_map[ITEM_SEQ_ENTRY_NAME if keys_to_tokenize == 'item' else ITEM_SEQ_ENTRY_NAME] = tokenizer
 
-        return DelegatingProcessor(tokenizer_processors)
+        return TokenizerProcessor(tokenizers_map)
 
     def is_required(self, context: Context) -> bool:
         return False

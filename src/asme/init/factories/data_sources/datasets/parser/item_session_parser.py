@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, List
 
 from data.datasets.sequence import ItemSessionParser
-from data.utils import create_indexed_header, read_csv_header
+from data.utils.csv import create_indexed_header, read_csv_header
 from asme.init.config import Config
 from asme.init.context import Context
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
