@@ -32,7 +32,6 @@ class SequencePositionIndexBuilder:
         with index_path.open("wb") as index_file:
             for session_idx in tqdm(range(len(dataset)), desc="Creating Index."):
                 session = dataset[session_idx]
-                items = session[ITEM_SEQ_ENTRY_NAME]
 
                 # remove session with lower min session length
                 target_positions = self._target_positions_extractor(session)

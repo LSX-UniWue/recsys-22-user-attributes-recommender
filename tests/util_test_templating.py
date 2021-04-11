@@ -10,9 +10,16 @@ from data.datasets import SAMPLE_IDS, ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from util_test_tokenizer import create_tokenizer
 
 
+"""
+the number of sequences in the example csv file
+"""
+NUM_EXAMPLES_SEQUENCES = 10
+
+
 def load_dataset(template: Dict[str, Any]
                  ) -> Dict[str, DataLoader]:
     modified_template = TemplateEngine().modify(template)
+    print(modified_template)
     context = Context()
     context.set('tokenizers.item', create_tokenizer())
 

@@ -15,27 +15,17 @@ def all_remaining_positions(session: Dict[str, Any]
     return range(1, len(session[ITEM_SEQ_ENTRY_NAME]) - 2)
 
 
-def _get_position_with_offset(session: Dict[str, Any], offset: int) -> Iterable[int]:
+def _get_position_with_offset(session: Dict[str, Any],
+                              offset: int
+                              ) -> Iterable[int]:
+    """
+    returns an iterator that only contains the position len(sequence) - offset
+    :param session:
+    :param offset:
+    :return:
+    """
     sequence = session[ITEM_SEQ_ENTRY_NAME]
     return [len(sequence) - offset]
-
-
-def get_position_with_offset_one(session: Dict[str, Any]) -> Iterable[int]:
-    """
-    Helper method for testing index
-    :param session: session that the target is to be extracted from
-    :return: index within session where testing target is stored
-    """
-    return _get_position_with_offset(session, offset=1)
-
-
-def get_position_with_offset_two(session: Dict[str, Any]) -> Iterable[int]:
-    """
-    Helper method for validation index
-    :param session: session that the target is to be extracted from
-    :return: index within session where validation target is stored
-    """
-    return _get_position_with_offset(session, offset=2)
 
 
 def filter_by_sequence_feature(session: Dict[str, Any],
@@ -114,19 +104,25 @@ def create_conditional_index_using_extractor(dataset_metadata: DatasetMetadata,
 def run_loo_split(dataset_metadata: DatasetMetadata,
                   output_dir_path: Path):
     """
-    Creates a next item split, i.e., From every session with length k use sequence[0:k-2] for training,
+    Creates a next item split, i.e., From every session with length k use the sequence[0:k-2] for training,
     sequence[-2] for validation and sequence[-1] for testing.
 
     :param dataset_metadata: Data Set Metadata
     :param output_dir_path: output directory where the index files for the splits are written to
-    :param minimum_session_length: Minimum length that sessions need to be in order to be included
     :return:
     """
+    # Create train index, cut the sequences at k - 3
+    create_conditional_index_using_extractor(
+        dataset_metadata=dataset_metadata,
+        output_file_path=output_dir_path / (dataset_metadata.file_prefix + ".train.loo.idx"),
+        target_positions_extractor=functools.partial(_get_position_with_offset, offset=3)
+    )
+
     # Create validation index with target item n-1
     create_conditional_index_using_extractor(dataset_metadata=dataset_metadata, output_file_path=output_dir_path / (
                 dataset_metadata.file_prefix + ".validation.loo.idx"),
-                                             target_positions_extractor=get_position_with_offset_two)
+                                             target_positions_extractor=functools.partial(_get_position_with_offset, offset=2))
     # Create testing index with target item n
     create_conditional_index_using_extractor(dataset_metadata=dataset_metadata, output_file_path=output_dir_path / (
                 dataset_metadata.file_prefix + ".test.loo.idx"),
-                                             target_positions_extractor=get_position_with_offset_one)
+                                             target_positions_extractor=functools.partial(_get_position_with_offset, offset=1))

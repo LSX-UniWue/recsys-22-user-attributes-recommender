@@ -248,7 +248,6 @@ def generic_csv_file(csv_file: Path = typer.Argument(..., help='path to the csv 
                      session_key: List[str] = typer.Argument(..., help='the session key'),
                      item_header_name: str = typer.Argument(..., help='item header name'),
                      delimiter: str = typer.Option('\t', help='the delimiter to use for csv'),
-                     min_seq_length: int = typer.Option(2, help='the delimiter to use for csv'),
                      splits_to_generate: List[str] = typer.Option(['loo', 'ratio'], help=''),
                      train_ratio: float = typer.Option(0.8, help='the train ratio'),
                      validation_ratio: float = typer.Option(0.1, help='the validation ratio'),
@@ -258,13 +257,10 @@ def generic_csv_file(csv_file: Path = typer.Argument(..., help='path to the csv 
     """
     Generates the configured splits for the specified csv file
 
-    FIXME: min_seq_length not considered
-
     :param csv_file:
     :param session_key:
     :param item_header_name:
     :param delimiter:
-    :param min_seq_length:
     :param splits_to_generate:
     :param train_ratio:
     :param validation_ratio:

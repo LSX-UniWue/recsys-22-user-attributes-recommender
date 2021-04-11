@@ -1,11 +1,10 @@
 from typing import Any, Dict
 
-import pytest
 from pytorch_lightning import seed_everything
 from torch.utils.data import DataLoader, RandomSampler
 
 from util_test import assert_list_equal
-from util_test_templating import load_dataset, get_all_data
+from util_test_templating import load_dataset, get_all_data, NUM_EXAMPLES_SEQUENCES
 from util_test_tokenizer import TEST_DATASET_BASE_PATH
 from data.datasets import SAMPLE_IDS, ITEM_SEQ_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
 
@@ -23,8 +22,7 @@ LEAVE_ONE_OUT_TEMPLATE = {
             },
             'path': TEST_DATASET_BASE_PATH,
             'file_prefix': 'example',
-            'split_type': 'leave_one_out',
-            'seed': 42  # FIXME: remove
+            'split_type': 'leave_one_out'
         }
     }
 }
@@ -41,8 +39,7 @@ RATIO_TEMPLATE = {
                 'num_workers': 0
             },
             'path': TEST_DATASET_BASE_PATH / 'ratio-0.8_0.1_0.1',
-            'file_prefix': 'example',
-            'seed': 42  # FIXME: remove
+            'file_prefix': 'example'
         }
     }
 }
@@ -65,7 +62,6 @@ def _get_all_data_positive_negative(data_loader: DataLoader
     return data
 
 
-@pytest.mark.skip(reason="must be discussed with alex")
 def test_leave_one_out_positive_negative_template():
     seed_everything(42)
 
@@ -76,33 +72,37 @@ def test_leave_one_out_positive_negative_template():
     assert isinstance(train_dataloader.sampler, RandomSampler)
 
     train_data = _get_all_data_positive_negative(train_dataloader)
-    assert len(train_data) == 10
+    assert len(train_data) == NUM_EXAMPLES_SEQUENCES
 
     # test some train data
-    sequence, pos, neg = train_data['0_2']
-    assert_list_equal(sequence, [1, 4, 0, 0])
-    assert_list_equal(pos, [3, 0, 0, 0])
-    assert_list_equal(neg, [3, 0, 0, 0])
+    sequence, pos, neg = train_data['0_1']
+    assert_list_equal(sequence, [3, 0, 0, 0])
+    assert_list_equal(pos, [4, 0, 0, 0])
+    assert_list_equal(neg, [9, 0, 0, 0])
     seq2, pos2, neg2 = train_data['4_1']
     assert_list_equal(seq2, [7, 0, 0, 0])
-    assert_list_equal(pos2, [0, 0, 0, 0])
-    assert_list_equal(neg2, [0, 0, 0, 0])
+    assert_list_equal(pos2, [8, 0, 0, 0])
+    assert_list_equal(neg2, [10, 0, 0, 0])
 
     # test some test data
     test_dataloader = data_sources['test']
-    test_data = _get_all_data_positive_negative(test_dataloader)
+    test_data = get_all_data(test_dataloader)
 
-    test_sequence, test_target = test_data['2_3']
-    assert_list_equal(test_sequence, [9, 10, 11, 1])
-    assert test_target == 12
+    assert len(test_data) == NUM_EXAMPLES_SEQUENCES
+
+    test_sequence, test_target = test_data['2_4']
+    assert_list_equal(test_sequence, [9, 10, 11, 12])
+    assert test_target == 7
 
     # test some validation data
     val_dataloader = data_sources['validation']
-    val_data = _get_all_data_positive_negative(val_dataloader)
+    val_data = get_all_data(val_dataloader)
 
-    val_sequence, val_target = val_data['1_2']
-    assert_list_equal(val_sequence, [3, 4, 1, 0])
-    assert val_target == 7
+    assert len(val_data) == NUM_EXAMPLES_SEQUENCES
+
+    val_sequence, val_target = val_data['5_2']
+    assert_list_equal(val_sequence, [4, 7, 0, 0])
+    assert val_target == 10
 
 
 def test_ratio_positive_negative_template():
@@ -116,19 +116,19 @@ def test_ratio_positive_negative_template():
     assert len(train_data) == 8
 
     sequence, pos, neg = train_data['0_0']
-    assert_list_equal(sequence, [3, 10, 0, 0])
-    assert_list_equal(pos, [10, 6, 0, 0])
-    assert_list_equal(neg, [4, 9, 0, 0])
+    assert_list_equal(sequence, [3, 10, 6, 0])
+    assert_list_equal(pos, [10, 6, 5, 0])
+    assert_list_equal(neg, [8, 7, 11, 0])
 
     seq2, pos2, neg2 = train_data['4_0']
-    assert_list_equal(seq2, [7, 8, 0, 0])
-    assert_list_equal(pos2, [8, 3, 0, 0])
-    assert_list_equal(neg2, [9, 10, 0, 0])
+    assert_list_equal(seq2, [7, 8, 3, 0])
+    assert_list_equal(pos2, [8, 3, 6, 0])
+    assert_list_equal(neg2, [10, 4, 10, 0])  # TODO: check and discuss
 
     test_dataloader = data_sources['test']
     test_data = get_all_data(test_dataloader)
+    assert len(test_data) == 3
 
-    assert len(test_data) == 2
     test_seq, test_target = test_data['0_1']
     assert_list_equal(test_seq, [5, 0, 0, 0])
     assert test_target == 6

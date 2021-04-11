@@ -1,16 +1,16 @@
 from typing import Dict, Any
 
 from asme.init.templating.datasources.datasources import DataSourceTemplateProcessor, build_datasource, \
-    NextPositionDatasetBuilder, SequenceDatasetRatioSplitBuilder
+    NextPositionDatasetBuilder, SequenceDatasetRatioSplitBuilder, TARGET_EXTRACTOR_PROCESSOR_CONFIG
 
 
 class PlainTrainingSourcesTemplateProcessor(DataSourceTemplateProcessor):
 
     """
-     This data sources template processor configs the datasets in the following was:
+     This data sources template processor configs the datasets in the following way:
     - train: a item sequence datasource with a tokenizer processor
-    - validation: a nextitem datasource with a tokenizer processor
-    - test: a nextitem datasource with a tokenizer processor
+    - validation: a nextitem datasource with a tokenizer processor and a target extract processor
+    - test: a nextitem datasource with a tokenizer processor and a target extract processor
     """
 
     DATASET_BUILDER_TRAINING = [SequenceDatasetRatioSplitBuilder()]
@@ -23,7 +23,9 @@ class PlainTrainingSourcesTemplateProcessor(DataSourceTemplateProcessor):
         return build_datasource(self.DATASET_BUILDER_TRAINING, parser, config, 'train')
 
     def _build_validation_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource(self.DATASET_BUILDERS_VALIDATION_AND_TEST, parser, config, 'validation')
+        return build_datasource(self.DATASET_BUILDERS_VALIDATION_AND_TEST, parser, config, 'validation',
+                                [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
 
     def _build_test_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource(self.DATASET_BUILDERS_VALIDATION_AND_TEST, parser, config, 'test')
+        return build_datasource(self.DATASET_BUILDERS_VALIDATION_AND_TEST, parser, config, 'test',
+                                [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
