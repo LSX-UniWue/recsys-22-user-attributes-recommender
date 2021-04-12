@@ -11,12 +11,11 @@ app = typer.Typer()
 
 
 @app.command()
-def next_item(
-        data_file_path: Path = typer.Argument(..., help="Data file in csv format"),
-        session_index_path: Path = typer.Argument(..., help="Path to session index for the data file"),
-        output_dir_path: Path = typer.Argument(..., help="path that the splits should be written to"),
-        delimiter: str = typer.Option('\t', help="Delimiter used in data file"),
-        item_header: str = typer.Option('title', help="Dataset Key that the Item-IDs are stored under")):
+def next_item(data_file_path: Path = typer.Argument(..., help="Data file in csv format"),
+              session_index_path: Path = typer.Argument(..., help="Path to session index for the data file"),
+              output_dir_path: Path = typer.Argument(..., help="path that the splits should be written to"),
+              delimiter: str = typer.Option('\t', help="Delimiter used in data file"),
+              item_header: str = typer.Option('title', help="Dataset Key that the Item-IDs are stored under")):
     """
     Creates a next item split, i.e., From every session with length k use sequence[0:k-2] for training,
     sequence[-2] for validation and sequence[-1] for testing.
@@ -88,9 +87,9 @@ def create_conditional_index(
         target_feature: str = typer.Option(None, help="the target column name to build the targets against"
                                                       "(default all next subsequences will be considered);"
                                                       "the target must be a boolean feature")
-) -> None:
+        ) -> None:
     """
-    FixMe I need some documentation
+    creates a index that uses
     :param data_file_path:
     :param session_index_path:
     :param output_file_path:

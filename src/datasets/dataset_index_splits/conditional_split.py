@@ -2,7 +2,7 @@ import functools
 from operator import itemgetter
 from pathlib import Path
 from typing import Dict, Any, Iterable, Callable, Optional
-from data.datasets import ITEM_SEQ_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets.index_builder import SequencePositionIndexBuilder
 from data.datasets.sequence import ItemSequenceDataset, ItemSessionParser, PlainSequenceDataset
@@ -35,7 +35,8 @@ def filter_by_sequence_feature(session: Dict[str, Any],
     targets = list(filter(itemgetter(1), enumerate(feature_values)))
     target_idxs = list(map(itemgetter(0), targets))
     if 0 in target_idxs:
-        target_idxs.remove(0)  # XXX: quick hack to remove the first position that can not be predicted by the models
+        raise ValueError(f'sequence with id {session[SAMPLE_IDS]} contains'
+                         f' a sequence where the target feature is True on position 0.')
     return target_idxs
 
 
@@ -49,7 +50,8 @@ def _build_target_position_extractor(target_feature: str
 
 def create_conditional_index(dataset_metadata: DatasetMetadata,
                              output_file_path: Path,
-                             target_feature: Optional[str]) -> None:
+                             target_feature: Optional[str]
+                             ) -> None:
     """
     FixMe I need some documentation
     :param dataset_metadata: Data Set Metadata
