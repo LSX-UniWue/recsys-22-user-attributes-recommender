@@ -1,11 +1,10 @@
-import typer
 import os
 from pathlib import Path
 import numpy as np
 import pandas as pd
 import datetime as dt
 
-app = typer.Typer()
+
 FULL_TRAIN_SET = "full_training_set"
 TRAIN_SET = "training_set"
 VALIDATION_SET = "validation_set"
@@ -17,7 +16,10 @@ YOOCHOOSE_CLICKS_FILE_NAME = "yoochoose-clicks"
 YOOCHOOSE_BUYS_FILE_NAME = "yoochoose-buys"
 
 
-def pre_process_yoochoose_dataset(path_to_original_data: Path, output_dir_path: Path, file_name:str) -> Path:
+def pre_process_yoochoose_dataset(path_to_original_data: Path,
+                                  output_dir_path: Path,
+                                  file_name:str
+                                  ) -> Path:
     """
     Perform pre-processing for yoochoose data set as specified by Hidasi et al. 2016. Code adapted from
     https://github.com/hidasib/GRU4Rec/blob/master/examples/rsc15/preprocess.py.

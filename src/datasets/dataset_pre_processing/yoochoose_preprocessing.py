@@ -1,11 +1,9 @@
-import typer
 import os
 from pathlib import Path
 import numpy as np
 import pandas as pd
 import datetime as dt
 
-app = typer.Typer()
 FULL_TRAIN_SET = "full_training_set"
 TRAIN_SET = "training_set"
 VALIDATION_SET = "validation_set"
