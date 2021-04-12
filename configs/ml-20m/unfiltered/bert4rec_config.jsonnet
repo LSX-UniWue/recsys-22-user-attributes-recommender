@@ -1,4 +1,4 @@
-local base_path = "/home/dallmann/uni/research/repositories/dataset/conventions/ml-20m_3_0_0/";
+local base_path = "/ssd/ml-20m/";
 local max_seq_length = 200;
 local metrics =  {
     mrr: [1, 5, 10],
@@ -11,14 +11,14 @@ local file_prefix = 'ml-20m';
 {
     templates: {
         unified_output: {
-            path: "/tmp/bert4rec_new"
+            path: "/scratch/jane-doe-framework/experiments/ml-20m/bert4rec_new"
         },
         mask_data_sources: {
             parser: {
                 item_column_name: "title"
             },
             loader: {
-                batch_size: 128,
+                batch_size: 64,
                 max_seq_length: max_seq_length
             },
             path: base_path,
@@ -36,7 +36,7 @@ local file_prefix = 'ml-20m';
             },
             sampled: {
                 sample_probability_file: base_path + "ml-20m.popularity.title.txt",
-                num_negative_samples: 1000,
+                num_negative_samples: 100,
                 metrics: metrics
             }
         },
@@ -71,11 +71,9 @@ local file_prefix = 'ml-20m';
             save_top_k: 3,
             mode: 'max'
         },
-        gpus: 1,
+        gpus: 8,
         max_epochs: 800,
-        #accelerator: "ddp",
-        limit_test_batches: 10,
+        accelerator: "ddp",
         check_val_every_n_epoch: 100
-
     }
 }
