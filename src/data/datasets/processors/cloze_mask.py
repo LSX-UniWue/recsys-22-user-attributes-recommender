@@ -1,9 +1,9 @@
-import random
 from typing import Dict, Any, List, Union
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from data.datasets.processors.processor import Processor
 from asme.tokenization.tokenizer import Tokenizer
+from data.datasets.processors.utils import random_uniform, random_
 
 TOKENIZER_PREFIX = 'tokenizers.'
 ITEM_TOKENIZER = 'tokenizers.item'
@@ -30,7 +30,7 @@ class ClozeMaskProcessor(Processor):
                  tokenizers: Dict[str, Tokenizer],
                  mask_prob: float,
                  only_last_item_mask_prob: float,
-                 seed: int,
+                 seed: int,  #TODO (AD) remove later
                  masking_targets: List[str] = [ITEM_SEQ_ENTRY_NAME]
                  ):
         """
@@ -47,7 +47,6 @@ class ClozeMaskProcessor(Processor):
         self.only_last_item_mask_prob = only_last_item_mask_prob
         self.masking_targets = masking_targets
 
-        self.random = random.Random(seed)
 
     def process(self,
                 parsed_sequence: Dict[str, Any]
@@ -70,7 +69,7 @@ class ClozeMaskProcessor(Processor):
             return self.tokenizers[TOKENIZER_PREFIX + target]
 
         # first we decide if we only mask the last item
-        mask_last_item_prob = self.random.random()
+        mask_last_item_prob = random_uniform()
         if mask_last_item_prob <= self.only_last_item_mask_prob:
 
             for mask_target, sequence in sequences.items():
@@ -85,7 +84,7 @@ class ClozeMaskProcessor(Processor):
                     target[:last_item] = [padding_mask] * last_item
         else:
             for index in range(0, len(sequence)):
-                prob = self.random.random()
+                prob = random_uniform()
                 if prob < self.mask_prob:
                     prob = prob / self.mask_prob
 
@@ -94,7 +93,7 @@ class ClozeMaskProcessor(Processor):
                             sequence_to_mask[index] = _format_item(get_tokenizer(mask_target).mask_token_id)
                     elif prob < 0.9:
                         for mask_target, sequence_to_mask in sequences.items():
-                            random_index = self.random.randint(0, len(get_tokenizer(mask_target)) - 1)
+                            random_index = random_(0, len(get_tokenizer(mask_target)) - 1)
                             sequence_to_mask[index] = _format_item(random_index)
                 else:
                     # we use the padding token as masking the cross entropy loss
