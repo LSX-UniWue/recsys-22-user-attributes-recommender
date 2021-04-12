@@ -28,17 +28,17 @@ def _get_position_with_offset(session: Dict[str, Any],
     return [len(sequence) - offset]
 
 
-def filter_by_sequence_feature(session: Dict[str, Any],
+def filter_by_sequence_feature(sequence: Dict[str, Any],
                                feature_key: str,
                                min_sequence_length: int
                                ) -> Iterable[int]:
-    feature_values = session[feature_key]
+    feature_values = sequence[feature_key]
     targets = list(filter(itemgetter(1), enumerate(feature_values)))
     target_idxs: List[int] = list(map(itemgetter(0), targets))
 
     for forbidden_position in range(0, min_sequence_length):
         if forbidden_position in target_idxs:
-            print(f'removing position {forbidden_position} from {target_idxs}')
+            print(f'removing position {forbidden_position} from {target_idxs} of sequence {sequence}')
             target_idxs.remove(forbidden_position)
 
     return target_idxs
