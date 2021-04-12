@@ -31,9 +31,7 @@ def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_ch
               min_item_feedback: int = typer.Option(0, help='the minimum number of feedback an item must have received')
               ) -> None:
     dataset_dir, extract_dir = download_and_unzip_movielens_data(dataset,
-                                                                 output_dir,
-                                                                 min_item_feedback=min_item_feedback,
-                                                                 min_user_feedback=min_user_feedback)
+                                                                 output_dir)
     main_file = preprocess_movielens_data(extract_dir,
                                           dataset_dir,
                                           dataset,

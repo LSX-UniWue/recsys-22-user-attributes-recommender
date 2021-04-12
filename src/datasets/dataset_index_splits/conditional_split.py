@@ -56,7 +56,7 @@ def _build_target_position_extractor(target_feature: str,
 def create_conditional_index(dataset_metadata: DatasetMetadata,
                              output_file_path: Path,
                              target_feature: Optional[str],
-                             min_sequence_length: Optional[int]
+                             min_sequence_length: Optional[int] = None
                              ) -> None:
     """
     FixMe I need some documentation
