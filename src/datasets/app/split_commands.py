@@ -15,7 +15,6 @@ def next_item(
         data_file_path: Path = typer.Argument(..., help="Data file in csv format"),
         session_index_path: Path = typer.Argument(..., help="Path to session index for the data file"),
         output_dir_path: Path = typer.Argument(..., help="path that the splits should be written to"),
-        minimum_session_length: int = typer.Option(4, help="Minimum length of sessions that are to be included"),
         delimiter: str = typer.Option('\t', help="Delimiter used in data file"),
         item_header: str = typer.Option('title', help="Dataset Key that the Item-IDs are stored under")):
     """
@@ -25,7 +24,6 @@ def next_item(
     :param data_file_path: data file that the split should be created for
     :param session_index_path: session index belonging to the data file
     :param output_dir_path: output directory where the index files for the splits are written to
-    :param minimum_session_length: Minimum length that sessions need to be in order to be included
     :param delimiter: delimiter used in data file
     :param item_header: data set key that the item-ids are stored under
     :return: None, Side effect: Test and Validation indices are written
@@ -37,8 +35,7 @@ def next_item(
         delimiter=delimiter,
         item_header_name=item_header
     )
-    conditional_split.run_loo_split(dataset_metadata=dataset_metadata, output_dir_path=output_dir_path,
-                                    minimum_session_length=minimum_session_length)
+    conditional_split.run_loo_split(dataset_metadata=dataset_metadata, output_dir_path=output_dir_path)
 
 
 @app.command()
