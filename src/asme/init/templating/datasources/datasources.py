@@ -178,14 +178,17 @@ class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
         return dataset_split_type == DatasetSplit.LEAVE_ONE_OUT
 
     def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        base_path = config['path']
+        base_path = Path(config['path'])
         prefix = _get_prefix(config, prefix_id)
 
+        csv_file_path = base_path / f'{prefix}.csv'
+        csv_file_index_path = base_path / f'{prefix}.session.idx'
+        nip_index_file_path = base_path / 'loo' / f'{prefix}.{prefix_id}.nextitem.idx'
         return {
             'type': 'sequence_position',
-            'csv_file': f'{base_path}{prefix}.csv',
-            'csv_file_index': f'{base_path}{prefix}.session.idx',
-            'nip_index_file': f'{base_path}/loo/{prefix}.{prefix_id}.nextitem.idx'
+            'csv_file': str(csv_file_path),
+            'csv_file_index': str(csv_file_index_path),
+            'nip_index_file': str(nip_index_file_path)
         }
 
 

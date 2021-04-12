@@ -21,10 +21,12 @@ class NextSequenceStepDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
         return 'next_sequence_step_data_sources'
 
     def _build_train_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource(self.TRAIN_DATASET_BUILDERS, parser, config, 'train')
+        return build_datasource(self.TRAIN_DATASET_BUILDERS, parser, config, 'train',
+                                [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
 
     def _build_validation_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource(self.TEST_VALID_DATASET_BUILDERS, parser, config, 'validation')
+        return build_datasource(self.TEST_VALID_DATASET_BUILDERS, parser, config, 'validation',
+                                [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
 
     def _build_test_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
         return build_datasource(self.TEST_VALID_DATASET_BUILDERS, parser, config, 'test',
