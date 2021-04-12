@@ -6,7 +6,7 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets.index_builder import SequencePositionIndexBuilder
 from data.datasets.sequence import ItemSequenceDataset, ItemSessionParser, PlainSequenceDataset
-from data.utils import create_indexed_header, read_csv_header
+from data.utils.csv import create_indexed_header, read_csv_header
 from datasets.data_structures.dataset_metadata import DatasetMetadata
 
 
