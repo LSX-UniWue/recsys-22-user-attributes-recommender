@@ -48,7 +48,6 @@ def ratios(
         output_dir_path: Path = typer.Argument(..., help="path that the splits should be written to"),
         session_key: List[str] = typer.Argument(..., help="session key"),
         item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
-        minimum_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
         train_ratio: float = typer.Argument(0.9, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
         validation_ratio: float = typer.Argument(0.05, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
         testing_ratio: float = typer.Argument(0.05, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
@@ -61,7 +60,6 @@ def ratios(
     :param session_index_path: session index belonging to the data file
     :param output_dir_path: output directory where the data and index files for the splits are written to
     :param session_key: Session key used to uniquely identify sessions
-    :param minimum_session_length: Minimum length that sessions need to be in order to be included
     :param item_header_name: data set key that the item-ids are stored under
     :param train_ratio: share of session used for training
     :param validation_ratio: share of session used for validation
@@ -89,7 +87,6 @@ def create_conditional_index(
         session_index_path: Path = typer.Argument(..., exists=True, help="path to the session index file"),
         output_file_path: Path = typer.Argument(..., help="path to the output file"),
         item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
-        min_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
         delimiter: str = typer.Option("\t", help="the delimiter used in the CSV file."),
         target_feature: str = typer.Option(None, help="the target column name to build the targets against"
                                                       "(default all next subsequences will be considered);"
@@ -101,7 +98,6 @@ def create_conditional_index(
     :param session_index_path:
     :param output_file_path:
     :param item_header_name:
-    :param min_session_length:
     :param delimiter:
     :param target_feature:
     :return:
