@@ -36,7 +36,7 @@ def filter_by_sequence_feature(sequence: Dict[str, Any],
     targets = list(filter(itemgetter(1), enumerate(feature_values)))
     target_idxs: List[int] = list(map(itemgetter(0), targets))
 
-    for forbidden_position in range(0, min_sequence_length):
+    for forbidden_position in range(0, min_sequence_length - 1):
         if forbidden_position in target_idxs:
             target_idxs.remove(forbidden_position)
 
