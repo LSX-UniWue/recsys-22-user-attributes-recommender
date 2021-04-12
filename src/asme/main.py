@@ -39,12 +39,8 @@ app = typer.Typer()
 
 @app.command()
 def train(config_file: Path = typer.Argument(..., help='the path to the config file', exists=True),
-          do_train: bool = typer.Option(True, help='flag iff the model should be trained'),
-          do_test: bool = typer.Option(False, help='flag iff the model should be tested (after training)')
+          resume: bool = typer.Option(False, help='flag iff the model should resume training from a checkpoint')
           ) -> None:
-    if do_test and not do_train:
-        print(f"The model has to be trained before it can be tested!")
-        exit(-1)
 
     config_file_path = Path(config_file)
     config = load_config(config_file_path)
@@ -56,15 +52,15 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
     log_dir = determine_log_dir(trainer)
     save_config(config, log_dir)
 
-    if do_train:
+    if resume:
+        resume(log_dir)
+
+    else:
         trainer.fit(container.module(),
                     train_dataloader=container.train_dataloader(),
                     val_dataloaders=container.validation_dataloader())
 
-    save_finished_flag(log_dir)
-
-    if do_test:
-        trainer.test(test_dataloaders=container.test_dataloader())
+        save_finished_flag(log_dir)
 
 
 @app.command()
