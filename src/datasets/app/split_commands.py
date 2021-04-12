@@ -86,16 +86,19 @@ def create_conditional_index(
         delimiter: str = typer.Option("\t", help="the delimiter used in the CSV file."),
         target_feature: str = typer.Option(None, help="the target column name to build the targets against"
                                                       "(default all next subsequences will be considered);"
-                                                      "the target must be a boolean feature")
+                                                      "the target must be a boolean feature"),
+        min_sequence_length: int = typer.Option(0, help="the minimum sequence length to consider the target feature")
         ) -> None:
     """
-    creates a index that uses
+    TODO: add documentation
+
     :param data_file_path:
     :param session_index_path:
     :param output_file_path:
     :param item_header_name:
     :param delimiter:
     :param target_feature:
+    :param min_sequence_length
     :return:
     """
     dataset_metadata: DatasetMetadata = DatasetMetadata(
@@ -106,4 +109,4 @@ def create_conditional_index(
         session_key=None
     )
     conditional_split.create_conditional_index(dataset_metadata=dataset_metadata, output_file_path=output_file_path,
-                                               target_feature=target_feature)
+                                               target_feature=target_feature, min_sequence_length=min_sequence_length)

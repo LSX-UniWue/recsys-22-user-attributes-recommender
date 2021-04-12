@@ -1,8 +1,8 @@
 import functools
 from operator import itemgetter
 from pathlib import Path
-from typing import Dict, Any, Iterable, Callable, Optional
-from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS
+from typing import Dict, Any, Iterable, Callable, Optional, List
+from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets.index_builder import SequencePositionIndexBuilder
 from data.datasets.sequence import ItemSequenceDataset, ItemSessionParser, PlainSequenceDataset
@@ -29,28 +29,35 @@ def _get_position_with_offset(session: Dict[str, Any],
 
 
 def filter_by_sequence_feature(session: Dict[str, Any],
-                               feature_key: str
+                               feature_key: str,
+                               min_sequence_length: int
                                ) -> Iterable[int]:
     feature_values = session[feature_key]
     targets = list(filter(itemgetter(1), enumerate(feature_values)))
-    target_idxs = list(map(itemgetter(0), targets))
-    if 0 in target_idxs:
-        raise ValueError(f'sequence with id {session[SAMPLE_IDS]} contains'
-                         f' a sequence where the target feature is True on position 0.')
+    target_idxs: List[int] = list(map(itemgetter(0), targets))
+
+    for forbidden_position in range(0, min_sequence_length):
+        if forbidden_position in target_idxs:
+            print(f'removing position {forbidden_position} from {target_idxs}')
+            target_idxs.remove(forbidden_position)
+
     return target_idxs
 
 
-def _build_target_position_extractor(target_feature: str
+def _build_target_position_extractor(target_feature: str,
+                                     min_sequence_length: int
                                      ) -> Optional[Callable[[Dict[str, Any]], Iterable[int]]]:
     if target_feature is None:
         return None
 
-    return functools.partial(filter_by_sequence_feature, feature_key=target_feature)
+    return functools.partial(filter_by_sequence_feature, feature_key=target_feature,
+                             min_sequence_length=min_sequence_length)
 
 
 def create_conditional_index(dataset_metadata: DatasetMetadata,
                              output_file_path: Path,
-                             target_feature: Optional[str]
+                             target_feature: Optional[str],
+                             min_sequence_length: Optional[int]
                              ) -> None:
     """
     FixMe I need some documentation
@@ -58,9 +65,10 @@ def create_conditional_index(dataset_metadata: DatasetMetadata,
     :param output_file_path: path to the output file
     :param target_feature: the target column name to build the targets against,
     (default all next subsequences will be considered); the target must be a boolean feature
+    :param min_sequence_length: the minimum sequence length when extracting the target
     :return:
     """
-    target_positions_extractor = _build_target_position_extractor(target_feature)
+    target_positions_extractor = _build_target_position_extractor(target_feature, min_sequence_length)
     additional_features = {}
     if target_feature is not None:
         additional_features[target_feature] = {'type': 'bool', 'sequence': True}
