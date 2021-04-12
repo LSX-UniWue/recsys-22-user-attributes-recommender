@@ -38,7 +38,6 @@ def filter_by_sequence_feature(sequence: Dict[str, Any],
 
     for forbidden_position in range(0, min_sequence_length):
         if forbidden_position in target_idxs:
-            print(f'removing position {forbidden_position} from {target_idxs} of sequence {sequence}')
             target_idxs.remove(forbidden_position)
 
     return target_idxs
