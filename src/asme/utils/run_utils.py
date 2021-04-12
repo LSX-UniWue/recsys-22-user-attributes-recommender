@@ -169,6 +169,7 @@ def log_dataloader_example(dataloader: DataLoader,
 
     dataset = dataloader.dataset
     if isinstance(dataset, ExampleLogger):
+        logger.info(f'using {len(dataset)} examples for {example_type}')
         logger.info('----------------------------')
         logger.info(f"{example_type} example")
         logger.info('----------------------------')
