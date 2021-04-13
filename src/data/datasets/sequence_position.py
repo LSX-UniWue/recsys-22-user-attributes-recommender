@@ -7,7 +7,7 @@ from data.datasets import SAMPLE_IDS, ITEM_SEQ_ENTRY_NAME
 from data.datasets.index import SequencePositionIndex
 from data.datasets.processors.processor import Processor
 from data.datasets.sequence import PlainSequenceDataset
-from data.examle_logging import ExampleLogger, Example
+from data.example_logging import ExampleLogger, Example
 from data.multi_processing import MultiProcessSupport
 
 

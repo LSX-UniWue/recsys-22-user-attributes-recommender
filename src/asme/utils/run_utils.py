@@ -20,7 +20,7 @@ from asme.tokenization.tokenizer import Tokenizer
 from asme.utils import logging
 from asme.utils.ioutils import PROCESSED_CONFIG_NAME, find_all_files
 from data.datasets import ITEM_SEQ_ENTRY_NAME
-from data.examle_logging import ExampleLogger
+from data.example_logging import ExampleLogger
 
 logger = logging.get_logger(__name__)
 
