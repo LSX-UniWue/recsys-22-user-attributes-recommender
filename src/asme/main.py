@@ -26,8 +26,7 @@ from asme.utils import ioutils, logging
 from asme.utils.ioutils import load_file_with_item_ids, determine_log_dir, save_config, save_finished_flag, \
     finished_flag_exists
 from asme.writer.prediction.prediction_writer import build_prediction_writer
-from asme.writer.results.results_writer import build_result_writer
-
+from asme.writer.results.results_writer import build_result_writer, check_file_format_supported
 
 _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at least the checkpoint file and config or" \
                                                     " the study name and study storage to infer the config and " \
@@ -336,6 +335,10 @@ def evaluate(config_file: Path = typer.Option(default=None, help='the path to th
     write_results_to_file = output_file is not None
     if write_results_to_file and not overwrite and output_file.exists():
         logger.error(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
+        exit(-1)
+
+    if write_results_to_file and not check_file_format_supported(output_file):
+        logger.error(f"'{output_file.suffix} is not a supported format to write predictions to a file.'")
         exit(-1)
 
     if seed is not None:

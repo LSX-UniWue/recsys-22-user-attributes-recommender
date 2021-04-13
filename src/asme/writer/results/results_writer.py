@@ -77,6 +77,24 @@ class CSVResultWriter(ResultWriter):
         self.csv_writer.writerows(rows_to_write)
 
 
+# for lazy loading only point to the class
+SUPPORTED_RESULT_WRITERS = {
+    '.csv': CSVResultWriter,
+    '.json': JSONResultWriter
+}
+
+
+def check_file_format_supported(output_file: Path) -> bool:
+    """
+    Checks whether the file extension of the provided file corresponds to a supported file format.
+
+    :param output_file: The path to the output file.
+    :return: True, if the file format indicated by the output file is supported. False otherwise.
+    """
+    file_extension = output_file.suffix
+    return file_extension in SUPPORTED_RESULT_WRITERS
+
+
 def build_result_writer(file_handle: IO[str]
                         ) -> ResultWriter:
     """
@@ -91,14 +109,9 @@ def build_result_writer(file_handle: IO[str]
     :param file_handle: the file handle to use
     :return:
     """
-    file_extension = Path(file_handle.name).suffix
+    output_file_path = Path(file_handle.name)
+    file_extension = output_file_path.suffix
 
-    # for lazy loading only point to the class
-    supported_prediction_writers = {
-        '.csv': CSVResultWriter,
-        '.json': JSONResultWriter
-    }
-
-    if file_extension not in supported_prediction_writers:
+    if not check_file_format_supported(output_file_path):
         raise KeyError(f'{file_extension} is not a supported format to write predictions to file')
-    return supported_prediction_writers[file_extension](file_handle)
+    return SUPPORTED_RESULT_WRITERS[file_extension](file_handle)
