@@ -33,5 +33,17 @@ pipeline {
 				}
 			}
 		}
+		stage('Run Coverage') {
+		    steps {
+		        sh 'export HOME=`pwd`/env; export PYTHONPATH=`pwd`/src; poetry run coverage erase'
+		        sh 'export HOME=`pwd`/env; export PYTHONPATH=`pwd`/src; poetry run coverage run --branch --source=`pwd`/src,`pwd`/tests -m pytest -v'
+		        sh 'export HOME=`pwd`/env; export PYTHONPATH=`pwd`/src; poetry run coverage xml'
+		    }
+		    post {
+		        always {
+		            cobertura coberturaReportFile: 'coverage.xml'
+		        }
+		    }
+		}
 	}
 }

@@ -32,6 +32,6 @@ def test_cloze_mask_processor():
     }
     masked = processor.process(parsed_session)
 
-    assert_list_equal(masked[ITEM_SEQ_ENTRY_NAME], [1, 1, 1, 7, 3, 4, 1, 0, 1, 1])
-    expected_targets = [5, 8, 9, 0, 0, 0, 12, 10, 11, 3]
+    assert_list_equal(masked[ITEM_SEQ_ENTRY_NAME], [5, 1, 9, 1, 3, 1, 12, 10, 1, 3])
+    expected_targets = [0, 8, 0, 7, 0, 4, 0, 0, 11, 0]
     assert_list_equal(masked[TARGET_ENTRY_NAME], expected_targets)
