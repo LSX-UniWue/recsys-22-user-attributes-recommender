@@ -1,19 +1,25 @@
 import os
+from contextlib import contextmanager, redirect_stdout
 
 import numpy as np
+import torch
 import typer
 import optuna
 import json
 
 from tempfile import NamedTemporaryFile
 from pathlib import Path
-from typing import Optional, Callable, List, Iterator
+from typing import Optional, Callable, List, Iterator, Tuple
 from optuna.study import StudyDirection
 from pytorch_lightning import seed_everything, Callback
 from torch.utils.data import Sampler, DataLoader
-from torch.utils.data.dataset import T_co
+from torch.utils.data.dataset import T_co, Dataset
+from tqdm import tqdm
 
+from asme.modules.metrics_trait import MetricsTrait
 from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME
+from asme.metrics.container.metrics_container import MetricsContainer
+from asme.metrics.metric import MetricStorageMode
 from asme.init.context import Context
 from asme.init.factories.metrics.metrics_container import MetricsContainerFactory
 from asme.init.templating.search.configuration import SearchConfigurationTemplateProcessor
@@ -177,7 +183,9 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
             study_name: str = typer.Option(default=None, help='the study name of an existing study'),
             study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
             overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
-            log_input: Optional[bool] = typer.Option(default=True, help='enable input logging.')
+            log_input: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
+            log_per_sample_metrics: Optional[bool] = typer.Option(default=True,
+                                                                  help='enable logging of per-sample metrics.')
             ):
     """
 
@@ -195,7 +203,9 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
     :param selected_items_file: the item that should only be considered
     :param overwrite: override the output file
     :param log_input: write the input sequence also to the file
+    :param log_per_sample_metrics: if true also writes per sample metrics for the samples
     """
+
     # checking if the file already exists
     if not overwrite and output_file.exists():
         print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
@@ -211,6 +221,11 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
     trainer = container.trainer().build()
     test_loader = container.test_dataloader()
 
+    if log_per_sample_metrics:
+        metrics_container: MetricsContainer = module.metrics
+        for metric in metrics_container.get_metrics():
+            metric.set_metrics_storage_mode(MetricStorageMode.PER_SAMPLE)
+
     def _noop_filter(sample_predictions: np.ndarray):
         return sample_predictions
 
@@ -222,6 +237,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
 
         def _selected_items_filter(sample_predictions: np.ndarray):
             return sample_predictions[selected_items]
+
         filter_predictions = _selected_items_filter
 
     # open the file and build the writer
@@ -246,17 +262,59 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
 
         item_tokenizer = container.tokenizer('item')
 
-        for index, batch in enumerate(test_loader):
+        def _extract_sample_metrics(module: MetricsTrait) -> List[Tuple[str, torch.Tensor]]:
+            """
+            Extracts the raw values of all metrics with per-sample-storage enabled.
+            :param module: The module used for generating predictions.
+            :return: A list of all metrics in the module's metric container with per-sample-storage enabled.
+            """
+            metrics_container = module.metrics
+            metric_names_and_values = list(filter(lambda x: x[1]._storage_mode == MetricStorageMode.PER_SAMPLE, zip(metrics_container.get_metric_names(), metrics_container.get_metrics())))
+            return list(map(lambda x: (x[0], x[1].raw_metric_values()), metric_names_and_values))
+
+        def _create_batch_loader(dataset: Dataset, batch_sampler: Sampler, collate_fn) -> DataLoader:
+            return DataLoader(dataset, batch_sampler=batch_sampler, collate_fn=collate_fn)
+
+        @contextmanager
+        def _no_eval_step_end_call(module):
+            """
+            Wrap a call to trainer.test with this context manager to avoid the _eval_epoch_end code provided by the
+            MetricsTrait to be executed before the wrapped code is executed. The hook is called afterwards.
+            """
+            _eval_epoch_end_hook = module._eval_epoch_end
+            try:
+                module._eval_epoch_end = lambda x: {}
+                yield None
+            finally:
+                module._eval_epoch_end = _eval_epoch_end_hook
+                module._eval_epoch_end(None)
+
+        for index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
+
             sequences = batch[ITEM_SEQ_ENTRY_NAME]
             batch_size = sequences.size()[0]
             batch_start = index * batch_size
 
-            batch_loader = DataLoader(test_loader.dataset, batch_sampler=FixedBatchSampler(batch_start, batch_size),
-                                      collate_fn=test_loader.collate_fn)
-            prediction_results = trainer.predict(module, dataloaders=batch_loader)
+            # We need two loaders since we have to run both, predict & test on each batch
+            batch_loader_predict = _create_batch_loader(test_loader.dataset,
+                                                        batch_sampler=FixedBatchSampler(batch_start, batch_size),
+                                                        collate_fn=test_loader.collate_fn)
+            batch_loader_test = _create_batch_loader(test_loader.dataset,
+                                                     batch_sampler=FixedBatchSampler(batch_start, batch_size),
+                                                     collate_fn=test_loader.collate_fn)
 
+            # Redirect prediction/test results to /dev/null to avoid spamming stdout
+            with open(os.devnull, "w") as f, redirect_stdout(f):
+                prediction_results = trainer.predict(module, dataloaders=batch_loader_predict)
+                if log_per_sample_metrics:
+                    # Prevent the reset-method of metrics to be called before extracting their values
+                    with _no_eval_step_end_call(module):
+                        # Run test in order to generate metrics (not generated by predict)
+                        trainer.test(module, test_dataloaders=batch_loader_test)
+                        metrics = _extract_sample_metrics(module)
+                else:
+                    metrics = []
             predictions = prediction_results[0]
-
             sample_ids = batch[SAMPLE_IDS]
             sequence_position_ids = None
             if 'pos' in batch:
@@ -295,6 +353,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
                 sample_id = _generate_sample_id(sample_ids, sequence_position_ids, i)
                 true_target = targets[i].item()
                 true_target = item_tokenizer.convert_ids_to_tokens(true_target)
+                metric_name_and_values = [(name, value[0][i].item()) for name, value in metrics]
                 sequence = None
                 if log_input:
                     sequence = sequences[i].tolist()
@@ -309,7 +368,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
                     sequence = _remove_special_tokens(sequence, item_tokenizer)
                     sequence = item_tokenizer.convert_ids_to_tokens(sequence)
 
-                output_writer.write_values(f'{sample_id}', tokens, scores, true_target, sequence)
+                output_writer.write_values(f'{sample_id}', tokens, scores, true_target, metric_name_and_values, sequence)
 
 
 @app.command()
