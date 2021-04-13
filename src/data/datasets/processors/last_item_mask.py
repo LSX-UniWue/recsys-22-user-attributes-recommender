@@ -32,7 +32,9 @@ class LastItemMaskProcessor(Processor):
         self.tokenizers = tokenizers
         self.masking_targets = masking_targets
 
-    def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
+    def process(self,
+                parsed_sequence: Dict[str, Any]
+                ) -> Dict[str, Any]:
 
         def get_tokenizer(target):
             if target in [ITEM_SEQ_ENTRY_NAME]:
@@ -50,8 +52,8 @@ class LastItemMaskProcessor(Processor):
             return item
 
         for target in self.masking_targets:
-            session = parsed_session[target]
+            session = parsed_sequence[target]
             mask_token = get_mask(target, session)
             session.append(mask_token)
 
-        return parsed_session
+        return parsed_sequence

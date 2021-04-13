@@ -16,7 +16,7 @@ class RatioSplitStrategy(SplitStrategy):
                                                       SplitNames.test: test_ratio}
         self.seed = seed
 
-    def split(self, dataset_metadata) -> TrainValidationTestSplitIndices:
+    def split(self, dataset_metadata: DatasetMetadata) -> TrainValidationTestSplitIndices:
         return perform_ratio_split(dataset_metadata=dataset_metadata,
                                    split_ratios=self.split_ratios,
                                    seed=self.seed)

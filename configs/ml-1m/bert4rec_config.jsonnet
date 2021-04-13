@@ -1,5 +1,5 @@
 local base_path = "/ssd/ml-1m/";
-local output_path = "/scratch/jane-doe-framework/experiments/ml-1m/bert4rec/";
+local output_path = "/scratch/jane-doe-framework/experiments/ml-1m/bert4rec_d05/";
 local loo_path = base_path + "loo/";
 local hidden_size = 128;
 local max_seq_length = 200;
@@ -49,7 +49,7 @@ local file_prefix = 'ml-1m';
             num_transformer_heads: 2,
             num_transformer_layers: 2,
             transformer_hidden_size: hidden_size,
-            transformer_dropout: 0.2
+            transformer_dropout: 0.5
         }
     },
     tokenizers: {

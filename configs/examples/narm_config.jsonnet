@@ -39,12 +39,12 @@ local metrics =  {
             }
         },
         model: {
-            item_embedding_size: 4,
-            global_encoder_size: 128,
-            global_encoder_num_layers: 1,
-            embedding_dropout: 0.25,
-            context_dropout: 0.25,
-            batch_first: true
+            batch_first: true,
+            context_dropout: 0.7255218897319398,
+            embedding_dropout: 0.5785578398798191,
+            global_encoder_num_layers: 2,
+            global_encoder_size: 30,
+            item_embedding_size: 180
         }
     },
     tokenizers: {

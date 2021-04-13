@@ -127,6 +127,7 @@ local metrics =  {
             monitor: "recall@5_sampled(2)",
             save_top_k: 3,
             mode: 'max'
-        }
+        },
+        max_epochs: 2
     }
 }

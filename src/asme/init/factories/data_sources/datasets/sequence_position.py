@@ -41,9 +41,6 @@ class SequencePositionDatasetFactory(DatasetFactory):
         nip_index_file_path = Path(config.get('nip_index_file'))
         basic_dataset = self.plain_session_factory.build(config, context)
 
-        add_target = config.get_or_default("add_target", True)
-
         return SequencePositionDataset(basic_dataset,
                                        SequencePositionIndex(nip_index_file_path),
-                                       processors=processors,
-                                       add_target=add_target)
+                                       processors=processors)

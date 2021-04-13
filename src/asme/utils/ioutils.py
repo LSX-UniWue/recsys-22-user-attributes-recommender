@@ -81,6 +81,19 @@ def finished_flag_exists(path: Path) -> bool:
     return os.path.isfile(full_path)
 
 
+def find_all_files(base_path: Path,
+                   suffix: str,
+                   follow_links: bool = True
+                   ) -> List[Path]:
+    all_files = []
+    for root, dirs, files in os.walk(str(base_path), followlinks=follow_links):
+        for file in files:
+            if file.endswith(suffix):
+                all_files.append(Path(os.path.join(root, file)))
+
+    return all_files
+
+
 def load_file_with_item_ids(path: Path) -> List[int]:
     """
     loads a file containing item ids into a list

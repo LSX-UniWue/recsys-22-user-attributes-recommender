@@ -55,6 +55,15 @@ class MetricsContainer(nn.Module):
         """
         pass
 
+    @abstractmethod
+    def get_metrics(self) -> List[RankingMetric]:
+        """
+        Returns all metrics contained in this container.
+
+        :return: All contained metrics.
+        """
+        pass
+
 
 class RankingMetricsContainer(MetricsContainer):
     """
@@ -114,6 +123,9 @@ class RankingMetricsContainer(MetricsContainer):
     def get_metric_names(self) -> List[str]:
         return [f'{metric.name()}{self.sampler.suffix_metric_name()}' for metric in self.metrics]
 
+    def get_metrics(self) -> List[RankingMetric]:
+        return self.metrics
+
 
 class AggregateMetricsContainer(MetricsContainer):
     """
@@ -157,5 +169,12 @@ class AggregateMetricsContainer(MetricsContainer):
 
         for container in self.containers.children():
             merged_list.extend(container.get_metric_names())
+
+        return merged_list
+
+    def get_metrics(self) -> List[RankingMetric]:
+        merged_list = []
+        for container in self.containers.children():
+            merged_list.extend(container.get_metrics())
 
         return merged_list

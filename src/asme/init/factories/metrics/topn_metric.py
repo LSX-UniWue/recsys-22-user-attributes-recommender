@@ -6,9 +6,9 @@ from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResu
 from asme.metrics.metric import RankingMetric
 
 
-class RankingMetricFactory(ObjectFactory):
+class TopNMetricFactory(ObjectFactory):
     """
-    general class to build a RankingMetric for one or multiple ks
+    general class to build a RankingMetric for one or multiple ks (topN metric)
     """
 
     def __init__(self,

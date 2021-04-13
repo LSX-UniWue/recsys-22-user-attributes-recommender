@@ -4,7 +4,7 @@ import pytest
 import torch
 
 from asme.metrics.dcg import DiscountedCumulativeGainMetric
-from util import EPSILON, build_sample
+from util_test_metric import EPSILON, build_sample
 
 
 def get_single_item_recommendation_samples():

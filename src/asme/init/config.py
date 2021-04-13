@@ -6,12 +6,16 @@ class Config:
     An object that controls access to the configuration.
     """
 
-    def __init__(self, config: Dict[str, Any], base_path: List[str] = []):
+    def __init__(self,
+                 config: Dict[str, Any],
+                 base_path: List[str] = None):
         """
         Initializes the configuration object.
         :param config: a dictionary that contains the configuration values.
         :param base_path: the path pointing from the root of the configuration to this sub configuration.
         """
+        if base_path is None:
+            base_path = []
         self.config = config
         self.base_path = base_path
 

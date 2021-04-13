@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from data.collate import padded_session_collate, PadDirection, PadInformation
 from data.datasets import ITEM_SEQ_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME, \
     TARGET_ENTRY_NAME
-from data.mp import mp_worker_init_fn
+from data.multi_processing import mp_worker_init_fn
 from asme.init.config import Config
 from asme.init.context import Context
 from asme.init.factories.common.dependencies_factory import DependenciesFactory
@@ -79,10 +79,11 @@ class LoaderFactory(ObjectFactory):
 
         pad_direction = PadDirection.LEFT if config.get("pad_direction") == "left" else PadDirection.RIGHT
 
+        shuffle_dataset = config.get("shuffle")
         return DataLoader(
             dataset=dataset,
             batch_size=config.get("batch_size"),
-            shuffle=config.get("shuffle"),
+            shuffle=shuffle_dataset,
             num_workers=num_workers,
             worker_init_fn=init_worker_fn,
             collate_fn=padded_session_collate(

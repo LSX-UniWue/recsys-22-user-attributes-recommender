@@ -28,5 +28,4 @@ def build(
     """
     build_popularity.build(data_file_path=data_file_path, session_index_path=session_index_path,
                            vocabulary_file_path=vocabulary_file_path, output_file_path=output_file_path,
-                           item_header_name=item_header_name, min_session_length=min_session_length,
-                           delimiter=delimiter)
+                           item_header_name=item_header_name, delimiter=delimiter)

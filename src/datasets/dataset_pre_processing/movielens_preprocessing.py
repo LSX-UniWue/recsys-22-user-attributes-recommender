@@ -1,13 +1,8 @@
 import os
-import functools
 import pandas as pd
 from pathlib import Path
 
 from datasets.dataset_pre_processing.utils import read_csv, download_dataset, unzip_file
-from datasets.dataset_index_splits.conditional_split import _get_position_with_offset, \
-    create_conditional_index_using_extractor, all_remaining_positions
-from datasets.app.index_command import index_csv
-from datasets.data_structures.dataset_metadata import DatasetMetadata
 
 RATING_USER_COLUMN_NAME = 'userId'
 RATING_MOVIE_COLUMN_NAME = 'movieId'
@@ -23,10 +18,10 @@ DOWNLOAD_URL_MAP = {
 }
 
 
-def download_and_unzip_movielens_data(dataset: str, output_dir: Path, min_seq_length: int, min_user_feedback: int,
-                                      min_item_feedback: int) -> (Path, Path):
+def download_and_unzip_movielens_data(dataset: str,
+                                      output_dir: Path) -> (Path, Path):
     url = DOWNLOAD_URL_MAP[dataset]
-    dataset_dir = output_dir / f'{dataset}_{min_seq_length}_{min_user_feedback}_{min_item_feedback}'
+    dataset_dir = output_dir / f'{dataset}'
     download_dir = output_dir
 
     downloaded_file = download_dataset(url, download_dir)
@@ -49,11 +44,12 @@ def filter_ratings(ratings_df: pd.DataFrame,
 
         return dataframe[ratings_df[column].isin(good_entities)]
 
-    if min_user_feedback > 1:
-        ratings_df = _filter_dataframe(RATING_USER_COLUMN_NAME, min_user_feedback, ratings_df)
-
+    # (AD) we adopt the order used in bert4rec preprocessing
     if min_item_feedback > 1:
         ratings_df = _filter_dataframe(RATING_MOVIE_COLUMN_NAME, min_item_feedback, ratings_df)
+
+    if min_user_feedback > 1:
+        ratings_df = _filter_dataframe(RATING_USER_COLUMN_NAME, min_user_feedback, ratings_df)
 
     return ratings_df
 
@@ -102,7 +98,6 @@ def preprocess_movielens_data(dataset_dir: Path,
     movies_df = read_csv(dataset_dir, "movies", file_type, sep, header)
 
     # only the ml-1m dataset has got a user info file …
-    users_df = None
 
     if movielens_1m:
         movies_df.columns = ['movieId', 'title', 'genres']
