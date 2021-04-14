@@ -42,7 +42,7 @@ local file_prefix = 'ml-20m';
         },
         model: {
             max_seq_length: max_seq_length,
-            num_transformer_heads: 2,
+            num_transformer_heads: 8,
             num_transformer_layers: 2,
             transformer_hidden_size: 256,
             transformer_dropout: 0.2
