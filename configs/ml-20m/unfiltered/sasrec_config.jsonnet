@@ -24,8 +24,7 @@ local file_prefix = 'ml-20m';
             },
             path: base_path,
             file_prefix: file_prefix,
-            seed: 123456,
-            split_type: "leave_one_out", // leave one out split for evaluation
+            split_type: "leave_one_out" // leave one out split for evaluation
         }
     },
     module: {
