@@ -127,6 +127,12 @@ class DreamModule(MetricsTrait, pl.LightningModule):
         mask = ~ targets.eq(self.item_tokenizer.pad_token_id)
         return build_eval_step_return_dict(input_seq, prediction, targets, mask=mask)
 
+    def test_step(self,
+                  batch: Dict[str, torch.Tensor],
+                  batch_idx: int
+                  ) -> Dict[str, torch.Tensor]:
+        return self.validation_step(batch, batch_idx)
+
     def predict(self,
                 batch: Dict[str, torch.Tensor],
                 batch_idx: int,
