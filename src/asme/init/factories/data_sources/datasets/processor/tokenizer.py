@@ -34,7 +34,7 @@ class TokenizerProcessorFactory(ObjectFactory):
         for name, tokenizer in tokenizers.items():
             if name.startswith("tokenizers."):
                 keys_to_tokenize = name.replace("tokenizers.", "")
-                tokenizers_map[ITEM_SEQ_ENTRY_NAME if keys_to_tokenize == 'item' else ITEM_SEQ_ENTRY_NAME] = tokenizer
+                tokenizers_map[ITEM_SEQ_ENTRY_NAME if keys_to_tokenize == 'item' else keys_to_tokenize] = tokenizer
 
         return TokenizerProcessor(tokenizers_map)
 
