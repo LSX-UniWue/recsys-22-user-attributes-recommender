@@ -10,8 +10,6 @@ from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResu
 
 
 class ParameterizedPositiveNegativeSamplerProcessorFactory(ObjectFactory):
-    #FIXME make this configurable for other tokenizers, e.g. keywords
-    TOKENIZER_KEY = TokenizerFactory.KEY + '.item'
 
     """
     factory for the PositiveNegativeSamplerProcessor
