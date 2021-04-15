@@ -8,7 +8,6 @@ from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResu
 
 
 class LastItemMaskProcessorFactory(ObjectFactory):
-    TOKENIZER_KEY = TokenizerFactory.KEY + '.item'
 
     """
     Factory for the LastItemMaskProcessor.
@@ -18,7 +17,7 @@ class LastItemMaskProcessorFactory(ObjectFactory):
                   config: Config,
                   context: Context
                   ) -> CanBuildResult:
-        if not context.has_path(get_tokenizer_key_for_voc("item")):
+        if not context.has_path(get_tokenizer_key_for_voc(ITEM_TOKENIZER_ID)):
             return CanBuildResult(CanBuildResultType.MISSING_DEPENDENCY, 'item tokenizer missing')
 
         return CanBuildResult(CanBuildResultType.CAN_BUILD)

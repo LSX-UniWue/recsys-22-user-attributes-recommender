@@ -9,6 +9,7 @@ from asme.tokenization.tokenizer import Tokenizer
 
 DEFAULT_SAMPLE_SIZE = 3
 
+
 class ParameterizedPositiveNegativeSamplerProcessor(Processor):
     """
     Takes the input sequence and generates positive and negative target

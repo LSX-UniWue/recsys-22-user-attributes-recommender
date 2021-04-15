@@ -11,10 +11,6 @@ from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResu
 from asme.tokenization.tokenizer import Tokenizer
 
 
-def get_tokenizer_key_for_voc(voc_id: str) -> str:
-    return f'{TokenizerFactory.KEY}s.{voc_id}'
-
-
 class TokenizerFactory(ObjectFactory):
     """
     Builds a single tokenizer entry inside the tokenizers section.
@@ -89,3 +85,14 @@ class TokenizersFactory(ObjectFactory):
 
     def config_key(self) -> str:
         return self.KEY
+
+"""
+the special key for the item tokenizer that must at least present in the config
+"""
+ITEM_TOKENIZER_ID = 'item'
+
+TOKENIZERS_PREFIX = f'{TokenizersFactory.KEY}.'
+
+
+def get_tokenizer_key_for_voc(voc_id: str) -> str:
+    return f'{TOKENIZERS_PREFIX}{voc_id}'

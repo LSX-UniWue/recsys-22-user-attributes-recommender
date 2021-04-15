@@ -7,7 +7,7 @@ from data.datasets.processors.processor import Processor
 class TargetExtractorProcessor(Processor):
 
     """
-    extracts the last item in the sequence as target for the training or evaluation process
+    This processor extracts the last item in the sequence as target for the training or evaluation process
 
     e.g. if the session is [5, 4, 3, 7] the processor sets the list to [5, 4, 3] and adds a TARGET_ENTRY_NAME to 7
     """
