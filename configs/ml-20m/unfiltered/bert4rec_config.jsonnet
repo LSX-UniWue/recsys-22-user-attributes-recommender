@@ -11,7 +11,7 @@ local file_prefix = 'ml-20m';
 {
     templates: {
         unified_output: {
-            path: "/scratch/jane-doe-framework/experiments/ml-20m/bert4rec_new"
+            path: "/scratch/jane-doe-framework/experiments/ml-20m/bert4rec_new0.1"
         },
         mask_data_sources: {
             parser: {
@@ -45,7 +45,7 @@ local file_prefix = 'ml-20m';
             num_transformer_heads: 8,
             num_transformer_layers: 2,
             transformer_hidden_size: 256,
-            transformer_dropout: 0.2
+            transformer_dropout: 0.1
         }
     },
     tokenizers: {
