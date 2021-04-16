@@ -74,6 +74,7 @@ local file_prefix = 'ml-20m';
         gpus: 8,
         max_epochs: 800,
         accelerator: "ddp",
-        check_val_every_n_epoch: 100
+        check_val_every_n_epoch: 100,
+        gradient_clip_val: 5
     }
 }
