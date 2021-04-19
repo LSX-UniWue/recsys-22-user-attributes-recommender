@@ -14,15 +14,13 @@ def _get_hyperparameters(args, kwargs, init_func):
         # index + 1 because self is the first parameter of init
         hyperparameters[parameters[index + 1][0]] = arg
 
-    hyperparameters.update(kwargs)
-
-    # special handling of the model parameter
-
-    for index, arg in enumerate(hyperparameters):
-        # index + 1 because self is the first parameter of init
-        model = hyperparameters.get(arg, None)
-        if isinstance(model, nn.Module) and arg != 'metrics':
-            model_hyperparameters = model.hyperparameters
+    for index, arg in enumerate(kwargs):
+        if arg == 'metrics' or arg == 'item_tokenizer':
+            continue
+        value = kwargs.get(arg, None)
+        hyperparameters[arg] = value
+        if isinstance(value, nn.Module):                    # special handling of the model parameter
+            model_hyperparameters = value.hyperparameters
             hyperparameters[arg] = model_hyperparameters
 
     return hyperparameters
