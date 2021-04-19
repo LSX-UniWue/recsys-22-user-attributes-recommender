@@ -10,6 +10,7 @@ import json
 from tempfile import NamedTemporaryFile
 from pathlib import Path
 from typing import Optional, Callable, List, Iterator, Tuple
+
 from optuna.study import StudyDirection
 from pytorch_lightning import seed_everything, Callback
 from torch.utils.data import Sampler, DataLoader
@@ -25,9 +26,9 @@ from asme.init.factories.metrics.metrics_container import MetricsContainerFactor
 from asme.init.templating.search.configuration import SearchConfigurationTemplateProcessor
 from asme.init.templating.search.processor import SearchTemplateProcessor
 from asme.init.templating.search.resolver import OptunaParameterResolver
+from asme.tokenization.utils.tokenization import remove_special_tokens
 from asme.utils.run_utils import load_config, create_container, OBJECTIVE_METRIC_KEY, TRAIL_BASE_PATH, \
     load_and_restore_from_file_or_study, log_dataloader_example
-from asme.tokenization.tokenizer import Tokenizer
 from asme.utils import ioutils, logging
 from asme.utils.ioutils import load_file_with_item_ids, determine_log_dir, save_config, save_finished_flag, \
     finished_flag_exists
@@ -259,7 +260,9 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
         # replace as soon as this is fixed in pytorch lighting
         class FixedBatchSampler(Sampler):
 
-            def __init__(self, batch_start, batch_size):
+            def __init__(self,
+                         batch_start: int,
+                         batch_size: int):
                 super().__init__(None)
                 self.batch_start = batch_start
                 self.batch_size = batch_size
@@ -282,7 +285,10 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
             metric_names_and_values = list(filter(lambda x: x[1]._storage_mode == MetricStorageMode.PER_SAMPLE, zip(metrics_container.get_metric_names(), metrics_container.get_metrics())))
             return list(map(lambda x: (x[0], x[1].raw_metric_values()), metric_names_and_values))
 
-        def _create_batch_loader(dataset: Dataset, batch_sampler: Sampler, collate_fn) -> DataLoader:
+        def _create_batch_loader(dataset: Dataset,
+                                 batch_sampler: Sampler,
+                                 collate_fn
+                                 ) -> DataLoader:
             return DataLoader(dataset, batch_sampler=batch_sampler, collate_fn=collate_fn)
 
         @contextmanager
@@ -300,9 +306,9 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
                 module._eval_epoch_end(None)
 
         for index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
-
             sequences = batch[ITEM_SEQ_ENTRY_NAME]
             batch_size = sequences.size()[0]
+            is_basket_recommendation = len(sequences.size()) == 3
             batch_start = index * batch_size
 
             # We need two loaders since we have to run both, predict & test on each batch
@@ -361,7 +367,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
                 scores = scores[::-1].tolist()[:num_predictions]
 
                 sample_id = _generate_sample_id(sample_ids, sequence_position_ids, i)
-                true_target = targets[i].item()
+                true_target = targets[i].tolist() if is_basket_recommendation else targets[i].item()
                 true_target = item_tokenizer.convert_ids_to_tokens(true_target)
                 metric_name_and_values = [(name, value[0][i].item()) for name, value in metrics]
                 sequence = None
@@ -369,13 +375,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
                     sequence = sequences[i].tolist()
 
                     # remove padding tokens
-                    # TODO: move method
-                    def _remove_special_tokens(sequence: List[int], tokenizer: Tokenizer) -> List[int]:
-                        for special_token_id in tokenizer.get_special_token_ids():
-                            sequence = list(filter(special_token_id.__ne__, sequence))
-                        return sequence
-
-                    sequence = _remove_special_tokens(sequence, item_tokenizer)
+                    sequence = remove_special_tokens(sequence, item_tokenizer)
                     sequence = item_tokenizer.convert_ids_to_tokens(sequence)
 
                 output_writer.write_values(f'{sample_id}', tokens, scores, true_target, metric_name_and_values, sequence)
