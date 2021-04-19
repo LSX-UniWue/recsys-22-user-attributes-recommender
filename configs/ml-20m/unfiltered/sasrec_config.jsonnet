@@ -11,7 +11,7 @@ local file_prefix = 'ml-20m';
 {
     templates: {
         unified_output: {
-            path: "/scratch/jane-doe-framework/experiments/ml-20m/sasrec_new256"
+            path: "/scratch/jane-doe-framework/experiments/ml-20m/sasrec_new256_8"
         },
         pos_neg_data_sources: {
             parser: {
@@ -34,14 +34,14 @@ local file_prefix = 'ml-20m';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + "ml-20m.popularity.title.txt",
+                sample_probability_file: base_path + "loo/ml-20m.popularity.title.txt",
                 num_negative_samples: 100,
                 metrics: metrics
             }
         },
         model: {
             transformer_hidden_size: 256,
-            num_transformer_heads: 2,
+            num_transformer_heads: 8,
             num_transformer_layers: 2,
             max_seq_length: max_seq_length,
             transformer_dropout: 0.2
@@ -56,7 +56,7 @@ local file_prefix = 'ml-20m';
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "ml-20m.vocabulary.title.txt"
+                    file: base_path + "loo/ml-20m.vocabulary.title.txt"
                 }
             }
         }

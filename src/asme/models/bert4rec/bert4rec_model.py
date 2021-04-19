@@ -20,13 +20,20 @@ class BERT4RecBaseModel(nn.Module):
                  transformer_dropout: float,
                  project_layer_type: str = 'transpose_embedding',
                  embedding_pooling_type: str = None,
-                 initializer_range: float = 0.02
+                 initializer_range: float = 0.02,
+                 transformer_intermediate_size: int = None,
+                 transformer_attention_dropout: float = None
                  ):
         super().__init__()
         self.initializer_range = initializer_range
+
+        if transformer_intermediate_size is None:
+            transformer_intermediate_size = 4 * transformer_hidden_size
+
         self.transformer_encoder = TransformerLayer(transformer_hidden_size, num_transformer_heads,
-                                                    num_transformer_layers, transformer_hidden_size * 4,
-                                                    transformer_dropout)
+                                                    num_transformer_layers, transformer_intermediate_size,
+                                                    transformer_dropout,
+                                                    attention_dropout=transformer_attention_dropout)
 
         self.transform = nn.Sequential(
             nn.Linear(transformer_hidden_size, transformer_hidden_size),
@@ -129,7 +136,9 @@ class BERT4RecModel(BERT4RecBaseModel):
                  transformer_dropout: float,
                  project_layer_type: str = 'transpose_embedding',
                  embedding_pooling_type: str = None,
-                 initializer_range: float = 0.02
+                 initializer_range: float = 0.02,
+                 transformer_intermediate_size: int = None,
+                 transformer_attention_dropout: float = None
                  ):
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
@@ -139,7 +148,9 @@ class BERT4RecModel(BERT4RecBaseModel):
                          transformer_dropout=transformer_dropout,
                          project_layer_type=project_layer_type,
                          embedding_pooling_type=embedding_pooling_type,
-                         initializer_range=initializer_range)
+                         initializer_range=initializer_range,
+                         transformer_intermediate_size=transformer_intermediate_size,
+                         transformer_attention_dropout=transformer_attention_dropout)
 
     def _init_internal(self,
                        transformer_hidden_size: int,

@@ -72,17 +72,19 @@ class TransformerEmbedding(nn.Module):
 class TransformerLayer(nn.Module):
 
     def __init__(self,
-                 transformer_hidden_size: int,
-                 num_transformer_heads: int,
-                 num_transformer_layers: int,
+                 hidden_size: int,
+                 num_heads: int,
+                 num_layers: int,
                  dim_feedforward: int,
-                 transformer_dropout: float
+                 dropout: float,
+                 attention_dropout: float = None
                  ):
         super().__init__()
         # multi-layers transformer blocks, deep network
         self.transformer_blocks = nn.ModuleList(
-            [TransformerBlock(transformer_hidden_size, num_transformer_heads, dim_feedforward, transformer_dropout)
-             for _ in range(num_transformer_layers)])
+            [TransformerBlock(hidden_size, num_heads, dim_feedforward, dropout,
+                              attention_dropout=attention_dropout)
+             for _ in range(num_layers)])
 
     def forward(self,
                 input_sequence: torch.Tensor,
@@ -220,7 +222,8 @@ class TransformerBlock(nn.Module):
                  hidden: int,
                  attn_heads: int,
                  feed_forward_hidden: int,
-                 dropout: float):
+                 dropout: float,
+                 attention_dropout: float = None):
         """
         :param hidden: hidden size of transformer
         :param attn_heads: head sizes of multi-head attention
@@ -229,7 +232,9 @@ class TransformerBlock(nn.Module):
         """
 
         super().__init__()
-        self.attention = MultiHeadedAttention(heads=attn_heads, d_model=hidden, dropout=dropout)
+        if attention_dropout is None:
+            attention_dropout = dropout
+        self.attention = MultiHeadedAttention(heads=attn_heads, d_model=hidden, dropout=attention_dropout)
         self.feed_forward = PositionwiseFeedForward(d_model=hidden, d_ff=feed_forward_hidden, dropout=dropout)
         self.input_sublayer = SublayerConnection(size=hidden, dropout=dropout)
         self.output_sublayer = SublayerConnection(size=hidden, dropout=dropout)
