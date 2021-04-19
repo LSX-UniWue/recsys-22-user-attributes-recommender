@@ -1,13 +1,17 @@
 import inspect
 from functools import wraps
 from torch import nn
+from asme.tokenization.tokenizer import Tokenizer
+import pytorch_lightning as pl
+
+from asme.metrics.container.metrics_container import MetricsContainer
 
 
 def _get_hyperparameters(args, kwargs, init_func):
+
     parameters = list(inspect.signature(init_func).parameters.items())
 
     hyperparameters = {}
-
     # first the args
 
     for index, arg in enumerate(args):
@@ -15,9 +19,9 @@ def _get_hyperparameters(args, kwargs, init_func):
         hyperparameters[parameters[index + 1][0]] = arg
 
     for index, arg in enumerate(kwargs):
-        if arg == 'metrics' or arg == 'item_tokenizer':
-            continue
         value = kwargs.get(arg, None)
+        if isinstance(value, (MetricsContainer, pl.metrics.Metric, Tokenizer)):  # excluding non-hyperparameters like Metrics and Tokenizer
+            continue
         hyperparameters[arg] = value
         if isinstance(value, nn.Module):                    # special handling of the model parameter
             model_hyperparameters = value.hyperparameters
