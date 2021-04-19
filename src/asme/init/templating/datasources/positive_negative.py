@@ -1,7 +1,8 @@
 from typing import Dict, Any
 
 from asme.init.templating.datasources.datasources import build_datasource, DataSourceTemplateProcessor, \
-    LeaveOneOutSessionDatasetBuilder, NextPositionDatasetBuilder, ConditionalSequenceOrSequencePositionDatasetBuilder
+    LeaveOneOutSessionDatasetBuilder, NextPositionDatasetBuilder, ConditionalSequenceOrSequencePositionDatasetBuilder, \
+    TARGET_EXTRACTOR_PROCESSOR_CONFIG
 
 
 class PositiveNegativeDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
@@ -20,16 +21,16 @@ class PositiveNegativeDataSourcesTemplateProcessor(DataSourceTemplateProcessor):
         return 'pos_neg_data_sources'
 
     def _build_train_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        seed = config['seed']
         pos_neg_sampler_processor = {
-            'type': "pos_neg",
-            'seed': seed
+            'type': "pos_neg"
         }
 
-        return build_datasource(self.TRAIN_DATASET_BUILDERS, parser, config, 'train', pos_neg_sampler_processor)
+        return build_datasource(self.TRAIN_DATASET_BUILDERS, parser, config, 'train', [pos_neg_sampler_processor])
 
     def _build_validation_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource(self.TEST_VALID_DATASET_BUILDERS, parser, config, 'validation')
+        return build_datasource(self.TEST_VALID_DATASET_BUILDERS, parser, config, 'validation',
+                                [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
 
     def _build_test_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource(self.TEST_VALID_DATASET_BUILDERS, parser, config, 'test')
+        return build_datasource(self.TEST_VALID_DATASET_BUILDERS, parser, config, 'test',
+                                [TARGET_EXTRACTOR_PROCESSOR_CONFIG])

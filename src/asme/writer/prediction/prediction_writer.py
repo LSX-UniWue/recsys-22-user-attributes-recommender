@@ -2,7 +2,7 @@ import csv
 import json
 from abc import abstractmethod
 from pathlib import Path
-from typing import List, Union, Optional, IO
+from typing import List, Union, Optional, IO, Tuple
 
 
 class PredictionWriter:
@@ -27,7 +27,9 @@ class PredictionWriter:
     def write_values(self,
                      sample_id: str,
                      recommendations: List[str],
-                     scores: List[float], targets: Union[str, List[str]],
+                     scores: List[float],
+                     targets: Union[str, List[str]],
+                     metrics: List[Tuple[str, float]],
                      input_sequence: Optional[Union[List[str], List[List[str]]]]):
         """
         writes a sample with all recommendations and corresponding scores to the file handle in the format defined by
@@ -37,6 +39,7 @@ class PredictionWriter:
         :param scores: the scores (list of size N) where score at index i is the score of the i-th item
         in recommendations
         :param targets: the actual item(s) that should be recommended
+        :param metrics: A list of tuples containing metric name and value computed for this sample
         :param input_sequence:
         :return:
         """
@@ -52,7 +55,7 @@ class JSONPredictionWriter(PredictionWriter):
     A JSON object looks like this:
 
     >>> {"sample_id": "0_1",
-    >>>  "target": "Item 14", "recommendations": [{"item": "<MASK>", "score": 0.09834106266498566}, {"item": "Item 1", "score": 0.09308887273073196}, {"item": "<UNK>", "score": 0.08346869796514511}, {"item": "Item 14", "score": 0.08295264840126038}, {"item": "Item 5", "score": 0.08237089216709137}], "input": ["Item 1"]}
+    >>>  "target": "Item 14", "metrics:" {"MMR@1": 0.23, "MMR@3": 0.33}, "recommendations": [{"item": "<MASK>", "score": 0.09834106266498566}, {"item": "Item 1", "score": 0.09308887273073196}, {"item": "<UNK>", "score": 0.08346869796514511}, {"item": "Item 14", "score": 0.08295264840126038}, {"item": "Item 5", "score": 0.08237089216709137}], "input": ["Item 1"]}
 
     """
 
@@ -65,6 +68,7 @@ class JSONPredictionWriter(PredictionWriter):
                      recommendations: List[str],
                      scores: List[float],
                      targets: Union[str, List[str]],
+                     metrics: List[Tuple[str, float]],
                      input_sequence: Optional[Union[List[str], List[List[str]]]]
                      ):
         json_object = {
@@ -80,6 +84,9 @@ class JSONPredictionWriter(PredictionWriter):
             })
 
         json_object['recommendations'] = json_recommendations
+
+        json_metrics = {name: value for (name, value) in metrics}
+        json_object['metrics'] = json_metrics
 
         if input_sequence is not None:
             json_object['input'] = input_sequence
@@ -109,18 +116,34 @@ class CSVPredictionWriter(PredictionWriter):
         super().__init__(file_handle, log_input)
 
         self.csv_writer = csv.writer(file_handle)
-        header_to_write = self.HEADER
-        if log_input:
-            header_to_write += [self.INPUT_HEADER_NAME]
-        self.csv_writer.writerow(header_to_write)
+        self._header_written = False
 
-    def write_values(self, sample_id: str, recommendations: List[str], scores: List[float],
-                     targets: Union[str, List[str]], input_sequence: Optional[Union[List[str], List[List[str]]]]):
+    def write_values(self, sample_id: str,
+                     recommendations: List[str],
+                     scores: List[float],
+                     targets: Union[str, List[str]],
+                     metrics: List[Tuple[str, float]],
+                     input_sequence: Optional[Union[List[str], List[List[str]]]]):
+
+        def _extract_metric_names(metrics: List[Tuple[str,float]]) -> List[str]:
+            return list(map(lambda metric: metric[0], metrics))
+
+        def _extract_metric_values(metrics: List[Tuple[str,float]]) -> List[float]:
+            return list(map(lambda metric: metric[1], metrics))
+
+        if not self._header_written:
+            header_to_write = self.HEADER
+            header_to_write += _extract_metric_names(metrics)
+            if self.log_input:
+                header_to_write += [self.INPUT_HEADER_NAME]
+            self.csv_writer.writerow(header_to_write)
+            self._header_written = True
+
         rows_to_write = []
-
+        metric_row = _extract_metric_values(metrics)
         # loop through the recommendations and scores and build the rows to write
-        for recommendation_position, recommendation, score in enumerate(zip(recommendations, scores)):
-            row_to_write = [sample_id, recommendation_position + 1, recommendation, score, targets]
+        for recommendation_position, (recommendation, score) in enumerate(zip(recommendations, scores)):
+            row_to_write = [sample_id, recommendation_position + 1, recommendation, score, *metric_row, targets]
             if input_sequence is not None:
                 row_to_write.append(input_sequence)
             rows_to_write.append(row_to_write)

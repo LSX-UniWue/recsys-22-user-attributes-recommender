@@ -1,5 +1,6 @@
 from typing import List
 
+from asme.init.factories.data_sources.datasets.processor.target_extractor import TargetExtractorProcessorFactory
 from data.datasets.processors.processor import Processor
 from asme.init.config import Config
 from asme.init.context import Context
@@ -29,11 +30,15 @@ class ProcessorsFactory(ObjectFactory):
                 'par_pos_neg': ParameterizedPositiveNegativeSamplerProcessorFactory(),
                 'last_item_mask': LastItemMaskProcessorFactory(),
                 'position_token': PositionTokenProcessorFactory(),
-                'tokenizer': TokenizerProcessorFactory()
+                'tokenizer': TokenizerProcessorFactory(),
+                'target_extractor': TargetExtractorProcessorFactory()
             })
         )
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
+    def can_build(self,
+                  config: Config,
+                  context: Context
+                  ) -> CanBuildResult:
         return self.processors_factories.can_build(config, context)
 
     def build(self,

@@ -3,14 +3,11 @@ from typing import List
 from data.datasets.processors.pos_neg_sampler import PositiveNegativeSamplerProcessor
 from asme.init.config import Config
 from asme.init.context import Context
-from asme.init.factories.tokenizer.tokenizer_factory import TokenizerFactory, get_tokenizer_key_for_voc
-from asme.init.factories.util import check_config_keys_exist
+from asme.init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc, ITEM_TOKENIZER_ID
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
 
 class PositiveNegativeSamplerProcessorFactory(ObjectFactory):
-    #FIXME make this configurable for other tokenizers, e.g. keywords
-    TOKENIZER_KEY = TokenizerFactory.KEY + '.item'
 
     """
     factory for the PositiveNegativeSamplerProcessor
@@ -20,11 +17,7 @@ class PositiveNegativeSamplerProcessorFactory(ObjectFactory):
                   config: Config,
                   context: Context
                   ) -> CanBuildResult:
-        config_keys_exist = check_config_keys_exist(config, ['seed'])
-        if not config_keys_exist:
-            return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION)
-
-        if not context.has_path(get_tokenizer_key_for_voc("item")):
+        if not context.has_path(get_tokenizer_key_for_voc(ITEM_TOKENIZER_ID)):
             return CanBuildResult(CanBuildResultType.MISSING_DEPENDENCY, 'item tokenizer missing')
 
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
@@ -33,10 +26,9 @@ class PositiveNegativeSamplerProcessorFactory(ObjectFactory):
               config: Config,
               context: Context
               ) -> PositiveNegativeSamplerProcessor:
-        tokenizer = context.get(get_tokenizer_key_for_voc("item"))
-        seed = config.get('seed')
+        tokenizer = context.get(get_tokenizer_key_for_voc(ITEM_TOKENIZER_ID))
 
-        return PositiveNegativeSamplerProcessor(tokenizer, seed)
+        return PositiveNegativeSamplerProcessor(tokenizer)
 
     def is_required(self, context: Context) -> bool:
         return False

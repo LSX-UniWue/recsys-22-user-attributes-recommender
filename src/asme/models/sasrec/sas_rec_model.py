@@ -23,7 +23,9 @@ class SASRecModel(nn.Module):
                  item_vocab_size: int,
                  max_seq_length: int,
                  transformer_dropout: float,
-                 embedding_pooling_type: str,
+                 embedding_pooling_type: str = None,
+                 transformer_intermediate_size: int = None,
+                 transformer_attention_dropout: float = None
                  ):
         """
         inits the SASRec model
@@ -34,8 +36,13 @@ class SASRecModel(nn.Module):
         :param max_seq_length: the max sequence length
         :param transformer_dropout: the dropout of the model
         :param embedding_pooling_type: the pooling to use for basket recommendation
+        :param transformer_intermediate_size: the intermediate size of the transformer (default 4 * transformer_hidden_size)
+        :param transformer_attention_dropout: the attention dropout (default transformer_dropout)
         """
         super().__init__()
+
+        if transformer_intermediate_size is None:
+            transformer_intermediate_size = 4 * transformer_hidden_size
 
         self.transformer_dropout = transformer_dropout
         self.max_seq_length = max_seq_length
@@ -52,8 +59,8 @@ class SASRecModel(nn.Module):
                                               embedding_pooling_type=self.embedding_mode)
 
         self.transformer_encoder = TransformerLayer(transformer_hidden_size, num_transformer_heads,
-                                                    num_transformer_layers, transformer_hidden_size * 4,
-                                                    transformer_dropout)
+                                                    num_transformer_layers, transformer_intermediate_size,
+                                                    transformer_dropout, attention_dropout=transformer_attention_dropout)
 
         self.apply(self._init_weights)
 
@@ -96,7 +103,7 @@ class SASRecModel(nn.Module):
         embedded_sequence = self.embedding(sequence, position_ids)  # (N, S, H)
 
         # pipe the embedded sequence to the transformer
-        # first build the attention mask FIXME: check the attention mask
+        # first build the attention mask
         input_size = sequence.size()
         batch_size = input_size[0]
         sequence_length = input_size[1]

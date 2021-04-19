@@ -3,9 +3,7 @@ from typing import Dict, Any, List
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.processors.processor import Processor
 from asme.tokenization.tokenizer import Tokenizer
-
-TOKENIZER_PREFIX = 'tokenizers.'
-ITEM_TOKENIZER = 'tokenizers.item'
+from data.datasets.processors.utils import get_mask_token
 
 
 class LastItemMaskProcessor(Processor):
@@ -24,34 +22,23 @@ class LastItemMaskProcessor(Processor):
 
     def __init__(self,
                  tokenizers: Dict[str, Tokenizer],
-                 masking_targets: List[str] = [ITEM_SEQ_ENTRY_NAME]
-
+                 masking_targets: List[str] = None
                  ):
         super().__init__()
+
+        if masking_targets is None:
+            masking_targets = [ITEM_SEQ_ENTRY_NAME]
 
         self.tokenizers = tokenizers
         self.masking_targets = masking_targets
 
-    def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
-
-        def get_tokenizer(target):
-            if target in [ITEM_SEQ_ENTRY_NAME]:
-                return self.tokenizers[ITEM_TOKENIZER]
-            else:
-                return self.tokenizers[TOKENIZER_PREFIX + target]
-
-        def get_mask(target, session):
-            tokenizer = get_tokenizer(target)
-            return format_if_list(tokenizer.mask_token_id, session)
-
-        def format_if_list(item, session):
-            if isinstance(session[0], list):
-                return [item]
-            return item
+    def process(self,
+                parsed_sequence: Dict[str, Any]
+                ) -> Dict[str, Any]:
 
         for target in self.masking_targets:
-            session = parsed_session[target]
-            mask_token = get_mask(target, session)
-            session.append(mask_token)
+            sequence = parsed_sequence[target]
+            mask_token = get_mask_token(self.tokenizers, target, sequence)
+            sequence.append(mask_token)
 
-        return parsed_session
+        return parsed_sequence

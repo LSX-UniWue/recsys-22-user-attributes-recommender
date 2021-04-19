@@ -6,15 +6,19 @@ class Processor:
 
     """
     Processors can be used to augment the raw input data. Examples include: masking tokens or augmenting the input data.
+
+    The processors can be chained, but the Tokenizer Processor must be the first processor in the chain!
+
     """
 
     @abstractmethod
     def process(self,
-                input: Dict[str, Any]) -> Dict[str, Any]:
+                parsed_sequence: Dict[str, Any]
+                ) -> Dict[str, Any]:
         """
         Takes the input and processes/enhances it.
 
-        :param input: input data at this step of the pipeline.
+        :param parsed_sequence: input data at this step of the pipeline.
         :return: a dictionary with the processed version of the input data.
         """
         pass
@@ -29,8 +33,9 @@ class DelegatingProcessor(Processor):
         self.processors = processors
 
     def process(self,
-                input: Dict[str, Any]) -> Dict[str, Any]:
+                parsed_sequence: Dict[str, Any]
+                ) -> Dict[str, Any]:
         for processor in self.processors:
-            input = processor.process(input)
+            parsed_sequence = processor.process(parsed_sequence)
 
-        return input
+        return parsed_sequence

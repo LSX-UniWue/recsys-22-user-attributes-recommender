@@ -10,7 +10,7 @@ spec:
     spec:
       containers:
         - name: ds4rec
-          image: gitlab2.informatik.uni-wuerzburg.de:4567/dmir/dallmann/recommender/jane-doe-gpu:latest
+          image: gitlab2.informatik.uni-wuerzburg.de:4567/dmir/dallmann/recommender/asme-dev:latest
           imagePullPolicy: "Always"
           resources:
             requests: &resources
@@ -28,13 +28,13 @@ spec:
             - name: REPO_BRANCH
               value: master
             - name: PREPARE_SCRIPT
-              value: /home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/unfiltered/copy_to_cache.sh
+              value: /home/ls6/zoller/seq_recommendation/project_master/recommender/configs/ml-20m/unfiltered/copy_to_cache.sh
             - name: GIT_TOKEN
               valueFrom:
                 secretKeyRef:
                   key: token
                   name: gitlab-token
-          args: ["train", "/home/ls6/zoller/seq_recommendation/recommender/projects/ml-20m/unfiltered/bert4rec_config.jsonnet"]
+          args: ["train", "/home/ls6/zoller/seq_recommendation/project_master/recommender/configs/ml-20m/unfiltered/bert4rec_config.jsonnet"]
           volumeMounts:
             - mountPath: /home/ls6/zoller
               name: home
@@ -46,14 +46,11 @@ spec:
               name: cache
           ports:
             - containerPort: 8880
-      tolerations:
-        - effect: NoSchedule
-          key: network
-          operator: Exists
       nodeSelector:
         gputype: "2080ti"
       imagePullSecrets:
         - name: regcred
+      priorityClassName: research-low
       restartPolicy: "Never"
       volumes:
         - name: home

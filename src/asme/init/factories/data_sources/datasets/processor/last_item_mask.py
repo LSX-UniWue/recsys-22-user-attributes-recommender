@@ -3,12 +3,11 @@ from typing import List
 from data.datasets.processors.last_item_mask import LastItemMaskProcessor
 from asme.init.config import Config
 from asme.init.context import Context
-from asme.init.factories.tokenizer.tokenizer_factory import TokenizerFactory, get_tokenizer_key_for_voc
+from asme.init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc, ITEM_TOKENIZER_ID
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
 
 class LastItemMaskProcessorFactory(ObjectFactory):
-    TOKENIZER_KEY = TokenizerFactory.KEY + '.item'
 
     """
     Factory for the LastItemMaskProcessor.
@@ -18,7 +17,7 @@ class LastItemMaskProcessorFactory(ObjectFactory):
                   config: Config,
                   context: Context
                   ) -> CanBuildResult:
-        if not context.has_path(get_tokenizer_key_for_voc("item")):
+        if not context.has_path(get_tokenizer_key_for_voc(ITEM_TOKENIZER_ID)):
             return CanBuildResult(CanBuildResultType.MISSING_DEPENDENCY, 'item tokenizer missing')
 
         return CanBuildResult(CanBuildResultType.CAN_BUILD)

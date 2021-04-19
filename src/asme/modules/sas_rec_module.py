@@ -4,6 +4,7 @@ import torch
 
 import pytorch_lightning as pl
 
+from asme.modules import LOG_KEY_TRAINING_LOSS
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
 from asme.losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
 from asme.metrics.container.metrics_container import MetricsContainer
@@ -86,7 +87,7 @@ class SASRecModule(MetricsTrait, pl.LightningModule):
         # TODO: check: the original code
         # (https://github.com/kang205/SASRec/blob/641c378fcfac265ea8d1e5fe51d4d53eb892d1b4/model.py#L92)
         # adds regularization losses, but they are empty, as far as I can see (dzo)
-
+        self.log(LOG_KEY_TRAINING_LOSS, loss)
         return {
             "loss": loss
         }

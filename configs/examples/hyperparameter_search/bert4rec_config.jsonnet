@@ -124,9 +124,10 @@ local metrics =  {
             tensorboard: {}
         },
         checkpoint: {
-            monitor: "recall@5/sampled(2)",
+            monitor: "recall@5_sampled(2)",
             save_top_k: 3,
             mode: 'max'
-        }
+        },
+        max_epochs: 2
     }
 }

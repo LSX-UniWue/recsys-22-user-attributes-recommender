@@ -9,26 +9,20 @@ class MRRMetric(RankingMetric):
     """
     calculates the Mean Reciprocal Rank (MRR) at k
     """
-
     def __init__(self,
                  k: int,
-                 dist_sync_on_step: bool = False):
-        super().__init__(dist_sync_on_step=dist_sync_on_step)
+                 storage_mode: bool = False,
+                 dist_sync_on_step: bool = True):
+        super().__init__(metric_id='mrr',
+                         dist_sync_on_step=dist_sync_on_step,
+                         storage_mode=storage_mode)
         self._k = k
 
-        self.add_state("mrr", torch.tensor(0.), dist_reduce_fx="sum")
-        self.add_state("count", torch.tensor(0), dist_reduce_fx="sum")
-
-    def _update(self,
-                prediction: torch.Tensor,
-                positive_item_mask: torch.Tensor,
-                metric_mask: torch.Tensor
-                ) -> None:
-        """
-        :param prediction: the logits for I items :math`(N, I)`
-        :param positive_item_mask: a mask where a 1 indices that the item at this index is relevant :math`(N, I)`
-        :return:
-        """
+    def _calc_metric(self,
+                     prediction: torch.Tensor,
+                     positive_item_mask: torch.Tensor,
+                     metric_mask: torch.Tensor
+                     ) -> torch.Tensor:
         device = prediction.device
 
         tp = get_true_positives(prediction, positive_item_mask, self._k, metric_mask)
@@ -40,12 +34,7 @@ class MRRMetric(RankingMetric):
         # mrr will contain 'inf' values if target is not in top k scores -> setting it to 0
         mrr = 1 / rank
         mrr[mrr == float('inf')] = 0
-
-        self.mrr += mrr.sum()
-        self.count += mrr.size()[0]
-
-    def compute(self):
-        return self.mrr / self.count
+        return mrr
 
     def name(self):
         return f"MRR@{self._k}"

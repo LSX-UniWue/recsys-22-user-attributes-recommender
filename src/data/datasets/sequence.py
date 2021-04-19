@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 from data.base.reader import CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS
 from data.datasets.processors.processor import Processor
-from data.mp import MultiProcessSupport
+from data.multi_processing import MultiProcessSupport
 
 
 def _parse_boolean(text: str
@@ -56,7 +56,7 @@ class ItemSessionParser(SequenceParser):
     def __init__(self,
                  indexed_headers: Dict[str, int],
                  item_header_name: str,
-                 additional_features: Dict[str, Any] = None,
+                 additional_features: Dict[str, Dict[str, Any]] = None,
                  item_separator: str = None,
                  delimiter: str = "\t"
                  ):
@@ -86,12 +86,12 @@ class ItemSessionParser(SequenceParser):
 
         for feature_key, info in self._additional_features.items():
             feature_sequence = info['sequence']
-
+            feature_column_name = info.get("column_name", feature_key)
             # if feature changes over the sequence parse it over all entries, else extract it form the first entry
             if feature_sequence:
-                feature = [self._get_feature(entry, feature_key, info) for entry in entries]
+                feature = [self._get_feature(entry, feature_column_name, info) for entry in entries]
             else:
-                feature = self._get_feature(entries[0], feature_key, info)
+                feature = self._get_feature(entries[0], feature_column_name, info)
             parsed_sequence[feature_key] = feature
 
         return parsed_sequence
