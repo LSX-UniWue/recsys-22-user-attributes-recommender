@@ -367,7 +367,11 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
                 scores = scores[::-1].tolist()[:num_predictions]
 
                 sample_id = _generate_sample_id(sample_ids, sequence_position_ids, i)
-                true_target = targets[i].tolist() if is_basket_recommendation else targets[i].item()
+                true_target = targets[i]
+                if is_basket_recommendation:
+                    true_target = remove_special_tokens(true_target, item_tokenizer)
+                else:
+                    true_target = true_target.item()
                 true_target = item_tokenizer.convert_ids_to_tokens(true_target)
                 metric_name_and_values = [(name, value[0][i].item()) for name, value in metrics]
                 sequence = None
