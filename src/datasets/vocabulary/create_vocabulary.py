@@ -6,7 +6,7 @@ from tqdm import tqdm
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.sequence import PlainSequenceDataset, ItemSessionParser
-from data.utils import create_indexed_header, read_csv_header
+from data.utils.csv import create_indexed_header, read_csv_header
 from asme.tokenization.vocabulary import VocabularyBuilder, CSVVocabularyReaderWriter
 
 

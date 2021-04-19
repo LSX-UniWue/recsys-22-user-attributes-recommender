@@ -9,6 +9,10 @@ from asme.init.templating.template_processor import TemplateProcessor
 
 CONFIG_DATASOURCES_KEY = 'data_sources'
 
+TARGET_EXTRACTOR_PROCESSOR_CONFIG = {
+    'type': 'target_extractor'
+}
+
 
 class DatasetSplit(Enum):
 
@@ -163,7 +167,6 @@ class ConditionalSequenceOrSequencePositionDatasetBuilder(DatasetBuilder):
     def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
         if 'next_seq_step_type' in config:
             dataset_config = self._sequence_position_dataset_builder.build_dataset_definition(prefix_id, config)
-            dataset_config['add_target'] = False
             return dataset_config
 
         return self._sequence_dataset_builder.build_dataset_definition(prefix_id, config)
@@ -175,27 +178,18 @@ class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
         return dataset_split_type == DatasetSplit.LEAVE_ONE_OUT
 
     def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        base_path = config['path']
+        base_path = Path(config['path'])
         prefix = _get_prefix(config, prefix_id)
 
-        #FIXME (AD) we need to reiterate our  dataset schema for loo
-        if prefix_id == "train":
-            # (AD) we should rename the index file to conform to validation/test
-            dataset_config = {
-                'type': 'sequence_position',
-                'csv_file': f'{base_path}{prefix}.csv',
-                'csv_file_index': f'{base_path}{prefix}.session.idx',
-                'nip_index_file': f'{base_path}/loo/{prefix}.{prefix_id}.nextitem.idx'
-            }
-        else:
-            dataset_config = {
-                'type': 'sequence_position',
-                'csv_file': f'{base_path}{prefix}.csv',
-                'csv_file_index': f'{base_path}{prefix}.session.idx',
-                'nip_index_file': f'{base_path}/loo/{prefix}.{prefix_id}.loo.idx'
-            }
-
-        return dataset_config
+        csv_file_path = base_path / f'{prefix}.csv'
+        csv_file_index_path = base_path / f'{prefix}.session.idx'
+        nip_index_file_path = base_path / 'loo' / f'{prefix}.{prefix_id}.nextitem.idx'
+        return {
+            'type': 'sequence_position',
+            'csv_file': str(csv_file_path),
+            'csv_file_index': str(csv_file_index_path),
+            'nip_index_file': str(nip_index_file_path)
+        }
 
 
 class LeaveOneOutSessionDatasetBuilder(DatasetBuilder):
@@ -207,31 +201,22 @@ class LeaveOneOutSessionDatasetBuilder(DatasetBuilder):
         base_path = Path(config['path'])
         prefix = _get_prefix(config, prefix_id)
         index_file_path = f"{prefix}.{prefix_id}"
-        is_training = prefix_id == 'train'
-        if is_training:
-            validation_prefix = _get_prefix(config, 'validation')
-            index_file_path = f"{validation_prefix}.validation"
         csv_file = base_path / f'{prefix}.csv'
         csv_file_index = base_path / f'{prefix}.session.idx'
         nip_index_file = base_path / 'loo' / f'{index_file_path}.loo.idx'
-        dataset_config = {
+        return {
             'type': 'sequence_position',
             'csv_file': str(csv_file),
             'csv_file_index': str(csv_file_index),
             'nip_index_file': str(nip_index_file)
         }
-        if is_training:
-            # (AD) this causes the PosNegProcessor to discard the last two items in the session, if this is set to
-            # False the validation target will be part of the training set.
-            dataset_config['add_target'] = True
-        return dataset_config
 
 
 def build_datasource(dataset_builders: List[DatasetBuilder],
                      parser: Dict[str, Any],
                      config: Dict[str, Any],
                      prefix_id: str,
-                     processor: Dict[str, Any] = None
+                     additional_processors: List[Dict[str, Any]] = None
                      ) -> Dict[str, Any]:
     """
     builds a datasource config with the specified parser, processor,
@@ -239,7 +224,7 @@ def build_datasource(dataset_builders: List[DatasetBuilder],
     :param parser:
     :param config:
     :param prefix_id:
-    :param processor:
+    :param additional_processors:
     :return:
     """
     loader_config = config['loader']
@@ -255,8 +240,8 @@ def build_datasource(dataset_builders: List[DatasetBuilder],
         }
     ]
 
-    if processor is not None:
-        processors.append(processor)
+    if additional_processors is not None:
+        processors.extend(additional_processors)
 
     dataset_split_type = DatasetSplit[config.get('split_type', DatasetSplit.RATIO_SPLIT.name).upper()]
 

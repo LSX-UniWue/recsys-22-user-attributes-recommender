@@ -2,7 +2,7 @@ from pytorch_lightning import seed_everything
 from torch.utils.data import RandomSampler
 
 from util_test import assert_list_equal
-from util_test_templating import load_dataset, get_all_data
+from util_test_templating import load_dataset, get_all_data, NUM_EXAMPLES_SEQUENCES
 from util_test_tokenizer import TEST_DATASET_BASE_PATH
 
 LEAVE_ONE_OUT_TEMPLATE = {
@@ -55,27 +55,31 @@ def test_leave_one_out_mask_template():
     assert isinstance(train_dataloader.sampler, RandomSampler)
 
     train_data = get_all_data(train_dataloader)
-    assert len(train_data) == 10
+    assert len(train_data) == NUM_EXAMPLES_SEQUENCES
 
     # test some train data
-    sequence, target = train_data['0_2']
-    assert_list_equal(sequence, [1, 4, 0, 0])
-    assert_list_equal(target, [3, 0, 0, 0])
+    sequence, target = train_data['0_1']
+    assert_list_equal(sequence, [3, 4, 0, 0])
+    assert_list_equal(target, [0, 0, 0, 0])
     seq2, target2 = train_data['4_1']
-    assert_list_equal(seq2, [7, 0, 0, 0])
-    assert_list_equal(target2, [0, 0, 0, 0])
+    assert_list_equal(seq2, [1, 8, 0, 0])
+    assert_list_equal(target2, [7, 0, 0, 0])
 
     # test some test data
     test_dataloader = data_sources['test']
     test_data = get_all_data(test_dataloader)
 
-    test_sequence, test_target = test_data['2_3']
-    assert_list_equal(test_sequence, [9, 10, 11, 1])
-    assert test_target == 12
+    assert len(test_data) == NUM_EXAMPLES_SEQUENCES
+
+    test_sequence, test_target = test_data['2_4']
+    assert_list_equal(test_sequence, [10, 11, 12, 1])
+    assert test_target == 7
 
     # test some validation data
     val_dataloader = data_sources['validation']
     val_data = get_all_data(val_dataloader)
+
+    assert len(val_data) == NUM_EXAMPLES_SEQUENCES
 
     val_sequence, val_target = val_data['1_2']
     assert_list_equal(val_sequence, [3, 4, 1, 0])
@@ -93,17 +97,17 @@ def test_ratio_mask_template():
     assert len(train_data) == 8
 
     sequence, target = train_data['0_0']
-    assert_list_equal(sequence, [3, 10, 6, 0])
-    assert_list_equal(target, [0, 0, 0, 0])
+    assert_list_equal(sequence, [3, 10, 6, 1])
+    assert_list_equal(target, [0, 0, 0, 5])
 
     seq2, target2 = train_data['4_0']
-    assert_list_equal(seq2, [7, 8, 1, 0])
-    assert_list_equal(target2, [0, 0, 3, 0])
+    assert_list_equal(seq2, [7, 8, 3, 6])
+    assert_list_equal(target2, [0, 0, 0, 0])
 
     test_dataloader = data_sources['test']
     test_data = get_all_data(test_dataloader)
 
-    assert len(test_data) == 2
+    assert len(test_data) == 3
     test_seq, test_target = test_data['0_1']
     assert_list_equal(test_seq, [5, 1, 0, 0])
     assert test_target == 6

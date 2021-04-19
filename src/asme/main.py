@@ -1,46 +1,59 @@
 import os
+from contextlib import contextmanager, redirect_stdout
 
 import numpy as np
+import torch
 import typer
 import optuna
 import json
 
 from tempfile import NamedTemporaryFile
 from pathlib import Path
-from typing import Optional, Callable, List, Iterator
+from typing import Optional, Callable, List, Iterator, Tuple
+
 from optuna.study import StudyDirection
 from pytorch_lightning import seed_everything, Callback
 from torch.utils.data import Sampler, DataLoader
-from torch.utils.data.dataset import T_co
+from torch.utils.data.dataset import T_co, Dataset
+from tqdm import tqdm
 
+from asme.modules.metrics_trait import MetricsTrait
 from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME
+from asme.metrics.container.metrics_container import MetricsContainer
+from asme.metrics.metric import MetricStorageMode
 from asme.init.context import Context
 from asme.init.factories.metrics.metrics_container import MetricsContainerFactory
 from asme.init.templating.search.configuration import SearchConfigurationTemplateProcessor
 from asme.init.templating.search.processor import SearchTemplateProcessor
 from asme.init.templating.search.resolver import OptunaParameterResolver
+from asme.tokenization.utils.tokenization import remove_special_tokens
 from asme.utils.run_utils import load_config, create_container, OBJECTIVE_METRIC_KEY, TRAIL_BASE_PATH, \
-    load_and_restore_from_file_or_study
-from asme.tokenization.tokenizer import Tokenizer
-from asme.utils import ioutils
+    load_and_restore_from_file_or_study, log_dataloader_example
+from asme.utils import ioutils, logging
 from asme.utils.ioutils import load_file_with_item_ids, determine_log_dir, save_config, save_finished_flag, \
     finished_flag_exists
 from asme.writer.prediction.prediction_writer import build_prediction_writer
-from asme.writer.results.results_writer import build_result_writer
-
+from asme.writer.results.results_writer import build_result_writer, check_file_format_supported
 
 _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at least the checkpoint file and config or" \
                                                     " the study name and study storage to infer the config and " \
                                                     "checkpoint path"
 
 
+logger = logging.get_logger(__name__)
 app = typer.Typer()
 
 
 @app.command()
 def train(config_file: Path = typer.Argument(..., help='the path to the config file', exists=True),
-          resume: bool = typer.Option(False, help='flag iff the model should resume training from a checkpoint')
+          do_train: bool = typer.Option(True, help='flag iff the model should be trained'),
+          do_test: bool = typer.Option(False, help='flag iff the model should be tested (after training)'),
+          print_train_val_examples: bool = typer.Option(True, help='print examples of the training'
+                                                                   'and evaluation dataset before starting training')
           ) -> None:
+    if do_test and not do_train:
+        logger.error(f"The model has to be trained before it can be tested!")
+        exit(-1)
 
     config_file_path = Path(config_file)
     config = load_config(config_file_path)
@@ -52,15 +65,23 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
     log_dir = determine_log_dir(trainer)
     save_config(config, log_dir)
 
-    if resume:
-        resume(log_dir)
+    if do_train:
+        train_dataloader = container.train_dataloader()
+        validation_dataloader = container.validation_dataloader()
 
-    else:
+        if print_train_val_examples:
+            tokenizers = container.tokenizers()
+            log_dataloader_example(train_dataloader, tokenizers, 'training')
+            log_dataloader_example(validation_dataloader, tokenizers, 'validation')
+
         trainer.fit(container.module(),
-                    train_dataloader=container.train_dataloader(),
-                    val_dataloaders=container.validation_dataloader())
+                    train_dataloader=train_dataloader,
+                    val_dataloaders=validation_dataloader)
 
-        save_finished_flag(log_dir)
+    save_finished_flag(log_dir)
+
+    if do_test:
+        trainer.test(test_dataloaders=container.test_dataloader())
 
 
 @app.command()
@@ -173,7 +194,9 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
             study_name: str = typer.Option(default=None, help='the study name of an existing study'),
             study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
             overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
-            log_input: Optional[bool] = typer.Option(default=True, help='enable input logging.')
+            log_input: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
+            log_per_sample_metrics: Optional[bool] = typer.Option(default=True,
+                                                                  help='enable logging of per-sample metrics.')
             ):
     """
 
@@ -191,21 +214,28 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
     :param selected_items_file: the item that should only be considered
     :param overwrite: override the output file
     :param log_input: write the input sequence also to the file
+    :param log_per_sample_metrics: if true also writes per sample metrics for the samples
     """
+
     # checking if the file already exists
     if not overwrite and output_file.exists():
-        print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
+        logger.error(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
         exit(2)
 
     container = load_and_restore_from_file_or_study(checkpoint_file, config_file, study_name, study_storage,
                                                     gpus=gpu)
     if container is None:
-        print(_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY)
+        logger.error(_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY)
         exit(-1)
 
     module = container.module()
     trainer = container.trainer().build()
     test_loader = container.test_dataloader()
+
+    if log_per_sample_metrics:
+        metrics_container: MetricsContainer = module.metrics
+        for metric in metrics_container.get_metrics():
+            metric.set_metrics_storage_mode(MetricStorageMode.PER_SAMPLE)
 
     def _noop_filter(sample_predictions: np.ndarray):
         return sample_predictions
@@ -218,6 +248,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
 
         def _selected_items_filter(sample_predictions: np.ndarray):
             return sample_predictions[selected_items]
+
         filter_predictions = _selected_items_filter
 
     # open the file and build the writer
@@ -229,7 +260,9 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
         # replace as soon as this is fixed in pytorch lighting
         class FixedBatchSampler(Sampler):
 
-            def __init__(self, batch_start, batch_size):
+            def __init__(self,
+                         batch_start: int,
+                         batch_size: int):
                 super().__init__(None)
                 self.batch_start = batch_start
                 self.batch_size = batch_size
@@ -242,17 +275,62 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
 
         item_tokenizer = container.tokenizer('item')
 
-        for index, batch in enumerate(test_loader):
+        def _extract_sample_metrics(module: MetricsTrait) -> List[Tuple[str, torch.Tensor]]:
+            """
+            Extracts the raw values of all metrics with per-sample-storage enabled.
+            :param module: The module used for generating predictions.
+            :return: A list of all metrics in the module's metric container with per-sample-storage enabled.
+            """
+            metrics_container = module.metrics
+            metric_names_and_values = list(filter(lambda x: x[1]._storage_mode == MetricStorageMode.PER_SAMPLE, zip(metrics_container.get_metric_names(), metrics_container.get_metrics())))
+            return list(map(lambda x: (x[0], x[1].raw_metric_values()), metric_names_and_values))
+
+        def _create_batch_loader(dataset: Dataset,
+                                 batch_sampler: Sampler,
+                                 collate_fn
+                                 ) -> DataLoader:
+            return DataLoader(dataset, batch_sampler=batch_sampler, collate_fn=collate_fn)
+
+        @contextmanager
+        def _no_eval_step_end_call(module):
+            """
+            Wrap a call to trainer.test with this context manager to avoid the _eval_epoch_end code provided by the
+            MetricsTrait to be executed before the wrapped code is executed. The hook is called afterwards.
+            """
+            _eval_epoch_end_hook = module._eval_epoch_end
+            try:
+                module._eval_epoch_end = lambda x: {}
+                yield None
+            finally:
+                module._eval_epoch_end = _eval_epoch_end_hook
+                module._eval_epoch_end(None)
+
+        for index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
             sequences = batch[ITEM_SEQ_ENTRY_NAME]
             batch_size = sequences.size()[0]
+            is_basket_recommendation = len(sequences.size()) == 3
             batch_start = index * batch_size
 
-            batch_loader = DataLoader(test_loader.dataset, batch_sampler=FixedBatchSampler(batch_start, batch_size),
-                                      collate_fn=test_loader.collate_fn)
-            prediction_results = trainer.predict(module, dataloaders=batch_loader)
+            # We need two loaders since we have to run both, predict & test on each batch
+            batch_loader_predict = _create_batch_loader(test_loader.dataset,
+                                                        batch_sampler=FixedBatchSampler(batch_start, batch_size),
+                                                        collate_fn=test_loader.collate_fn)
+            batch_loader_test = _create_batch_loader(test_loader.dataset,
+                                                     batch_sampler=FixedBatchSampler(batch_start, batch_size),
+                                                     collate_fn=test_loader.collate_fn)
 
+            # Redirect prediction/test results to /dev/null to avoid spamming stdout
+            with open(os.devnull, "w") as f, redirect_stdout(f):
+                prediction_results = trainer.predict(module, dataloaders=batch_loader_predict)
+                if log_per_sample_metrics:
+                    # Prevent the reset-method of metrics to be called before extracting their values
+                    with _no_eval_step_end_call(module):
+                        # Run test in order to generate metrics (not generated by predict)
+                        trainer.test(module, test_dataloaders=batch_loader_test)
+                        metrics = _extract_sample_metrics(module)
+                else:
+                    metrics = []
             predictions = prediction_results[0]
-
             sample_ids = batch[SAMPLE_IDS]
             sequence_position_ids = None
             if 'pos' in batch:
@@ -289,23 +367,22 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
                 scores = scores[::-1].tolist()[:num_predictions]
 
                 sample_id = _generate_sample_id(sample_ids, sequence_position_ids, i)
-                true_target = targets[i].item()
+                true_target = targets[i]
+                if is_basket_recommendation:
+                    true_target = remove_special_tokens(true_target.tolist(), item_tokenizer)
+                else:
+                    true_target = true_target.item()
                 true_target = item_tokenizer.convert_ids_to_tokens(true_target)
+                metric_name_and_values = [(name, value[0][i].item()) for name, value in metrics]
                 sequence = None
                 if log_input:
                     sequence = sequences[i].tolist()
 
                     # remove padding tokens
-                    # TODO: move method
-                    def _remove_special_tokens(sequence: List[int], tokenizer: Tokenizer) -> List[int]:
-                        for special_token_id in tokenizer.get_special_token_ids():
-                            sequence = list(filter(special_token_id.__ne__, sequence))
-                        return sequence
-
-                    sequence = _remove_special_tokens(sequence, item_tokenizer)
+                    sequence = remove_special_tokens(sequence, item_tokenizer)
                     sequence = item_tokenizer.convert_ids_to_tokens(sequence)
 
-                output_writer.write_values(f'{sample_id}', tokens, scores, true_target, sequence)
+                output_writer.write_values(f'{sample_id}', tokens, scores, true_target, metric_name_and_values, sequence)
 
 
 @app.command()
@@ -320,7 +397,11 @@ def evaluate(config_file: Path = typer.Option(default=None, help='the path to th
              ):
     write_results_to_file = output_file is not None
     if write_results_to_file and not overwrite and output_file.exists():
-        print(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
+        logger.error(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
+        exit(-1)
+
+    if write_results_to_file and not check_file_format_supported(output_file):
+        logger.error(f"'{output_file.suffix} is not a supported format to write predictions to a file.'")
         exit(-1)
 
     if seed is not None:
@@ -329,7 +410,7 @@ def evaluate(config_file: Path = typer.Option(default=None, help='the path to th
     container = load_and_restore_from_file_or_study(checkpoint_file, config_file, study_name, study_storage,
                                                     gpus=gpu)
     if container is None:
-        print(_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY)
+        logger.error(_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY)
         exit(-1)
 
     module = container.module()
@@ -354,13 +435,13 @@ def resume(log_dir: str = typer.Argument(..., help='the path to the logging dire
 
     # check for finished flag
     if finished_flag_exists(log_dir):
-        print(f"Found a finished flag in '{log_dir}'. Training has finished and will not be resumed.")
+        logger.error(f"Found a finished flag in '{log_dir}'. Training has finished and will not be resumed.")
         exit(-1)
 
     # check for config file
     config_file = log_dir / ioutils.PROCESSED_CONFIG_NAME
     if not os.path.isfile(config_file):
-        print(f"Could not find '{ioutils.PROCESSED_CONFIG_NAME} in path {log_dir}.")
+        logger.error(f"Could not find '{ioutils.PROCESSED_CONFIG_NAME} in path {log_dir}.")
         exit(-1)
 
     raw_config = load_config(Path(config_file))
@@ -373,8 +454,8 @@ def resume(log_dir: str = typer.Argument(..., help='the path to the logging dire
 
     checkpoint_path = checkpoint_dir / checkpoint_file
     if not os.path.isfile(checkpoint_path):
-        print("Could not determine the last checkpoint. "
-              "You can specify a particular checkpoint via the --checkpoint-file option.")
+        logger.error("Could not determine the last checkpoint. "
+                     "You can specify a particular checkpoint via the --checkpoint-file option.")
         exit(-1)
 
     container = create_container(raw_config)

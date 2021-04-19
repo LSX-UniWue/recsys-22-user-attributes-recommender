@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 import io
 
-from data.mp import MultiProcessSupport
+from data.multi_processing import MultiProcessSupport
 
 
 @dataclass

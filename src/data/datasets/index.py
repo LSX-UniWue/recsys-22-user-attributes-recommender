@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 from data.datasets import INT_BYTE_SIZE
-from data.mp import MultiProcessSupport
+from data.multi_processing import MultiProcessSupport
 
 
 class SequencePositionIndex(MultiProcessSupport):

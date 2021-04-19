@@ -19,11 +19,9 @@ DOWNLOAD_URL_MAP = {
 
 
 def download_and_unzip_movielens_data(dataset: str,
-                                      output_dir: Path,
-                                      min_user_feedback: int,
-                                      min_item_feedback: int) -> (Path, Path):
+                                      output_dir: Path) -> (Path, Path):
     url = DOWNLOAD_URL_MAP[dataset]
-    dataset_dir = output_dir / f'{dataset}_{min_user_feedback}_{min_item_feedback}'
+    dataset_dir = output_dir / f'{dataset}'
     download_dir = output_dir
 
     downloaded_file = download_dataset(url, download_dir)
@@ -46,11 +44,12 @@ def filter_ratings(ratings_df: pd.DataFrame,
 
         return dataframe[ratings_df[column].isin(good_entities)]
 
-    if min_user_feedback > 1:
-        ratings_df = _filter_dataframe(RATING_USER_COLUMN_NAME, min_user_feedback, ratings_df)
-
+    # (AD) we adopt the order used in bert4rec preprocessing
     if min_item_feedback > 1:
         ratings_df = _filter_dataframe(RATING_MOVIE_COLUMN_NAME, min_item_feedback, ratings_df)
+
+    if min_user_feedback > 1:
+        ratings_df = _filter_dataframe(RATING_USER_COLUMN_NAME, min_user_feedback, ratings_df)
 
     return ratings_df
 

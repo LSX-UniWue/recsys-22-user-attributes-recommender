@@ -11,13 +11,11 @@ app = typer.Typer()
 
 
 @app.command()
-def next_item(
-        data_file_path: Path = typer.Argument(..., help="Data file in csv format"),
-        session_index_path: Path = typer.Argument(..., help="Path to session index for the data file"),
-        output_dir_path: Path = typer.Argument(..., help="path that the splits should be written to"),
-        minimum_session_length: int = typer.Option(4, help="Minimum length of sessions that are to be included"),
-        delimiter: str = typer.Option('\t', help="Delimiter used in data file"),
-        item_header: str = typer.Option('title', help="Dataset Key that the Item-IDs are stored under")):
+def next_item(data_file_path: Path = typer.Argument(..., help="Data file in csv format"),
+              session_index_path: Path = typer.Argument(..., help="Path to session index for the data file"),
+              output_dir_path: Path = typer.Argument(..., help="path that the splits should be written to"),
+              delimiter: str = typer.Option('\t', help="Delimiter used in data file"),
+              item_header: str = typer.Option('title', help="Dataset Key that the Item-IDs are stored under")):
     """
     Creates a next item split, i.e., From every session with length k use sequence[0:k-2] for training,
     sequence[-2] for validation and sequence[-1] for testing.
@@ -25,7 +23,6 @@ def next_item(
     :param data_file_path: data file that the split should be created for
     :param session_index_path: session index belonging to the data file
     :param output_dir_path: output directory where the index files for the splits are written to
-    :param minimum_session_length: Minimum length that sessions need to be in order to be included
     :param delimiter: delimiter used in data file
     :param item_header: data set key that the item-ids are stored under
     :return: None, Side effect: Test and Validation indices are written
@@ -37,8 +34,7 @@ def next_item(
         delimiter=delimiter,
         item_header_name=item_header
     )
-    conditional_split.run_loo_split(dataset_metadata=dataset_metadata, output_dir_path=output_dir_path,
-                                    minimum_session_length=minimum_session_length)
+    conditional_split.run_loo_split(dataset_metadata=dataset_metadata, output_dir_path=output_dir_path)
 
 
 @app.command()
@@ -48,7 +44,6 @@ def ratios(
         output_dir_path: Path = typer.Argument(..., help="path that the splits should be written to"),
         session_key: List[str] = typer.Argument(..., help="session key"),
         item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
-        minimum_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
         train_ratio: float = typer.Argument(0.9, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
         validation_ratio: float = typer.Argument(0.05, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
         testing_ratio: float = typer.Argument(0.05, help="a list of splits, e.g. train;0.9 valid;0.05 test;0.05"),
@@ -61,7 +56,6 @@ def ratios(
     :param session_index_path: session index belonging to the data file
     :param output_dir_path: output directory where the data and index files for the splits are written to
     :param session_key: Session key used to uniquely identify sessions
-    :param minimum_session_length: Minimum length that sessions need to be in order to be included
     :param item_header_name: data set key that the item-ids are stored under
     :param train_ratio: share of session used for training
     :param validation_ratio: share of session used for validation
@@ -89,21 +83,22 @@ def create_conditional_index(
         session_index_path: Path = typer.Argument(..., exists=True, help="path to the session index file"),
         output_file_path: Path = typer.Argument(..., help="path to the output file"),
         item_header_name: str = typer.Argument(..., help="name of the column that contains the item id"),
-        min_session_length: int = typer.Option(2, help="the minimum acceptable session length"),
         delimiter: str = typer.Option("\t", help="the delimiter used in the CSV file."),
         target_feature: str = typer.Option(None, help="the target column name to build the targets against"
                                                       "(default all next subsequences will be considered);"
-                                                      "the target must be a boolean feature")
-) -> None:
+                                                      "the target must be a boolean feature"),
+        min_sequence_length: int = typer.Option(0, help="the minimum sequence length to consider the target feature")
+        ) -> None:
     """
-    FixMe I need some documentation
+    TODO: add documentation
+
     :param data_file_path:
     :param session_index_path:
     :param output_file_path:
     :param item_header_name:
-    :param min_session_length:
     :param delimiter:
     :param target_feature:
+    :param min_sequence_length
     :return:
     """
     dataset_metadata: DatasetMetadata = DatasetMetadata(
@@ -114,4 +109,4 @@ def create_conditional_index(
         session_key=None
     )
     conditional_split.create_conditional_index(dataset_metadata=dataset_metadata, output_file_path=output_file_path,
-                                               target_feature=target_feature)
+                                               target_feature=target_feature, min_sequence_length=min_sequence_length)

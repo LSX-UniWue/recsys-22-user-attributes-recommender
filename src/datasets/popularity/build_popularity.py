@@ -6,7 +6,7 @@ from typing import Dict, Optional, Callable, List, Any
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.sequence import PlainSequenceDataset, ItemSequenceDataset, ItemSessionParser
-from data.utils import read_csv_header, create_indexed_header
+from data.utils.csv import read_csv_header, create_indexed_header
 from asme.tokenization.tokenizer import Tokenizer
 from asme.tokenization.vocabulary import CSVVocabularyReaderWriter
 

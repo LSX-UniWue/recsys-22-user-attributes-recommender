@@ -5,6 +5,9 @@ from data.datasets.processors.processor import Processor
 
 
 class PositionTokenProcessor(Processor):
+    """
+    Processor that flattens the basket sequence and adds position ids for the flatten basket items
+    """
 
     def __init__(self,
                  seq_length: int
@@ -34,9 +37,9 @@ class PositionTokenProcessor(Processor):
         return positions
 
     def process(self,
-                parsed_session: Dict[str, Any]
+                parsed_sequence: Dict[str, Any]
                 ) -> Dict[str, Any]:
-        items = parsed_session[ITEM_SEQ_ENTRY_NAME]
+        items = parsed_sequence[ITEM_SEQ_ENTRY_NAME]
         if not isinstance(items[0], list):
             raise ValueError('sequence items are not list of lists')
 
@@ -44,7 +47,7 @@ class PositionTokenProcessor(Processor):
         positions = self._generate_position_tokens(items)
 
         flat_items = [item for sublist in items for item in sublist]
-        parsed_session[ITEM_SEQ_ENTRY_NAME] = flat_items
-        parsed_session[POSITION_IDS] = positions
+        parsed_sequence[ITEM_SEQ_ENTRY_NAME] = flat_items
+        parsed_sequence[POSITION_IDS] = positions
 
-        return parsed_session
+        return parsed_sequence

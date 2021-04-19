@@ -1,9 +1,9 @@
 from pathlib import Path
-from typing import Dict, Text, List, Optional, Set, Callable, Any
+from typing import Dict, Text, List, Optional, Set
 from tqdm import tqdm
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datasets.sequence import ItemSessionParser
-from data.utils import create_indexed_header
+from data.utils.csv import create_indexed_header
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 
 from datasets.app import index_command

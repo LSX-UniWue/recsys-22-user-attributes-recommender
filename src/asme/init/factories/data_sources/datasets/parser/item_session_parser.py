@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, List
 
 from data.datasets.sequence import ItemSessionParser
-from data.utils import create_indexed_header, read_csv_header
+from data.utils.csv import create_indexed_header, read_csv_header
 from asme.init.config import Config
 from asme.init.context import Context
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
@@ -23,7 +23,7 @@ class ItemSessionParserFactory(ObjectFactory):
         item_column_name = parser_config.get('item_column_name')
         item_separator = parser_config.get('item_separator')
 
-        additional_features = parser_config.get_or_default('additional_attributes', None)
+        additional_features = parser_config.get_or_default('features', None)
 
         header = create_indexed_header(read_csv_header(csv_file, delimiter=delimiter))
         return ItemSessionParser(header, item_column_name,

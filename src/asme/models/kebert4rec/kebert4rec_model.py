@@ -48,7 +48,11 @@ class KeBERT4RecModel(BERT4RecBaseModel):
                  item_vocab_size: int,
                  max_seq_length: int,
                  transformer_dropout: float,
-                 additional_attributes: Dict[str, Dict[str, Any]]):
+                 additional_attributes: Dict[str, Dict[str, Any]],
+                 embedding_pooling_type: str = None,
+                 initializer_range: float = 0.02,
+                 transformer_intermediate_size: int = None,
+                 transformer_attention_dropout: float = None):
 
         super().__init__(transformer_hidden_size=transformer_hidden_size,
                          num_transformer_heads=num_transformer_heads,
@@ -56,7 +60,11 @@ class KeBERT4RecModel(BERT4RecBaseModel):
                          transformer_dropout=transformer_dropout,
                          item_vocab_size=item_vocab_size,
                          max_seq_length=max_seq_length,
-                         project_layer_type=PROJECT_TYPE_LINEAR)
+                         project_layer_type=PROJECT_TYPE_LINEAR,
+                         embedding_pooling_type=embedding_pooling_type,
+                         initializer_range=initializer_range,
+                         transformer_intermediate_size=transformer_intermediate_size,
+                         transformer_attention_dropout=transformer_attention_dropout)
 
         self.additional_attributes = additional_attributes
         additional_attribute_embeddings = {}
@@ -64,8 +72,8 @@ class KeBERT4RecModel(BERT4RecBaseModel):
             embedding_type = attribute_infos['embedding_type']
             vocab_size = attribute_infos['vocab_size']
             additional_attribute_embeddings[attribute_name] = _build_embedding_type(embedding_type=embedding_type,
-                                                                         vocab_size=vocab_size,
-                                                                         hidden_size=transformer_hidden_size)
+                                                                                    vocab_size=vocab_size,
+                                                                                    hidden_size=transformer_hidden_size)
         self.additional_attribute_embeddings = nn.ModuleDict(additional_attribute_embeddings)
         self.dropout_embedding = nn.Dropout(transformer_dropout)
         self.norm_embedding = nn.LayerNorm(transformer_hidden_size)
@@ -79,6 +87,8 @@ class KeBERT4RecModel(BERT4RecBaseModel):
                        max_seq_length: int,
                        transformer_dropout: float,
                        embedding_mode: str = None):
+        # we here do not norm the embedding, we will do it after all attribute embeddings were added
+        # to the global embedding
         self.embedding = TransformerEmbedding(item_voc_size=item_vocab_size, max_seq_len=max_seq_length,
                                               embedding_size=transformer_hidden_size, dropout=transformer_dropout,
                                               embedding_pooling_type=embedding_mode, norm_embedding=False)

@@ -18,9 +18,9 @@ class PositiveNegativeSamplerProcessor(Processor):
 
     Example:
         Input:
-            session: [1, 5, 7, 8]
+            sequence: [1, 5, 7, 8]
         Output:
-            session:          [1, 5, 7]
+            sequence:         [1, 5, 7]
             positive samples: [5, 7, 8]
             negative samples: [2, 9, 6]
 
@@ -49,7 +49,7 @@ class PositiveNegativeSamplerProcessor(Processor):
         if isinstance(sequence[0], list):
             results = []
             for seq_step in sequence[:-1]:  # skip last target
-                neg_samples = torch.multinomial(weights, num_samples=len(seq_step) - 1, replacement=True).tolist()
+                neg_samples = torch.multinomial(weights, num_samples=len(seq_step), replacement=True).tolist()
                 results.append(neg_samples)
             return results
 
