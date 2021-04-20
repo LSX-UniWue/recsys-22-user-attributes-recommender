@@ -452,7 +452,7 @@ def resume(log_dir: str = typer.Argument(..., help='the path to the logging dire
     if not os.path.isfile(checkpoint_path):
         logger.error("Could not determine the last checkpoint. "
                      "You can specify a particular checkpoint via the --checkpoint-file option.")
-        exit(-1)
+        train(Path(config_file), do_resume=False)
 
     container = create_container(raw_config)
     module = container.module()
