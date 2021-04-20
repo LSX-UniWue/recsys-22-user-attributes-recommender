@@ -87,7 +87,10 @@ def load_and_restore_container(config_file: Path,
     # FIXME: try to use load_from_checkpoint later
     # load checkpoint <- we don't use the PL function load_from_checkpoint because it does
     # not work with our module class system
-    ckpt = cloud_io.load(checkpoint_file)
+    if gpus > 0:
+        ckpt = cloud_io.load(checkpoint_file)
+    else:
+        ckpt = cloud_io.load(checkpoint_file, map_location='cpu')
 
     # acquire state_dict
     state_dict = ckpt["state_dict"]
