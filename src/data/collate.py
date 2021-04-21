@@ -22,7 +22,8 @@ class PadInformation:
 
 def padded_session_collate(entries_to_pad: Dict[str, PadInformation],
                            session_length_entry: str = "session",
-                           pad_direction: PadDirection = PadDirection.RIGHT
+                           pad_direction: PadDirection = PadDirection.RIGHT,
+                           dynamic_padding: bool = False
                            ):
     """
     Pads sequences with a padding token to `max_length`.
@@ -30,14 +31,17 @@ def padded_session_collate(entries_to_pad: Dict[str, PadInformation],
     :param entries_to_pad: a list of entries in the dictionary that need to be padded.
     :param session_length_entry: the name of the entry that is used to determine individual session length.
     :param pad_direction: from where to pad the entries
+    :param dynamic_padding: if true all values in the batch will be padded to the minimum of the configured padding
+    length and the max sequence length in the current batch
     :return: a collate function that can be used to collate session data.
     """
-    return partial(_padded_session_collate, entries_to_pad, session_length_entry, pad_direction)
+    return partial(_padded_session_collate, entries_to_pad, session_length_entry, pad_direction, dynamic_padding)
 
 
 def _padded_session_collate(entries_to_pad: Dict[str, PadInformation],
                             session_length_entry: str,
                             pad_direction: PadDirection,
+                            dynamic_padding: bool,
                             batch):
     from torch.utils.data.dataloader import default_collate
 
@@ -60,6 +64,17 @@ def _padded_session_collate(entries_to_pad: Dict[str, PadInformation],
                          ) -> List[int]:
         return [pad_token_id] * (pad_length - length)
 
+    # first determine the max sequence length of the provided lists
+    # to apply dynamic padding based on the batch
+    max_length_values = {}
+    if dynamic_padding:
+        for sample in batch:
+            for entry_name, value in dict(sample).items():
+                if isinstance(value, list):
+                    previous_max_sequence_length = max_length_values.get(entry_name, 0)
+                    current_sequence_length = len(value)
+                    max_length_values[entry_name] = max(previous_max_sequence_length, current_sequence_length)
+
     padded_batch = []
     for sample in batch:
         padded_sample = dict(sample)
@@ -69,7 +84,8 @@ def _padded_session_collate(entries_to_pad: Dict[str, PadInformation],
             value_to_convert = value
             if isinstance(value, list) and entry_name in entries_to_pad:
                 pad_info = entries_to_pad[entry_name]
-                max_length = pad_info.max_seq_length
+                configured_max_seq_length = pad_info.max_seq_length
+                max_length = min(configured_max_seq_length, max_length_values.get(entry_name)) if dynamic_padding else configured_max_seq_length
                 padding_token_id = pad_info.pad_token_id
 
                 if isinstance(value[0], list):

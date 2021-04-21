@@ -78,6 +78,7 @@ class LoaderFactory(ObjectFactory):
         init_worker_fn = None if num_workers == 0 else mp_worker_init_fn
 
         pad_direction = PadDirection.LEFT if config.get("pad_direction") == "left" else PadDirection.RIGHT
+        dynamic_padding = config.get_or_default('dynamic_padding', True)
 
         shuffle_dataset = config.get("shuffle")
         return DataLoader(
@@ -90,7 +91,8 @@ class LoaderFactory(ObjectFactory):
                 entries_to_pad=self._build_entries_to_pad(config.get("max_seq_length"),
                                                           config.get("max_seq_step_length"), context),
                 session_length_entry=ITEM_SEQ_ENTRY_NAME,
-                pad_direction=pad_direction
+                pad_direction=pad_direction,
+                dynamic_padding=dynamic_padding
             )
         )
 
