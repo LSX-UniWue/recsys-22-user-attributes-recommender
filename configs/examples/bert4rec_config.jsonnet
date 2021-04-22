@@ -4,7 +4,8 @@ local prefix = 'example';
 local metrics =  {
     mrr: [1, 3, 5],
     recall: [1, 3, 5],
-    ndcg: [1, 3, 5]
+    ndcg: [1, 3, 5],
+    rank: []
 };
 {
     templates: {
