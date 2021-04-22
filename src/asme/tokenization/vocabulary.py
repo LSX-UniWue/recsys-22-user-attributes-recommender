@@ -35,10 +35,17 @@ class Vocabulary(object):
     def __len__(self):
         return len(self.token_to_id)
 
+    def __iter__(self):
+        return iter(self.token_to_id.items())
+
 
 class VocabularyBuilder(object):
     def __init__(self,
-                 tokens: List[str] = [], start_id: int = 0):
+                 tokens: List[str] = None,
+                 start_id: int = 0
+                 ):
+        if tokens is None:
+            tokens = []
         self.next_id = start_id + len(tokens)
         self.token_to_id = collections.OrderedDict(zip(tokens, range(start_id, self.next_id)))
 

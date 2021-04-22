@@ -5,6 +5,7 @@ from asme.init.context import Context
 from asme.init.factories.common.dependencies_factory import DependenciesFactory
 from asme.init.factories.metrics.fixed_items_metrics import FixedItemsMetricsFactory
 from asme.init.factories.metrics.full_metrics import FullMetricsFactory
+from asme.init.factories.metrics.random_sampled_metric import RandomSampledMetricsFactory
 from asme.init.factories.metrics.sampled_metrics import SampledMetricsFactory
 from asme.init.object_factory import ObjectFactory, CanBuildResult
 from asme.metrics.container.metrics_container import AggregateMetricsContainer
@@ -18,6 +19,7 @@ class MetricsContainerFactory(ObjectFactory):
 
     def __init__(self, metrics_factories: DependenciesFactory = DependenciesFactory([FullMetricsFactory(),
                                                                                      SampledMetricsFactory(),
+                                                                                     RandomSampledMetricsFactory(),
                                                                                      FixedItemsMetricsFactory()],
                                                                                     optional_based_on_path=True)):
         super().__init__()
