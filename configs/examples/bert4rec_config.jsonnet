@@ -37,6 +37,10 @@ local metrics =  {
                 num_negative_samples: 2,
                 metrics: metrics
             },
+            random_negative_sampled: {
+                num_negative_samples: 2,
+                metrics: metrics
+            },
             fixed: {
                 item_file: base_path + "example.relevant_items.item_id.txt",
                 metrics: metrics
