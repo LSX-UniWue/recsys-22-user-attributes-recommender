@@ -1,19 +1,14 @@
 import torch
-
 from asme.metrics.common import get_ranks
 from asme.metrics.metric import RankingMetric, MetricStorageMode
 
 
-class MRRFullMetric(RankingMetric):
-
-    """
-    calculates the Mean Reciprocal Rank (MRR)
-    """
+class Rank(RankingMetric):
 
     def __init__(self,
                  dist_sync_on_step: bool = False,
                  storage_mode: MetricStorageMode = MetricStorageMode.SUM):
-        super().__init__(metric_id='mrr_full',
+        super().__init__(metric_id='rank',
                          dist_sync_on_step=dist_sync_on_step,
                          storage_mode=storage_mode)
 
@@ -22,12 +17,7 @@ class MRRFullMetric(RankingMetric):
                      positive_item_mask: torch.Tensor,
                      metric_mask: torch.Tensor
                      ) -> torch.Tensor:
-        rank = get_ranks(prediction, positive_item_mask, metric_mask)
-
-        # mrr will contain 'inf' values if target is not in top k scores -> setting it to 0
-        mrr = 1 / rank
-        mrr[mrr == float('inf')] = 0
-        return mrr
+        return get_ranks(prediction, positive_item_mask, metric_mask)
 
     def name(self):
-        return f"MRR"
+        return f"rank"

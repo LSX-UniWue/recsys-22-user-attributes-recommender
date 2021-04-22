@@ -7,8 +7,11 @@ import torch
 
 
 class MetricStorageMode(Enum):
-    """ enum describing all possible modes the ranking metrics to support storing """
+    """ enum describing all possible modes the ranking metrics support for storing the results """
+
+    """ stores each result (e.g. used while predicting) """
     PER_SAMPLE = 'per_sample'
+    """ stores only a sum (e.g. used while training) """
     SUM = 'sum'
 
 

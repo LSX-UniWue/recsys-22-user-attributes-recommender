@@ -27,6 +27,25 @@ def get_true_positives(prediction: torch.Tensor,
     return positive_item_mask.gather(1, predicted_id)
 
 
+def get_ranks(prediction: torch.Tensor,
+              positive_item_mask: torch.Tensor,
+              metrics_mask: torch.Tensor
+              ) -> torch.Tensor:
+    """
+    returns the rank of the first relevant item
+    :param prediction: the prediction logtis :math`(N, I)`
+    :param positive_item_mask: a mask where 1 at position i indicates that the item at index i is relevant :math`(N, I)`
+    :param metrics_mask: the metrics mask
+    :return:
+    """
+    device = prediction.device
+    num_positions = prediction.size()[1] + 1
+    tp = get_true_positives(prediction, positive_item_mask, num_positions, metrics_mask)
+    ranks = torch.arange(1, num_positions).unsqueeze(0).repeat(prediction.size()[0], 1).to(device=device)
+    rank = (ranks * tp).max(dim=-1).values
+    return rank
+
+
 def get_true_positive_count(prediction: torch.Tensor,
                             positive_item_mask: torch.Tensor,
                             k: int,
