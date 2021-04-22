@@ -35,7 +35,7 @@ def assert_loo_test_and_validation(data_sources: Dict[str, DataLoader]):
     assert len(val_data) == NUM_EXAMPLES_SEQUENCES
 
     val_sequence, val_target = val_data['5_2']
-    assert_list_equal(val_sequence, [4, 7, 0, 0])
+    assert_list_equal(val_sequence, [4, 7])
     assert val_target == 10
 
 
@@ -45,11 +45,11 @@ def assert_next_item_test_validation(data_sources: Dict[str, DataLoader]):
     assert len(test_data) == 3
 
     test_seq, test_target = test_data['0_1']
-    assert_list_equal(test_seq, [5, 0, 0, 0])
+    assert_list_equal(test_seq, [5, 0])
     assert test_target == 6
 
     test_seq2, test_target2 = test_data['0_2']
-    assert_list_equal(test_seq2, [5, 6, 0, 0])
+    assert_list_equal(test_seq2, [5, 6])
     assert test_target2 == 8
 
     val_dataloader = data_sources['validation']
@@ -58,11 +58,11 @@ def assert_next_item_test_validation(data_sources: Dict[str, DataLoader]):
     assert len(val_data) == 3
 
     val_seq, val_target = val_data['0_1']
-    assert_list_equal(val_seq, [3, 0, 0, 0])
+    assert_list_equal(val_seq, [3, 0])
     assert val_target == 4
 
     val_seq2, val_target2 = val_data['0_3']
-    assert_list_equal(val_seq2, [3, 4, 7, 0])
+    assert_list_equal(val_seq2, [3, 4, 7])
     assert val_target2 == 8
 
 

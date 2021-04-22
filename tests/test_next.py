@@ -57,15 +57,15 @@ def test_leave_one_out_next_template():
 
     # test some train data
     sequence, pos = train_data['2_2']
-    assert_list_equal(sequence, [9, 10, 0, 0])
+    assert_list_equal(sequence, [9, 10])
     assert pos == 11
 
     sequence, pos = train_data['2_1']
-    assert_list_equal(sequence, [9, 0, 0, 0])
+    assert_list_equal(sequence, [9])
     assert pos == 10
 
     seq2, pos2 = train_data['4_1']
-    assert_list_equal(seq2, [7, 0, 0, 0])
+    assert_list_equal(seq2, [7])
     assert pos2 == 8
 
     assert_loo_test_and_validation(data_sources)
@@ -82,7 +82,7 @@ def test_ratio_next_template():
     assert len(train_data) == 26
 
     sequence, pos = train_data['0_1']
-    assert_list_equal(sequence, [3, 0, 0, 0])
+    assert_list_equal(sequence, [3, 0])
     assert pos == 10
 
     seq2, pos2 = train_data['3_4']

@@ -262,14 +262,21 @@ def build_datasource(dataset_builders: List[DatasetBuilder],
         'shuffle': shuffle
     }
 
-    max_seq_step_length = loader_config.get('max_seq_step_length')
-    if max_seq_step_length is not None:
-        loader_config_dict['max_seq_step_length'] = max_seq_step_length
-
-    num_workers = loader_config.get('num_workers')
-    if num_workers is not None:
-        loader_config_dict['num_workers'] = num_workers
+    loader_config_dict = _transfer_properties(loader_config, loader_config_dict,
+                                              ['max_seq_step_length', 'num_workers', 'dynamic_padding'])
 
     return {
         'loader': loader_config_dict
     }
+
+
+def _transfer_properties(source_dict: Dict[str, Any],
+                         target_dict: Dict[str, Any],
+                         keys_to_transfer: List[str]
+                         ) -> Dict[str, Any]:
+    for key in keys_to_transfer:
+        value = source_dict.get(key)
+        if value is not None:
+            target_dict[key] = value
+
+    return target_dict
