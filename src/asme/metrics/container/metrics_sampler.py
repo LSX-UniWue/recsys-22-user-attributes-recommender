@@ -121,16 +121,21 @@ class NegativeMetricsSampler(MetricsSampler):
         If the :code sample_size is :code 100, and there is one target, the final sample has size :code 101
     """
 
-    def __init__(self, weights: List[float], sample_size: int):
+    def __init__(self,
+                 weights: List[float],
+                 sample_size: int,
+                 metrics_suffix: str):
         """
         Constructor.
 
         :param weights: weights for each item in target space.
         :param sample_size: number of samples generated for evaluation.
+        :param metrics_suffix: the suffix of the metrics
         """
         super().__init__()
         self.weights = weights
         self.sample_size = sample_size
+        self.metrics_suffix = metrics_suffix
 
     def sample(self,
                input_seq: torch.Tensor,
@@ -199,4 +204,4 @@ class NegativeMetricsSampler(MetricsSampler):
         return MetricsSample(sampled_predictions, positive_item_mask, metric_mask)
 
     def suffix_metric_name(self) -> str:
-        return f"_sampled({self.sample_size})"
+        return f"_{self.metrics_suffix}({self.sample_size})"

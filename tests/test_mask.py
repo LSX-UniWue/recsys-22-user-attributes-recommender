@@ -59,11 +59,11 @@ def test_leave_one_out_mask_template():
 
     # test some train data
     sequence, target = train_data['0_1']
-    assert_list_equal(sequence, [3, 4, 0, 0])
-    assert_list_equal(target, [0, 0, 0, 0])
+    assert_list_equal(sequence, [3, 4])
+    assert_list_equal(target, [0, 0])
     seq2, target2 = train_data['4_1']
-    assert_list_equal(seq2, [1, 8, 0, 0])
-    assert_list_equal(target2, [7, 0, 0, 0])
+    assert_list_equal(seq2, [1, 8])
+    assert_list_equal(target2, [7, 0])
 
     # test some test data
     test_dataloader = data_sources['test']
@@ -82,7 +82,7 @@ def test_leave_one_out_mask_template():
     assert len(val_data) == NUM_EXAMPLES_SEQUENCES
 
     val_sequence, val_target = val_data['1_2']
-    assert_list_equal(val_sequence, [3, 4, 1, 0])
+    assert_list_equal(val_sequence, [3, 4, 1])
     assert val_target == 7
 
 
@@ -109,11 +109,11 @@ def test_ratio_mask_template():
 
     assert len(test_data) == 3
     test_seq, test_target = test_data['0_1']
-    assert_list_equal(test_seq, [5, 1, 0, 0])
+    assert_list_equal(test_seq, [5, 1, 0])
     assert test_target == 6
 
     test_seq2, test_target2 = test_data['0_2']
-    assert_list_equal(test_seq2, [5, 6, 1, 0])
+    assert_list_equal(test_seq2, [5, 6, 1])
     assert test_target2 == 8
 
     val_dataloader = data_sources['validation']
@@ -122,7 +122,7 @@ def test_ratio_mask_template():
     assert len(val_data) == 3
 
     val_seq, val_target = val_data['0_1']
-    assert_list_equal(val_seq, [3, 1, 0, 0])
+    assert_list_equal(val_seq, [3, 1, 0])
     assert val_target == 4
 
     val_seq2, val_target2 = val_data['0_3']

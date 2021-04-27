@@ -4,7 +4,8 @@ local prefix = 'example';
 local metrics =  {
     mrr: [1, 3, 5],
     recall: [1, 3, 5],
-    ndcg: [1, 3, 5]
+    ndcg: [1, 3, 5],
+    rank: []
 };
 {
     templates: {
@@ -34,6 +35,10 @@ local metrics =  {
             },
             sampled: {
                 sample_probability_file: base_path + "example.popularity.item_id.txt",
+                num_negative_samples: 2,
+                metrics: metrics
+            },
+            random_negative_sampled: {
                 num_negative_samples: 2,
                 metrics: metrics
             },

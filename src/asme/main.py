@@ -196,7 +196,8 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
             overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
             log_input: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
             log_per_sample_metrics: Optional[bool] = typer.Option(default=True,
-                                                                  help='enable logging of per-sample metrics.')
+                                                                  help='enable logging of per-sample metrics.'),
+            seed: Optional[int] = typer.Option(default=None, help='seed used eg for the sampled evaluation')
             ):
     """
 
@@ -215,6 +216,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
     :param overwrite: override the output file
     :param log_input: write the input sequence also to the file
     :param log_per_sample_metrics: if true also writes per sample metrics for the samples
+    :param seed: the seed to use for this model (should not effect the predictions but the metrics if sampled)
     """
 
     # checking if the file already exists
@@ -227,6 +229,9 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
     if container is None:
         logger.error(_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY)
         exit(-1)
+
+    if seed is not None:
+        seed_everything(seed)
 
     module = container.module()
     trainer = container.trainer().build()

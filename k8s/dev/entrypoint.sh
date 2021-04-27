@@ -5,6 +5,12 @@ REPO_URL="https://${REPO_USER}@gitlab2.informatik.uni-wuerzburg.de/dmir/dallmann
 mkdir -p "${PROJECT_DIR}"
 cd "${PROJECT_DIR}"
 # checkout the repository
+
+# TODO: recommender
+if [ ! -d "${PROJECT_DIR}/recommender" ]; then
+    git clone -q "${REPO_URL}"
+fi
+
 git clone -q "${REPO_URL}"
 cd recommender || exit 1
 git checkout -q "${REPO_BRANCH}"

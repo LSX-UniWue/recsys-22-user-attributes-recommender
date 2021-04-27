@@ -13,6 +13,7 @@ from asme.metrics.mrr_full import MRRFullMetric
 from asme.metrics.ndcg import NormalizedDiscountedCumulativeGainMetric
 from asme.metrics.precision import PrecisionMetric
 from asme.metrics.metric import RankingMetric
+from asme.metrics.rank import Rank
 from asme.metrics.recall import RecallMetric
 
 
@@ -32,7 +33,8 @@ class MetricsFactory(ObjectFactory):
                                             TopNMetricFactory('dcg', DiscountedCumulativeGainMetric),
                                             TopNMetricFactory('ndcg', NormalizedDiscountedCumulativeGainMetric),
                                             TopNMetricFactory('precision', PrecisionMetric),
-                                            MetricFactory('mrr_full', MRRFullMetric)],
+                                            MetricFactory('mrr_full', MRRFullMetric),
+                                            MetricFactory('rank', Rank)],
                                            optional_based_on_path=True)
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
