@@ -1,6 +1,7 @@
 from typing import List
 
 from asme.init.factories.data_sources.datasets.processor.target_extractor import TargetExtractorProcessorFactory
+from asme.init.factories.data_sources.datasets.processor.no_target_extractor import NoTargetExtractorProcessorFactory
 from data.datasets.processors.processor import Processor
 from asme.init.config import Config
 from asme.init.context import Context
@@ -31,7 +32,8 @@ class ProcessorsFactory(ObjectFactory):
                 'last_item_mask': LastItemMaskProcessorFactory(),
                 'position_token': PositionTokenProcessorFactory(),
                 'tokenizer': TokenizerProcessorFactory(),
-                'target_extractor': TargetExtractorProcessorFactory()
+                'target_extractor': TargetExtractorProcessorFactory(),
+                'no_target_extractor': NoTargetExtractorProcessorFactory()
             })
         )
 
