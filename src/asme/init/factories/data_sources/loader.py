@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 from data.collate import padded_session_collate, PadDirection, PadInformation
 from data.datasets import ITEM_SEQ_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME, \
-    TARGET_ENTRY_NAME
+    TARGET_ENTRY_NAME,TARGET_SUFFIX
 from data.multi_processing import mp_worker_init_fn
 from asme.init.config import Config
 from asme.init.context import Context
@@ -126,6 +126,7 @@ class LoaderFactory(ObjectFactory):
                 else:
                     padding_token = context.get(get_tokenizer_key_for_voc(key)).pad_token_id
                     entries_to_pad[key] = PadInformation(padding_token, max_seq_length, max_length)
+                    entries_to_pad[key + TARGET_SUFFIX] = PadInformation(padding_token, max_seq_length, max_length)
 
         return entries_to_pad
 
