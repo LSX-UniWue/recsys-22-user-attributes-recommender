@@ -1,0 +1,61 @@
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional, Callable, List
+
+import pytorch_lightning.core as pl
+from tqdm import tqdm
+
+from data.datamodule.config import AsmeDataModuleConfig
+from data.datamodule.preprocessing import PreprocessingAction
+from data.datamodule.unpacker import Unpacker
+from data.datasets.config import get_movielens_1m_config
+from datasets.dataset_pre_processing.utils import download_dataset
+
+
+
+
+class AsmeDataModule(pl.LightningDataModule):
+
+    PREPROCESSING_FINISHED_FLAG = ".PREPROCESSING_FINISHED"
+
+    def __init__(self, config: AsmeDataModuleConfig):
+        super().__init__()
+        self.config = config
+
+    def prepare_data(self):
+        dsConfig = self.config.datasetConfig
+
+        # Check whether we already preprocessed the dataset
+        if self._check_finished_flag(dsConfig.location):
+            return
+
+        print(f"Downloading dataset...")
+        dataset_file = download_dataset(dsConfig.url, dsConfig.location)
+
+        # If necessary, unpack the dataset
+        if dsConfig.unpacker is not None:
+            print(f"Unpacking dataset...", end="")
+            unpacked_location = dsConfig.unpacker(dataset_file)
+            print("Done.")
+        else:
+            unpacked_location = dsConfig.location
+
+        # Apply preprocessing steps
+        for i,step in enumerate(dsConfig.preprocessing_actions):
+            print(f"Applying preprocessing step '{step.name()}' ({i}/{len(dsConfig.preprocessing_actions)})...", end="")
+            step.apply(unpacked_location)
+            print("Done.")
+
+    def setup(self, stage: Optional[str] = None):
+        pass
+
+    def _check_finished_flag(self, directory: Path) -> bool:
+        return os.path.exists(directory / self.PREPROCESSING_FINISHED_FLAG)
+
+
+if __name__ == "__main__":
+    dSconfig = get_movielens_1m_config(Path("/tmp/ml-1m"), Path("/tmp/ml-1m/raw"))
+    config = AsmeDataModuleConfig(dSconfig)
+    module = AsmeDataModule(config)
+    module.prepare_data()
