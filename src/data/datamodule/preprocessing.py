@@ -13,7 +13,7 @@ from datasets.dataset_pre_processing.utils import read_csv
 
 class YooChooseConverter:
     @staticmethod
-    def yoochoose_to_csv(location: Path, output_file: Path):
+    def to_csv(location: Path, output_file: Path):
         YOOCHOOSE_SESSION_ID_KEY = "SessionId"
         YOOCHOOSE_ITEM_ID_KEY = "ItemId"
 
@@ -44,7 +44,7 @@ class Movielens1MConverter:
     RATING_TIMESTAMP_COLUMN_NAME = 'timestamp'
 
     @staticmethod
-    def ml_1m_to_csv(location: Path, output_file: Path, delimiter = "\t"):
+    def to_csv(location: Path, output_file: Path, delimiter="\t"):
 
         file_type = ".dat"
         header = None
@@ -53,7 +53,8 @@ class Movielens1MConverter:
         location = location / name
         ratings_df = read_csv(location, "ratings", file_type, sep, header)
 
-        ratings_df.columns = [Movielens1MConverter.RATING_USER_COLUMN_NAME, Movielens1MConverter.RATING_MOVIE_COLUMN_NAME, 'rating',
+        ratings_df.columns = [Movielens1MConverter.RATING_USER_COLUMN_NAME,
+                              Movielens1MConverter.RATING_MOVIE_COLUMN_NAME, 'rating',
                               Movielens1MConverter.RATING_TIMESTAMP_COLUMN_NAME]
 
         movies_df = read_csv(location, "movies", file_type, sep, header)
@@ -120,7 +121,8 @@ class ConvertToCsv(PreprocessingAction):
 
 class TransformCsv(PreprocessingAction):
 
-    def __init__(self, input_file: Path, output_file:Path,  filter: Callable[[pd.DataFrame], pd.DataFrame], delimiter="\t"):
+    def __init__(self, input_file: Path, output_file: Path, filter: Callable[[pd.DataFrame], pd.DataFrame],
+                 delimiter="\t"):
         self.input_file = input_file
         self.output_file = output_file
         self.delimiter = delimiter
@@ -137,7 +139,7 @@ class TransformCsv(PreprocessingAction):
 
 class CreateSessionIndex(PreprocessingAction):
 
-    def __init__(self, input_file: Path, output_file: Path, session_key: List[str], delimiter = "\t"):
+    def __init__(self, input_file: Path, output_file: Path, session_key: List[str], delimiter="\t"):
         self.input_file = input_file
         self.output_file = output_file
         self.delimiter = delimiter

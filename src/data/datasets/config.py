@@ -13,7 +13,7 @@ def get_movielens_1m_config(output_directory: Path,
                             ) -> DatasetConfig:
     main_file = output_directory / "ml-1m.csv"
     session_index = output_directory / "ml-1m.session.idx"
-    preprocessing_actions = [ConvertToCsv(main_file, Movielens1MConverter.ml_1m_to_csv),
+    preprocessing_actions = [ConvertToCsv(main_file, Movielens1MConverter.to_csv),
                              TransformCsv(main_file, main_file, functools.partial(
                                  Movielens1MConverter.filter_ratings,
                                  min_item_feedback=min_item_feedback,
