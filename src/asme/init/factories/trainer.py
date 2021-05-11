@@ -102,10 +102,12 @@ class CheckpointFactory(ObjectFactory):
             config.set("filename", "{epoch}-" + f"{{{monitored_metric}}}")
         if not config.has_path("save_last"):
             config.set("save_last", True)
-        output_file = config.get_or_default("output_file", None)
-        config.config.pop('output_file', None)
+        output_base_path = config.get_or_default("output_base_path", None)
+        config.config.pop('output_base_path', None)
+        output_filename = config.get_or_default("output_filename", None)
+        config.config.pop('output_filename', None)
         model_checkpoint = ModelCheckpoint(**config.config)
-        wrapped_checkpoint = BestModelWritingModelCheckpoint(model_checkpoint, output_file)
+        wrapped_checkpoint = BestModelWritingModelCheckpoint(model_checkpoint, output_base_path, output_filename)
         return wrapped_checkpoint
 
     def is_required(self, context: Context) -> bool:

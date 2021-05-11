@@ -10,26 +10,32 @@ from pytorch_lightning import LightningModule
 class BestModelWritingModelCheckpoint(ModelCheckpoint):
     """
         Decorates the ModelCheckpoint class by calling the to_yaml method after each epoch and creating a symlink
-        pointing to the best model.
+        pointing to the best model. If output_base_path (path for the best-k-models file) can not be found in the
+        configuration, the dirpath of model_checkpoint is used as the default. Same goes for output_filename where
+        the default value is "best_k_models.yaml".
     """
 
-    def __init__(self, model_checkpoint: ModelCheckpoint, output_file: str):
+    def __init__(self, model_checkpoint: ModelCheckpoint, output_base_path: str, output_filename: str):
         super().__init__()
         self.target_object = model_checkpoint
-        if output_file is not None:
-            self.output_file = output_file
+        if output_base_path is not None:
+            self.output_base_path = output_base_path
         else:
-            self.output_file = self.target_object.dirpath
+            self.output_base_path = self.target_object.dirpath
+        if output_filename is not None:
+            self.output_filename = output_filename
+        else:
+            self.output_filename = "best_k_models.yaml"
 
     def on_train_end(self, trainer, pl_module: LightningModule):
         self.target_object.on_train_end(trainer, pl_module)
-        self.target_object.to_yaml(os.path.join(self.output_file, "best_k_models.yaml"))
+        self.target_object.to_yaml(os.path.join(self.output_base_path, self.output_filename))
         try:
-            os.symlink(self.target_object.best_model_path, os.path.join(self.output_file, "best.ckpt"))
+            os.symlink(self.target_object.best_model_path, os.path.join(self.output_base_path, "best.ckpt"))
         except OSError as e:
             if e.errno == errno.EEXIST:
-                os.remove(os.path.join(self.output_file, "best.ckpt"))
-                os.symlink(self.best_model_path, os.path.join(self.output_file, "best.ckpt"))
+                os.remove(os.path.join(self.output_base_path, "best.ckpt"))
+                os.symlink(self.best_model_path, os.path.join(self.output_base_path, "best.ckpt"))
 
     def on_pretrain_routine_start(self, trainer, pl_module):
         self.target_object.on_pretrain_routine_start(trainer, pl_module)
