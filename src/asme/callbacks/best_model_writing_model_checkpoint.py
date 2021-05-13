@@ -9,10 +9,12 @@ from pytorch_lightning import LightningModule
 
 class BestModelWritingModelCheckpoint(ModelCheckpoint):
     """
-        Decorates the ModelCheckpoint class by calling the to_yaml method after each epoch and creating a symlink
-        pointing to the best model. If output_base_path (path for the best-k-models file) can not be found in the
-        configuration, the dirpath of model_checkpoint is used as the default. Same goes for output_filename where
-        the default value is "best_k_models.yaml".
+        Tracks best checkpoints by decorating the `ModelCheckpoint` class.
+
+        Calls the to_yaml method after each epoch and creates a symlink `best.ckpt` pointing to the best model.
+        Additionally, validation metrics for each checkpoint are stored in `<output_base_path>/<output_filename>`.
+        If output_base_path can not be found in the configuration, the dirpath of model_checkpoint is used as the default.
+        Same goes for output_filename where the default value is "best_k_models.yaml".
     """
 
     def __init__(self, model_checkpoint: ModelCheckpoint, output_base_path: str, output_filename: str):
