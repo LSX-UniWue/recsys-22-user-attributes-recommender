@@ -43,8 +43,8 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
     def on_validation_end(self, trainer, pl_module):
         self.target_object.on_validation_end(trainer, pl_module)
 
-    def on_save_checkpoint(self, trainer, pl_module) -> Dict[str, Any]:
-        self.target_object.on_save_checkpoint(trainer, pl_module)
+    def on_save_checkpoint(self, trainer, pl_module, checkpoint: Dict[str, Any]) -> Dict[str, Any]:
+        return self.target_object.on_save_checkpoint(trainer, pl_module)
 
     def on_load_checkpoint(self, checkpointed_state: Dict[str, Any]):
         self.target_object.on_load_checkpoint(checkpointed_state)
@@ -58,7 +58,7 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
     def _save_model(self, filepath: str, trainer, pl_module):
         return self.target_object._save_model(filepath, trainer, pl_module)
 
-    def check_monitor_top_k(self, current) -> bool:
+    def check_monitor_top_k(self, trainer, current: Optional[torch.Tensor] = None) -> bool:
         return self.target_object.check_monitor_top_k(current)
 
     @classmethod
