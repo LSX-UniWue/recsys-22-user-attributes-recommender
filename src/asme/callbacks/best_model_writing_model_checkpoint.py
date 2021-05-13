@@ -44,7 +44,7 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
         self.target_object.on_validation_end(trainer, pl_module)
 
     def on_save_checkpoint(self, trainer, pl_module, checkpoint: Dict[str, Any]) -> Dict[str, Any]:
-        return self.target_object.on_save_checkpoint(trainer, pl_module)
+        return self.target_object.on_save_checkpoint(trainer, pl_module, checkpoint)
 
     def on_load_checkpoint(self, checkpointed_state: Dict[str, Any]):
         self.target_object.on_load_checkpoint(checkpointed_state)
