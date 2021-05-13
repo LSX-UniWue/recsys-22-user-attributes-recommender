@@ -1,5 +1,7 @@
 import typer
 from pathlib import Path
+
+from datasets.app.data_set_commands import DEFAULT_SPECIAL_TOKENS
 from datasets.vocabulary import create_vocabulary
 
 app = typer.Typer()
@@ -25,5 +27,5 @@ def build(data_file_path: Path = typer.Argument(..., exists=True, help="path to 
                                               data_file_path=data_file_path,
                                               session_index_path=session_index_path,
                                               vocabulary_output_file_path=vocabulary_output_file_path,
-                                              custom_tokens=[],
+                                              custom_tokens=DEFAULT_SPECIAL_TOKENS,
                                               delimiter=delimiter)
