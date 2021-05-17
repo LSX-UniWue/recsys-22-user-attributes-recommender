@@ -7,7 +7,7 @@ import pytorch_lightning.core as pl
 from tqdm import tqdm
 
 from data.datamodule.config import AsmeDataModuleConfig
-from data.datamodule.preprocessing import PreprocessingAction
+from data.datamodule.preprocessing import PreprocessingAction, EXTRACTED_DIRECTORY_KEY
 from data.datamodule.unpacker import Unpacker
 from data.datasets.config import get_movielens_1m_config
 from datasets.dataset_pre_processing.utils import download_dataset
@@ -30,8 +30,12 @@ class AsmeDataModule(pl.LightningDataModule):
         if self._check_finished_flag(dsConfig.location):
             return
 
-        print(f"Downloading dataset...")
-        dataset_file = download_dataset(dsConfig.url, dsConfig.location)
+        if dsConfig.url is not None:
+            print(f"Downloading dataset...")
+            dataset_file = download_dataset(dsConfig.url, dsConfig.location)
+        else:
+            print(f"No download URL specified, using local copy at '{dsConfig.location}'")
+            dataset_file = dsConfig.location
 
         # If necessary, unpack the dataset
         if dsConfig.unpacker is not None:
@@ -42,9 +46,9 @@ class AsmeDataModule(pl.LightningDataModule):
             unpacked_location = dsConfig.location
 
         # Apply preprocessing steps
-        for i,step in enumerate(dsConfig.preprocessing_actions):
-            print(f"Applying preprocessing step '{step.name()}' ({i}/{len(dsConfig.preprocessing_actions)})...", end="")
-            step.apply(unpacked_location)
+        for i, step in enumerate(dsConfig.preprocessing_actions):
+            print(f"Applying preprocessing step '{step.name()}' ({i+1}/{len(dsConfig.preprocessing_actions)})...", end="")
+            step.apply(dsConfig.context)
             print("Done.")
 
     def setup(self, stage: Optional[str] = None):
@@ -55,7 +59,7 @@ class AsmeDataModule(pl.LightningDataModule):
 
 
 if __name__ == "__main__":
-    dSconfig = get_movielens_1m_config(Path("/tmp/ml-1m"), Path("/tmp/ml-1m/raw"))
+    dSconfig = get_movielens_1m_config(Path("/tmp/ml-1m"), Path("/tmp/ml-1m/raw"),min_user_feedback=100, min_item_feedback=50)
     config = AsmeDataModuleConfig(dSconfig)
     module = AsmeDataModule(config)
     module.prepare_data()
