@@ -59,7 +59,7 @@ class AsmeDataModule(pl.LightningDataModule):
 
 
 if __name__ == "__main__":
-    dSconfig = get_movielens_1m_config(Path("/tmp/ml-1m"), Path("/tmp/ml-1m/raw"),min_user_feedback=100, min_item_feedback=50)
+    dSconfig = get_movielens_1m_config(Path("/tmp/ml-1m"), Path("/tmp/ml-1m/raw"),min_sequence_length=100, min_item_feedback=50)
     config = AsmeDataModuleConfig(dSconfig)
     module = AsmeDataModule(config)
     module.prepare_data()

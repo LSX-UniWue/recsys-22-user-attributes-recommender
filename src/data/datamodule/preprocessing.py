@@ -1,27 +1,23 @@
 import copy
-import functools
 import math
-import os
 import random
 from abc import abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
-from typing import Callable, List, Any, Optional, Dict, Iterable
+from typing import Callable, List, Any, Optional, Dict
 
-import numpy as np
 import pandas as pd
 
 from asme.init.context import Context
 from data.base.csv_index_builder import CsvSessionIndexer
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
+from data.datamodule.converters import CsvConverter
+from data.datamodule.extractors import TargetPositionExtractor, FixedOffsetPositionExtractor
 from data.datasets.index_builder import SequencePositionIndexBuilder
 from data.datasets.sequence import ItemSessionParser, ItemSequenceDataset, PlainSequenceDataset
 from data.utils.csv import read_csv_header, create_indexed_header
 from datasets.data_structures.split_names import SplitNames
 from datasets.data_structures.train_validation_test_splits_indices import TrainValidationTestSplitIndices
-from datasets.dataset_index_splits.conditional_split import _get_position_with_offset
-from datasets.dataset_pre_processing.utils import read_csv
 from datasets.vocabulary.create_vocabulary import create_token_vocabulary
 
 EXTRACTED_DIRECTORY_KEY = "raw_file"
@@ -35,87 +31,6 @@ SEED_KEY = "seed"
 
 def format_prefix(prefixes: List[str]) -> str:
     return ".".join(prefixes)
-
-
-class YooChooseConverter:
-    @staticmethod
-    def to_csv(location: Path, output_file: Path):
-        YOOCHOOSE_SESSION_ID_KEY = "SessionId"
-        YOOCHOOSE_ITEM_ID_KEY = "ItemId"
-
-        data = pd.read_csv(location.joinpath('clicks.dat'),
-                           sep=',',
-                           header=None,
-                           usecols=[0, 1, 2],
-                           dtype={0: np.int32, 1: str, 2: np.int64},
-                           names=['SessionId', 'TimeStr', 'ItemId'])
-
-        data['Time'] = data.TimeStr.apply(lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S.%fZ').timestamp())
-        session_lengths = data.groupby(YOOCHOOSE_SESSION_ID_KEY).size()
-        data = data[np.in1d(data.SessionId, session_lengths[session_lengths > 1].index)]
-        item_supports = data.groupby(YOOCHOOSE_ITEM_ID_KEY).size()
-        data = data[np.in1d(data.ItemId, item_supports[item_supports >= 5].index)]
-        session_lengths = data.groupby(YOOCHOOSE_SESSION_ID_KEY).size()
-        data = data[np.in1d(data.SessionId, session_lengths[session_lengths >= 2].index)]
-
-        if not os.path.exists(output_file):
-            output_file.parent.mkdir(parents=True, exist_ok=True)
-        data = data.sort_values(YOOCHOOSE_SESSION_ID_KEY)
-        data.to_csv(path_or_buf=output_file)
-
-
-class Movielens1MConverter:
-    RATING_USER_COLUMN_NAME = 'userId'
-    RATING_MOVIE_COLUMN_NAME = 'movieId'
-    RATING_TIMESTAMP_COLUMN_NAME = 'timestamp'
-
-    @staticmethod
-    def to_csv(location: Path, output_file: Path, delimiter="\t"):
-
-        file_type = ".dat"
-        header = None
-        sep = "::"
-        name = "ml-1m"
-        location = location / name
-        ratings_df = read_csv(location, "ratings", file_type, sep, header)
-
-        ratings_df.columns = [Movielens1MConverter.RATING_USER_COLUMN_NAME,
-                              Movielens1MConverter.RATING_MOVIE_COLUMN_NAME, 'rating',
-                              Movielens1MConverter.RATING_TIMESTAMP_COLUMN_NAME]
-
-        movies_df = read_csv(location, "movies", file_type, sep, header)
-
-        movies_df.columns = ['movieId', 'title', 'genres']
-        users_df = read_csv(location, "users", file_type, sep, header)
-        users_df.columns = [Movielens1MConverter.RATING_USER_COLUMN_NAME, 'gender', 'age', 'occupation', 'zip']
-        ratings_df = pd.merge(ratings_df, users_df)
-
-        merged_df = pd.merge(ratings_df, movies_df).sort_values(
-            by=[Movielens1MConverter.RATING_USER_COLUMN_NAME, Movielens1MConverter.RATING_TIMESTAMP_COLUMN_NAME])
-
-        os.makedirs(output_file.parent, exist_ok=True)
-
-        merged_df.to_csv(output_file, sep=delimiter, index=False)
-
-    @staticmethod
-    def filter_ratings(ratings_df: pd.DataFrame,
-                       min_user_feedback: int = 0,
-                       min_item_feedback: int = 0
-                       ):
-        def _filter_dataframe(column: str, min_count: int, dataframe: pd.DataFrame) -> pd.DataFrame:
-            sizes = ratings_df.groupby(column).size()
-            good_entities = sizes.index[sizes >= min_count]
-
-            return dataframe[ratings_df[column].isin(good_entities)]
-
-        # (AD) we adopt the order used in bert4rec preprocessing
-        if min_item_feedback > 1:
-            ratings_df = _filter_dataframe(Movielens1MConverter.RATING_MOVIE_COLUMN_NAME, min_item_feedback, ratings_df)
-
-        if min_user_feedback > 1:
-            ratings_df = _filter_dataframe(Movielens1MConverter.RATING_USER_COLUMN_NAME, min_user_feedback, ratings_df)
-
-        return ratings_df
 
 
 class PreprocessingAction:
@@ -134,7 +49,7 @@ class PreprocessingAction:
 
 class ConvertToCsv(PreprocessingAction):
 
-    def __init__(self, converter: Callable[[Path, Path], None]):
+    def __init__(self, converter: CsvConverter):
         self.converter = converter
 
     def name(self) -> str:
@@ -217,8 +132,8 @@ class CreateSessionIndex(PreprocessingAction):
 
 class CreateNextItemIndex(PreprocessingAction):
 
-    def __init__(self, column: str, target_positions_extractor: Callable[[Dict[str, Any]], Iterable[int]]):
-        self.target_positions_extractor = target_positions_extractor
+    def __init__(self, column: str, extractor: TargetPositionExtractor):
+        self.extractor = extractor
         self.column = column
 
     def name(self) -> str:
@@ -241,7 +156,7 @@ class CreateNextItemIndex(PreprocessingAction):
             delimiter=delimiter
         )
         dataset = ItemSequenceDataset(PlainSequenceDataset(reader, parser))
-        builder = SequencePositionIndexBuilder(target_positions_extractor=self.target_positions_extractor)
+        builder = SequencePositionIndexBuilder(target_positions_extractor=self.extractor)
         builder.build(dataset, output_file)
 
 
@@ -273,7 +188,7 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
         for name, offset in zip([SplitNames.train, SplitNames.validation, SplitNames.test], [3, 2, 1]):
             prefix = format_prefix(context.get(PREFIXES_KEY) + [name.name])
             output_file = output_dir / f"{prefix}.loo.idx"
-            builder = SequencePositionIndexBuilder(target_positions_extractor=functools.partial(_get_position_with_offset, offset=offset))
+            builder = SequencePositionIndexBuilder(target_positions_extractor=FixedOffsetPositionExtractor(offset))
             builder.build(dataset, output_file)
 
 
