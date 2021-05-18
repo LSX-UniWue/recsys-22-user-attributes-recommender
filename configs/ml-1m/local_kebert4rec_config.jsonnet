@@ -108,9 +108,7 @@ local additional_attributes_list = ['genres'];
             save_top_k: 3,
             mode: 'max'
         },
-        gpus: 0,
         max_epochs: 10,
-        accelerator: "ddp",
         check_val_every_n_epoch: 50
     }
 }

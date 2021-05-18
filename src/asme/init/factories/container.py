@@ -24,10 +24,9 @@ from asme.modules.baselines.pop_module import PopModule
 from asme.modules.baselines.session_pop_module import SessionPopModule
 from asme.modules.basket.dream_module import DreamModule
 from asme.modules.basket.nnrec_module import NNRecModule
-from asme.modules.bert4rec_module import BERT4RecModule
+from asme.modules.masked_training_module import MaskedTrainingModule
 from asme.modules.caser_module import CaserModule
 from asme.modules.hgn_module import HGNModule
-from asme.modules.kebert4rec_module import KeBERT4RecModule
 from asme.modules.narm_module import NarmModule
 from asme.modules.rnn_module import RNNModule
 from asme.modules.sas_rec_module import SASRecModule
@@ -39,8 +38,8 @@ class ContainerFactory(ObjectFactory):
         self.tokenizers_factory = TokenizersFactory()
         self.dependencies = DependenciesFactory(
             [
-                ConditionalFactory('type', {'kebert4rec': GenericModuleFactory(KeBERT4RecModule, KeBERT4RecModel),
-                                            'bert4rec': GenericModuleFactory(BERT4RecModule, BERT4RecModel),
+                ConditionalFactory('type', {'kebert4rec': GenericModuleFactory(MaskedTrainingModule, KeBERT4RecModel),
+                                            'bert4rec': GenericModuleFactory(MaskedTrainingModule, BERT4RecModel),
                                             'caser': GenericModuleFactory(CaserModule, CaserModel),
                                             'narm': GenericModuleFactory(NarmModule, NarmModel),
                                             'sasrec': GenericModuleFactory(SASRecModule, SASRecModel),
@@ -51,7 +50,7 @@ class ContainerFactory(ObjectFactory):
                                             'pop': GenericModuleFactory(PopModule, None),
                                             'session_pop': GenericModuleFactory(SessionPopModule, None),
                                             'markov': GenericModuleFactory(MarkovModule, None),
-                                            'bpr' : GenericModuleFactory(BprModule, None),},
+                                            'bpr': GenericModuleFactory(BprModule, None),},
                                    config_key='module',
                                    config_path=['module']),
                 DataSourcesFactory(),
