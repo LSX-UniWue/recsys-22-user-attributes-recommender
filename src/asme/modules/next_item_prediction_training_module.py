@@ -18,7 +18,11 @@ from torch import nn
 
 class NextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
     """
-    The Narm module for training the Narm model
+    A training module for models that get a sequence and must predict the next item in the sequence
+
+    Supported models are:
+    - NARM
+    - RNN
     """
 
     @save_hyperparameters
@@ -31,7 +35,7 @@ class NextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
                  beta_2: float = 0.998
                  ):
         """
-        Initializes the Narm Module.
+        Initializes the training module.
         """
         super().__init__()
         self.model = model
