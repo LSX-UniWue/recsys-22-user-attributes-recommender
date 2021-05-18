@@ -17,7 +17,12 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
         Same goes for output_filename where the default value is "best_k_models.yaml".
     """
 
-    def __init__(self, model_checkpoint: ModelCheckpoint, output_base_path: str, output_filename: str):
+    def __init__(self,
+                 model_checkpoint: ModelCheckpoint,
+                 output_base_path: str,
+                 output_filename: str,
+                 symlink_name: str = 'best.ckpt'
+                 ):
         super().__init__()
         self.target_object = model_checkpoint
         if output_base_path is not None:
@@ -29,15 +34,19 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
         else:
             self.output_filename = "best_k_models.yaml"
 
+        self.symlink_name = symlink_name
+
     def on_train_end(self, trainer, pl_module: LightningModule):
         self.target_object.on_train_end(trainer, pl_module)
         self.target_object.to_yaml(os.path.join(self.output_base_path, self.output_filename))
+        symlink_path = os.path.join(self.output_base_path, self.symlink_name)
+        best_checkpoint_path = self.target_object.best_model_path
         try:
-            os.symlink(self.target_object.best_model_path, os.path.join(self.output_base_path, "best.ckpt"))
+            os.symlink(best_checkpoint_path, symlink_path)
         except OSError as e:
             if e.errno == errno.EEXIST:
-                os.remove(os.path.join(self.output_base_path, "best.ckpt"))
-                os.symlink(self.best_model_path, os.path.join(self.output_base_path, "best.ckpt"))
+                os.remove(symlink_path)
+                os.symlink(best_checkpoint_path, symlink_path)
 
     def on_pretrain_routine_start(self, trainer, pl_module):
         self.target_object.on_pretrain_routine_start(trainer, pl_module)
