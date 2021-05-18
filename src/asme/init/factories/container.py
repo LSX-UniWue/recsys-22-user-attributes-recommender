@@ -27,8 +27,7 @@ from asme.modules.basket.nnrec_module import NNRecModule
 from asme.modules.masked_training_module import MaskedTrainingModule
 from asme.modules.caser_module import CaserModule
 from asme.modules.hgn_module import HGNModule
-from asme.modules.narm_module import NarmModule
-from asme.modules.rnn_module import RNNModule
+from asme.modules.next_item_prediction_training_module import NextItemPredictionTrainingModule
 from asme.modules.sas_rec_module import SASRecModule
 
 
@@ -41,9 +40,9 @@ class ContainerFactory(ObjectFactory):
                 ConditionalFactory('type', {'kebert4rec': GenericModuleFactory(MaskedTrainingModule, KeBERT4RecModel),
                                             'bert4rec': GenericModuleFactory(MaskedTrainingModule, BERT4RecModel),
                                             'caser': GenericModuleFactory(CaserModule, CaserModel),
-                                            'narm': GenericModuleFactory(NarmModule, NarmModel),
+                                            'narm': GenericModuleFactory(NextItemPredictionTrainingModule, NarmModel),
                                             'sasrec': GenericModuleFactory(SASRecModule, SASRecModel),
-                                            'rnn': GenericModuleFactory(RNNModule, RNNModel),
+                                            'rnn': GenericModuleFactory(NextItemPredictionTrainingModule, RNNModel),
                                             'hgn': GenericModuleFactory(HGNModule, HGNModel),
                                             'dream': GenericModuleFactory(DreamModule, RNNModel),
                                             'nnrec': GenericModuleFactory(NNRecModule, NNRecModel),
