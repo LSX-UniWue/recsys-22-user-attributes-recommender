@@ -82,8 +82,16 @@ class TransformCsv(PreprocessingAction):
 
 @dataclass
 class GroupedFilter:
+    """
+    Objects of this class hold all information necessary to aggregate a grouped dataframe and the filter based on
+    aggregated values.
+
+    :param aggregator: An aggregation function provided by pandas either as a string or a function reference, e.g "count".
+    :param apply: The actual filter function which determines whether a row should by kept based on the aggregated values.
+    :param aggregated_column: The name of the column to which the filter will be applied.
+    """
     aggregator: Any
-    apply: Callable[[int], bool]
+    apply: Callable[[Any], bool]
     aggregated_column: Optional[str] = None
 
 
@@ -162,8 +170,23 @@ class CreateNextItemIndex(PreprocessingAction):
 
 class CreateLeaveOneOutSplit(PreprocessingAction):
 
-    def __init__(self, column: str):
+    def __init__(self, column: str, training_target_offset=2, validation_target_offset=1, test_target_offset=0):
+        """
+        This action allows to create a leave-one-out split for a dataset.
+
+        :param column: The name of the column of the CSV file containing the items.
+        :param training_target_offset:      The offset of the training target item, i.e. the distance from the end of
+                                            the sequence. For instance, setting this to 2 will yield item n-2 as the
+                                            target for a sequence of length n.
+        :param validation_target_offset:    The offset of the validation target item, i.e. the distance from the end of
+                                            the sequence. For instance, setting this to 1 will yield item n-1 as the
+                                            target for a sequence of length n.
+        :param test_target_offset:          The offset of the test target item, i.e. the distance from the end of the
+                                            sequence. For instance, setting this to 0 will yield item n as the target
+                                            for a sequence of length n.
+        """
         self.column = column
+        self.offsets = [training_target_offset, validation_target_offset, test_target_offset]
 
     def name(self) -> str:
         return "Creating Leave one out split"
@@ -185,7 +208,7 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
             delimiter=delimiter
         )
         dataset = ItemSequenceDataset(PlainSequenceDataset(reader, parser))
-        for name, offset in zip([SplitNames.train, SplitNames.validation, SplitNames.test], [3, 2, 1]):
+        for name, offset in zip([SplitNames.train, SplitNames.validation, SplitNames.test], self.offsets):
             prefix = format_prefix(context.get(PREFIXES_KEY) + [name.name])
             output_file = output_dir / f"{prefix}.loo.idx"
             builder = SequencePositionIndexBuilder(target_positions_extractor=FixedOffsetPositionExtractor(offset))
@@ -245,22 +268,9 @@ class CreateRatioSplit(PreprocessingAction):
             SplitNames.test: self.test_percentage
         })
 
-        # Write individual CSVs for every split
+        # Write individual CSVs and execute inner actions for each split
         for name, indices in split_indices.items():
-            prefix = format_prefix(context.get(PREFIXES_KEY) + [name.name])
-            output_file = output_dir / f"{prefix}.csv"
-            self._write_split(output_file, header, reader, indices)
-
-            # Modify context such that the operations occur in the new output directory using the split file
-            cloned = copy.deepcopy(context)
-            cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
-            cloned.set(MAIN_FILE_KEY, output_file, overwrite=True)
-            current_prefixes = context.get(PREFIXES_KEY)
-            cloned.set(PREFIXES_KEY, current_prefixes + [name.name], overwrite=True)
-
-            # Apply the necessary preprocessing, i.e. session index generation
-            for action in self.inner_actions:
-                action(cloned)
+            self._process_split(context, name.name, header, reader, indices)
 
     @staticmethod
     def _generate_split_indices(session_index: CsvDatasetIndex, split_ratios: Dict[SplitNames, float]):
@@ -285,6 +295,25 @@ class CreateRatioSplit(PreprocessingAction):
         return TrainValidationTestSplitIndices(train_indices=splits[SplitNames.train],
                                                validation_indices=splits[SplitNames.validation],
                                                test_indices=splits[SplitNames.test])
+
+    def _process_split(self, context: Context, name: str, header: str, reader: CsvDatasetReader, indices: List[int]):
+        prefix = format_prefix(context.get(PREFIXES_KEY) + [name])
+        output_dir = context.get(OUTPUT_DIR_KEY)
+        output_file = output_dir / f"{prefix}.csv"
+
+        # Write the CSV file for the current split
+        self._write_split(output_file, header, reader, indices)
+
+        # Modify context such that the operations occur in the new output directory using the split file
+        cloned = copy.deepcopy(context)
+        cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
+        cloned.set(MAIN_FILE_KEY, output_file, overwrite=True)
+        current_prefixes = context.get(PREFIXES_KEY)
+        cloned.set(PREFIXES_KEY, current_prefixes + [name], overwrite=True)
+
+        # Apply the necessary preprocessing, i.e. session index generation
+        for action in self.inner_actions:
+            action(cloned)
 
     @staticmethod
     def _write_split(output_file: Path, header: str, reader: CsvDatasetReader, indices: List[int]):

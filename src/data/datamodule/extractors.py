@@ -20,7 +20,7 @@ class FixedOffsetPositionExtractor(TargetPositionExtractor):
         self.offset = offset
 
     def apply(self, session: Dict[str, Any]) -> Iterable[int]:
-        return [len(session[ITEM_SEQ_ENTRY_NAME]) - self.offset]
+        return [len(session[ITEM_SEQ_ENTRY_NAME]) - self.offset - 1]
 
 
 class RemainingSessionPositionExtractor(TargetPositionExtractor):
