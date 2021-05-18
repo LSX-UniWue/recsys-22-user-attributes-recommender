@@ -103,16 +103,18 @@ class CaserModel(nn.Module):
 
     def forward(self,
                 sequence: torch.Tensor,
-                user: torch.Tensor,
-                pos_items: torch.Tensor,
-                neg_items: Optional[torch.Tensor] = None
+                positive_items: torch.Tensor,
+                negative_items: Optional[torch.Tensor] = None,
+                padding_mask: Optional[torch.Tensor] = None,
+                user: Optional[torch.Tensor] = None
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         forward pass
+        :param padding_mask: the padding mask; note: not used
         :param sequence: the sequences :math`(N, S)`
         :param user: the users for each batch :math `(N)` optional
-        :param pos_items: the positive (next) items of the sequence `(N)`
-        :param neg_items: the negative items (sampled) `(N, X)`, only required for training
+        :param positive_items: the positive (next) items of the sequence `(N)`
+        :param negative_items: the negative items (sampled) `(N, X)`, only required for training
         :return: the logits of the pos_items and if provided the logits of the neg_items
 
         Where B is the batch size, S the max sequence length (of the current batch)
@@ -153,8 +155,8 @@ class CaserModel(nn.Module):
         z = self.fc1_activation(self.fc1(out))
         x = torch.cat([z, user_emb], 1) if users_provided else z
 
-        pos_w2 = self.W2(pos_items)
-        pos_b2 = self.b2(pos_items)
+        pos_w2 = self.W2(positive_items)
+        pos_b2 = self.b2(positive_items)
 
         #if not self.training:
         #    w2 = pos_w2.squeeze()
@@ -164,12 +166,12 @@ class CaserModel(nn.Module):
 
         x = x.unsqueeze(2)
         res_pos = torch.baddbmm(pos_b2, pos_w2, x).squeeze()
-        if neg_items is None:
+        if negative_items is None:
             return res_pos
 
         # negative items
-        neg_w2 = self.W2(neg_items)
-        neg_b2 = self.b2(neg_items)
+        neg_w2 = self.W2(negative_items)
+        neg_b2 = self.b2(negative_items)
         res_negative = torch.baddbmm(neg_b2, neg_w2, x).squeeze()
         return res_pos, res_negative
 

@@ -78,8 +78,8 @@ class SASRecModel(nn.Module):
 
     def forward(self,
                 sequence: torch.Tensor,
-                pos_items: torch.Tensor,
-                neg_items: Optional[torch.Tensor] = None,
+                positive_items: torch.Tensor,
+                negative_items: Optional[torch.Tensor] = None,
                 position_ids: Optional[torch.Tensor] = None,
                 padding_mask: Optional[torch.Tensor] = None
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
@@ -89,8 +89,8 @@ class SASRecModel(nn.Module):
         If no negative items are provided,
 
         :param sequence: the sequence :math:`(N, S)`
-        :param pos_items: ids of the positive items (the next items in the sequence) :math:`(N)`
-        :param neg_items: random sampled negative items that are not in the session of the user :math:`(N)`
+        :param positive_items: ids of the positive items (the next items in the sequence) :math:`(N)`
+        :param negative_items: random sampled negative items that are not in the session of the user :math:`(N)`
         :param position_ids: the optional position ids if not the position ids are generated :math:`(N, S)`
         :param padding_mask: the optional padding mask if the sequence is padded :math:`(N, S)` True if not padded
         :return: the logits of the pos_items and the logits of the negative_items, each of shape :math:`(N, S)`
@@ -117,9 +117,9 @@ class SASRecModel(nn.Module):
         transformer_output = self.transformer_encoder(embedded_sequence, attention_mask=attention_mask)
 
         # when training the model we multiply the seq embedding with the positive and negative items
-        if neg_items is not None:
-            emb_pos_items = self.embedding.get_item_embedding(pos_items)  # (N, H)
-            emb_neg_items = self.embedding.get_item_embedding(neg_items)  # (N, H)
+        if negative_items is not None:
+            emb_pos_items = self.embedding.get_item_embedding(positive_items)  # (N, H)
+            emb_neg_items = self.embedding.get_item_embedding(negative_items)  # (N, H)
 
             pos_output = emb_pos_items * transformer_output  # (N, S, H)
             neg_output = emb_neg_items * transformer_output  # (N, S, H)
@@ -131,7 +131,7 @@ class SASRecModel(nn.Module):
 
         # inference step (I is the number of positive items to test)
         # embeddings of pos_items
-        item_embeddings = self.embedding.get_item_embedding(pos_items, flatten=False)  # (N, I, H)
+        item_embeddings = self.embedding.get_item_embedding(positive_items, flatten=False)  # (N, I, H)
 
         # we use "advanced" indexing to slice the right elements from the transformer output
         batch_size = sequence.size()[0]
