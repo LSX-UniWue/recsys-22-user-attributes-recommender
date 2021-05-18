@@ -84,6 +84,7 @@ local metrics =  {
           min_delta: 0.00,
           patience: 10,
           mode: 'max'
-        }
+        },
+        max_epochs: 5
     }
 }
