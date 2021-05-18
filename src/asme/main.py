@@ -292,9 +292,10 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
 
         def _create_batch_loader(dataset: Dataset,
                                  batch_sampler: Sampler,
-                                 collate_fn
+                                 collate_fn,
+                                 num_workers: int
                                  ) -> DataLoader:
-            return DataLoader(dataset, batch_sampler=batch_sampler, collate_fn=collate_fn)
+            return DataLoader(dataset, batch_sampler=batch_sampler, collate_fn=collate_fn, num_workers=num_workers)
 
         @contextmanager
         def _no_eval_step_end_call(module):
@@ -319,10 +320,12 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
             # We need two loaders since we have to run both, predict & test on each batch
             batch_loader_predict = _create_batch_loader(test_loader.dataset,
                                                         batch_sampler=FixedBatchSampler(batch_start, batch_size),
-                                                        collate_fn=test_loader.collate_fn)
+                                                        collate_fn=test_loader.collate_fn,
+                                                        num_workers=test_loader.num_workers)
             batch_loader_test = _create_batch_loader(test_loader.dataset,
                                                      batch_sampler=FixedBatchSampler(batch_start, batch_size),
-                                                     collate_fn=test_loader.collate_fn)
+                                                     collate_fn=test_loader.collate_fn,
+                                                     num_workers=test_loader.num_workers)
 
             # Redirect prediction/test results to /dev/null to avoid spamming stdout
             with open(os.devnull, "w") as f, redirect_stdout(f):
