@@ -12,7 +12,7 @@ from asme.modules.metrics_trait import MetricsTrait
 from asme.modules.util.module_util import build_eval_step_return_dict
 from asme.tokenization.tokenizer import Tokenizer
 
-
+# FIXME: merge with SequenceNextItemPredictionTrainingModule
 class CosRecModule(MetricsTrait, pl.LightningModule):
     @staticmethod
     def get_users_from_batch(batch: Dict[str, torch.Tensor]

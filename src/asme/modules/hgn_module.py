@@ -14,6 +14,7 @@ from asme.tokenization.tokenizer import Tokenizer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
+# FIXME: merge with SequenceNextItemPredictionTrainingModule
 class HGNModule(MetricsTrait, pl.LightningModule):
 
     @staticmethod
@@ -76,7 +77,7 @@ class HGNModule(MetricsTrait, pl.LightningModule):
             logits, [pos_items.size(1), neg_items.size(1)], dim=1)
 
         # Compute the BPR loss
-        loss = -torch.log(torch.sigmoid(targets_prediction - negatives_prediction) + 1e-8)
+        loss = - torch.log(torch.sigmoid(targets_prediction - negatives_prediction) + 1e-8)
         loss = torch.mean(torch.sum(loss))
 
         self.log(LOG_KEY_TRAINING_LOSS, loss)

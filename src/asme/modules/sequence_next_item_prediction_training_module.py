@@ -29,7 +29,8 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
                  metrics: MetricsContainer,
                  learning_rate: float = 0.001,
                  beta_1: float = 0.99,
-                 beta_2: float = 0.998
+                 beta_2: float = 0.998,
+                 weight_decay: float = 1e-3
                  ):
         """
         inits the SASRec module
@@ -46,6 +47,8 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
         self.learning_rate = learning_rate
         self.beta_1 = beta_1
         self.beta_2 = beta_2
+        self.weight_decay = weight_decay
+
         self.item_tokenizer = item_tokenizer
         self.metrics = metrics
 
@@ -153,7 +156,8 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(),
                                 lr=self.learning_rate,
-                                betas=(self.beta_1, self.beta_2))
+                                betas=(self.beta_1, self.beta_2),
+                                weight_decay=self.weight_decay)
 
     def _get_additional_meta_data(self,
                                   batch: Dict[str, torch.Tensor]
