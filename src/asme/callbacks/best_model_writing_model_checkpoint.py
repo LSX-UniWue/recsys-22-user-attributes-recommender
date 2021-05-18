@@ -40,7 +40,9 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
         self.target_object.on_train_end(trainer, pl_module)
         self.target_object.to_yaml(os.path.join(self.output_base_path, self.output_filename))
         symlink_path = os.path.join(self.output_base_path, self.symlink_name)
-        best_checkpoint_path = self.target_object.best_model_path
+        # here we only link relative paths, to prevent wrong links when
+        # the result path is mounted into a VM, container …
+        best_checkpoint_path = Path(self.target_object.best_model_path).name
         try:
             os.symlink(best_checkpoint_path, symlink_path)
         except OSError as e:
