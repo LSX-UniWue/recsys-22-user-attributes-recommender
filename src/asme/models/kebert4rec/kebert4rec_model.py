@@ -39,7 +39,7 @@ class LinearUpscaler(nn.Module):
         return self.linear(multi_hot)
 
 
-class KeBERT4RecModel(SequenceRecommenderModel):
+class KeBERT4RecModel(BERT4RecBaseModel):
 
     @save_hyperparameters
     def __init__(self,

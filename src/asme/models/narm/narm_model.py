@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
 
@@ -56,7 +58,8 @@ class NarmModel(SequenceRecommenderModel):
 
     def forward(self,
                 sequence: torch.Tensor,
-                padding_mask: torch.Tensor
+                padding_mask: Optional[torch.Tensor],
+                **kwargs
                 ):
         """
         Computes item similarity scores using the NARM model.

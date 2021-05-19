@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
 
@@ -70,6 +72,7 @@ class HGNModel(SequenceRecommenderModel):
 
     def forward(self,
                 sequence: torch.Tensor,
+                padding_mask: Optional[torch.Tensor],
                 user: torch.Tensor,
                 items_to_predict: torch.Tensor,
                 for_pred: bool = False

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from typing import List
+from typing import List, Optional
 
 from asme.models.layers.layers import ItemEmbedding
 from asme.models.layers.util_layers import get_activation_layer
@@ -76,16 +76,18 @@ class CosRecModel(SequenceRecommenderModel):
 
     def forward(self,
                 sequence: torch.Tensor,
+                padding_mask: Optional[torch.Tensor],
                 user: torch.Tensor,
                 item_to_predict: torch.Tensor,
                 eval: bool = False
-                ):
+                ) -> torch.Tensor:
         """
         Args:
             sequence: torch.Tensor with size :math`(N, S)`
                 a batch of sequence
             user: torch.Tensor with size :math`(N)`
                 a batch of user
+            padding_mask: torch.Tensor with size :math`(N, S)` note: not used
             item_to_predict: torch.Tensor with size :math`(N)`
                 a batch of items
             eval: boolean, optional

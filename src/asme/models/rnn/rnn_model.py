@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Tuple
+from typing import Tuple, Optional
 
 import torch
 from torch import nn
@@ -107,7 +107,8 @@ class RNNModel(SequenceRecommenderModel):
 
     def forward(self,
                 sequence: torch.Tensor,
-                padding_mask: torch.Tensor
+                padding_mask: Optional[torch.Tensor],
+                **kwargs
                 ) -> torch.Tensor:
         """
         calc the logits given the sequence and the mask

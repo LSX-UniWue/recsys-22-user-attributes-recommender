@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import Optional
 
 import torch
 from torch import nn
@@ -81,8 +82,8 @@ class BERT4RecBaseModel(SequenceRecommenderModel):
 
     def forward(self,
                 sequence: torch.Tensor,
-                padding_mask: torch.Tensor = None,
-                position_ids: torch.Tensor = None,
+                padding_mask: Optional[torch.Tensor] = None,
+                position_ids: Optional[torch.Tensor] = None,
                 **kwargs
                 ) -> torch.Tensor:
         """
