@@ -2,15 +2,15 @@ from typing import Tuple, Optional, Union
 
 import torch
 
-
 from torch import nn
 
 from asme.models.layers.layers import ItemEmbedding
 from asme.models.layers.util_layers import get_activation_layer
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-class CaserModel(nn.Module):
+class CaserModel(SequenceRecommenderModel):
     """
         implementation of the Caser model proposed in
         Personalized Top-N Sequential Recommendation via Convolutional Sequence Embedding, Jiaxi Tang and Ke Wang, WSDM'18

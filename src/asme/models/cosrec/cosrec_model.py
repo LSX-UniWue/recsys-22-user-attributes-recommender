@@ -4,9 +4,10 @@ from typing import List
 
 from asme.models.layers.layers import ItemEmbedding
 from asme.models.layers.util_layers import get_activation_layer
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 
 
-class CosRecModel(nn.Module):
+class CosRecModel(SequenceRecommenderModel):
     """
     A 2D CNN for sequential Recommendation.
     Based on paper "CosRec: 2D Convolutional Neural Networks for Sequential Recommendation" which can be found at https://dl.acm.org/doi/10.1145/3357384.3358113.

@@ -2,10 +2,11 @@ import torch
 import torch.nn as nn
 
 from asme.models.layers.layers import ItemEmbedding
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-class HGNModel(nn.Module):
+class HGNModel(SequenceRecommenderModel):
 
     """
     The HGN model for Sequential Recommendation

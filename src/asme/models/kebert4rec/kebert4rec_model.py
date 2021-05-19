@@ -7,6 +7,7 @@ from asme.models.bert4rec.bert4rec_model import BERT4RecBaseModel
 from asme.models.layers.layers import PROJECT_TYPE_LINEAR
 from asme.models.layers.layers import build_projection_layer
 from asme.models.layers.transformer_layers import TransformerEmbedding
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
@@ -38,7 +39,7 @@ class LinearUpscaler(nn.Module):
         return self.linear(multi_hot)
 
 
-class KeBERT4RecModel(BERT4RecBaseModel):
+class KeBERT4RecModel(SequenceRecommenderModel):
 
     @save_hyperparameters
     def __init__(self,

@@ -5,6 +5,7 @@ import torch
 from torch import nn
 
 from asme.models.layers.layers import ItemEmbedding, PROJECT_TYPE_LINEAR, build_projection_layer
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
@@ -66,7 +67,7 @@ class LSTMSeqItemRecommenderModule(nn.Module):
         return outputs, final_state[0]
 
 
-class RNNModel(nn.Module):
+class RNNModel(SequenceRecommenderModel):
 
     @save_hyperparameters
     def __init__(self,

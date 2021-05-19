@@ -4,10 +4,11 @@ import torch
 import torch.nn as nn
 
 from asme.models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-class SASRecModel(nn.Module):
+class SASRecModel(SequenceRecommenderModel):
     """
     Implementation of the "Self-Attentive Sequential Recommendation" paper.
     see https://doi.org/10.1109%2fICDM.2018.00035 for more details

@@ -2,10 +2,11 @@ import torch
 import torch.nn as nn
 
 from asme.models.layers.layers import ItemEmbedding
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-class NarmModel(nn.Module):
+class NarmModel(SequenceRecommenderModel):
     """
         Implementation of "Neural Attentive Session-based Recommendation." (https://dl.acm.org/doi/10.1145/3132847.3132926).
 

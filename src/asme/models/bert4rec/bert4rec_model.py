@@ -5,10 +5,11 @@ from torch import nn
 
 from asme.models.layers.layers import build_projection_layer
 from asme.models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-class BERT4RecBaseModel(nn.Module):
+class BERT4RecBaseModel(SequenceRecommenderModel):
 
     @save_hyperparameters
     def __init__(self,
@@ -80,8 +81,8 @@ class BERT4RecBaseModel(nn.Module):
 
     def forward(self,
                 sequence: torch.Tensor,
-                position_ids: torch.Tensor = None,
                 padding_mask: torch.Tensor = None,
+                position_ids: torch.Tensor = None,
                 **kwargs
                 ) -> torch.Tensor:
         """
