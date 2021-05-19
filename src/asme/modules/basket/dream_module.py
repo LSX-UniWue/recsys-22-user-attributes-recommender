@@ -18,7 +18,7 @@ from asme.tokenization.tokenizer import Tokenizer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-# FIXME: maybe merge with RNNModule and make loss configurable
+# FIXME: merge with sequence_next_item_prediction module
 class DreamModule(MetricsTrait, pl.LightningModule):
 
     """
