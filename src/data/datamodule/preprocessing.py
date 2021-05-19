@@ -2,6 +2,7 @@ import copy
 import math
 import random
 from abc import abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, List, Any, Optional, Dict
@@ -9,10 +10,13 @@ from typing import Callable, List, Any, Optional, Dict
 import pandas as pd
 
 from asme.init.context import Context
+from asme.tokenization.tokenizer import Tokenizer
+from asme.tokenization.vocabulary import CSVVocabularyReaderWriter, Vocabulary
 from data.base.csv_index_builder import CsvSessionIndexer
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datamodule.converters import CsvConverter
 from data.datamodule.extractors import TargetPositionExtractor, FixedOffsetPositionExtractor
+from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.index_builder import SequencePositionIndexBuilder
 from data.datasets.sequence import ItemSessionParser, ItemSequenceDataset, PlainSequenceDataset
 from data.utils.csv import read_csv_header, create_indexed_header
@@ -75,9 +79,9 @@ class TransformCsv(PreprocessingAction):
     def apply(self, context: Context) -> None:
         current_file = context.get(MAIN_FILE_KEY)
         delimiter = context.get(DELIMITER_KEY)
-        df = pd.read_csv(current_file, delimiter=delimiter)
+        df = pd.read_csv(current_file, delimiter=delimiter, index_col=False)
         filtered = self.filter(df)
-        filtered.to_csv(current_file, sep=delimiter)
+        filtered.to_csv(current_file, sep=delimiter, index=False)
 
 
 @dataclass
@@ -170,7 +174,8 @@ class CreateNextItemIndex(PreprocessingAction):
 
 class CreateLeaveOneOutSplit(PreprocessingAction):
 
-    def __init__(self, column: str, training_target_offset=2, validation_target_offset=1, test_target_offset=0):
+    def __init__(self, column: str, training_target_offset=2, validation_target_offset=1, test_target_offset=0,
+                 inner_actions: List[PreprocessingAction] = None):
         """
         This action allows to create a leave-one-out split for a dataset.
 
@@ -185,6 +190,7 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
                                             sequence. For instance, setting this to 0 will yield item n as the target
                                             for a sequence of length n.
         """
+        self.inner_actions = [] if inner_actions is None else inner_actions
         self.column = column
         self.offsets = [training_target_offset, validation_target_offset, test_target_offset]
 
@@ -214,13 +220,18 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
             builder = SequencePositionIndexBuilder(target_positions_extractor=FixedOffsetPositionExtractor(offset))
             builder.build(dataset, output_file)
 
+        cloned = copy.deepcopy(context)
+        cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
+        for action in self.inner_actions:
+            action(cloned)
+
 
 class CreateVocabulary(PreprocessingAction):
 
     def __init__(self, columns: List[str],
-                 custom_tokens: List[str] = None):
+                 special_tokens: List[str] = None):
         self.columns = columns
-        self.custom_tokens = [] if custom_tokens is None else custom_tokens
+        self.special_tokens = [] if special_tokens is None else special_tokens
 
     def name(self) -> str:
         return f"Creating Vocabulary for columns: {self.columns}."
@@ -234,17 +245,21 @@ class CreateVocabulary(PreprocessingAction):
         for column in self.columns:
             output_file = output_dir / f"{prefix}.vocabulary.{column}.txt"
             create_token_vocabulary(column, main_file, session_index_path,
-                                    output_file, self.custom_tokens, delimiter, None)
+                                    output_file, self.special_tokens, delimiter, None)
 
 
 class CreateRatioSplit(PreprocessingAction):
 
     def __init__(self, train_percentage: float, validation_percentage: float, test_percentage: float,
-                 inner_actions: List[PreprocessingAction] = None):
+                 per_split_actions: List[PreprocessingAction] = None,
+                 complete_split_actions: List[PreprocessingAction] = None,
+                 update_paths: bool = True):
         self.test_percentage = test_percentage
         self.validation_percentage = validation_percentage
         self.train_percentage = train_percentage
-        self.inner_actions = [] if inner_actions is None else inner_actions
+        self.per_split_actions = [] if per_split_actions is None else per_split_actions
+        self.complete_split_actions = [] if complete_split_actions is None else complete_split_actions
+        self.update_paths = update_paths
 
     def name(self) -> str:
         return f"Creating ratio split ({self.train_percentage}/{self.validation_percentage}/{self.test_percentage})"
@@ -253,7 +268,8 @@ class CreateRatioSplit(PreprocessingAction):
         main_file = context.get(MAIN_FILE_KEY)
         delimiter = context.get(DELIMITER_KEY)
         header = delimiter.join(read_csv_header(main_file, delimiter))
-        output_dir = context.get(OUTPUT_DIR_KEY) / f"ratio_split-{self.train_percentage}_{self.validation_percentage}_{self.test_percentage}"
+        output_dir = context.get(OUTPUT_DIR_KEY) / \
+                     f"ratio_split-{self.train_percentage}_{self.validation_percentage}_{self.test_percentage}"
         session_index_path = context.get(SESSION_INDEX_KEY)
         session_index = CsvDatasetIndex(session_index_path)
         reader = CsvDatasetReader(main_file, session_index)
@@ -270,7 +286,9 @@ class CreateRatioSplit(PreprocessingAction):
 
         # Write individual CSVs and execute inner actions for each split
         for name, indices in split_indices.items():
-            self._process_split(context, name.name, header, reader, indices)
+            self._process_split(context, output_dir, name.name, header, reader, indices)
+
+        self._perform_complete_split_actions(context, output_dir)
 
     @staticmethod
     def _generate_split_indices(session_index: CsvDatasetIndex, split_ratios: Dict[SplitNames, float]):
@@ -296,9 +314,9 @@ class CreateRatioSplit(PreprocessingAction):
                                                validation_indices=splits[SplitNames.validation],
                                                test_indices=splits[SplitNames.test])
 
-    def _process_split(self, context: Context, name: str, header: str, reader: CsvDatasetReader, indices: List[int]):
+    def _process_split(self, context: Context, output_dir: Path, name: str, header: str, reader: CsvDatasetReader,
+                       indices: List[int]):
         prefix = format_prefix(context.get(PREFIXES_KEY) + [name])
-        output_dir = context.get(OUTPUT_DIR_KEY)
         output_file = output_dir / f"{prefix}.csv"
 
         # Write the CSV file for the current split
@@ -312,7 +330,23 @@ class CreateRatioSplit(PreprocessingAction):
         cloned.set(PREFIXES_KEY, current_prefixes + [name], overwrite=True)
 
         # Apply the necessary preprocessing, i.e. session index generation
-        for action in self.inner_actions:
+        for action in self.per_split_actions:
+            action(cloned)
+
+    def _perform_complete_split_actions(self, context: Context, split_output_dir: Path):
+        # Modify context such that the operations occur in the new output directory
+        cloned = copy.deepcopy(context)
+        cloned.set(OUTPUT_DIR_KEY, split_output_dir, overwrite=True)
+        # If enabled, change paths to point to the train split, e.g. for creating the vocabulary or popularities
+        if self.update_paths:
+            current_prefixes = context.get(PREFIXES_KEY)
+            train_prefix = current_prefixes + [SplitNames.train.name]
+            cloned.set(PREFIXES_KEY, train_prefix, overwrite=True)
+            cloned.set(MAIN_FILE_KEY, split_output_dir / f"{format_prefix(train_prefix)}.csv", overwrite=True)
+            cloned.set(SESSION_INDEX_KEY, split_output_dir / f"{format_prefix(train_prefix)}.session.idx",
+                       overwrite=True)
+
+        for action in self.complete_split_actions:
             action(cloned)
 
     @staticmethod
@@ -327,3 +361,63 @@ class CreateRatioSplit(PreprocessingAction):
     def _get_header(input_file: Path) -> str:
         with open(input_file, "r") as f:
             return f.readline().strip()
+
+
+class CreatePopularity(PreprocessingAction):
+    def __init__(self, columns: List[str]):
+        self.columns = columns
+
+    def name(self) -> str:
+        return f"Creating popularities for: {self.columns}"
+
+    def apply(self, context: Context) -> None:
+        main_file = context.get(MAIN_FILE_KEY)
+        output_dir = context.get(OUTPUT_DIR_KEY)
+        delimiter = context.get(DELIMITER_KEY)
+        prefixes = context.get(PREFIXES_KEY)
+        header = create_indexed_header(read_csv_header(main_file, delimiter))
+        session_index_path = context.get(SESSION_INDEX_KEY)
+        session_index = CsvDatasetIndex(session_index_path)
+        reader = CsvDatasetReader(main_file, session_index)
+        for column in self.columns:
+            session_parser = ItemSessionParser(header, column, delimiter=delimiter)
+            plain_dataset = PlainSequenceDataset(reader, session_parser)
+            dataset = ItemSequenceDataset(plain_dataset)
+            prefix = format_prefix(prefixes)
+
+            # Read the vocabulary for this column
+            vocabulary_path = output_dir / f"{prefix}.vocabulary.{column}.txt"
+            with open(vocabulary_path, "r") as f:
+                vocabulary = CSVVocabularyReaderWriter().read(f)
+
+            # Get occurrence count of every token
+            counts = self._count_items(dataset, vocabulary)
+            # Compute popularity
+            total_count = sum(counts.values())
+            popularities = [count / total_count for count in counts.values()]
+            # Save them to the correct file
+            output_file = output_dir / f"{prefix}.popularity.{column}.txt"
+            self._write_popularity(popularities, output_file)
+
+    def _count_items(self, dataset: ItemSequenceDataset, vocabulary: Vocabulary) -> Dict[int, int]:
+        tokenizer = Tokenizer(vocabulary)
+        counts = defaultdict(int)
+
+        for session_idx in range(len(dataset)):
+            session = dataset[session_idx]
+            items = session[ITEM_SEQ_ENTRY_NAME]
+            converted_tokens = tokenizer.convert_tokens_to_ids(items)
+            for token in converted_tokens:
+                counts[token] += 1
+
+        # Include special tokens in popularity
+        for special_token_id in tokenizer.get_special_token_ids():
+            if special_token_id not in counts:
+                counts[special_token_id] = 1
+
+        return counts
+
+    def _write_popularity(self, popularities: List[float], output_file: Path):
+        with open(output_file, 'w') as f:
+            for popularity in popularities:
+                f.write(f"{popularity}\n")

@@ -4,12 +4,11 @@ from asme.init.context import Context
 from data.datamodule.config import DatasetConfig
 from data.datamodule.preprocessing import ConvertToCsv, TransformCsv, CreateSessionIndex, \
     GroupAndFilter, GroupedFilter, CreateVocabulary, DELIMITER_KEY, EXTRACTED_DIRECTORY_KEY, \
-    OUTPUT_DIR_KEY, CreateRatioSplit, CreateNextItemIndex, CreateLeaveOneOutSplit
+    OUTPUT_DIR_KEY, CreateRatioSplit, CreateNextItemIndex, CreateLeaveOneOutSplit, CreatePopularity
 from data.datamodule.converters import YooChooseConverter, Movielens1MConverter
 from data.datamodule.extractors import RemainingSessionPositionExtractor
 from data.datamodule.unpacker import Unzipper
 from data.datamodule.preprocessing import PREFIXES_KEY
-from datasets.dataset_index_splits.conditional_split import _build_target_position_extractor
 
 
 def get_movielens_1m_config(output_directory: Path,
@@ -23,19 +22,24 @@ def get_movielens_1m_config(output_directory: Path,
     context.set(EXTRACTED_DIRECTORY_KEY, extraction_directory)
     context.set(OUTPUT_DIR_KEY, output_directory)
 
+    special_tokens = ["<PAD>", "<MASK>", "<UNK>"]
+    columns = ["rating", "gender", "age", "occupation", "zip", "title", "genres"]
     preprocessing_actions = [ConvertToCsv(Movielens1MConverter()),
-                             # TransformCsv(main_file, main_file, functools.partial(
-                             #    Movielens1MConverter.filter_ratings,
-                             #    min_item_feedback=min_item_feedback,
-                             #    min_user_feedback=min_user_feedback)),
                              GroupAndFilter("movieId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
                              GroupAndFilter("userId", GroupedFilter("count", lambda v: v >= min_sequence_length)),
                              CreateSessionIndex(["userId"]),
-                             CreateVocabulary(["rating", "gender", "age", "occupation", "zip", "title", "genres"]),
                              CreateRatioSplit(0.8, 0.1, 0.1,
+                                              per_split_actions=
                                               [CreateSessionIndex(["userId"]),
-                                               CreateNextItemIndex("title", RemainingSessionPositionExtractor(min_sequence_length))]),
-                             CreateLeaveOneOutSplit("title")]
+                                               CreateNextItemIndex("title", RemainingSessionPositionExtractor(min_sequence_length))],
+                                              complete_split_actions=
+                                              [CreateVocabulary(columns, special_tokens=special_tokens),
+                                               CreatePopularity(columns)]),
+                             CreateLeaveOneOutSplit("title",
+                                                    inner_actions=
+                                                    [CreateNextItemIndex("title", RemainingSessionPositionExtractor(min_sequence_length)),
+                                                     CreateVocabulary(columns, special_tokens),
+                                                     CreatePopularity(columns)])]
     return DatasetConfig("ml-1m",
                          "http://files.grouplens.org/datasets/movielens/ml-1m.zip",
                          output_directory,
