@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from typing import List, Optional
+from typing import List, Optional, Tuple, Union
 
 from asme.models.layers.layers import ItemEmbedding
 from asme.models.layers.util_layers import get_activation_layer
@@ -11,9 +11,9 @@ from data.datasets import USER_ENTRY_NAME
 class CosRecModel(SequenceRecommenderModel):
     """
     A 2D CNN for sequential Recommendation.
-    Based on paper "CosRec: 2D Convolutional Neural Networks for Sequential Recommendation" which can be found at https://dl.acm.org/doi/10.1145/3357384.3358113.
+    Based on paper "CosRec: 2D Convolutional Neural Networks for Sequential Recommendation" which can be found at
+    https://dl.acm.org/doi/10.1145/3357384.3358113.
     Original code used for this model is available at: https://github.com/zzxslp/CosRec.
-
 
     Args:
         user_vocab_size: number of users.
@@ -62,7 +62,7 @@ class CosRecModel(SequenceRecommenderModel):
         self.fc1 = nn.Linear(self.cnn_out_dim, self.fc_dim)
         self.activation_function = get_activation_layer(activation_function)
 
-        # build cnnBlock
+        # build cnn block
         self.block_num = block_num
         block_dim.insert(0, 2 * embed_dim)  # adds first input dimension of first cnn block
         # holds submodules in a list
@@ -77,11 +77,11 @@ class CosRecModel(SequenceRecommenderModel):
 
     def forward(self,
                 sequence: torch.Tensor,
-                item_to_predict: torch.Tensor,
+                positive_items: torch.Tensor,
+                negative_items: Optional[torch.Tensor] = None,
                 padding_mask: Optional[torch.Tensor] = None,
-                user: Optional[torch.Tensor] = None,
-                eval: bool = False
-                ) -> torch.Tensor:
+                user: Optional[torch.Tensor] = None
+                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Args:
             sequence: torch.Tensor with size :math`(N, S)`
@@ -89,12 +89,13 @@ class CosRecModel(SequenceRecommenderModel):
             user: torch.Tensor with size :math`(N)`
                 a batch of user
             padding_mask: torch.Tensor with size :math`(N, S)` note: not used
-            item_to_predict: torch.Tensor with size :math`(N)`
+            positive_items: torch.Tensor with size :math`(N, PI)`
                 a batch of items
+            negative_items: torch.Tensor with size :math`(N, NI)`
             eval: boolean, optional
                 Train or Prediction. Set to True when evaluation.
 
-            where N is the batch size and S the max sequence length
+            where N is the batch size, S the max sequence length, PI the positive item size, NI the negative item size
         """
 
         item_embs = self.item_embeddings(sequence)  # (N, S, D)
@@ -122,20 +123,26 @@ class CosRecModel(SequenceRecommenderModel):
 
         if user is not None:
             user_emb = self.user_embeddings(user)  # (N, D)
-            x = torch.cat([out, user_emb], 1)  # (N,
+            x = torch.cat([out, user_emb], 1)  # (N, 2 * D)
         else:
             x = out
 
-        # FIXME: remove
-        unsqueeze = item_to_predict
-        w2 = self.W2(unsqueeze)
-        b2 = self.b2(unsqueeze)
-        # TODO: should not be necessary for eval, please check
-        #if eval:
-        #    w2 = w2.squeeze()       # removed: b2 = b2.squeeze
-        #    return (x * w2).sum(1) + b2
+        w2 = self.W2(positive_items)  # (N, I, F_D)
+        b2 = self.b2(positive_items)  # (N, I, 1)
 
-        return torch.baddbmm(b2, w2, x.unsqueeze(2)).squeeze()
+        x = x.unsqueeze(2)
+        # TODO: use torch.einsum('nif,nf -> ni', w2, x) + b2.squeeze()
+        positive_score = torch.baddbmm(b2, w2, x).squeeze()
+
+        if negative_items is None:
+            return positive_score
+
+        w2_negative_items = self.W2(negative_items)
+        b2_negative_items = self.b2(negative_items)
+
+        negative_score = torch.baddbmm(b2_negative_items, w2_negative_items, x).squeeze()
+
+        return positive_score, negative_score
 
     def optional_metadata_keys(self) -> List[str]:
         return [USER_ENTRY_NAME]

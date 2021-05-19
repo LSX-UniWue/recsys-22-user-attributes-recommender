@@ -69,11 +69,8 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
 
         pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]  # (N, 3)
         neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]  # (N, 3)
-        items_to_predict = torch.cat((pos_items, neg_items), 1)
-        logits = self.model(input_seq, items_to_predict, **additional_metadata)
-        (pos_logits, neg_logits) = torch.split(logits,
-                                               [pos_items.size(1),
-                                                neg_items.size(1)], dim=1)
+        pos_logits, neg_logits = self.model(input_seq, pos_items, negative_items=neg_items, **additional_metadata)
+
         loss = self._calc_loss(pos_logits, neg_logits)
         self.log(LOG_KEY_TRAINING_LOSS, loss)
         return {
@@ -119,7 +116,7 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
         device = input_seq.device
         items_to_rank = torch.as_tensor(self.item_tokenizer.get_vocabulary().ids(), dtype=torch.long, device=device)
         items_to_rank = items_to_rank.repeat([batch_size, 1])
-        prediction = self.model(input_seq, items_to_rank, eval=True, **additional_metadata)
+        prediction = self.model(input_seq, items_to_rank, **additional_metadata)
         return build_eval_step_return_dict(input_seq, prediction, targets)
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
