@@ -17,7 +17,7 @@ from asme.tokenization.tokenizer import Tokenizer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-class MaskedTrainingBaseModule(MetricsTrait, pl.LightningModule):
+class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
     """
     base module to train a model using the masking restore objective:
     in the sequence items are masked randomly and the model must predict the masked items
@@ -35,6 +35,7 @@ class MaskedTrainingBaseModule(MetricsTrait, pl.LightningModule):
                  model: nn.Module,
                  item_tokenizer: Tokenizer,
                  metrics: MetricsContainer,
+                 additional_attributes: List[str] = None,
                  learning_rate: float = 0.001,
                  beta_1: float = 0.99,
                  beta_2: float = 0.998,
@@ -42,6 +43,12 @@ class MaskedTrainingBaseModule(MetricsTrait, pl.LightningModule):
                  num_warmup_steps: int = 10000
                  ):
         super().__init__()
+
+        if additional_attributes is None:
+            additional_attributes = []
+
+        self.attributes = additional_attributes
+
         self.model = model
 
         self.learning_rate = learning_rate
@@ -61,7 +68,16 @@ class MaskedTrainingBaseModule(MetricsTrait, pl.LightningModule):
                 batch: Dict[str, torch.Tensor],
                 batch_idx: int
                 ) -> torch.Tensor:
-        return self._forward_internal(batch, batch_idx)
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        position_ids = MaskedTrainingModule.get_position_ids(batch)
+
+        # calc the padding mask
+        padding_mask = get_padding_mask(sequence=input_seq, tokenizer=self.item_tokenizer)
+
+        attribute_sequences = self._get_attribute_sequences(batch)
+
+        # call the model
+        return self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids, **attribute_sequences)
 
     @abstractmethod
     def _forward_internal(self, batch: Dict[str, torch.Tensor],
@@ -189,52 +205,6 @@ class MaskedTrainingBaseModule(MetricsTrait, pl.LightningModule):
             ]
             return [optimizer], schedulers
         return [optimizer]
-
-
-class MaskedTrainingModule(MaskedTrainingBaseModule):
-    """
-    A module that trains a model based on masking items in a sequence randomly and tries to restore the mask item
-    """
-
-    @save_hyperparameters
-    def __init__(self,
-                 model: nn.Module,
-                 item_tokenizer: Tokenizer,
-                 metrics: MetricsContainer,
-                 additional_attributes: List[str] = None,
-                 learning_rate: float = 0.001,
-                 beta_1: float = 0.99,
-                 beta_2: float = 0.998,
-                 weight_decay: float = 0.001,
-                 num_warmup_steps: int = 10000
-                 ):
-        super().__init__(model=model,
-                         item_tokenizer=item_tokenizer,
-                         metrics=metrics,
-                         learning_rate=learning_rate,
-                         beta_1=beta_1,
-                         beta_2=beta_2,
-                         weight_decay=weight_decay,
-                         num_warmup_steps=num_warmup_steps)
-
-        if additional_attributes is None:
-            additional_attributes = []
-
-        self.attributes = additional_attributes
-
-    def _forward_internal(self, batch: Dict[str, torch.Tensor],
-                          batch_idx: int
-                          ) -> torch.Tensor:
-        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        position_ids = MaskedTrainingModule.get_position_ids(batch)
-
-        # calc the padding mask
-        padding_mask = get_padding_mask(sequence=input_seq, tokenizer=self.item_tokenizer)
-
-        attribute_sequences = self._get_attribute_sequences(batch)
-
-        # call the model
-        return self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids, **attribute_sequences)
 
     def _get_attribute_sequences(self,
                                  batch: Dict[str, torch.Tensor]
