@@ -8,11 +8,13 @@ from typing import Union, Dict, Optional, Any, List
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
 from asme.metrics.container.metrics_container import MetricsContainer
 from asme.modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TEST_LOSS, LOG_KEY_TRAINING_LOSS
 from asme.modules.metrics_trait import MetricsTrait
-from asme.modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
+from asme.modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict, \
+    get_additional_meta_data
 from asme.tokenization.tokenizer import Tokenizer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
@@ -32,10 +34,9 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
 
     @save_hyperparameters
     def __init__(self,
-                 model: nn.Module,
+                 model: SequenceRecommenderModel,
                  item_tokenizer: Tokenizer,
                  metrics: MetricsContainer,
-                 additional_attributes: List[str] = None,
                  learning_rate: float = 0.001,
                  beta_1: float = 0.99,
                  beta_2: float = 0.998,
@@ -43,11 +44,6 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
                  num_warmup_steps: int = 10000
                  ):
         super().__init__()
-
-        if additional_attributes is None:
-            additional_attributes = []
-
-        self.attributes = additional_attributes
 
         self.model = model
 
@@ -74,16 +70,10 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
         # calc the padding mask
         padding_mask = get_padding_mask(sequence=input_seq, tokenizer=self.item_tokenizer)
 
-        attribute_sequences = self._get_attribute_sequences(batch)
+        additional_metadata = get_additional_meta_data(self.model, batch)
 
         # call the model
-        return self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids, **attribute_sequences)
-
-    @abstractmethod
-    def _forward_internal(self, batch: Dict[str, torch.Tensor],
-                          batch_idx: int
-                          ) -> torch.Tensor:
-        pass
+        return self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids, **additional_metadata)
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
@@ -205,10 +195,3 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
             ]
             return [optimizer], schedulers
         return [optimizer]
-
-    def _get_attribute_sequences(self,
-                                 batch: Dict[str, torch.Tensor]
-                                 ) -> Dict[str, torch.Tensor]:
-        return {
-            attribute: batch[attribute] for attribute in self.attributes
-        }

@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 import torch
 from torch import nn

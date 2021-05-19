@@ -3,15 +3,15 @@ from typing import Union, Dict, Optional
 import torch
 
 import pytorch_lightning as pl
-from torch import nn
 
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.modules import LOG_KEY_TRAINING_LOSS
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
-    NEGATIVE_SAMPLES_ENTRY_NAME, USER_ENTRY_NAME
+    NEGATIVE_SAMPLES_ENTRY_NAME
 from asme.losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
 from asme.metrics.container.metrics_container import MetricsContainer
 from asme.modules.metrics_trait import MetricsTrait
-from asme.modules.util.module_util import get_padding_mask, build_eval_step_return_dict
+from asme.modules.util.module_util import get_padding_mask, build_eval_step_return_dict, get_additional_meta_data
 from asme.tokenization.tokenizer import Tokenizer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
@@ -24,7 +24,7 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
 
     @save_hyperparameters
     def __init__(self,
-                 model: nn.Module,
+                 model: SequenceRecommenderModel,
                  item_tokenizer: Tokenizer,
                  metrics: MetricsContainer,
                  learning_rate: float = 0.001,
@@ -81,7 +81,7 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
 
         # add users and other meta data (XXX: currently only users)
-        additional_meta_data = self._get_additional_meta_data(batch)
+        additional_meta_data = get_additional_meta_data(self.model, batch)
 
         pos = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
@@ -139,7 +139,7 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
 
         # add users and other meta data (XXX: currently only users)
-        additional_meta_data = self._get_additional_meta_data(batch)
+        additional_meta_data = get_additional_meta_data(self.model, batch)
 
         # calc the padding mask
         padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
@@ -158,13 +158,3 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
                                 lr=self.learning_rate,
                                 betas=(self.beta_1, self.beta_2),
                                 weight_decay=self.weight_decay)
-
-    def _get_additional_meta_data(self,
-                                  batch: Dict[str, torch.Tensor]
-                                  ) -> Dict[str, torch.Tensor]:
-        if USER_ENTRY_NAME in batch:
-            return {
-                'user': batch[USER_ENTRY_NAME]
-            }
-
-        return {}

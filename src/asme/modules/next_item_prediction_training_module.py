@@ -5,11 +5,13 @@ import torch
 import pytorch_lightning as pl
 from pytorch_lightning.core.decorators import auto_move_data
 
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from asme.metrics.container.metrics_container import MetricsContainer
 from asme.modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TRAINING_LOSS
 from asme.modules.metrics_trait import MetricsTrait
-from asme.modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
+from asme.modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict, \
+    get_additional_meta_data
 from asme.tokenization.tokenizer import Tokenizer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
@@ -27,7 +29,7 @@ class NextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
 
     @save_hyperparameters
     def __init__(self,
-                 model: nn.Module,
+                 model: SequenceRecommenderModel,
                  item_tokenizer: Tokenizer,
                  metrics: MetricsContainer,
                  learning_rate: float = 0.001,
@@ -72,10 +74,12 @@ class NextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
 
         Where N is the batch size, S the max sequence length, and I the item vocabulary size.
         """
+        additional_meta_data = get_additional_meta_data(self.model, batch)
+
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
 
-        return self.model(input_seq, padding_mask)
+        return self.model(input_seq, padding_mask, **additional_meta_data)
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],

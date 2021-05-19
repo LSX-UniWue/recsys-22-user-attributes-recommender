@@ -9,8 +9,9 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME, USER_ENTRY_NAME, POSITIVE_SAMPLES
 from asme.metrics.container.metrics_container import MetricsContainer
 from asme.models.cosrec.cosrec_model import CosRecModel
 from asme.modules.metrics_trait import MetricsTrait
-from asme.modules.util.module_util import build_eval_step_return_dict
+from asme.modules.util.module_util import build_eval_step_return_dict, get_additional_meta_data
 from asme.tokenization.tokenizer import Tokenizer
+
 
 # FIXME: merge with SequenceNextItemPredictionTrainingModule
 class CosRecModule(MetricsTrait, pl.LightningModule):
@@ -64,11 +65,12 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
         :return: the total loss
         """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        users = CosRecModule.get_users_from_batch(batch)
+        additional_metadata = get_additional_meta_data(self.model, batch)
+
         pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]  # (N, 3)
         neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]  # (N, 3)
         items_to_predict = torch.cat((pos_items, neg_items), 1)
-        logits = self.model(input_seq, users, items_to_predict)
+        logits = self.model(input_seq, items_to_predict, **additional_metadata)
         (pos_logits, neg_logits) = torch.split(logits,
                                                [pos_items.size(1),
                                                 neg_items.size(1)], dim=1)
@@ -108,7 +110,8 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
         """
 
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        users = CosRecModule.get_users_from_batch(batch)
+        additional_metadata = get_additional_meta_data(self.model, batch)
+
         targets = batch[TARGET_ENTRY_NAME]
         batch_size = input_seq.size()[0]
 
@@ -116,7 +119,7 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
         device = input_seq.device
         items_to_rank = torch.as_tensor(self.item_tokenizer.get_vocabulary().ids(), dtype=torch.long, device=device)
         items_to_rank = items_to_rank.repeat([batch_size, 1])
-        prediction = self.model(input_seq, users, items_to_rank, eval=True)
+        prediction = self.model(input_seq, items_to_rank, eval=True, **additional_metadata)
         return build_eval_step_return_dict(input_seq, prediction, targets)
 
     def test_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:

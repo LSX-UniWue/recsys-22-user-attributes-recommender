@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Union
+from typing import Tuple, Optional, Union, List
 
 import torch
 
@@ -8,6 +8,7 @@ from asme.models.layers.layers import ItemEmbedding
 from asme.models.layers.util_layers import get_activation_layer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
+from data.datasets import USER_ENTRY_NAME
 
 
 class CaserModel(SequenceRecommenderModel):
@@ -174,6 +175,9 @@ class CaserModel(SequenceRecommenderModel):
         neg_b2 = self.b2(negative_items)
         res_negative = torch.baddbmm(neg_b2, neg_w2, x).squeeze()
         return res_pos, res_negative
+
+    def optional_metadata_keys(self) -> List[str]:
+        return [USER_ENTRY_NAME]
 
 
 class CaserHorizontalConvNet(nn.Module):

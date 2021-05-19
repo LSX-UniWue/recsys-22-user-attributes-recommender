@@ -5,6 +5,7 @@ from typing import List, Optional
 from asme.models.layers.layers import ItemEmbedding
 from asme.models.layers.util_layers import get_activation_layer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
+from data.datasets import USER_ENTRY_NAME
 
 
 class CosRecModel(SequenceRecommenderModel):
@@ -76,9 +77,9 @@ class CosRecModel(SequenceRecommenderModel):
 
     def forward(self,
                 sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor],
-                user: torch.Tensor,
                 item_to_predict: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                user: Optional[torch.Tensor] = None,
                 eval: bool = False
                 ) -> torch.Tensor:
         """
@@ -135,6 +136,9 @@ class CosRecModel(SequenceRecommenderModel):
         #    return (x * w2).sum(1) + b2
 
         return torch.baddbmm(b2, w2, x.unsqueeze(2)).squeeze()
+
+    def optional_metadata_keys(self) -> List[str]:
+        return [USER_ENTRY_NAME]
 
 
 class CNNBlock(nn.Module):

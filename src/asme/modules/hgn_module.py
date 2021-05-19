@@ -9,7 +9,7 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME, USER_ENTRY_NAME, POSITIVE_SAMPLES
 from asme.metrics.container.metrics_container import MetricsContainer
 from asme.models.hgn.hgn_model import HGNModel
 from asme.modules.metrics_trait import MetricsTrait
-from asme.modules.util.module_util import build_eval_step_return_dict
+from asme.modules.util.module_util import build_eval_step_return_dict, get_additional_meta_data
 from asme.tokenization.tokenizer import Tokenizer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
@@ -66,12 +66,13 @@ class HGNModule(MetricsTrait, pl.LightningModule):
         :return: the total loss
         """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        users = HGNModule.get_users_from_batch(batch)
+
         pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
         target = torch.cat((pos_items, neg_items), 1)
 
-        logits = self.model(input_seq, users, target, False)
+        additional_metadata = get_additional_meta_data(self.model, batch)
+        logits = self.model(input_seq, target, padding_mask=None, for_pred=False, **additional_metadata)
 
         (targets_prediction, negatives_prediction) = torch.split(
             logits, [pos_items.size(1), neg_items.size(1)], dim=1)
@@ -108,7 +109,7 @@ class HGNModule(MetricsTrait, pl.LightningModule):
         :return: A dictionary with entries according to `build_eval_step_return_dict`.
         """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        users = HGNModule.get_users_from_batch(batch)
+        additional_metadata = get_additional_meta_data(self.model, batch)
         targets = batch[TARGET_ENTRY_NAME]
 
         batch_size = input_seq.size()[0]
@@ -121,7 +122,7 @@ class HGNModule(MetricsTrait, pl.LightningModule):
         #items_to_rank = items_to_rank.repeat([batch_size, 1]) # (N, I)
         # TODO items_to_rank muss eindimensional sein! shape(I)
 
-        prediction = self.model(input_seq, users, items_to_rank, True) # (N, I) # True
+        prediction = self.model(input_seq, items_to_rank, padding_mask=None, for_pred=True, **additional_metadata) # (N, I) # True
 
        #(targets_prediction, negatives_prediction) = torch.split(
       #      logits, [pos_items.size(1), neg_items.size(1)], dim=1)

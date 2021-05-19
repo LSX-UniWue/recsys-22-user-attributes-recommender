@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 import torch
 import torch.nn as nn
@@ -6,6 +6,7 @@ import torch.nn as nn
 from asme.models.layers.layers import ItemEmbedding
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
+from data.datasets import USER_ENTRY_NAME
 
 
 class HGNModel(SequenceRecommenderModel):
@@ -72,17 +73,18 @@ class HGNModel(SequenceRecommenderModel):
 
     def forward(self,
                 sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor],
-                user: torch.Tensor,
                 items_to_predict: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                user: Optional[torch.Tensor] = None,
                 for_pred: bool = False
                 ) -> torch.Tensor:
         """
         Forward pass
 
         :param sequence: the sequence :math:'(N, S)'
-        :param user: the user ids for each batch :math:'(N)'
         :param items_to_predict: the target items for each sequence :math:'(N, I)'
+        :param padding_mask: the padding mask :math:'(N, S)'
+        :param user: the user ids for each batch :math:'(N)'
         :param for_pred: true if logits are used for prediction
         :return: the logits of the predicted tokens :math:'(N, I)'
 
@@ -151,3 +153,6 @@ class HGNModel(SequenceRecommenderModel):
             rel_score = torch.sum(rel_score, dim=1)  # (N, I)
             res += rel_score  # (N, I)
         return res
+
+    def optional_metadata_keys(self) -> List[str]:
+        return [USER_ENTRY_NAME]
