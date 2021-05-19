@@ -25,7 +25,6 @@ from asme.modules.baselines.pop_module import PopModule
 from asme.modules.baselines.session_pop_module import SessionPopModule
 from asme.modules.basket.dream_module import DreamModule
 from asme.modules.basket.nnrec_module import NNRecModule
-from asme.modules.cosrec_module import CosRecModule
 from asme.modules.masked_training_module import MaskedTrainingModule
 from asme.modules.next_item_prediction_training_module import NextItemPredictionTrainingModule
 from asme.modules.sequence_next_item_prediction_training_module import SequenceNextItemPredictionTrainingModule
@@ -39,12 +38,16 @@ class ContainerFactory(ObjectFactory):
             [
                 ConditionalFactory('type', {'kebert4rec': GenericModuleFactory(MaskedTrainingModule, KeBERT4RecModel),
                                             'bert4rec': GenericModuleFactory(MaskedTrainingModule, BERT4RecModel),
-                                            'caser': GenericModuleFactory(SequenceNextItemPredictionTrainingModule, CaserModel),
+                                            'caser': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
+                                                                          CaserModel),
                                             'narm': GenericModuleFactory(NextItemPredictionTrainingModule, NarmModel),
-                                            'sasrec': GenericModuleFactory(SequenceNextItemPredictionTrainingModule, SASRecModel),
+                                            'sasrec': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
+                                                                           SASRecModel),
                                             'rnn': GenericModuleFactory(NextItemPredictionTrainingModule, RNNModel),
-                                            'cosrec': GenericModuleFactory(CosRecModule, CosRecModel),
-                                            'hgn': GenericModuleFactory(CosRecModule, HGNModel),
+                                            'cosrec': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
+                                                                           CosRecModel),
+                                            'hgn': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
+                                                                        HGNModel),
                                             'dream': GenericModuleFactory(DreamModule, RNNModel),
                                             'nnrec': GenericModuleFactory(NNRecModule, NNRecModel),
                                             'pop': GenericModuleFactory(PopModule, None),

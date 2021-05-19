@@ -19,7 +19,13 @@ from asme.utils.hyperparameter_utils import save_hyperparameters
 class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
 
     """
-    the module for training a SASRec model
+    the module for training a model using a sequence and positve and negative items based on the sequence
+
+    models that can be trained with this module are:
+    - SASRec
+    - Caser
+    - CosRec
+    - HGN
     """
 
     @save_hyperparameters
@@ -33,7 +39,7 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
                  weight_decay: float = 1e-3
                  ):
         """
-        inits the SASRec module
+        inits the training module
         :param model: the model to train
         :param learning_rate: the learning rate
         :param beta_1: the beta1 of the adam optimizer
@@ -91,14 +97,28 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
         pos_logits, neg_logits = self.model(input_seq, pos, negative_items=neg, padding_mask=padding_mask,
                                             **additional_meta_data)
 
-        # FIXME: use other loss for caser, …
-        loss_func = SASRecBinaryCrossEntropyLoss()
-        loss = loss_func(pos_logits, neg_logits, mask=padding_mask)
-
+        loss = self._calc_loss(pos_logits, neg_logits, padding_mask)
         self.log(LOG_KEY_TRAINING_LOSS, loss)
         return {
             "loss": loss
         }
+
+    def _calc_loss(self,
+                   pos_logits: torch.Tensor,
+                   neg_logits: torch.Tensor,
+                   padding_mask: torch.Tensor
+                   ) -> torch.Tensor:
+        loss_func = SASRecBinaryCrossEntropyLoss()
+        return loss_func(pos_logits, neg_logits, mask=padding_mask)
+        # bpr loss? from hgn
+        #loss = - torch.log(torch.sigmoid(positive_logits - negative_logits) + 1e-8)
+        #loss = torch.mean(torch.sum(loss))
+
+        # cosrec loss
+        # compute the binary cross-entropy loss
+        # positive_loss = -torch.mean(torch.log(torch.sigmoid(pos_logits)))
+        # negative_loss = -torch.mean(torch.log(1 - torch.sigmoid(neg_logits)))
+        # return positive_loss + negative_loss
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
