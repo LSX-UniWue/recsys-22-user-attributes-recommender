@@ -2,30 +2,33 @@ from typing import Union, Dict, Optional
 
 import pytorch_lightning as pl
 import torch
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 
 from asme.modules import LOG_KEY_TRAINING_LOSS
+from asme.utils.hyperparameter_utils import save_hyperparameters
 from data.datasets import ITEM_SEQ_ENTRY_NAME, USER_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME, TARGET_ENTRY_NAME
 from asme.metrics.container.metrics_container import MetricsContainer
-from asme.models.cosrec.cosrec_model import CosRecModel
 from asme.modules.metrics_trait import MetricsTrait
 from asme.modules.util.module_util import build_eval_step_return_dict, get_additional_meta_data
 from asme.tokenization.tokenizer import Tokenizer
 
 
-# FIXME: merge with SequenceNextItemPredictionTrainingModule
+# FIXME: merge with SequenceNextItemPredictionTrainingModule?
 class CosRecModule(MetricsTrait, pl.LightningModule):
+
     @staticmethod
     def get_users_from_batch(batch: Dict[str, torch.Tensor]
                              ) -> Optional[torch.Tensor]:
         return batch[USER_ENTRY_NAME] if USER_ENTRY_NAME in batch else None
 
+    @save_hyperparameters
     def __init__(self,
-                 model: CosRecModel,
+                 model: SequenceRecommenderModel,
                  item_tokenizer: Tokenizer,
-                 learning_rate: float,
-                 weight_decay: float,
                  metrics: MetricsContainer,
+                 learning_rate: float = 0.001,
+                 weight_decay: float = 1e-3
                  ):
         super().__init__()
         self.model = model
@@ -34,15 +37,10 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
         self.weight_decay = weight_decay
         self.metrics = metrics
 
+        self.save_hyperparameters(self.hyperparameters)
+
     def get_metrics(self) -> MetricsContainer:
         return self.metrics
-
-    def configure_optimizers(self):
-        return torch.optim.Adam(
-            self.parameters(),
-            lr=self.learning_rate,
-            weight_decay=self.weight_decay
-        )
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
@@ -66,12 +64,13 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
         """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         additional_metadata = get_additional_meta_data(self.model, batch)
-
         pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]  # (N, 3)
         neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]  # (N, 3)
-        pos_logits, neg_logits = self.model(input_seq, pos_items, negative_items=neg_items, **additional_metadata)
 
-        loss = self._calc_loss(pos_logits, neg_logits)
+        positive_logits, negative_logits = self.model(input_seq, pos_items, negative_items=neg_items,
+                                                      **additional_metadata)
+
+        loss = self._calc_loss(positive_logits, negative_logits)
         self.log(LOG_KEY_TRAINING_LOSS, loss)
         return {
             'loss': loss
@@ -81,10 +80,21 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
                    pos_logits: torch.Tensor,
                    neg_logits: torch.Tensor
                    ) -> torch.Tensor:
+        # bpr loss? from hgn
+        #loss = - torch.log(torch.sigmoid(positive_logits - negative_logits) + 1e-8)
+        #loss = torch.mean(torch.sum(loss))
+
         # compute the binary cross-entropy loss
         positive_loss = -torch.mean(torch.log(torch.sigmoid(pos_logits)))
         negative_loss = -torch.mean(torch.log(1 - torch.sigmoid(neg_logits)))
         return positive_loss + negative_loss
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(
+            self.parameters(),
+            lr=self.learning_rate,
+            weight_decay=self.weight_decay
+        )
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
@@ -105,7 +115,6 @@ class CosRecModule(MetricsTrait, pl.LightningModule):
 
         Where N is the batch size and S the max sequence length.
         """
-
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         additional_metadata = get_additional_meta_data(self.model, batch)
 

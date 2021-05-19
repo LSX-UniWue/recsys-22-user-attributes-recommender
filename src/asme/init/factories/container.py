@@ -27,7 +27,6 @@ from asme.modules.basket.dream_module import DreamModule
 from asme.modules.basket.nnrec_module import NNRecModule
 from asme.modules.cosrec_module import CosRecModule
 from asme.modules.masked_training_module import MaskedTrainingModule
-from asme.modules.hgn_module import HGNModule
 from asme.modules.next_item_prediction_training_module import NextItemPredictionTrainingModule
 from asme.modules.sequence_next_item_prediction_training_module import SequenceNextItemPredictionTrainingModule
 
@@ -45,7 +44,7 @@ class ContainerFactory(ObjectFactory):
                                             'sasrec': GenericModuleFactory(SequenceNextItemPredictionTrainingModule, SASRecModel),
                                             'rnn': GenericModuleFactory(NextItemPredictionTrainingModule, RNNModel),
                                             'cosrec': GenericModuleFactory(CosRecModule, CosRecModel),
-                                            'hgn': GenericModuleFactory(HGNModule, HGNModel),
+                                            'hgn': GenericModuleFactory(CosRecModule, HGNModel),
                                             'dream': GenericModuleFactory(DreamModule, RNNModel),
                                             'nnrec': GenericModuleFactory(NNRecModule, NNRecModel),
                                             'pop': GenericModuleFactory(PopModule, None),

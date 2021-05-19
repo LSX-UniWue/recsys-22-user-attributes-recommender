@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Union, Tuple
 
 import torch
 import torch.nn as nn
@@ -73,25 +73,27 @@ class HGNModel(SequenceRecommenderModel):
 
     def forward(self,
                 sequence: torch.Tensor,
-                items_to_predict: torch.Tensor,
+                positive_items: torch.Tensor,
                 padding_mask: Optional[torch.Tensor] = None,
-                user: Optional[torch.Tensor] = None,
-                for_pred: bool = False
-                ) -> torch.Tensor:
+                negative_items: Optional[torch.Tensor] = None,
+                user: Optional[torch.Tensor] = None
+                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Forward pass
 
         :param sequence: the sequence :math:'(N, S)'
-        :param items_to_predict: the target items for each sequence :math:'(N, I)'
+        :param positive_items: the target items for each sequence :math:'(N, PI)'
         :param padding_mask: the padding mask :math:'(N, S)'
+        :param negative_items: the negative items for each sequence :math:'(N, NI)'
         :param user: the user ids for each batch :math:'(N)'
-        :param for_pred: true if logits are used for prediction
         :return: the logits of the predicted tokens :math:'(N, I)'
 
         where
             S is the (max) sequence length of the batch,
             N is the batch size,
-            D is the dimensions, and
+            D is the dimensions,
+            PI is the number of positive (target) samples
+            NI is the number of negative samples, and
             I is the number of items
         """
         item_embs = self.item_embeddings(sequence)
@@ -120,39 +122,37 @@ class HGNModel(SequenceRecommenderModel):
         union_out = torch.sum(union_out, dim=1)
         union_out = union_out / torch.sum(instance_score, dim=1).unsqueeze(1)  # (N, D)
 
-        w2 = self.W2(items_to_predict)  # (N, I, D) for train, (I, D) for prediction
-        b2 = self.b2(items_to_predict)  # (N, I, 1) for train, (I, 1) for prediction
+        positive_item_score = self._calc_scores(positive_items, union_out, item_embs, user_emb)
 
-        if for_pred:
-            w2 = w2.squeeze()  # (I, D)
-            b2 = b2.squeeze()  # (I)
+        if negative_items is None:
+            return positive_item_score  # (N, I)
 
-            # Matrix Factorization
-            if user_provided:
-                res = user_emb.mm(w2.t()) + b2  # (N, I)
-                # union-level
-                res += union_out.mm(w2.t())  # (N, I)
-            else:
-                res = union_out.mm(w2.t())  # (N, I)
+        negative_item_score = self._calc_scores(negative_items, union_out, item_embs, user_emb)
 
-            # item-item product (to model the relation between two single items)
-            rel_score = torch.matmul(item_embs, w2.t().unsqueeze(0))  # (B, L?, I)
-            rel_score = torch.sum(rel_score, dim=1)  # (B, I)
-            res += rel_score # (B, I)
+        return positive_item_score, negative_item_score
+
+    def _calc_scores(self,
+                     items: torch.Tensor,
+                     sequence_representation: torch.Tensor,
+                     item_embedding: torch.Tensor,
+                     user_emb: torch.Tensor
+                     ) -> torch.Tensor:
+        w2 = self.W2(items)  # (N, I, D) for train
+        b2 = self.b2(items)  # (N, I, 1) for train
+
+        # matrix factorization
+        if user_emb is not None:
+            res = torch.baddbmm(b2, w2, user_emb.unsqueeze(2)).squeeze()
+            # union-level
+            res += torch.bmm(sequence_representation.unsqueeze(1), w2.permute(0, 2, 1)).squeeze()
         else:
-            # Matrix Factorization
-            if user_provided:
-                res = torch.baddbmm(b2, w2, user_emb.unsqueeze(2)).squeeze()
-                # union-level
-                res += torch.bmm(union_out.unsqueeze(1), w2.permute(0, 2, 1)).squeeze()
-            else:
-                res = torch.bmm(union_out.unsqueeze(1), w2.permute(0, 2, 1)).squeeze()  # (N, I)
+            res = torch.baddbmm(b2, w2, sequence_representation.unsqueeze(2)).squeeze()  # (N, I)
 
-            # item-item product (to model the relation between two single items)
-            rel_score = item_embs.bmm(w2.permute(0, 2, 1))  # (N, S, I)
-            rel_score = torch.sum(rel_score, dim=1)  # (N, I)
-            res += rel_score  # (N, I)
-        return res
+        # item-item product (to model the relation between two single items)
+        rel_score = item_embedding.bmm(w2.permute(0, 2, 1))  # (N, S, I)
+        rel_score = torch.sum(rel_score, dim=1)  # (N, I)
+
+        return res + rel_score
 
     def optional_metadata_keys(self) -> List[str]:
         return [USER_ENTRY_NAME]

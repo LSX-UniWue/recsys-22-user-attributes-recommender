@@ -127,22 +127,26 @@ class CosRecModel(SequenceRecommenderModel):
         else:
             x = out
 
-        w2 = self.W2(positive_items)  # (N, I, F_D)
-        b2 = self.b2(positive_items)  # (N, I, 1)
-
         x = x.unsqueeze(2)
-        # TODO: use torch.einsum('nif,nf -> ni', w2, x) + b2.squeeze()
-        positive_score = torch.baddbmm(b2, w2, x).squeeze()
+
+        positive_score = self._calc_score(positive_items, x)
 
         if negative_items is None:
             return positive_score
 
-        w2_negative_items = self.W2(negative_items)
-        b2_negative_items = self.b2(negative_items)
-
-        negative_score = torch.baddbmm(b2_negative_items, w2_negative_items, x).squeeze()
+        negative_score = self._calc_scores(negative_items)
 
         return positive_score, negative_score
+
+    def _calc_scores(self,
+                     item: torch.Tensor,
+                     sequence_representation: torch.Tensor
+                     ) -> torch.Tensor:
+        w2 = self.W2(item)  # (N, I, F_D)
+        b2 = self.b2(item)  # (N, I, 1)
+
+        # TODO: use torch.einsum('nif,nf -> ni', w2, x) + b2.squeeze()
+        return torch.baddbmm(b2, w2, sequence_representation).squeeze()
 
     def optional_metadata_keys(self) -> List[str]:
         return [USER_ENTRY_NAME]
