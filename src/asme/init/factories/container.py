@@ -27,7 +27,6 @@ from asme.modules.baselines.markov_module import MarkovModule
 from asme.modules.baselines.pop_module import PopModule
 from asme.modules.baselines.session_pop_module import SessionPopModule
 from asme.modules.basket.dream_module import DreamModule
-from asme.modules.basket.nnrec_module import NNRecModule
 from asme.modules.masked_training_module import MaskedTrainingModule
 from asme.modules.next_item_prediction_training_module import NextItemPredictionTrainingModule
 from asme.modules.sequence_next_item_prediction_training_module import SequenceNextItemPredictionTrainingModule
@@ -55,7 +54,7 @@ class ContainerFactory(ObjectFactory):
                                                                         HGNLoss(),
                                                                         HGNModel),
                                             'dream': GenericModuleFactory(DreamModule, RNNModel),
-                                            'nnrec': GenericModuleFactory(NNRecModule, NNRecModel),
+                                            'nnrec': GenericModuleFactory(NextItemPredictionTrainingModule, NNRecModel),
                                             'pop': GenericModuleFactory(PopModule, model_cls=None),
                                             'session_pop': GenericModuleFactory(SessionPopModule, model_cls=None),
                                             'markov': GenericModuleFactory(MarkovModule, model_cls=None),

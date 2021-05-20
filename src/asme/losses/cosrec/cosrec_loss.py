@@ -1,8 +1,8 @@
 import torch
-from asme.losses.losses import RecommenderSequenceContrastiveLoss
+from asme.losses.losses import SequenceRecommenderContrastiveLoss
 
 
-class CosRecLoss(RecommenderSequenceContrastiveLoss):
+class CosRecLoss(SequenceRecommenderContrastiveLoss):
 
     def forward(self,
                 pos_input: torch.Tensor,

@@ -3,7 +3,7 @@ from typing import Union, Dict, Optional
 import torch
 
 import pytorch_lightning as pl
-from asme.losses.losses import RecommenderSequenceContrastiveLoss
+from asme.losses.losses import SequenceRecommenderContrastiveLoss
 
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.modules import LOG_KEY_TRAINING_LOSS
@@ -38,7 +38,7 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
                  beta_1: float = 0.99,
                  beta_2: float = 0.998,
                  weight_decay: float = 1e-3,
-                 loss_function: RecommenderSequenceContrastiveLoss = SASRecBinaryCrossEntropyLoss()
+                 loss_function: SequenceRecommenderContrastiveLoss = SASRecBinaryCrossEntropyLoss()
                  ):
         """
         inits the training module

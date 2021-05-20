@@ -3,6 +3,7 @@ from typing import Union, Dict, Optional
 import torch
 
 import pytorch_lightning as pl
+from asme.losses.losses import SequenceRecommenderLoss, CrossEntropyLoss
 from pytorch_lightning.core.decorators import auto_move_data
 
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
@@ -10,12 +11,9 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from asme.metrics.container.metrics_container import MetricsContainer
 from asme.modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TRAINING_LOSS
 from asme.modules.metrics_trait import MetricsTrait
-from asme.modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict, \
-    get_additional_meta_data
+from asme.modules.util.module_util import get_padding_mask, build_eval_step_return_dict, get_additional_meta_data
 from asme.tokenization.tokenizer import Tokenizer
 from asme.utils.hyperparameter_utils import save_hyperparameters
-
-from torch import nn
 
 
 class NextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
@@ -34,7 +32,9 @@ class NextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
                  metrics: MetricsContainer,
                  learning_rate: float = 0.001,
                  beta_1: float = 0.99,
-                 beta_2: float = 0.998
+                 beta_2: float = 0.998,
+                 weight_decay: float = 0,
+                 loss_function: SequenceRecommenderLoss = CrossEntropyLoss()
                  ):
         """
         Initializes the training module.
@@ -45,9 +45,13 @@ class NextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
         self.learning_rate = learning_rate
         self.beta_1 = beta_1
         self.beta_2 = beta_2
+        self.weight_decay = weight_decay
+
         self.item_tokenizer = item_tokenizer
 
         self.metrics = metrics
+
+        self.loss_function = loss_function
 
         self.save_hyperparameters(self.hyperparameters)
 
@@ -112,14 +116,8 @@ class NextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
                    logits: torch.Tensor,
                    target_tensor: torch.Tensor
                    ) -> torch.Tensor:
-        if len(target_tensor.size()) == 1:
-            # only one item per sequence step
-            loss_fnc = nn.CrossEntropyLoss()
-            return loss_fnc(logits, target_tensor)
 
-        loss_fnc = nn.BCEWithLogitsLoss()
-        target_tensor = convert_target_to_multi_hot(target_tensor, len(self.item_tokenizer), self.item_tokenizer.pad_token_id)
-        return loss_fnc(logits, target_tensor)
+        return self.loss_function(target_tensor, logits)
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
@@ -165,4 +163,5 @@ class NextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(),
                                 lr=self.learning_rate,
-                                betas=(self.beta_1, self.beta_2))
+                                betas=(self.beta_1, self.beta_2),
+                                weight_decay=self.weight_decay)

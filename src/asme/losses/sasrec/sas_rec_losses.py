@@ -1,9 +1,9 @@
 import torch
-from asme.losses.losses import RecommenderSequenceContrastiveLoss, DEFAULT_REDUCTION
+from asme.losses.losses import SequenceRecommenderContrastiveLoss, DEFAULT_REDUCTION
 from pytorch_lightning.metrics.utils import reduce
 
 
-class SASRecBinaryCrossEntropyLoss(RecommenderSequenceContrastiveLoss):
+class SASRecBinaryCrossEntropyLoss(SequenceRecommenderContrastiveLoss):
     """
     The adapted binary cross entropy loss from the SASRec paper
     """

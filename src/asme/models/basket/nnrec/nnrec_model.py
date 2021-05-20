@@ -1,11 +1,15 @@
+from typing import List, Optional
+
 import torch
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
+from data.datasets import USER_ENTRY_NAME
 from torch import nn
 
 from asme.models.layers.layers import ItemEmbedding
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-class NNRecModel(nn.Module):
+class NNRecModel(SequenceRecommenderModel):
 
     """
     NNRec implementation from the paper "Next Basket Recommendation with Neural Networks"
@@ -41,11 +45,13 @@ class NNRecModel(nn.Module):
 
     def forward(self,
                 input_sequence: torch.Tensor,
-                user: torch.Tensor = None
+                padding_mask: Optional[torch.Tensor] = None,
+                user: Optional[torch.Tensor] = None
                 ) -> torch.Tensor:
         """
         performs a forward path
         :param input_sequence: input sequence :math`(N, S)`
+        :param padding_mask: not used for this model
         :param user: the user id :math`(N)`
         :return: the logits for each item :math`(N, I)`
         """
@@ -63,3 +69,6 @@ class NNRecModel(nn.Module):
         first_hidden = self.act1(self.hidden_layer(overall_representation))
 
         return self.projection_layer(first_hidden)
+
+    def optional_metadata_keys(self) -> List[str]:
+        return [USER_ENTRY_NAME]

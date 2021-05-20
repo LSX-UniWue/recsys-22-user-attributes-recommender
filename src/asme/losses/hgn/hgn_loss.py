@@ -1,8 +1,8 @@
 import torch
-from asme.losses.losses import RecommenderSequenceContrastiveLoss
+from asme.losses.losses import SequenceRecommenderContrastiveLoss
 
 
-class HGNLoss(RecommenderSequenceContrastiveLoss):
+class HGNLoss(SequenceRecommenderContrastiveLoss):
 
     def forward(self,
                 positive_logits: torch.Tensor,
