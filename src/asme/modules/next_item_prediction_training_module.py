@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import Union, Dict, Optional
 
 import torch
@@ -7,7 +8,8 @@ from asme.losses.losses import SequenceRecommenderLoss, CrossEntropyLoss
 from pytorch_lightning.core.decorators import auto_move_data
 
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
-from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
+    NEGATIVE_SAMPLES_ENTRY_NAME
 from asme.metrics.container.metrics_container import MetricsContainer
 from asme.modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TRAINING_LOSS
 from asme.modules.metrics_trait import MetricsTrait
@@ -16,7 +18,7 @@ from asme.tokenization.tokenizer import Tokenizer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-class NextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
+class BaseNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
     """
     A training module for models that get a sequence and must predict the next item in the sequence
 
@@ -85,6 +87,42 @@ class NextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
 
         return self.model(input_seq, padding_mask, **additional_meta_data)
 
+    @abstractmethod
+    def training_step(self,
+                      batch: Dict[str, torch.Tensor],
+                      batch_idx: int
+                      ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
+        pass
+
+    @abstractmethod
+    def validation_step(self,
+                        batch: Dict[str, torch.Tensor],
+                        batch_idx: int
+                        ) -> Dict[str, torch.Tensor]:
+        pass
+
+    def test_step(self,
+                  batch: Dict[str, torch.Tensor],
+                  batch_idx: int
+                  ) -> Dict[str, torch.Tensor]:
+        return self.validation_step(batch, batch_idx)
+
+    def predict(self,
+                batch: Dict[str, torch.Tensor],
+                batch_idx: int,
+                dataloader_idx: Optional[int] = None
+                ) -> torch.Tensor:
+        return self(batch, batch_idx)
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(),
+                                lr=self.learning_rate,
+                                betas=(self.beta_1, self.beta_2),
+                                weight_decay=self.weight_decay)
+
+
+class NextItemPredictionTrainingModule(BaseNextItemPredictionTrainingModule):
+
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
@@ -116,7 +154,6 @@ class NextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
                    logits: torch.Tensor,
                    target_tensor: torch.Tensor
                    ) -> torch.Tensor:
-
         return self.loss_function(target_tensor, logits)
 
     def validation_step(self,
@@ -150,18 +187,67 @@ class NextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
 
         return build_eval_step_return_dict(input_seq, logits, target, mask=mask)
 
-    def test_step(self, batch, batch_idx):
-        return self.validation_step(batch, batch_idx)
 
-    def predict(self,
-                batch:  Dict[str, torch.Tensor],
-                batch_idx: int,
-                dataloader_idx: Optional[int] = None
-                ) -> torch.Tensor:
-        return self(batch, batch_idx)
+class NextItemPredictionWithNegativeSampleTrainingModule(BaseNextItemPredictionTrainingModule):
 
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(),
-                                lr=self.learning_rate,
-                                betas=(self.beta_1, self.beta_2),
-                                weight_decay=self.weight_decay)
+    def training_step(self,
+                      batch: Dict[str, torch.Tensor],
+                      batch_idx: int
+                      ) -> Optional[Union[torch.Tensor, Dict[str, Union[torch.Tensor, float]]]]:
+        """
+        Performs a training step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S, M),
+            * `POSITIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N, M) containing the next sequence items (pos examples)
+            * `NEGATIVE_SAMPLES_ENTRY_NAME`: a tensor of size (N, M) containing a negative item (sampled)
+
+        Where N is the batch size, S the max sequence length and M the max items per sequence step.
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return: the total loss
+        """
+        pos_items = batch[POSITIVE_SAMPLES_ENTRY_NAME]
+        neg_items = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
+
+        logits = self.predict(batch, batch_idx)
+
+        loss = self._calc_loss(logits, pos_items, neg_items)
+        return {
+            'loss': loss
+        }
+
+    def _calc_loss(self,
+                   logit: torch.Tensor,
+                   pos_items: torch.Tensor,
+                   neg_items: torch.Tensor
+                   ) -> torch.Tensor:
+        return self.loss_function(logit, pos_items, neg_items)
+
+    def validation_step(self,
+                        batch: Dict[str, torch.Tensor],
+                        batch_idx: int
+                        ) -> Dict[str, torch.Tensor]:
+        """
+        Performs a validation step on a batch of sequences and returns the overall loss.
+
+        `batch` must be a dictionary containing the following entries:
+            * `ITEM_SEQ_ENTRY_NAME`: a tensor of size (N, S, M),
+            * `TARGET_ENTRY_NAME`: a tensor of size (N, M) with the target items,
+
+        A padding mask will be generated on the fly, and also the masking of items
+
+        Where N is the batch size, S the max sequence length and M the max items per sequence step.
+
+        :param batch: the batch
+        :param batch_idx: the batch number.
+        :return: A dictionary with entries according to `build_eval_step_return_dict`.
+        """
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        targets = batch[TARGET_ENTRY_NAME]
+
+        prediction = self.predict(batch, batch_idx)
+
+        mask = None if len(targets.size()) == 1 else ~ targets.eq(self.item_tokenizer.pad_token_id)
+        return build_eval_step_return_dict(input_seq, prediction, targets, mask=mask)

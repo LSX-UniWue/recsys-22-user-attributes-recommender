@@ -10,6 +10,7 @@ from asme.init.factories.modules.modules import GenericModuleFactory
 from asme.init.factories.tokenizer.tokenizer_factory import TokenizersFactory
 from asme.init.factories.trainer import TrainerBuilderFactory
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
+from asme.losses.basket.dream.dream_loss import DreamContrastiveLoss
 from asme.losses.cosrec.cosrec_loss import CosRecLoss
 from asme.losses.hgn.hgn_loss import HGNLoss
 from asme.losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
@@ -26,9 +27,9 @@ from asme.modules.baselines.bpr_module import BprModule
 from asme.modules.baselines.markov_module import MarkovModule
 from asme.modules.baselines.pop_module import PopModule
 from asme.modules.baselines.session_pop_module import SessionPopModule
-from asme.modules.basket.dream_module import DreamModule
 from asme.modules.masked_training_module import MaskedTrainingModule
-from asme.modules.next_item_prediction_training_module import NextItemPredictionTrainingModule
+from asme.modules.next_item_prediction_training_module import NextItemPredictionTrainingModule, \
+    NextItemPredictionWithNegativeSampleTrainingModule
 from asme.modules.sequence_next_item_prediction_training_module import SequenceNextItemPredictionTrainingModule
 
 
@@ -53,7 +54,9 @@ class ContainerFactory(ObjectFactory):
                                             'hgn': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
                                                                         HGNLoss(),
                                                                         HGNModel),
-                                            'dream': GenericModuleFactory(DreamModule, RNNModel),
+                                            'dream': GenericModuleFactory(NextItemPredictionWithNegativeSampleTrainingModule,
+                                                                          DreamContrastiveLoss(),
+                                                                          RNNModel),
                                             'nnrec': GenericModuleFactory(NextItemPredictionTrainingModule, NNRecModel),
                                             'pop': GenericModuleFactory(PopModule, model_cls=None),
                                             'session_pop': GenericModuleFactory(SessionPopModule, model_cls=None),
