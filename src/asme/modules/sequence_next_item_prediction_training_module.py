@@ -3,6 +3,7 @@ from typing import Union, Dict, Optional
 import torch
 
 import pytorch_lightning as pl
+from asme.losses.losses import RecommenderSequenceContrastiveLoss
 
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.modules import LOG_KEY_TRAINING_LOSS
@@ -36,7 +37,8 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
                  learning_rate: float = 0.001,
                  beta_1: float = 0.99,
                  beta_2: float = 0.998,
-                 weight_decay: float = 1e-3
+                 weight_decay: float = 1e-3,
+                 loss_function: RecommenderSequenceContrastiveLoss = SASRecBinaryCrossEntropyLoss()
                  ):
         """
         inits the training module
@@ -57,6 +59,8 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
 
         self.item_tokenizer = item_tokenizer
         self.metrics = metrics
+
+        self.loss_function = loss_function
 
         self.save_hyperparameters(self.hyperparameters)
 
@@ -108,17 +112,7 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
                    neg_logits: torch.Tensor,
                    padding_mask: torch.Tensor
                    ) -> torch.Tensor:
-        loss_func = SASRecBinaryCrossEntropyLoss()
-        return loss_func(pos_logits, neg_logits, mask=padding_mask)
-        # bpr loss? from hgn
-        #loss = - torch.log(torch.sigmoid(positive_logits - negative_logits) + 1e-8)
-        #loss = torch.mean(torch.sum(loss))
-
-        # cosrec loss
-        # compute the binary cross-entropy loss
-        # positive_loss = -torch.mean(torch.log(torch.sigmoid(pos_logits)))
-        # negative_loss = -torch.mean(torch.log(1 - torch.sigmoid(neg_logits)))
-        # return positive_loss + negative_loss
+        return self.loss_function(pos_logits, neg_logits, mask=padding_mask)
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],

@@ -35,7 +35,7 @@ class MarkovModule(MetricsTrait, pl.LightningModule):
                  tokenizer: Tokenizer,
                  metrics: MetricsContainer):
 
-        super(MarkovModule, self).__init__()
+        super().__init__()
         self.tokenizer = tokenizer
         self.item_vocab_size = len(tokenizer)
         self.metrics = metrics

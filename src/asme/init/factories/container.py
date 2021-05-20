@@ -10,6 +10,9 @@ from asme.init.factories.modules.modules import GenericModuleFactory
 from asme.init.factories.tokenizer.tokenizer_factory import TokenizersFactory
 from asme.init.factories.trainer import TrainerBuilderFactory
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
+from asme.losses.cosrec.cosrec_loss import CosRecLoss
+from asme.losses.hgn.hgn_loss import HGNLoss
+from asme.losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
 from asme.models.basket.nnrec.nnrec_model import NNRecModel
 from asme.models.bert4rec.bert4rec_model import BERT4RecModel
 from asme.models.caser.caser_model import CaserModel
@@ -42,18 +45,21 @@ class ContainerFactory(ObjectFactory):
                                                                           CaserModel),
                                             'narm': GenericModuleFactory(NextItemPredictionTrainingModule, NarmModel),
                                             'sasrec': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
+                                                                           SASRecBinaryCrossEntropyLoss(),
                                                                            SASRecModel),
                                             'rnn': GenericModuleFactory(NextItemPredictionTrainingModule, RNNModel),
                                             'cosrec': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
+                                                                           CosRecLoss(),
                                                                            CosRecModel),
                                             'hgn': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
+                                                                        HGNLoss(),
                                                                         HGNModel),
                                             'dream': GenericModuleFactory(DreamModule, RNNModel),
                                             'nnrec': GenericModuleFactory(NNRecModule, NNRecModel),
-                                            'pop': GenericModuleFactory(PopModule, None),
-                                            'session_pop': GenericModuleFactory(SessionPopModule, None),
-                                            'markov': GenericModuleFactory(MarkovModule, None),
-                                            'bpr': GenericModuleFactory(BprModule, None),},
+                                            'pop': GenericModuleFactory(PopModule, model_cls=None),
+                                            'session_pop': GenericModuleFactory(SessionPopModule, model_cls=None),
+                                            'markov': GenericModuleFactory(MarkovModule, model_cls=None),
+                                            'bpr': GenericModuleFactory(BprModule, model_cls=None)},
                                    config_key='module',
                                    config_path=['module']),
                 DataSourcesFactory(),

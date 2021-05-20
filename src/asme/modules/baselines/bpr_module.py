@@ -18,7 +18,7 @@ class BprModule(MetricsTrait, pl.LightningModule):
                  embedding_size: int,
                  regularization_factor: float,
                  metrics: MetricsContainer):
-        super(BprModule, self).__init__()
+        super().__init__()
         self.item_tokenizer = item_tokenizer
         self.user_tokenizer = user_tokenizer
         self.embedding_size = embedding_size
