@@ -85,7 +85,7 @@ class ItemSessionParser(SequenceParser):
         }
 
         for feature_key, info in self._additional_features.items():
-            feature_sequence = info['sequence']
+            feature_sequence = info.get('sequence', False)
             feature_column_name = info.get("column_name", feature_key)
             # if feature changes over the sequence parse it over all entries, else extract it form the first entry
             if feature_sequence:
