@@ -24,6 +24,7 @@ def get_movielens_1m_config(output_directory: Path,
 
     special_tokens = ["<PAD>", "<MASK>", "<UNK>"]
     columns = ["rating", "gender", "age", "occupation", "zip", "title", "genres"]
+    prefix = "ml-1m"
     preprocessing_actions = [ConvertToCsv(Movielens1MConverter()),
                              GroupAndFilter("movieId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
                              GroupAndFilter("userId", GroupedFilter("count", lambda v: v >= min_sequence_length)),
@@ -33,14 +34,14 @@ def get_movielens_1m_config(output_directory: Path,
                                               [CreateSessionIndex(["userId"]),
                                                CreateNextItemIndex("title", RemainingSessionPositionExtractor(min_sequence_length))],
                                               complete_split_actions=
-                                              [CreateVocabulary(columns, special_tokens=special_tokens),
-                                               CreatePopularity(columns)]),
+                                              [CreateVocabulary(columns, special_tokens=special_tokens, prefixes=[prefix]),
+                                               CreatePopularity(columns, prefixes=[prefix])]),
                              CreateLeaveOneOutSplit("title",
                                                     inner_actions=
                                                     [CreateNextItemIndex("title", RemainingSessionPositionExtractor(min_sequence_length)),
-                                                     CreateVocabulary(columns, special_tokens),
+                                                     CreateVocabulary(columns, special_tokens=special_tokens),
                                                      CreatePopularity(columns)])]
-    return DatasetConfig("ml-1m",
+    return DatasetConfig(prefix,
                          "http://files.grouplens.org/datasets/movielens/ml-1m.zip",
                          output_directory,
                          Unzipper(extraction_directory),

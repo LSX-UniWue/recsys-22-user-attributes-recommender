@@ -13,8 +13,6 @@ from data.datasets.config import get_movielens_1m_config
 from datasets.dataset_pre_processing.utils import download_dataset
 
 
-
-
 class AsmeDataModule(pl.LightningDataModule):
 
     PREPROCESSING_FINISHED_FLAG = ".PREPROCESSING_FINISHED"
@@ -40,10 +38,8 @@ class AsmeDataModule(pl.LightningDataModule):
         # If necessary, unpack the dataset
         if dsConfig.unpacker is not None:
             print(f"Unpacking dataset...", end="")
-            unpacked_location = dsConfig.unpacker(dataset_file)
+            dsConfig.unpacker(dataset_file)
             print("Done.")
-        else:
-            unpacked_location = dsConfig.location
 
         # Apply preprocessing steps
         for i, step in enumerate(dsConfig.preprocessing_actions):
@@ -51,7 +47,11 @@ class AsmeDataModule(pl.LightningDataModule):
             step.apply(dsConfig.context)
             print("Done.")
 
+        # Write finished flag
+        (dsConfig.location / self.PREPROCESSING_FINISHED_FLAG).touch()
+
     def setup(self, stage: Optional[str] = None):
+        # This should essentially do the job of the data sources factory
         pass
 
     def _check_finished_flag(self, directory: Path) -> bool:

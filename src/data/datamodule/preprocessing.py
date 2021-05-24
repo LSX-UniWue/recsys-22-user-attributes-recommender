@@ -229,9 +229,11 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
 class CreateVocabulary(PreprocessingAction):
 
     def __init__(self, columns: List[str],
-                 special_tokens: List[str] = None):
+                 special_tokens: List[str] = None,
+                 prefixes: List[str] = None):
         self.columns = columns
         self.special_tokens = [] if special_tokens is None else special_tokens
+        self.prefixes = prefixes
 
     def name(self) -> str:
         return f"Creating Vocabulary for columns: {self.columns}."
@@ -240,7 +242,7 @@ class CreateVocabulary(PreprocessingAction):
         main_file = context.get(MAIN_FILE_KEY)
         session_index_path = context.get(SESSION_INDEX_KEY)
         output_dir = context.get(OUTPUT_DIR_KEY)
-        prefix = format_prefix(context.get(PREFIXES_KEY))
+        prefix = format_prefix(context.get(PREFIXES_KEY) if self.prefixes is None else self.prefixes)
         delimiter = context.get(DELIMITER_KEY)
         for column in self.columns:
             output_file = output_dir / f"{prefix}.vocabulary.{column}.txt"
@@ -364,8 +366,9 @@ class CreateRatioSplit(PreprocessingAction):
 
 
 class CreatePopularity(PreprocessingAction):
-    def __init__(self, columns: List[str]):
+    def __init__(self, columns: List[str], prefixes: List[str] = None):
         self.columns = columns
+        self.prefixes = prefixes
 
     def name(self) -> str:
         return f"Creating popularities for: {self.columns}"
@@ -374,7 +377,7 @@ class CreatePopularity(PreprocessingAction):
         main_file = context.get(MAIN_FILE_KEY)
         output_dir = context.get(OUTPUT_DIR_KEY)
         delimiter = context.get(DELIMITER_KEY)
-        prefixes = context.get(PREFIXES_KEY)
+        prefixes = context.get(PREFIXES_KEY) if self.prefixes is None else self.prefixes
         header = create_indexed_header(read_csv_header(main_file, delimiter))
         session_index_path = context.get(SESSION_INDEX_KEY)
         session_index = CsvDatasetIndex(session_index_path)
