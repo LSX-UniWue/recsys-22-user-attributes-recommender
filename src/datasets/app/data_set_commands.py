@@ -9,7 +9,8 @@ from datasets.dataset_index_splits import split_strategies_factory
 from datasets.dataset_pre_processing.generic import generic_process_dataset
 
 from datasets.dataset_pre_processing.movielens_preprocessing import download_and_unzip_movielens_data, \
-    preprocess_movielens_data, MOVIELENS_DELIMITER, MOVIELENS_ITEM_HEADER_NAME, MOVIELENS_SESSION_KEY
+    preprocess_movielens_data, MOVIELENS_DELIMITER, MOVIELENS_ITEM_HEADER_NAME, MOVIELENS_SESSION_KEY, \
+    RATING_USER_COLUMN_NAME
 from datasets.dataset_pre_processing.utils import download_dataset
 from datasets.dataset_pre_processing.yoochoose_preprocessing import pre_process_yoochoose_dataset, \
     YOOCHOOSE_CLICKS_FILE_NAME, YOOCHOOSE_SESSION_ID_KEY, YOOCHOOSE_ITEM_ID_KEY, YOOCHOOSE_BUYS_FILE_NAME, \
@@ -38,7 +39,7 @@ def movielens(dataset: str = typer.Argument(..., help="ml-1m or ml-20m", show_ch
                                           min_item_feedback=min_item_feedback,
                                           min_user_feedback=min_user_feedback)
 
-    stats_columns = ["title", "genres"]
+    stats_columns = ["title", "genres", RATING_USER_COLUMN_NAME]
     if dataset == "ml-1m":
         stats_columns += ["gender", "age", "occupation", "zip"]
 
