@@ -33,38 +33,34 @@ where `[]` denotes the target item
 
 ### Data Set File Scheme
 In order to use both Leave one out and Next Item recommendation tasks for training on a data set the following files have
-to be stored/created under \<directory-basepath\>. 
+to be stored/created under *directory-basepath*. 
 
-\<prefix\>.csv - The original data file containing the raw data.
+| File Name | Description |
+| :---- | :--- |
+| *prefix*.csv | The original data file containing the raw data. |
+| *prefix*.session.idx | The session index for the original raw data. |
 
-\<prefix\>.session.idx - The session index for the original raw data. 
+### Ratio Split
+Created under *directory-basepath*/ratio-*train-ratio*\_*val-ratio*\_*test-ratio*
 
-\<prefix\>.train.csv - data file containing share of session that are used for training with the next item 
-recommendation task
+| File Name | Description |
+| :---- | :--- |
+| *prefix*.train.csv | data file containing share of session that are used for training with the next item recommendation task
+| *prefix*.train.session.idx | Session index for *prefix*.train.csv |
+| *prefix*.train.nextitem.idx | Next Item Index for *prefix*.train.csv|
+| *prefix*.validation.csv | data file containing share of session that are used for validation with the next item recommendation task |
+| *prefix*.validation.session.idx | Session index for *prefix*.validation.csv |
+| *prefix*.validation.nextitem.idx | Next Item Index for *prefix*.validation.csv |
+| *prefix*.test.csv | data file containing share of session that are used for testing with the next item recommendation task |
+| *prefix*.test.session.idx | Session index for *prefix*.test.csv |
+| *prefix*.test.nextitem.idx | Next Item Index for *prefix*.test.csv |
 
-\<prefix\>.train.session.idx - Session index for \<prefix\>.train.csv
+### Leave One Out Split
+Created under *directory-basepath*/loo
 
-\<prefix\>.train.nextitem.idx - Next Item Index for \<prefix\>.train.csv
-
-\<prefix\>.validation.csv - data file containing share of session that are used for validation with the next item 
-recommendation task
-
-\<prefix\>.validation.session.idx - Session index for \<prefix\>.validation.csv
-
-\<prefix\>.validation.nextitem.idx - Next Item Index for \<prefix\>.validation.csv
-
-\<prefix\>.test.csv - data file containing share of session that are used for testing with the next item 
-recommendation task
-
-\<prefix\>.test.session.idx - Session index for \<prefix\>.test.csv
-
-\<prefix\>.test.nextitem.idx - Next Item Index for \<prefix\>.test.csv
-
-\<prefix\>.validation.loo.idx - Leave One Out Index for \<prefix\>.csv used for training and validation with the leave
-one out trainings task
-
-\<prefix\>.test.loo.idx - Leave One Out Index for \<prefix\>.csv used for testing with the leave one out trainings task
-
-\<prefix\>.vocabulary.\<columnname\>.txt - List of unique entries of a column
-
-\<prefix\>.popularity.\<columnname\>.txt - Percentage of occurrences of an item
+| File Name | Description |
+| :---- | :--- |
+| *prefix*.validation.loo.idx | Leave One Out Index for *prefix*.csv used for training and validation with the leave one out trainings task |
+| *prefix*.test.loo.idx | Leave One Out Index for *prefix*.csv used for testing with the leave one out trainings task |
+| *prefix*.vocabulary.*columnname*.txt | List of unique entries of a column |
+| *prefix*.popularity.*columnname*.txt | Percentage of occurrences of an item |

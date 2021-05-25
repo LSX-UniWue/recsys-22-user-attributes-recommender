@@ -7,7 +7,7 @@
 - read_csv
 	- Moved to dataset_preprocessing/utils.py
 - \_get_position_with_offset
-	- Moved to datset_splits/conditional_split.py
+	- Moved to dataset_splits/conditional_split.py
 - split_dataset
 	- moved into dataset_preprocessing/movielens.py
 - main
