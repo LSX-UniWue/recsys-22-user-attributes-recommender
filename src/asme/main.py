@@ -46,14 +46,10 @@ app = typer.Typer()
 
 @app.command()
 def train(config_file: Path = typer.Argument(..., help='the path to the config file', exists=True),
-          do_train: bool = typer.Option(True, help='flag iff the model should be trained'),
-          do_test: bool = typer.Option(False, help='flag iff the model should be tested (after training)'),
+          resume: bool = typer.Option(False, help='flag iff the model should resume training from a checkpoint'),
           print_train_val_examples: bool = typer.Option(True, help='print examples of the training'
-                                                                   'and evaluation dataset before starting training')
-          ) -> None:
-    if do_test and not do_train:
-        logger.error(f"The model has to be trained before it can be tested!")
-        exit(-1)
+                                                                    'and evaluation dataset before starting training')
+    ) -> None:
 
     config_file_path = Path(config_file)
     config = load_config(config_file_path)
@@ -65,7 +61,10 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
     log_dir = determine_log_dir(trainer)
     save_config(config, log_dir)
 
-    if do_train:
+    if resume:
+        resume(log_dir)
+
+    else:
         train_dataloader = container.train_dataloader()
         validation_dataloader = container.validation_dataloader()
 
@@ -78,10 +77,7 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
                     train_dataloader=train_dataloader,
                     val_dataloaders=validation_dataloader)
 
-    save_finished_flag(log_dir)
-
-    if do_test:
-        trainer.test(test_dataloaders=container.test_dataloader())
+        save_finished_flag(log_dir)
 
 
 @app.command()
@@ -464,7 +460,7 @@ def resume(log_dir: str = typer.Argument(..., help='the path to the logging dire
     if not os.path.isfile(checkpoint_path):
         logger.error("Could not determine the last checkpoint. "
                      "You can specify a particular checkpoint via the --checkpoint-file option.")
-        exit(-1)
+        train(Path(config_file), do_resume=False)
 
     container = create_container(raw_config)
     module = container.module()
