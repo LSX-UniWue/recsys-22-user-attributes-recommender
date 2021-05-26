@@ -4,8 +4,30 @@ from typing import Union, Tuple, Optional, List
 import torch
 from torch import nn
 
+from asme.models.layers.layers import ItemEmbedding
+
+
+class SequenceRepresentationLayer(ABC, nn.Module):
+    pass
+
+
+class ProjectionLayer(ABC, nn.Module):
+    pass
+
+
+class SequenceRepresentationModifierLayer(ABC, nn.Module):
+    pass
+
 
 class SequenceRecommenderModel(ABC, nn.Module):
+    def __init__(self,
+                 item_embedding_layer: ItemEmbedding,  # rename ItemEmbeddingLayer
+                 sequence_representation_layer: SequenceRepresentationLayer,
+                 sequence_representation_modifier_layer: SequenceRepresentationModifierLayer,
+                 projection_layer: ProjectionLayer):
+        super().__init__()
+        # TODO
+
     """
     base class to implement a sequence recommendation model
     """
