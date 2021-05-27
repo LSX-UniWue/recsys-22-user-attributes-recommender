@@ -14,6 +14,7 @@ class NNRecSequenceRepresentationLayer(SequenceRepresentationLayer):
     def __init__(self,
                  embedding_size: int,
                  hidden_size: int):
+        super().__init__()
         self.hidden_layer = nn.Linear(embedding_size, hidden_size)
         self.act1 = nn.Tanh()
 
