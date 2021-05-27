@@ -24,6 +24,8 @@ class SequenceEmbeddingLayer(ABC, nn.Module):
 
 
 class SequenceRepresentationLayer(ABC, nn.Module):
+
+    @abstractmethod
     def forward(self,
                 sequence: torch.Tensor,
                 padding_mask: Optional[torch.Tensor] = None,

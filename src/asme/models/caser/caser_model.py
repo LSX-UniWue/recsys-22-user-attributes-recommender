@@ -108,11 +108,17 @@ class CaserSequenceRepresentationLayer(SequenceRepresentationLayer):
 
 class CaserProjectionLayer(ProjectionLayer):
 
+    """
+    TODO: rename layer and move
+    """
+
     def __init__(self,
                  item_vocab_size: int,
                  embedding_size: int,
                  ):
         super().__init__()
+
+        # W2, b2 are encoded with nn.Embedding, as we don't need to compute scores for all items
 
         self.W2 = nn.Embedding(item_vocab_size, embedding_size)
         self.b2 = nn.Embedding(item_vocab_size, 1)
@@ -127,9 +133,6 @@ class CaserProjectionLayer(ProjectionLayer):
                 positive_samples: Optional[torch.Tensor] = None,
                 negative_samples: Optional[torch.Tensor] = None
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        pos_w2 = self.W2(positive_samples)
-        pos_b2 = self.b2(negative_samples)
-
         #if not self.training:
         #    w2 = pos_w2.squeeze()
         #    b2 = pos_b2.squeeze()
@@ -137,15 +140,23 @@ class CaserProjectionLayer(ProjectionLayer):
         #    return torch.matmul(x, w2).sum(dim=1) + b2
 
         sequence_representation = sequence_representation.unsqueeze(2)
-        res_pos = torch.baddbmm(pos_b2, pos_w2, sequence_representation).squeeze()
+        res_pos = self._calc_scores(positive_samples, sequence_representation)
         if negative_samples is None:
             return res_pos
 
         # negative items
-        neg_w2 = self.W2(positive_samples)
-        neg_b2 = self.b2(negative_samples)
-        res_negative = torch.baddbmm(neg_b2, neg_w2, sequence_representation).squeeze()
+        res_negative = self._calc_scores(negative_samples, sequence_representation)
         return res_pos, res_negative
+
+    def _calc_scores(self,
+                     item: torch.Tensor,
+                     sequence_representation: torch.Tensor
+                     ) -> torch.Tensor:
+        w2 = self.W2(item)  # (N, I, F_D)
+        b2 = self.b2(item)  # (N, I, 1)
+
+        # TODO: use torch.einsum('nif,nf -> ni', w2, x) + b2.squeeze()
+        return torch.baddbmm(b2, w2, sequence_representation).squeeze()
 
 
 class CaserModel(SequenceRecommenderModel):
