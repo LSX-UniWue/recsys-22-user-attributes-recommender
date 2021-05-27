@@ -1,9 +1,55 @@
 import math
 from abc import ABC, abstractmethod
 from functools import partial
+from typing import Optional, Dict
 
 import torch
 from torch import nn
+
+from asme.models.sequence_recommendation_model import SequenceElementsRepresentationLayer
+
+
+class SequenceElementsEmbeddingLayer(SequenceElementsRepresentationLayer):
+    """
+    Computes an embedding for every element in the sequence.
+    """
+    def __init__(self,
+                 item_voc_size: int,
+                 embedding_size: int):
+        super().__init__()
+
+        self.embedding_size = embedding_size
+        self.embedding = nn.Embedding(num_embeddings=item_voc_size, embedding_dim=embedding_size)
+
+    def forward(self,
+                sequence: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
+
+        embedded_sequence = self.embedding(sequence)
+
+        return embedded_sequence
+
+
+class PooledSequenceElementsRepresentation(nn.Module):
+    """
+    A stateless module that provides pooling functionality over embedded sequences.
+    """
+    def __init__(self, pooling_type: str):
+        """
+
+        :param pooling_type: the type of pooling to perform, can be either: `max`, `sum`, or `mean`.
+        """
+        super().__init__()
+
+        self.pooling_function = {
+            'max': _max_pooling,
+            'sum': partial(torch.sum, dim=-2),
+            'mean': partial(torch.mean, dim=-2)
+        }[pooling_type]
+
+    def forward(self, sequence: torch.Tensor) -> torch.Tensor:
+        return self.pooling_function(sequence)
 
 
 def _max_pooling(tensor: torch.Tensor
@@ -28,16 +74,15 @@ class ItemEmbedding(nn.Module):
                  ):
         super().__init__()
         self.embedding_size = embedding_size
+
+        if embedding_pooling_type:
+            self.pooling = PooledSequenceElementsRepresentation(embedding_pooling_type)
+        else:
+            self.pooling = None
+
         self.embedding_mode = embedding_pooling_type
         self.embedding = nn.Embedding(num_embeddings=item_voc_size,
                                       embedding_dim=self.embedding_size)
-
-        self.embedding_flatten = {
-            None: _identity,
-            'max': _max_pooling,
-            'sum': partial(torch.sum, dim=-2),
-            'mean': partial(torch.mean, dim=-2)
-        }[self.embedding_mode]
 
     def get_weight(self) -> torch.Tensor:
         return self.embedding.weight
@@ -49,8 +94,8 @@ class ItemEmbedding(nn.Module):
         embedding = self.embedding(items)
 
         # this is a quick hack, if a module needs the embeddings of a single item
-        if flatten:
-            embedding = self.embedding_flatten(embedding)
+        if self.pooling:
+            embedding = self.pooling(embedding)
         return embedding
 
 

@@ -1,3 +1,4 @@
+import abc
 from abc import ABC
 from typing import Union, Tuple, Optional, List, Dict
 
@@ -5,10 +6,11 @@ import torch
 from torch import nn
 
 
-class SequenceEmbeddingLayer(ABC, nn.Module):
+class SequenceElementsRepresentationLayer(ABC, nn.Module):
     """
     Base class for modules that embed the elements of a sequence.
     """
+    @abc.abstractmethod
     def forward(self,
                 sequence: torch.Tensor,
                 padding_mask: Optional[torch.Tensor] = None,
