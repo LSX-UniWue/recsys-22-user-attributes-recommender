@@ -41,12 +41,12 @@ class SequenceRepresentationLayer(ABC, nn.Module):
 
 class SequenceRepresentationModifierLayer(ABC, nn.Module):
     def forward(self,
-                sequence: torch.Tensor,
+                sequence_representation: torch.Tensor,
                 padding_mask: Optional[torch.Tensor] = None,
                 **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
         """
 
-        :param sequence: a sequence tensor. :math:`(N, S, R)`
+        :param sequence_representation: a sequence tensor. :math:`(N, S, R)`
         :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
         :param kwargs: attributes that can be used to contextualize the sequence
 

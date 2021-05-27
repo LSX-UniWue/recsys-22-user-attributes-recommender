@@ -7,7 +7,7 @@ from asme.models.bert4rec.bert4rec_model import BERT4RecBaseModel
 from asme.models.layers.layers import PROJECT_TYPE_LINEAR
 from asme.models.layers.layers import build_projection_layer
 from asme.models.layers.transformer_layers import TransformerEmbedding
-from asme.models.sequence_recommendation_model import SequenceRecommenderModel
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel, ProjectionLayer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
@@ -90,15 +90,15 @@ class KeBERT4RecModel(BERT4RecBaseModel):
                        embedding_mode: str = None):
         # we here do not norm the embedding, we will do it after all attribute embeddings were added
         # to the global embedding
-        self.embedding = TransformerEmbedding(item_voc_size=item_vocab_size, max_seq_len=max_seq_length,
-                                              embedding_size=transformer_hidden_size, dropout=transformer_dropout,
-                                              embedding_pooling_type=embedding_mode, norm_embedding=False)
+        return TransformerEmbedding(item_voc_size=item_vocab_size, max_seq_len=max_seq_length,
+                                    embedding_size=transformer_hidden_size, dropout=transformer_dropout,
+                                    embedding_pooling_type=embedding_mode, norm_embedding=False)
 
     def _build_projection_layer(self,
                                 project_layer_type: str,
                                 transformer_hidden_size: int,
                                 item_vocab_size: int
-                                ) -> nn.Module:
+                                ) -> ProjectionLayer:
         return build_projection_layer(project_layer_type, transformer_hidden_size, item_vocab_size,
                                       self.embedding.item_embedding.embedding)
 
