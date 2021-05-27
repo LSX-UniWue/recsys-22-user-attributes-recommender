@@ -1,11 +1,13 @@
 import math
 import abc
-from typing import Optional, Dict, Union, Tuple
+from typing import Optional, Union, Tuple
 from abc import ABC
 
 import torch
 from torch import nn
 
+from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence, SequenceRepresentation, \
+    ModifiedSequenceRepresentation
 from asme.models.layers.sequence_embedding import PooledSequenceElementsRepresentation
 
 
@@ -14,31 +16,21 @@ class SequenceElementsRepresentationLayer(ABC, nn.Module):
     Base class for modules that embed the elements of a sequence.
     """
     @abc.abstractmethod
-    def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(self, sequence: InputSequence) -> EmbeddedElementsSequence:
         """
-        :param sequence: a sequence tensor with item ids. :math:`(N, S)` or :math:`(N, S, BS)`
-        :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
-        :param kwargs: attributes that can be used to contextualize the sequence
+        :param sequence: a sequence.
 
-        :return: a sequence with embedded elements. :math:`(N, S, H)`
+        :return: an embedded sequence.
         """
         pass
 
 
 class SequenceRepresentationLayer(ABC, nn.Module):
     @abc.abstractmethod
-    def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(self, embedded_sequence: EmbeddedElementsSequence) -> SequenceRepresentation:
         """
 
-        :param sequence: an embedded sequence tensor. :math:`(N, S, H)`
-        :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
-        :param kwargs: attributes that can be used to contextualize the sequence representation.
+        :param embedded_sequence: an embedded sequence..
 
         :return: a sequence representation. :math:`(N, S, R)`
         """
@@ -47,17 +39,10 @@ class SequenceRepresentationLayer(ABC, nn.Module):
 
 class SequenceRepresentationModifierLayer(ABC, nn.Module):
     @abc.abstractmethod
-    def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(self, sequence_representation: SequenceRepresentation) -> ModifiedSequenceRepresentation:
         """
-
-        :param sequence: a sequence tensor. :math:`(N, S, R)`
-        :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
-        :param kwargs: attributes that can be used to contextualize the sequence
-
-        :return: a sequence with embedded elements. :math:`(N, S, T)`
+        :param sequence_representation: an encoded sequence
+        :return: a modified sequence representation. :math:`(N, S, T)`
         """
         pass
 
@@ -65,15 +50,13 @@ class SequenceRepresentationModifierLayer(ABC, nn.Module):
 class ProjectionLayer(ABC, nn.Module):
     @abc.abstractmethod
     def forward(self,
-                sequence_representation: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
+                modified_sequence_representation: ModifiedSequenceRepresentation,
                 positive_samples: Optional[torch.Tensor] = None,
                 negative_samples: Optional[torch.Tensor] = None
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
 
-        :param sequence_representation: a sequence tensor. :math:`(N, S, T)`
-        :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
+        :param modified_sequence_representation: a modified sequence representation tensor.
         :param positive_samples: a tensor with positive sample item ids to score. :math:`(N, P)`
         :param negative_samples: a tensor with negative sample item ids o score. :math:`(N, NI)`
 
@@ -83,6 +66,16 @@ class ProjectionLayer(ABC, nn.Module):
         if positive and negative samples are provided a tuple of two tensors of shape :math:`(N, PI)`, :math:`(N, NI)`
         """
         pass
+
+
+class IdentitySequenceRepresentationModifierLayer(SequenceRepresentationModifierLayer):
+
+    """ a SequenceRepresentationModifierLayer that does nothing with the sequence representation """
+
+    def forward(self, sequence_representation: SequenceRepresentation) -> ModifiedSequenceRepresentation:
+        return ModifiedSequenceRepresentation(sequence_representation.padding_mask,
+                                              sequence_representation.attributes,
+                                              sequence_representation.encoded_sequence)
 
 
 class ItemEmbedding(nn.Module):

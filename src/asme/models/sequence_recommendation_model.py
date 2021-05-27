@@ -1,22 +1,12 @@
 from abc import ABC
-from typing import Union, Tuple, Optional, List, Dict
+from typing import Union, Tuple, List
 
 import torch
 from torch import nn
 
 from asme.models.layers.layers import SequenceElementsRepresentationLayer, SequenceRepresentationLayer, \
     SequenceRepresentationModifierLayer, ProjectionLayer
-
-
-class IdentitySequenceRepresentationModifierLayer(SequenceRepresentationModifierLayer):
-
-    """ a SequenceRepresentationModifierLayer that does nothing with the sequence representation """
-
-    def forward(self,
-                sequence_representation: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
-        return sequence_representation
+from asme.models.layers.data.sequence import InputSequence
 
 
 class SequenceRecommenderModel(ABC, nn.Module):
@@ -42,28 +32,22 @@ class SequenceRecommenderModel(ABC, nn.Module):
         self._sequence_representation_modifier_layer = sequence_representation_modifier_layer
         self._projection_layer = projection_layer
 
-    def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor],
-                **kwargs
-                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    def forward(self, sequence: InputSequence) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
 
-        :param sequence: a sequence tensor. :math:`(N, S)` or :math:`(N, S, BS)`
-        :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
-        :param kwargs:
+        :param sequence: a sequence.
         :return:
         """
         # 1. embed the information
-        embedded_sequence = self._sequence_embedding_layer(sequence, padding_mask, **kwargs)
+        embedded_sequence = self._sequence_embedding_layer(sequence)
 
         # 2. get the sequence representation
-        sequence_representation = self._sequence_representation_layer(embedded_sequence, padding_mask, **kwargs)
+        sequence_representation = self._sequence_representation_layer(embedded_sequence)
 
         # 3. maybe modify the representation
-        sequence_representation = self._sequence_representation_modifier_layer(sequence_representation, padding_mask, **kwargs)
+        sequence_representation = self._sequence_representation_modifier_layer(sequence_representation)
 
-        return self._projection_layer(sequence_representation, padding_mask, **kwargs)
+        return self._projection_layer(sequence_representation)
 
     def required_metadata_keys(self) -> List[str]:
         """
