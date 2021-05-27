@@ -1,82 +1,11 @@
-import abc
 from abc import ABC
-from typing import Union, Tuple, Optional, List, Dict
+from typing import Union, Tuple, Optional, List
 
 import torch
 from torch import nn
 
-
-class SequenceElementsRepresentationLayer(ABC, nn.Module):
-    """
-    Base class for modules that embed the elements of a sequence.
-    """
-    @abc.abstractmethod
-    def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
-        """
-        :param sequence: a sequence tensor with item ids. :math:`(N, S)` or :math:`(N, S, BS)`
-        :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
-        :param kwargs: attributes that can be used to contextualize the sequence
-
-        :return: a sequence with embedded elements. :math:`(N, S, H)`
-        """
-        pass
-
-
-class SequenceRepresentationLayer(ABC, nn.Module):
-    def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
-        """
-
-        :param sequence: an embedded sequence tensor. :math:`(N, S, H)`
-        :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
-        :param kwargs: attributes that can be used to contextualize the sequence representation.
-
-        :return: a sequence representation. :math:`(N, S, R)`
-        """
-        pass
-
-
-class SequenceRepresentationModifierLayer(ABC, nn.Module):
-    def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
-        """
-
-        :param sequence: a sequence tensor. :math:`(N, S, R)`
-        :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
-        :param kwargs: attributes that can be used to contextualize the sequence
-
-        :return: a sequence with embedded elements. :math:`(N, S, T)`
-        """
-        pass
-
-
-class ProjectionLayer(ABC, nn.Module):
-    def forward(self,
-                sequence_representation: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                positive_samples: Optional[torch.Tensor] = None,
-                negative_samples: Optional[torch.Tensor] = None
-                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        """
-
-        :param sequence_representation: a sequence tensor. :math:`(N, S, T)`
-        :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
-        :param positive_samples: a tensor with positive sample item ids to score. :math:`(N, P)`
-        :param negative_samples: a tensor with negative sample item ids o score. :math:`(N, NI)`
-
-        :return: a score for each (provided) item.
-        if no positive_samples and negative samples are provided a tensor of :math:`(N, I)` is returned
-        if positive samples are provided :math:`(N, PI)` or
-        if positive and negative samples are provided a tuple of two tensors of shape :math:`(N, PI)`, :math:`(N, NI)`
-        """
-        pass
+from asme.models.layers.layers import SequenceElementsRepresentationLayer, SequenceRepresentationLayer, \
+    SequenceRepresentationModifierLayer, ProjectionLayer
 
 
 class SequenceRecommenderModel(ABC, nn.Module):

@@ -1,64 +1,88 @@
 import math
+import abc
 from abc import ABC, abstractmethod
-from functools import partial
-from typing import Optional, Dict
+from typing import Optional, Dict, Union, Tuple
 
 import torch
 from torch import nn
 
-from asme.models.sequence_recommendation_model import SequenceElementsRepresentationLayer
+from asme.models.layers.sequence_embedding import PooledSequenceElementsRepresentation
 
 
-class SequenceElementsEmbeddingLayer(SequenceElementsRepresentationLayer):
+class SequenceElementsRepresentationLayer(ABC, nn.Module):
     """
-    Computes an embedding for every element in the sequence.
+    Base class for modules that embed the elements of a sequence.
     """
-    def __init__(self,
-                 item_voc_size: int,
-                 embedding_size: int):
-        super().__init__()
-
-        self.embedding_size = embedding_size
-        self.embedding = nn.Embedding(num_embeddings=item_voc_size, embedding_dim=embedding_size)
-
+    @abc.abstractmethod
     def forward(self,
                 sequence: torch.Tensor,
                 padding_mask: Optional[torch.Tensor] = None,
                 **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """
+        :param sequence: a sequence tensor with item ids. :math:`(N, S)` or :math:`(N, S, BS)`
+        :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
+        :param kwargs: attributes that can be used to contextualize the sequence
 
-        embedded_sequence = self.embedding(sequence)
+        :return: a sequence with embedded elements. :math:`(N, S, H)`
+        """
+        pass
 
-        return embedded_sequence
 
-
-class PooledSequenceElementsRepresentation(nn.Module):
-    """
-    A stateless module that provides pooling functionality over embedded sequences.
-    """
-    def __init__(self, pooling_type: str):
+class SequenceRepresentationLayer(ABC, nn.Module):
+    @abc.abstractmethod
+    def forward(self,
+                sequence: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
         """
 
-        :param pooling_type: the type of pooling to perform, can be either: `max`, `sum`, or `mean`.
+        :param sequence: an embedded sequence tensor. :math:`(N, S, H)`
+        :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
+        :param kwargs: attributes that can be used to contextualize the sequence representation.
+
+        :return: a sequence representation. :math:`(N, S, R)`
         """
-        super().__init__()
-
-        self.pooling_function = {
-            'max': _max_pooling,
-            'sum': partial(torch.sum, dim=-2),
-            'mean': partial(torch.mean, dim=-2)
-        }[pooling_type]
-
-    def forward(self, sequence: torch.Tensor) -> torch.Tensor:
-        return self.pooling_function(sequence)
+        pass
 
 
-def _max_pooling(tensor: torch.Tensor
-                 ) -> torch.Tensor:
-    return tensor.max(dim=-2)[0]
+class SequenceRepresentationModifierLayer(ABC, nn.Module):
+    @abc.abstractmethod
+    def forward(self,
+                sequence: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """
+
+        :param sequence: a sequence tensor. :math:`(N, S, R)`
+        :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
+        :param kwargs: attributes that can be used to contextualize the sequence
+
+        :return: a sequence with embedded elements. :math:`(N, S, T)`
+        """
+        pass
 
 
-def _identity(tensor: torch.Tensor) -> torch.Tensor:
-    return tensor
+class ProjectionLayer(ABC, nn.Module):
+    @abc.abstractmethod
+    def forward(self,
+                sequence_representation: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                positive_samples: Optional[torch.Tensor] = None,
+                negative_samples: Optional[torch.Tensor] = None
+                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        """
+
+        :param sequence_representation: a sequence tensor. :math:`(N, S, T)`
+        :param padding_mask: a mask that contains positions of padding tokens. :math:`(N, S)`
+        :param positive_samples: a tensor with positive sample item ids to score. :math:`(N, P)`
+        :param negative_samples: a tensor with negative sample item ids o score. :math:`(N, NI)`
+
+        :return: a score for each (provided) item.
+        if no positive_samples and negative samples are provided a tensor of :math:`(N, I)` is returned
+        if positive samples are provided :math:`(N, PI)` or
+        if positive and negative samples are provided a tuple of two tensors of shape :math:`(N, PI)`, :math:`(N, NI)`
+        """
+        pass
 
 
 class ItemEmbedding(nn.Module):
