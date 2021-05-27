@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Union, Tuple, Optional, List, Dict
 
 import torch
@@ -40,6 +40,8 @@ class SequenceRepresentationLayer(ABC, nn.Module):
 
 
 class SequenceRepresentationModifierLayer(ABC, nn.Module):
+
+    @abstractmethod
     def forward(self,
                 sequence_representation: torch.Tensor,
                 padding_mask: Optional[torch.Tensor] = None,
@@ -53,6 +55,17 @@ class SequenceRepresentationModifierLayer(ABC, nn.Module):
         :return: a sequence with embedded elements. :math:`(N, S, T)`
         """
         pass
+
+
+class IdentitySequenceRepresentationModifierLayer(SequenceRepresentationModifierLayer):
+
+    """ a SequenceRepresentationModifierLayer that does nothing with the sequence representation """
+
+    def forward(self,
+                sequence_representation: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
+        return sequence_representation
 
 
 class ProjectionLayer(ABC, nn.Module):
