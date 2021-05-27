@@ -1,16 +1,12 @@
-from abc import abstractmethod
 from typing import Optional
 
-import torch
 from torch import nn
 
 from asme.models.layers.data.sequence import SequenceRepresentation, ModifiedSequenceRepresentation, \
     EmbeddedElementsSequence
-from asme.models.layers.layers import build_projection_layer
-from asme.models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
+from asme.models.layers.transformer_layers import TransformerLayer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer, \
-    SequenceRepresentationModifierLayer, ProjectionLayer
-from asme.utils.hyperparameter_utils import save_hyperparameters
+    SequenceRepresentationModifierLayer
 
 
 class FFNSequenceRepresentationModifierLayer(SequenceRepresentationModifierLayer):
@@ -69,9 +65,14 @@ class BidirectionalTransformerSequenceRepresentationLayer(SequenceRepresentation
         return SequenceRepresentation(padding_mask, embedded_sequence.attributes, encoded_sequence)
 
 
-class BERT4RecBaseModel(SequenceRecommenderModel):
+class BERT4RecModel(SequenceRecommenderModel):
+    """
+        implementation of the paper "BERT4Rec: Sequential Recommendation with Bidirectional Encoder Representations
+        from Transformer"
+        see https://doi.org/10.1145%2f3357384.3357895 for more details.
+        Using own transformer implementation to be able to pass batch first tensors to the model
+    """
 
-    @save_hyperparameters
     def __init__(self,
                  transformer_hidden_size: int,
                  num_transformer_heads: int,
@@ -95,10 +96,10 @@ class BERT4RecBaseModel(SequenceRecommenderModel):
                                                                                    transformer_attention_dropout,
                                                                                    transformer_intermediate_size)
 
+        transform_layer = FFNSequenceRepresentationModifierLayer(transformer_hidden_size)
+
         projection_layer = self._build_projection_layer(project_layer_type, transformer_hidden_size,
                                                         item_vocab_size)
-
-        transform_layer = FFNSequenceRepresentationModifierLayer(transformer_hidden_size)
 
         super().__init__(embedding_layer, representation_layer, transform_layer, projection_layer)
         self.initializer_range = initializer_range
@@ -115,90 +116,3 @@ class BERT4RecBaseModel(SequenceRecommenderModel):
             module.weight.data.fill_(1.0)
         if is_linear_layer and module.bias is not None:
             module.bias.data.zero_()
-
-    def _init_internal(self,
-                       transformer_hidden_size: int,
-                       num_transformer_heads: int,
-                       num_transformer_layers: int,
-                       item_vocab_size: int,
-                       max_seq_length: int,
-                       transformer_dropout: float,
-                       embedding_mode: str = None) -> nn.Module:
-        pass
-
-    @abstractmethod
-    def _build_projection_layer(self,
-                                project_layer_type: str,
-                                transformer_hidden_size: int,
-                                item_vocab_size: int
-                                ) -> ProjectionLayer:
-        pass
-
-    @abstractmethod
-    def _embed_input(self,
-                     sequence: torch.Tensor,
-                     position_ids: torch.Tensor,
-                     **kwargs
-                     ) -> torch.Tensor:
-        pass
-
-
-class BERT4RecModel(BERT4RecBaseModel):
-    """
-        implementation of the paper "BERT4Rec: Sequential Recommendation with Bidirectional Encoder Representations
-        from Transformer"
-        see https://doi.org/10.1145%2f3357384.3357895 for more details.
-        Using own transformer implementation to be able to pass batch first tensors to the model
-    """
-
-    def __init__(self,
-                 transformer_hidden_size: int,
-                 num_transformer_heads: int,
-                 num_transformer_layers: int,
-                 item_vocab_size: int,
-                 max_seq_length: int,
-                 transformer_dropout: float,
-                 project_layer_type: str = 'transpose_embedding',
-                 embedding_pooling_type: str = None,
-                 initializer_range: float = 0.02,
-                 transformer_intermediate_size: int = None,
-                 transformer_attention_dropout: float = None
-                 ):
-        super().__init__(transformer_hidden_size=transformer_hidden_size,
-                         num_transformer_heads=num_transformer_heads,
-                         num_transformer_layers=num_transformer_layers,
-                         item_vocab_size=item_vocab_size,
-                         max_seq_length=max_seq_length,
-                         transformer_dropout=transformer_dropout,
-                         project_layer_type=project_layer_type,
-                         embedding_pooling_type=embedding_pooling_type,
-                         initializer_range=initializer_range,
-                         transformer_intermediate_size=transformer_intermediate_size,
-                         transformer_attention_dropout=transformer_attention_dropout)
-
-    def _init_internal(self,
-                       transformer_hidden_size: int,
-                       num_transformer_heads: int,
-                       num_transformer_layers: int,
-                       item_vocab_size: int,
-                       max_seq_length: int,
-                       transformer_dropout: float,
-                       embedding_mode: str = None):
-        return TransformerEmbedding(item_voc_size=item_vocab_size, max_seq_len=max_seq_length,
-                                    embedding_size=transformer_hidden_size, dropout=transformer_dropout,
-                                    embedding_pooling_type=embedding_mode)
-
-    def _build_projection_layer(self,
-                                project_layer_type: str,
-                                transformer_hidden_size: int,
-                                item_vocab_size: int
-                                ) -> ProjectionLayer:
-        return build_projection_layer(project_layer_type, transformer_hidden_size, item_vocab_size,
-                                      self.embedding.item_embedding.embedding)
-
-    def _embed_input(self,
-                     sequence: torch.Tensor,
-                     position_ids: torch.Tensor,
-                     **kwargs
-                     ) -> torch.Tensor:
-        return self.embedding(sequence, position_ids=position_ids)
