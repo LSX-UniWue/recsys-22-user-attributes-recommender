@@ -2,6 +2,8 @@ import math
 import abc
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Union, Tuple
+from abc import ABC
+from functools import partial
 
 import torch
 from torch import nn
@@ -139,29 +141,35 @@ class MatrixFactorizationLayer(nn.Linear, ABC):
 PROJECT_TYPE_LINEAR = 'linear'
 
 
-class ProjectionLayer(nn.Module):
-
-    @abstractmethod
-    def forward(self,
-                dense: torch.Tensor
-                ) -> torch.Tensor:
-        pass
-
-
 class LinearProjectionLayer(ProjectionLayer):
 
+    """
+    A projection layer that uses a linear layer to project the sequence representation into a score for each item
+    """
+
     def __init__(self,
-                 transformer_hidden_size: int,
+                 hidden_size: int,
                  item_vocab_size: int):
         super().__init__()
 
-        self.linear = nn.Linear(transformer_hidden_size, item_vocab_size)
+        self.linear = nn.Linear(hidden_size, item_vocab_size)
 
-    def forward(self, dense: torch.Tensor) -> torch.Tensor:
-        return self.linear(dense)
+    def forward(self,
+                sequence_representation: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                positive_samples: Optional[torch.Tensor] = None,
+                negative_samples: Optional[torch.Tensor] = None
+                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        return self.linear(sequence_representation)
 
 
 class ItemEmbeddingProjectionLayer(ProjectionLayer):
+
+    """
+    A projection layer that uses the item embedding matrix to transform the sequence representation into the item space
+
+    TODO: currently the sequence representation size must be the same as the item space size
+    """
 
     def __init__(self,
                  item_vocab_size: int,
@@ -180,8 +188,13 @@ class ItemEmbeddingProjectionLayer(ProjectionLayer):
         bound = 1 / math.sqrt(self.item_vocab_size)
         nn.init.uniform_(self.output_bias, -bound, bound)
 
-    def forward(self, dense: torch.Tensor) -> torch.Tensor:
-        dense = torch.matmul(dense, self.embedding.weight.transpose(0, 1))  # (S, N, I)
+    def forward(self,
+                sequence_representation: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                positive_samples: Optional[torch.Tensor] = None,
+                negative_samples: Optional[torch.Tensor] = None
+                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        dense = torch.matmul(sequence_representation, self.embedding.weight.transpose(0, 1))  # (S, N, I)
         return dense + self.output_bias
 
 

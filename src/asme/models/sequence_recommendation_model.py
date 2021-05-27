@@ -1,11 +1,22 @@
-from abc import ABC
-from typing import Union, Tuple, Optional, List
+from abc import ABC, abstractmethod
+from typing import Union, Tuple, Optional, List, Dict
 
 import torch
 from torch import nn
 
 from asme.models.layers.layers import SequenceElementsRepresentationLayer, SequenceRepresentationLayer, \
     SequenceRepresentationModifierLayer, ProjectionLayer
+
+
+class IdentitySequenceRepresentationModifierLayer(SequenceRepresentationModifierLayer):
+
+    """ a SequenceRepresentationModifierLayer that does nothing with the sequence representation """
+
+    def forward(self,
+                sequence_representation: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
+        return sequence_representation
 
 
 class SequenceRecommenderModel(ABC, nn.Module):

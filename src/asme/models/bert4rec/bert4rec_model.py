@@ -1,13 +1,66 @@
 from abc import abstractmethod
-from typing import Optional, List
+from typing import Optional, Dict
 
 import torch
 from torch import nn
 
 from asme.models.layers.layers import build_projection_layer
 from asme.models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
-from asme.models.sequence_recommendation_model import SequenceRecommenderModel
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer, \
+    SequenceRepresentationModifierLayer, ProjectionLayer
 from asme.utils.hyperparameter_utils import save_hyperparameters
+
+
+class FFNSequenceRepresentationModifierLayer(SequenceRepresentationModifierLayer):
+    """
+    layer that applies a linear layer and a activation function
+    """
+    def __init__(self,
+                 feature_size: int
+                 ):
+        super().__init__()
+        self.transform = nn.Sequential(
+            nn.Linear(feature_size, feature_size),
+            nn.GELU(),
+            nn.LayerNorm(feature_size)
+        )
+
+    def forward(self,
+                sequence_representation: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
+        return self.transform(sequence_representation)
+
+
+class BidirectionalTransformerSequenceRepresentationLayer(SequenceRepresentationLayer):
+
+    def __init__(self,
+                 transformer_hidden_size: int,
+                 num_transformer_heads: int,
+                 num_transformer_layers: int,
+                 transformer_dropout: float,
+                 transformer_attention_dropout: Optional[float] = None,
+                 transformer_intermediate_size: Optional[int] = None):
+        super().__init__()
+
+        if transformer_intermediate_size is None:
+            transformer_intermediate_size = 4 * transformer_hidden_size
+
+        self.transformer_encoder = TransformerLayer(transformer_hidden_size, num_transformer_heads,
+                                                    num_transformer_layers, transformer_intermediate_size,
+                                                    transformer_dropout,
+                                                    attention_dropout=transformer_attention_dropout)
+
+    def forward(self,
+                sequence: torch.Tensor,
+                padding_mask: Optional[torch.Tensor] = None,
+                **kwargs: Dict[str, torch.Tensor]
+                ) -> torch.Tensor:
+        attention_mask = None
+        if padding_mask is not None:
+            attention_mask = padding_mask.unsqueeze(1).repeat(1, sequence.size()[1], 1).unsqueeze(1)
+
+        return self.transformer_encoder(sequence, attention_mask=attention_mask)
 
 
 class BERT4RecBaseModel(SequenceRecommenderModel):
@@ -26,28 +79,23 @@ class BERT4RecBaseModel(SequenceRecommenderModel):
                  transformer_intermediate_size: int = None,
                  transformer_attention_dropout: float = None
                  ):
-        super().__init__()
+        embedding_layer = self._init_internal(transformer_hidden_size, num_transformer_heads, num_transformer_layers, item_vocab_size,
+                                              max_seq_length, transformer_dropout, embedding_pooling_type)
+
+        representation_layer = BidirectionalTransformerSequenceRepresentationLayer(transformer_hidden_size,
+                                                                                   num_transformer_heads,
+                                                                                   num_transformer_layers,
+                                                                                   transformer_dropout,
+                                                                                   transformer_attention_dropout,
+                                                                                   transformer_intermediate_size)
+
+        projection_layer = self._build_projection_layer(project_layer_type, transformer_hidden_size,
+                                                        item_vocab_size)
+
+        transform_layer = FFNSequenceRepresentationModifierLayer(transformer_hidden_size)
+
+        super().__init__(embedding_layer, representation_layer, transform_layer, projection_layer)
         self.initializer_range = initializer_range
-
-        if transformer_intermediate_size is None:
-            transformer_intermediate_size = 4 * transformer_hidden_size
-
-        self.transformer_encoder = TransformerLayer(transformer_hidden_size, num_transformer_heads,
-                                                    num_transformer_layers, transformer_intermediate_size,
-                                                    transformer_dropout,
-                                                    attention_dropout=transformer_attention_dropout)
-
-        self.transform = nn.Sequential(
-            nn.Linear(transformer_hidden_size, transformer_hidden_size),
-            nn.GELU(),
-            nn.LayerNorm(transformer_hidden_size)
-        )
-
-        self._init_internal(transformer_hidden_size, num_transformer_heads, num_transformer_layers, item_vocab_size,
-                            max_seq_length, transformer_dropout, embedding_pooling_type)
-
-        self.projection_layer = self._build_projection_layer(project_layer_type, transformer_hidden_size,
-                                                             item_vocab_size)
         self.apply(self._init_weights)
 
     def _init_weights(self, module):
@@ -69,7 +117,7 @@ class BERT4RecBaseModel(SequenceRecommenderModel):
                        item_vocab_size: int,
                        max_seq_length: int,
                        transformer_dropout: float,
-                       embedding_mode: str = None):
+                       embedding_mode: str = None) -> nn.Module:
         pass
 
     @abstractmethod
@@ -77,40 +125,8 @@ class BERT4RecBaseModel(SequenceRecommenderModel):
                                 project_layer_type: str,
                                 transformer_hidden_size: int,
                                 item_vocab_size: int
-                                ) -> nn.Module:
+                                ) -> ProjectionLayer:
         pass
-
-    def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                position_ids: Optional[torch.Tensor] = None,
-                **kwargs
-                ) -> torch.Tensor:
-        """
-        forward pass to calculate the scores for the mask item modelling
-
-        :param sequence: the input sequence :math:`(N, S)`
-        :param position_ids: (optional) positional_ids if None the position ids are generated :math:`(N, S)`
-        :param padding_mask: (optional) the padding mask if the sequence is padded :math:`(N, S)` True if not padded
-        :return: the logits of the predicted tokens :math:`(N, S, I)`
-        (Note: all logits for all positions are returned. For loss calculation please only use the positions of the
-        MASK tokens.)
-
-        Where N the batch size, S is the (max) sequence length of the batch, and I the vocabulary size of the items.
-        """
-
-        # embedding the indexed sequence to sequence of vectors
-        embedded_sequence = self._embed_input(sequence, position_ids, **kwargs)
-
-        attention_mask = None
-        if padding_mask is not None:
-            attention_mask = padding_mask.unsqueeze(1).repeat(1, sequence.size()[1], 1).unsqueeze(1)
-
-        encoded_sequence = self.transformer_encoder(embedded_sequence, attention_mask=attention_mask)
-
-        transformed = self.transform(encoded_sequence)
-
-        return self.projection_layer(transformed)
 
     @abstractmethod
     def _embed_input(self,
@@ -162,15 +178,15 @@ class BERT4RecModel(BERT4RecBaseModel):
                        max_seq_length: int,
                        transformer_dropout: float,
                        embedding_mode: str = None):
-        self.embedding = TransformerEmbedding(item_voc_size=item_vocab_size, max_seq_len=max_seq_length,
-                                              embedding_size=transformer_hidden_size, dropout=transformer_dropout,
-                                              embedding_pooling_type=embedding_mode)
+        return TransformerEmbedding(item_voc_size=item_vocab_size, max_seq_len=max_seq_length,
+                                    embedding_size=transformer_hidden_size, dropout=transformer_dropout,
+                                    embedding_pooling_type=embedding_mode)
 
     def _build_projection_layer(self,
                                 project_layer_type: str,
                                 transformer_hidden_size: int,
                                 item_vocab_size: int
-                                ) -> nn.Module:
+                                ) -> ProjectionLayer:
         return build_projection_layer(project_layer_type, transformer_hidden_size, item_vocab_size,
                                       self.embedding.item_embedding.embedding)
 
