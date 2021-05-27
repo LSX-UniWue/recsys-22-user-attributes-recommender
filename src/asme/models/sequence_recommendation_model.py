@@ -84,7 +84,7 @@ class SequenceRecommenderModel(ABC, nn.Module):
     Configurable sequence recommender model.
     """
     def __init__(self,
-                 sequence_embedding_layer: SequenceEmbeddingLayer,
+                 sequence_embedding_layer: SequenceElementsRepresentationLayer,
                  sequence_representation_layer: SequenceRepresentationLayer,
                  sequence_representation_modifier_layer: SequenceRepresentationModifierLayer,
                  projection_layer: ProjectionLayer):
