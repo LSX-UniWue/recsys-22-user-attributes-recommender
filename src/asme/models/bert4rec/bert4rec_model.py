@@ -1,9 +1,11 @@
 from abc import abstractmethod
-from typing import Optional, Dict
+from typing import Optional
 
 import torch
 from torch import nn
 
+from asme.models.layers.data.sequence import SequenceRepresentation, ModifiedSequenceRepresentation, \
+    EmbeddedElementsSequence
 from asme.models.layers.layers import build_projection_layer
 from asme.models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer, \
@@ -25,14 +27,17 @@ class FFNSequenceRepresentationModifierLayer(SequenceRepresentationModifierLayer
             nn.LayerNorm(feature_size)
         )
 
-    def forward(self,
-                sequence_representation: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
-        return self.transform(sequence_representation)
+    def forward(self, sequence_representation: SequenceRepresentation) -> ModifiedSequenceRepresentation:
+        transformation = self.transform(sequence_representation.encoded_sequence)
+        return ModifiedSequenceRepresentation(sequence_representation.padding_mask,
+                                              sequence_representation.attributes,
+                                              transformation)
 
 
 class BidirectionalTransformerSequenceRepresentationLayer(SequenceRepresentationLayer):
+    """
+    A representation layer that uses a bidirectional transformer layer(s) to encode the given sequence
+    """
 
     def __init__(self,
                  transformer_hidden_size: int,
@@ -51,16 +56,17 @@ class BidirectionalTransformerSequenceRepresentationLayer(SequenceRepresentation
                                                     transformer_dropout,
                                                     attention_dropout=transformer_attention_dropout)
 
-    def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]
-                ) -> torch.Tensor:
+    def forward(self, embedded_sequence: EmbeddedElementsSequence) -> SequenceRepresentation:
+        sequence = embedded_sequence.embedded_sequence
+        padding_mask = embedded_sequence.padding_mask
+
         attention_mask = None
+
         if padding_mask is not None:
             attention_mask = padding_mask.unsqueeze(1).repeat(1, sequence.size()[1], 1).unsqueeze(1)
 
-        return self.transformer_encoder(sequence, attention_mask=attention_mask)
+        encoded_sequence = self.transformer_encoder(sequence, attention_mask=attention_mask)
+        return SequenceRepresentation(padding_mask, embedded_sequence.attributes, encoded_sequence)
 
 
 class BERT4RecBaseModel(SequenceRecommenderModel):

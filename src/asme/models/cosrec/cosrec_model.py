@@ -1,12 +1,13 @@
 import torch
 import torch.nn as nn
-from typing import List, Optional, Dict
+from typing import List
 
 from asme.models.caser.caser_model import UserEmbeddingConcatModifier, CaserProjectionLayer
-from asme.models.layers.layers import ItemEmbedding
+from asme.models.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation
+from asme.models.layers.layers import ItemEmbedding, IdentitySequenceRepresentationModifierLayer
 from asme.models.layers.util_layers import get_activation_layer
-from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer, \
-    IdentitySequenceRepresentationModifierLayer
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer
+
 from data.datasets import USER_ENTRY_NAME
 
 
@@ -37,11 +38,8 @@ class CosRecSequenceRepresentationLayer(SequenceRepresentationLayer):
         self.fc1 = nn.Linear(cnn_out_dim, fc_dim)
         self.activation_function = get_activation_layer(activation_function)
 
-    def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]
-                ) -> torch.Tensor:
+    def forward(self, embedded_sequence: EmbeddedElementsSequence) -> SequenceRepresentation:
+        sequence = embedded_sequence.embedded_sequence
         sequence_shape = sequence.size()
 
         batch_size = sequence_shape[0]
@@ -63,7 +61,9 @@ class CosRecSequenceRepresentationLayer(SequenceRepresentationLayer):
 
         # apply fc and dropout
         out = self.activation_function(self.fc1(out))  # (N, F_D)
-        return self.dropout(out)
+        representation = self.dropout(out)
+
+        return SequenceRepresentation(embedded_sequence.padding_mask, embedded_sequence.attributes, representation)
 
 
 class CosRecModel(SequenceRecommenderModel):

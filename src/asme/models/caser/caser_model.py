@@ -4,15 +4,18 @@ import torch
 
 from torch import nn
 
-from asme.models.layers.layers import ItemEmbedding
+from asme.models.layers.data.sequence import SequenceRepresentation, ModifiedSequenceRepresentation, \
+    EmbeddedElementsSequence
+from asme.models.layers.layers import ItemEmbedding, IdentitySequenceRepresentationModifierLayer, \
+    SequenceRepresentationModifierLayer
 from asme.models.layers.util_layers import get_activation_layer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer, \
-    ProjectionLayer, IdentitySequenceRepresentationModifierLayer
+    ProjectionLayer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 from data.datasets import USER_ENTRY_NAME
 
 
-class UserEmbeddingConcatModifier(IdentitySequenceRepresentationModifierLayer):
+class UserEmbeddingConcatModifier(SequenceRepresentationModifierLayer):
 
     """
     a sequence representation modifier that cats a user embedding to the sequence representation
@@ -27,15 +30,14 @@ class UserEmbeddingConcatModifier(IdentitySequenceRepresentationModifierLayer):
         # init weights
         self.user_embedding.weight.data.normal_(0, 1.0 / self.user_embedding.embedding_dim)
 
-    def forward(self,
-                sequence_representation: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]
-                ) -> torch.Tensor:
-        user = kwargs.get(USER_ENTRY_NAME)
+    def forward(self, sequence_representation: SequenceRepresentation) -> ModifiedSequenceRepresentation:
+        user = sequence_representation.get_attribute(USER_ENTRY_NAME)
         user_emb = self.user_embedding(user).squeeze(1)
 
-        return torch.cat([sequence_representation, user_emb], 1)
+        modified_representation = torch.cat([sequence_representation.encoded_sequence, user_emb], 1)
+        return ModifiedSequenceRepresentation(sequence_representation.padding_mask,
+                                              sequence_representation.attributes,
+                                              modified_representation)
 
 
 class CaserSequenceRepresentationLayer(SequenceRepresentationLayer):
@@ -77,10 +79,9 @@ class CaserSequenceRepresentationLayer(SequenceRepresentationLayer):
 
         self.fc1_activation = get_activation_layer(fc_activation_fn)
 
-    def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(self, embedded_sequence: EmbeddedElementsSequence) -> SequenceRepresentation:
+        sequence = embedded_sequence.embedded_sequence
+
         # Convolutional Layers
         out_vertical = None
         # vertical conv layer
@@ -102,8 +103,12 @@ class CaserSequenceRepresentationLayer(SequenceRepresentationLayer):
         # apply dropout
         out = self.dropout(out)
 
+        sequence_representation = self.fc1_activation(self.fc1(out))
+
         # fully-connected layer
-        return self.fc1_activation(self.fc1(out))
+        return SequenceRepresentation(embedded_sequence.padding_mask,
+                                      embedded_sequence.attributes,
+                                      sequence_representation)
 
 
 class CaserProjectionLayer(ProjectionLayer):
@@ -119,7 +124,6 @@ class CaserProjectionLayer(ProjectionLayer):
         super().__init__()
 
         # W2, b2 are encoded with nn.Embedding, as we don't need to compute scores for all items
-
         self.W2 = nn.Embedding(item_vocab_size, embedding_size)
         self.b2 = nn.Embedding(item_vocab_size, 1)
 
@@ -128,8 +132,7 @@ class CaserProjectionLayer(ProjectionLayer):
         self.b2.weight.data.zero_()
 
     def forward(self,
-                sequence_representation: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
+                modified_sequence_representation: ModifiedSequenceRepresentation,
                 positive_samples: Optional[torch.Tensor] = None,
                 negative_samples: Optional[torch.Tensor] = None
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
@@ -138,7 +141,7 @@ class CaserProjectionLayer(ProjectionLayer):
         #    b2 = pos_b2.squeeze()
         #    w2 = w2.permute(1, 0, 2)
         #    return torch.matmul(x, w2).sum(dim=1) + b2
-
+        sequence_representation = modified_sequence_representation.modified_encoded_sequence
         sequence_representation = sequence_representation.unsqueeze(2)
         res_pos = self._calc_scores(positive_samples, sequence_representation)
         if negative_samples is None:
@@ -190,7 +193,10 @@ class CaserModel(SequenceRecommenderModel):
         seq_rep_layer = CaserSequenceRepresentationLayer(embedding_size, max_seq_length, num_vertical_filters,
                                                          num_horizontal_filters, conv_activation_fn, fc_activation_fn,
                                                          dropout)
-        mod_layer = UserEmbeddingConcatModifier(user_vocab_size, embedding_size) if user_present else IdentitySequenceRepresentationModifierLayer()
+        if user_present:
+            mod_layer = UserEmbeddingConcatModifier(user_vocab_size, embedding_size)
+        else:
+            mod_layer = IdentitySequenceRepresentationModifierLayer()
 
         projection_layer = CaserProjectionLayer(item_vocab_size, 2 * embedding_size if user_present else embedding_size)
         super().__init__(None, seq_rep_layer, mod_layer, projection_layer)

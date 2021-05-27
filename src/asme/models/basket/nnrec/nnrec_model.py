@@ -1,11 +1,11 @@
-from typing import List, Optional, Dict
+from typing import List
 
-import torch
-from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer, IdentitySequenceRepresentationModifierLayer
+from asme.models.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer
 from data.datasets import USER_ENTRY_NAME
 from torch import nn
 
-from asme.models.layers.layers import ItemEmbedding, LinearProjectionLayer
+from asme.models.layers.layers import ItemEmbedding, LinearProjectionLayer, IdentitySequenceRepresentationModifierLayer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
@@ -19,10 +19,9 @@ class NNRecSequenceRepresentationLayer(SequenceRepresentationLayer):
         self.act1 = nn.Tanh()
 
     def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]
-                ) -> torch.Tensor:
+                embedded_sequence: EmbeddedElementsSequence
+                ) -> SequenceRepresentation:
+        sequence = embedded_sequence.embedded_sequence
         return self.act1(self.hidden_layer(sequence))
 
 
