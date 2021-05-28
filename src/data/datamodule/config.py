@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
+from asme.init.config import Config
 from asme.init.context import Context
 from data.datamodule.preprocessing import PreprocessingAction
 from data.datamodule.unpacker import Unpacker
@@ -20,3 +21,4 @@ class DatasetConfig:
 @dataclass
 class AsmeDataModuleConfig:
     datasetConfig: DatasetConfig
+    dataloaderConfig: Config

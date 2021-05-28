@@ -4,8 +4,12 @@ from pathlib import Path
 from typing import Optional, Callable, List
 
 import pytorch_lightning.core as pl
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from asme.init.config import Config
+from asme.init.context import Context
+from asme.init.factories.data_sources.data_sources import DataSourcesFactory
 from data.datamodule.config import AsmeDataModuleConfig
 from data.datamodule.preprocessing import PreprocessingAction, EXTRACTED_DIRECTORY_KEY
 from data.datamodule.unpacker import Unpacker
@@ -17,9 +21,12 @@ class AsmeDataModule(pl.LightningDataModule):
 
     PREPROCESSING_FINISHED_FLAG = ".PREPROCESSING_FINISHED"
 
-    def __init__(self, config: AsmeDataModuleConfig):
+    def __init__(self, config: AsmeDataModuleConfig, context: Context):
         super().__init__()
         self.config = config
+        self.context = context
+        self._datasource_factory = DataSourcesFactory()
+        self._objects = {}
 
     def prepare_data(self):
         dsConfig = self.config.datasetConfig
@@ -51,8 +58,18 @@ class AsmeDataModule(pl.LightningDataModule):
         (dsConfig.location / self.PREPROCESSING_FINISHED_FLAG).touch()
 
     def setup(self, stage: Optional[str] = None):
-        # This should essentially do the job of the data sources factory
-        pass
+        loaderConfig = self.config.dataloaderConfig
+        self._objects = self._datasource_factory.build(loaderConfig, self.context)
+
+    def train_dataloader(self) -> DataLoader:
+        return self._objects["data_sources.train"]
+
+    def validation_dataloader(self) -> DataLoader:
+        return self._objects["data_sources.validation"]
+
+    def test_dataloader(self) -> DataLoader:
+        return self._objects["data_sources.test"]
+
 
     def _check_finished_flag(self, directory: Path) -> bool:
         return os.path.exists(directory / self.PREPROCESSING_FINISHED_FLAG)
@@ -60,6 +77,6 @@ class AsmeDataModule(pl.LightningDataModule):
 
 if __name__ == "__main__":
     dSconfig = get_movielens_1m_config(Path("/tmp/ml-1m"), Path("/tmp/ml-1m/raw"),min_sequence_length=100, min_item_feedback=50)
-    config = AsmeDataModuleConfig(dSconfig)
+    config = AsmeDataModuleConfig(dSconfig, Config({}))
     module = AsmeDataModule(config)
     module.prepare_data()
