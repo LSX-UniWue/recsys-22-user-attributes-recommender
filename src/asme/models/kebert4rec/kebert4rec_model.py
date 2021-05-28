@@ -75,7 +75,7 @@ class KeBERT4RecSequenceElementsRepresentationLayer(SequenceElementsRepresentati
             embedding += module(sequence.get_attribute(input_key))
         embedding = self.norm_embedding(embedding)
         embedding = self.dropout_embedding(embedding)
-        return EmbeddedElementsSequence(sequence.padding_mask, sequence.attributes, embedding)
+        return EmbeddedElementsSequence(embedding)
 
 
 class KeBERT4RecModel(SequenceRecommenderModel):

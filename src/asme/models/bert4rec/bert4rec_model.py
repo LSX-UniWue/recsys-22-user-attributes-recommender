@@ -25,9 +25,7 @@ class FFNSequenceRepresentationModifierLayer(SequenceRepresentationModifierLayer
 
     def forward(self, sequence_representation: SequenceRepresentation) -> ModifiedSequenceRepresentation:
         transformation = self.transform(sequence_representation.encoded_sequence)
-        return ModifiedSequenceRepresentation(sequence_representation.padding_mask,
-                                              sequence_representation.attributes,
-                                              transformation)
+        return ModifiedSequenceRepresentation(transformation)
 
 
 class BidirectionalTransformerSequenceRepresentationLayer(SequenceRepresentationLayer):
@@ -54,7 +52,7 @@ class BidirectionalTransformerSequenceRepresentationLayer(SequenceRepresentation
 
     def forward(self, embedded_sequence: EmbeddedElementsSequence) -> SequenceRepresentation:
         sequence = embedded_sequence.embedded_sequence
-        padding_mask = embedded_sequence.padding_mask
+        padding_mask = embedded_sequence.input_sequence.padding_mask
 
         attention_mask = None
 
@@ -62,7 +60,7 @@ class BidirectionalTransformerSequenceRepresentationLayer(SequenceRepresentation
             attention_mask = padding_mask.unsqueeze(1).repeat(1, sequence.size()[1], 1).unsqueeze(1)
 
         encoded_sequence = self.transformer_encoder(sequence, attention_mask=attention_mask)
-        return SequenceRepresentation(padding_mask, embedded_sequence.attributes, encoded_sequence)
+        return SequenceRepresentation(encoded_sequence)
 
 
 class BERT4RecModel(SequenceRecommenderModel):

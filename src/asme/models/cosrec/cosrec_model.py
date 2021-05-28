@@ -63,7 +63,7 @@ class CosRecSequenceRepresentationLayer(SequenceRepresentationLayer):
         out = self.activation_function(self.fc1(out))  # (N, F_D)
         representation = self.dropout(out)
 
-        return SequenceRepresentation(embedded_sequence.padding_mask, embedded_sequence.attributes, representation)
+        return SequenceRepresentation(representation)
 
 
 class CosRecModel(SequenceRecommenderModel):

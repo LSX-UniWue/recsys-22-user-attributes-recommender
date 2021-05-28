@@ -31,13 +31,11 @@ class UserEmbeddingConcatModifier(SequenceRepresentationModifierLayer):
         self.user_embedding.weight.data.normal_(0, 1.0 / self.user_embedding.embedding_dim)
 
     def forward(self, sequence_representation: SequenceRepresentation) -> ModifiedSequenceRepresentation:
-        user = sequence_representation.get_attribute(USER_ENTRY_NAME)
+        user = sequence_representation.embedded_elements_sequence.input_sequence.get_attribute(USER_ENTRY_NAME)
         user_emb = self.user_embedding(user).squeeze(1)
 
         modified_representation = torch.cat([sequence_representation.encoded_sequence, user_emb], 1)
-        return ModifiedSequenceRepresentation(sequence_representation.padding_mask,
-                                              sequence_representation.attributes,
-                                              modified_representation)
+        return ModifiedSequenceRepresentation(modified_representation)
 
 
 class CaserSequenceRepresentationLayer(SequenceRepresentationLayer):
@@ -106,9 +104,7 @@ class CaserSequenceRepresentationLayer(SequenceRepresentationLayer):
         sequence_representation = self.fc1_activation(self.fc1(out))
 
         # fully-connected layer
-        return SequenceRepresentation(embedded_sequence.padding_mask,
-                                      embedded_sequence.attributes,
-                                      sequence_representation)
+        return SequenceRepresentation(sequence_representation)
 
 
 class CaserProjectionLayer(ProjectionLayer):

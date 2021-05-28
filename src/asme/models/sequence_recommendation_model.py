@@ -40,14 +40,17 @@ class SequenceRecommenderModel(ABC, nn.Module):
         """
         # 1. embed the information
         embedded_sequence = self._sequence_embedding_layer(sequence)
+        embedded_sequence.input_sequence = sequence
 
         # 2. get the sequence representation
         sequence_representation = self._sequence_representation_layer(embedded_sequence)
+        sequence_representation.embedded_elements_sequence = embedded_sequence
 
         # 3. maybe modify the representation
-        sequence_representation = self._sequence_representation_modifier_layer(sequence_representation)
+        modified_sequence_representation = self._sequence_representation_modifier_layer(sequence_representation)
+        modified_sequence_representation.sequence_representation = sequence_representation
 
-        return self._projection_layer(sequence_representation)
+        return self._projection_layer(modified_sequence_representation)
 
     def required_metadata_keys(self) -> List[str]:
         """

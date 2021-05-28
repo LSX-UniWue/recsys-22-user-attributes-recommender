@@ -22,7 +22,7 @@ class NNRecSequenceRepresentationLayer(SequenceRepresentationLayer):
                 embedded_sequence: EmbeddedElementsSequence
                 ) -> SequenceRepresentation:
         sequence = embedded_sequence.embedded_sequence
-        return self.act1(self.hidden_layer(sequence))
+        return SequenceRepresentation(self.act1(self.hidden_layer(sequence)))
 
 
 class NNRecModel(SequenceRecommenderModel):

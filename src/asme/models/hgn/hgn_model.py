@@ -5,7 +5,8 @@ import torch.nn as nn
 
 from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence, SequenceRepresentation, \
     ModifiedSequenceRepresentation
-from asme.models.layers.layers import ItemEmbedding, SequenceElementsRepresentationLayer, SequenceRepresentationLayer, IdentitySequenceRepresentationModifierLayer, ProjectionLayer
+from asme.models.layers.layers import ItemEmbedding, SequenceElementsRepresentationLayer, SequenceRepresentationLayer,\
+    IdentitySequenceRepresentationModifierLayer, ProjectionLayer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 from data.datasets import USER_ENTRY_NAME
@@ -38,7 +39,7 @@ class HGNEmbeddingLayer(SequenceElementsRepresentationLayer):
     def forward(self, sequence: InputSequence) -> HGNEEmbeddedElementsSequence:
         item_embedding = self.item_embedding_layer(sequence).embedded_sequence
 
-        sequence_result = HGNEEmbeddedElementsSequence(sequence.padding_mask, sequence.attributes, item_embedding)
+        sequence_result = HGNEEmbeddedElementsSequence(item_embedding)
 
         if sequence.has_attribute(USER_ENTRY_NAME):
             user = sequence.get_attribute(USER_ENTRY_NAME)
@@ -87,9 +88,7 @@ class HGNSequenceRepresentationLayer(SequenceRepresentationLayer):
         union_out = gated_item * instance_score.unsqueeze(2)
         union_out = torch.sum(union_out, dim=1)
         sequence_representation = union_out / torch.sum(instance_score, dim=1).unsqueeze(1)  # (N, D)
-        return SequenceRepresentation(embedded_sequence.padding_mask,
-                                      embedded_sequence.attributes,
-                                      sequence_representation)
+        return SequenceRepresentation(sequence_representation)
 
 
 class HGNProjectionLayer(ProjectionLayer):
@@ -112,14 +111,19 @@ class HGNProjectionLayer(ProjectionLayer):
                 positive_samples: Optional[torch.Tensor] = None,
                 negative_samples: Optional[torch.Tensor] = None
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        sequence = modified_sequence_representation.sequence_representation.embedded_elements_sequence
+        item_embedding = sequence.embedded_sequence
+        user_embedding = sequence.embedded_user
         sequence_representation = modified_sequence_representation.modified_encoded_sequence
 
-        positive_item_score = self._calc_scores(positive_samples, sequence_representation, item_embs, user_emb)
+        positive_item_score = self._calc_scores(positive_samples, sequence_representation, item_embedding,
+                                                user_embedding)
 
         if negative_samples is None:
             return positive_item_score  # (N, I)
 
-        negative_item_score = self._calc_scores(negative_samples, sequence_representation, item_embs, user_emb)
+        negative_item_score = self._calc_scores(negative_samples, sequence_representation, item_embedding,
+                                                user_embedding)
 
         return positive_item_score, negative_item_score
 
@@ -127,14 +131,14 @@ class HGNProjectionLayer(ProjectionLayer):
                      items: torch.Tensor,
                      sequence_representation: torch.Tensor,
                      item_embedding: torch.Tensor,
-                     user_emb: torch.Tensor
+                     user_embedding: torch.Tensor
                      ) -> torch.Tensor:
         w2 = self.W2(items)  # (N, I, D) for train
         b2 = self.b2(items)  # (N, I, 1) for train
 
         # matrix factorization
-        if user_emb is not None:
-            res = torch.baddbmm(b2, w2, user_emb.unsqueeze(2)).squeeze()
+        if user_embedding is not None:
+            res = torch.baddbmm(b2, w2, user_embedding.unsqueeze(2)).squeeze()
             # union-level
             res += torch.bmm(sequence_representation.unsqueeze(1), w2.permute(0, 2, 1)).squeeze()
         else:
