@@ -9,6 +9,7 @@ from data.datamodule.converters import YooChooseConverter, Movielens1MConverter
 from data.datamodule.extractors import RemainingSessionPositionExtractor
 from data.datamodule.unpacker import Unzipper
 from data.datamodule.preprocessing import PREFIXES_KEY
+from datasets.vocabulary.create_vocabulary import ColumnInfo
 
 
 def get_movielens_1m_config(output_directory: Path,
@@ -23,7 +24,12 @@ def get_movielens_1m_config(output_directory: Path,
     context.set(OUTPUT_DIR_KEY, output_directory)
 
     special_tokens = ["<PAD>", "<MASK>", "<UNK>"]
-    columns = ["rating", "gender", "age", "occupation", "zip", "title", "genres"]
+    columnnames = ["rating", "gender", "age", "occupation", "zip", "title", "genres"]
+    delimiter = [None, None, None, None, None, None, "|"]
+    columns = []
+    for i, column in enumerate(columnnames):
+        columns.append(ColumnInfo(column, delimiter[i]))
+
     prefix = "ml-1m"
     preprocessing_actions = [ConvertToCsv(Movielens1MConverter()),
                              GroupAndFilter("movieId", GroupedFilter("count", lambda v: v >= min_item_feedback)),

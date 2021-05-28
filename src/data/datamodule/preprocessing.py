@@ -22,7 +22,7 @@ from data.datasets.sequence import ItemSessionParser, ItemSequenceDataset, Plain
 from data.utils.csv import read_csv_header, create_indexed_header
 from datasets.data_structures.split_names import SplitNames
 from datasets.data_structures.train_validation_test_splits_indices import TrainValidationTestSplitIndices
-from datasets.vocabulary.create_vocabulary import create_token_vocabulary
+from datasets.vocabulary.create_vocabulary import create_token_vocabulary, ColumnInfo
 
 EXTRACTED_DIRECTORY_KEY = "raw_file"
 MAIN_FILE_KEY = "main_file"
@@ -225,10 +225,9 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
         for action in self.inner_actions:
             action(cloned)
 
-
 class CreateVocabulary(PreprocessingAction):
 
-    def __init__(self, columns: List[str],
+    def __init__(self, columns: List[ColumnInfo],
                  special_tokens: List[str] = None,
                  prefixes: List[str] = None):
         self.columns = columns
@@ -245,14 +244,9 @@ class CreateVocabulary(PreprocessingAction):
         prefix = format_prefix(context.get(PREFIXES_KEY) if self.prefixes is None else self.prefixes)
         delimiter = context.get(DELIMITER_KEY)
         for column in self.columns:
-            output_file = output_dir / f"{prefix}.vocabulary.{column}.txt"
+            output_file = output_dir / f"{prefix}.vocabulary.{column.columnName}.txt"
             create_token_vocabulary(column, main_file, session_index_path,
                                     output_file, self.special_tokens, delimiter, None)
-            if prefix == "ml-1m" and column == "genres":
-                output_file = output_dir / f"{prefix}.vocabulary.splitted-{column}.txt"
-                sub_delimiter = "|"
-                create_token_vocabulary(column, main_file, session_index_path,
-                                        output_file, self.special_tokens, delimiter, None, sub_delimiter)
 
 
 class CreateRatioSplit(PreprocessingAction):
@@ -388,39 +382,25 @@ class CreatePopularity(PreprocessingAction):
         session_index = CsvDatasetIndex(session_index_path)
         reader = CsvDatasetReader(main_file, session_index)
         for column in self.columns:
-            session_parser = ItemSessionParser(header, column, delimiter=delimiter)
+            session_parser = ItemSessionParser(header, column.columnName, delimiter=delimiter)
             plain_dataset = PlainSequenceDataset(reader, session_parser)
             dataset = ItemSequenceDataset(plain_dataset)
             prefix = format_prefix(prefixes)
+            sub_delimiter = column.delimiter
 
             # Read the vocabulary for this column
-            vocabulary_path = output_dir / f"{prefix}.vocabulary.{column}.txt"
+            vocabulary_path = output_dir / f"{prefix}.vocabulary.{column.columnName}.txt"
             with open(vocabulary_path, "r") as f:
                 vocabulary = CSVVocabularyReaderWriter().read(f)
 
             # Get occurrence count of every token
-            counts = self._count_items(dataset, vocabulary)
+            counts = self._count_items(dataset, vocabulary, sub_delimiter)
             # Compute popularity
             total_count = sum(counts.values())
             popularities = [count / total_count for count in counts.values()]
             # Save them to the correct file
-            output_file = output_dir / f"{prefix}.popularity.{column}.txt"
+            output_file = output_dir / f"{prefix}.popularity.{column.columnName}.txt"
             self._write_popularity(popularities, output_file)
-
-            if prefix == "ml-1m" and column == "genres":
-                sub_delimiter = "|"
-                vocabulary_path = output_dir / f"{prefix}.vocabulary.splitted-{column}.txt"
-                with open(vocabulary_path, "r") as f:
-                    vocabulary = CSVVocabularyReaderWriter().read(f)
-
-                # Get occurrence count of every token
-                counts = self._count_items(dataset, vocabulary, sub_delimiter)
-                # Compute popularity
-                total_count = sum(counts.values())
-                popularities = [count / total_count for count in counts.values()]
-                # Save them to the correct file
-                output_file = output_dir / f"{prefix}.popularity.splitted-{column}.txt"
-                self._write_popularity(popularities, output_file)
 
     def _count_items(self, dataset: ItemSequenceDataset, vocabulary: Vocabulary, sub_delimiter: str = None) -> Dict[int, int]:
         tokenizer = Tokenizer(vocabulary)
