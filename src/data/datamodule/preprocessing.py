@@ -14,6 +14,7 @@ from asme.tokenization.tokenizer import Tokenizer
 from asme.tokenization.vocabulary import CSVVocabularyReaderWriter, Vocabulary
 from data.base.csv_index_builder import CsvSessionIndexer
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
+from data.datamodule.column_info import ColumnInfo
 from data.datamodule.converters import CsvConverter
 from data.datamodule.extractors import TargetPositionExtractor, FixedOffsetPositionExtractor
 from data.datasets import ITEM_SEQ_ENTRY_NAME
@@ -22,7 +23,7 @@ from data.datasets.sequence import ItemSessionParser, ItemSequenceDataset, Plain
 from data.utils.csv import read_csv_header, create_indexed_header
 from datasets.data_structures.split_names import SplitNames
 from datasets.data_structures.train_validation_test_splits_indices import TrainValidationTestSplitIndices
-from datasets.vocabulary.create_vocabulary import create_token_vocabulary, ColumnInfo
+from datasets.vocabulary.create_vocabulary import create_token_vocabulary
 
 EXTRACTED_DIRECTORY_KEY = "raw_file"
 MAIN_FILE_KEY = "main_file"
@@ -225,6 +226,7 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
         for action in self.inner_actions:
             action(cloned)
 
+
 class CreateVocabulary(PreprocessingAction):
 
     def __init__(self, columns: List[ColumnInfo],
@@ -365,7 +367,7 @@ class CreateRatioSplit(PreprocessingAction):
 
 
 class CreatePopularity(PreprocessingAction):
-    def __init__(self, columns: List[str], prefixes: List[str] = None):
+    def __init__(self, columns: List[ColumnInfo], prefixes: List[str] = None):
         self.columns = columns
         self.prefixes = prefixes
 

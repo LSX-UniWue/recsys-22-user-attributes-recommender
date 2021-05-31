@@ -5,11 +5,11 @@ from data.datamodule.config import DatasetConfig
 from data.datamodule.preprocessing import ConvertToCsv, TransformCsv, CreateSessionIndex, \
     GroupAndFilter, GroupedFilter, CreateVocabulary, DELIMITER_KEY, EXTRACTED_DIRECTORY_KEY, \
     OUTPUT_DIR_KEY, CreateRatioSplit, CreateNextItemIndex, CreateLeaveOneOutSplit, CreatePopularity
+from data.datamodule.column_info import ColumnInfo
 from data.datamodule.converters import YooChooseConverter, Movielens1MConverter
 from data.datamodule.extractors import RemainingSessionPositionExtractor
 from data.datamodule.unpacker import Unzipper
 from data.datamodule.preprocessing import PREFIXES_KEY
-from datasets.vocabulary.create_vocabulary import ColumnInfo
 
 
 def get_movielens_1m_config(output_directory: Path,
@@ -24,11 +24,8 @@ def get_movielens_1m_config(output_directory: Path,
     context.set(OUTPUT_DIR_KEY, output_directory)
 
     special_tokens = ["<PAD>", "<MASK>", "<UNK>"]
-    columnnames = ["rating", "gender", "age", "occupation", "zip", "title", "genres"]
-    delimiter = [None, None, None, None, None, None, "|"]
-    columns = []
-    for i, column in enumerate(columnnames):
-        columns.append(ColumnInfo(column, delimiter[i]))
+    columns = [ColumnInfo("rating"), ColumnInfo("gender"), ColumnInfo("age"), ColumnInfo("occupation"),
+                   ColumnInfo("zip"), ColumnInfo("title"), ColumnInfo("genres", "|")]
 
     prefix = "ml-1m"
     preprocessing_actions = [ConvertToCsv(Movielens1MConverter()),

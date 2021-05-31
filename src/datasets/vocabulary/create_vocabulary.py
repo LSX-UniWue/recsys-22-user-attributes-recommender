@@ -4,6 +4,7 @@ from typing import List, Callable, Any, Optional
 from tqdm import tqdm
 
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
+from data.datamodule.column_info import ColumnInfo
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.sequence import PlainSequenceDataset, ItemSessionParser
 from data.utils.csv import create_indexed_header, read_csv_header
@@ -30,15 +31,8 @@ def create_session_data_set(item_header_name: str, data_file_path: Path, index_f
     session_data_set = PlainSequenceDataset(reader, parser)
     return session_data_set
 
-class ColumnInfo:
-    columnName: str
-    delimiter: Optional[str] = None
 
-    def __init__(self, columnName, delimiter):
-        self.columnName = columnName
-        self.delimiter = delimiter
-
-def create_token_vocabulary(item_header_name: ColumnInfo,
+def create_token_vocabulary(item_column: ColumnInfo,
                             data_file_path: Path,
                             session_index_path: Path,
                             vocabulary_output_file_path: Path,
@@ -51,7 +45,7 @@ def create_token_vocabulary(item_header_name: ColumnInfo,
     :param data_file_path: Path to CSV file containing original data
     :param session_index_path: Path to index file belonging to the data file
     :param vocabulary_output_file_path: output path for vocabulary file
-    :param item_header_name: Name of the item key in the data set, e.g, "ItemId" TODO
+    :param item_column: Name of the item key in the data set, e.g, "ItemId" TODO
     :param custom_tokens: FixMe I need documentation
     :param delimiter: delimiter used in data file
     :param strategy_function: function selecting which items of a session are used in the vocabulary
@@ -61,8 +55,8 @@ def create_token_vocabulary(item_header_name: ColumnInfo,
     for token in custom_tokens:
         vocab_builder.add_token(token)
 
-    header = item_header_name.columnName
-    sub_delimiter = item_header_name.delimiter
+    header = item_column.columnName
+    sub_delimiter = item_column.delimiter
 
     data_set = create_session_data_set(item_header_name=header,
                                        data_file_path=data_file_path,
