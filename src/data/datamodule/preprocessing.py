@@ -408,7 +408,7 @@ class CreatePopularity(PreprocessingAction):
             total_count = sum(counts.values())
             popularities = [count / total_count for count in counts.values()]
             # Save them to the correct file
-            output_file = output_dir / f"{prefix}.popularity.{column.columnName}.txt"
+            output_file = output_dir / f"{prefix}.popularity.{filename}.txt"
             self._write_popularity(popularities, output_file)
 
     def _count_items(self, dataset: ItemSequenceDataset, vocabulary: Vocabulary, sub_delimiter: str = None) -> Dict[int, int]:
