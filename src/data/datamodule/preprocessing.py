@@ -246,7 +246,10 @@ class CreateVocabulary(PreprocessingAction):
         prefix = format_prefix(context.get(PREFIXES_KEY) if self.prefixes is None else self.prefixes)
         delimiter = context.get(DELIMITER_KEY)
         for column in self.columns:
-            output_file = output_dir / f"{prefix}.vocabulary.{column.columnName}.txt"
+            filename = column.columnName
+            if column.delimiter is not None:
+                filename += "-splitted"
+            output_file = output_dir / f"{prefix}.vocabulary.{filename}.txt"
             create_token_vocabulary(column, main_file, session_index_path,
                                     output_file, self.special_tokens, delimiter, None)
 
@@ -390,8 +393,12 @@ class CreatePopularity(PreprocessingAction):
             prefix = format_prefix(prefixes)
             sub_delimiter = column.delimiter
 
+            filename = column.columnName
+            if column.delimiter is not None:
+                filename += "-splitted"
+
             # Read the vocabulary for this column
-            vocabulary_path = output_dir / f"{prefix}.vocabulary.{column.columnName}.txt"
+            vocabulary_path = output_dir / f"{prefix}.vocabulary.{filename}.txt"
             with open(vocabulary_path, "r") as f:
                 vocabulary = CSVVocabularyReaderWriter().read(f)
 

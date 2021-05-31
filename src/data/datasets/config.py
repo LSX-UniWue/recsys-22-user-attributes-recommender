@@ -25,7 +25,7 @@ def get_movielens_1m_config(output_directory: Path,
 
     special_tokens = ["<PAD>", "<MASK>", "<UNK>"]
     columns = [ColumnInfo("rating"), ColumnInfo("gender"), ColumnInfo("age"), ColumnInfo("occupation"),
-                   ColumnInfo("zip"), ColumnInfo("title"), ColumnInfo("genres", "|")]
+                   ColumnInfo("zip"), ColumnInfo("title"), ColumnInfo("genres"), ColumnInfo("genres", "|")]
 
     prefix = "ml-1m"
     preprocessing_actions = [ConvertToCsv(Movielens1MConverter()),
