@@ -6,6 +6,7 @@ from asme.init.templating.datasources.next import NextSequenceStepDataSourcesTem
 from asme.init.templating.datasources.plain_training import PlainTrainingSourcesTemplateProcessor
 from asme.init.templating.datasources.par_positive_negative import ParameterizedPositiveNegativeDataSourcesTemplateProcessor
 from asme.init.templating.datasources.positive_negative import PositiveNegativeDataSourcesTemplateProcessor
+from asme.init.templating.datasources.sliding_window import SlidingWindowDataSourceTemplateProcessor
 from asme.init.templating.template_processor import TemplateProcessor
 from asme.init.templating.trainer.output_directory import OutputDirectoryProcessor
 
@@ -30,6 +31,7 @@ class TemplateEngine:
                                                        ParameterizedPositiveNegativeDataSourcesTemplateProcessor(),
                                                        NextSequenceStepDataSourcesTemplateProcessor(),
                                                        PlainTrainingSourcesTemplateProcessor(),
+                                                       SlidingWindowDataSourceTemplateProcessor(),
                                                        OutputDirectoryProcessor()] + tail_processors
 
     def modify(self, config: Dict[str, Any]) -> Dict[str, Any]:
