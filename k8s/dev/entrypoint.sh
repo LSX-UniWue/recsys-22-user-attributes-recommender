@@ -11,7 +11,6 @@ if [ ! -d "${PROJECT_DIR}/recommender" ]; then
     git clone -q "${REPO_URL}"
 fi
 
-git clone -q "${REPO_URL}"
 cd recommender || exit 1
 git checkout -q "${REPO_BRANCH}"
 
