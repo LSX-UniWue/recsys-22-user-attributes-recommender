@@ -14,6 +14,7 @@ from asme.tokenization.tokenizer import Tokenizer
 from asme.tokenization.vocabulary import CSVVocabularyReaderWriter, Vocabulary
 from data.base.csv_index_builder import CsvSessionIndexer
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
+from data.datamodule.column_info import ColumnInfo
 from data.datamodule.converters import CsvConverter
 from data.datamodule.extractors import TargetPositionExtractor, FixedOffsetPositionExtractor
 from data.datasets import ITEM_SEQ_ENTRY_NAME
@@ -228,7 +229,7 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
 
 class CreateVocabulary(PreprocessingAction):
 
-    def __init__(self, columns: List[str],
+    def __init__(self, columns: List[ColumnInfo],
                  special_tokens: List[str] = None,
                  prefixes: List[str] = None):
         self.columns = columns
@@ -245,7 +246,10 @@ class CreateVocabulary(PreprocessingAction):
         prefix = format_prefix(context.get(PREFIXES_KEY) if self.prefixes is None else self.prefixes)
         delimiter = context.get(DELIMITER_KEY)
         for column in self.columns:
-            output_file = output_dir / f"{prefix}.vocabulary.{column}.txt"
+            filename = column.columnName
+            if column.delimiter is not None:
+                filename += "-splitted"
+            output_file = output_dir / f"{prefix}.vocabulary.{filename}.txt"
             create_token_vocabulary(column, main_file, session_index_path,
                                     output_file, self.special_tokens, delimiter, None)
 
@@ -366,7 +370,7 @@ class CreateRatioSplit(PreprocessingAction):
 
 
 class CreatePopularity(PreprocessingAction):
-    def __init__(self, columns: List[str], prefixes: List[str] = None):
+    def __init__(self, columns: List[ColumnInfo], prefixes: List[str] = None):
         self.columns = columns
         self.prefixes = prefixes
 
@@ -383,32 +387,39 @@ class CreatePopularity(PreprocessingAction):
         session_index = CsvDatasetIndex(session_index_path)
         reader = CsvDatasetReader(main_file, session_index)
         for column in self.columns:
-            session_parser = ItemSessionParser(header, column, delimiter=delimiter)
+            session_parser = ItemSessionParser(header, column.columnName, delimiter=delimiter)
             plain_dataset = PlainSequenceDataset(reader, session_parser)
             dataset = ItemSequenceDataset(plain_dataset)
             prefix = format_prefix(prefixes)
+            sub_delimiter = column.delimiter
+
+            filename = column.columnName
+            if column.delimiter is not None:
+                filename += "-splitted"
 
             # Read the vocabulary for this column
-            vocabulary_path = output_dir / f"{prefix}.vocabulary.{column}.txt"
+            vocabulary_path = output_dir / f"{prefix}.vocabulary.{filename}.txt"
             with open(vocabulary_path, "r") as f:
                 vocabulary = CSVVocabularyReaderWriter().read(f)
 
             # Get occurrence count of every token
-            counts = self._count_items(dataset, vocabulary)
+            counts = self._count_items(dataset, vocabulary, sub_delimiter)
             # Compute popularity
             total_count = sum(counts.values())
             popularities = [count / total_count for count in counts.values()]
             # Save them to the correct file
-            output_file = output_dir / f"{prefix}.popularity.{column}.txt"
+            output_file = output_dir / f"{prefix}.popularity.{filename}.txt"
             self._write_popularity(popularities, output_file)
 
-    def _count_items(self, dataset: ItemSequenceDataset, vocabulary: Vocabulary) -> Dict[int, int]:
+    def _count_items(self, dataset: ItemSequenceDataset, vocabulary: Vocabulary, sub_delimiter: str = None) -> Dict[int, int]:
         tokenizer = Tokenizer(vocabulary)
         counts = defaultdict(int)
 
         for session_idx in range(len(dataset)):
             session = dataset[session_idx]
             items = session[ITEM_SEQ_ENTRY_NAME]
+            if sub_delimiter is not None:
+                items = [label for entry in items for label in entry.split(sub_delimiter)]
             converted_tokens = tokenizer.convert_tokens_to_ids(items)
             for token in converted_tokens:
                 counts[token] += 1
