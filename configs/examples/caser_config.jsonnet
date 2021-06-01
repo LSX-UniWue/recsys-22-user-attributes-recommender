@@ -1,5 +1,6 @@
 local base_path = "../tests/example_dataset/";
-local max_seq_length = 7;
+local number_of_targets = 1;
+local max_seq_length = 2;
 local metrics =  {
     mrr: [1, 3, 5],
     recall: [1, 3, 5],
@@ -10,7 +11,7 @@ local metrics =  {
         unified_output: {
             path: "/tmp/experiments/caser"
         },
-        pos_neg_data_sources: {
+        sliding_window_data_sources: {
             parser: {
                 item_column_name: "item_id"
             },
@@ -21,7 +22,8 @@ local metrics =  {
             },
             path: base_path + "ratio-0.8_0.1_0.1/",
             file_prefix: "example",
-            seed: 123456
+            window_size: max_seq_length,
+            number_target_interactions: number_of_targets
         }
     },
     module: {

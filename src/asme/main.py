@@ -46,14 +46,10 @@ app = typer.Typer()
 
 @app.command()
 def train(config_file: Path = typer.Argument(..., help='the path to the config file', exists=True),
-          do_train: bool = typer.Option(True, help='flag iff the model should be trained'),
-          do_test: bool = typer.Option(False, help='flag iff the model should be tested (after training)'),
+          resume: bool = typer.Option(False, help='flag iff the model should resume training from a checkpoint'),
           print_train_val_examples: bool = typer.Option(True, help='print examples of the training'
-                                                                   'and evaluation dataset before starting training')
-          ) -> None:
-    if do_test and not do_train:
-        logger.error(f"The model has to be trained before it can be tested!")
-        exit(-1)
+                                                                    'and evaluation dataset before starting training')
+    ) -> None:
 
     config_file_path = Path(config_file)
     config = load_config(config_file_path)
@@ -65,7 +61,10 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
     log_dir = determine_log_dir(trainer)
     save_config(config, log_dir)
 
-    if do_train:
+    if resume:
+        resume(log_dir)
+
+    else:
         train_dataloader = container.train_dataloader()
         validation_dataloader = container.validation_dataloader()
 
@@ -78,10 +77,7 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
                     train_dataloader=train_dataloader,
                     val_dataloaders=validation_dataloader)
 
-    save_finished_flag(log_dir)
-
-    if do_test:
-        trainer.test(test_dataloaders=container.test_dataloader())
+        save_finished_flag(log_dir)
 
 
 @app.command()
@@ -292,9 +288,10 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
 
         def _create_batch_loader(dataset: Dataset,
                                  batch_sampler: Sampler,
-                                 collate_fn
+                                 collate_fn,
+                                 num_workers: int
                                  ) -> DataLoader:
-            return DataLoader(dataset, batch_sampler=batch_sampler, collate_fn=collate_fn)
+            return DataLoader(dataset, batch_sampler=batch_sampler, collate_fn=collate_fn, num_workers=num_workers)
 
         @contextmanager
         def _no_eval_step_end_call(module):
@@ -319,10 +316,12 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
             # We need two loaders since we have to run both, predict & test on each batch
             batch_loader_predict = _create_batch_loader(test_loader.dataset,
                                                         batch_sampler=FixedBatchSampler(batch_start, batch_size),
-                                                        collate_fn=test_loader.collate_fn)
+                                                        collate_fn=test_loader.collate_fn,
+                                                        num_workers=test_loader.num_workers)
             batch_loader_test = _create_batch_loader(test_loader.dataset,
                                                      batch_sampler=FixedBatchSampler(batch_start, batch_size),
-                                                     collate_fn=test_loader.collate_fn)
+                                                     collate_fn=test_loader.collate_fn,
+                                                     num_workers=test_loader.num_workers)
 
             # Redirect prediction/test results to /dev/null to avoid spamming stdout
             with open(os.devnull, "w") as f, redirect_stdout(f):
@@ -461,7 +460,7 @@ def resume(log_dir: str = typer.Argument(..., help='the path to the logging dire
     if not os.path.isfile(checkpoint_path):
         logger.error("Could not determine the last checkpoint. "
                      "You can specify a particular checkpoint via the --checkpoint-file option.")
-        exit(-1)
+        train(Path(config_file), do_resume=False)
 
     container = create_container(raw_config)
     module = container.module()

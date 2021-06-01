@@ -92,7 +92,15 @@ def create_conditional_index_using_extractor(dataset_metadata: DatasetMetadata,
     """
     if additional_features is None:
         additional_features = {}
+    dataset = _build_item_sequence_dataset(dataset_metadata, additional_features)
 
+    builder = SequencePositionIndexBuilder(target_positions_extractor=target_positions_extractor)
+    builder.build(dataset, output_file_path)
+
+
+def _build_item_sequence_dataset(dataset_metadata: DatasetMetadata,
+                                 additional_features: Optional[Dict[str, Any]] = None
+                                 ) -> ItemSequenceDataset:
     session_parser = ItemSessionParser(
         create_indexed_header(read_csv_header(dataset_metadata.data_file_path, dataset_metadata.delimiter)),
         item_header_name=dataset_metadata.item_header_name,
@@ -104,9 +112,26 @@ def create_conditional_index_using_extractor(dataset_metadata: DatasetMetadata,
     reader = CsvDatasetReader(dataset_metadata.data_file_path, session_index)
 
     plain_dataset = PlainSequenceDataset(reader, session_parser)
-    dataset = ItemSequenceDataset(plain_dataset)
+    return ItemSequenceDataset(plain_dataset)
 
-    builder = SequencePositionIndexBuilder(target_positions_extractor=target_positions_extractor)
+
+def _window_position_generator(data: Dict[str, Any],
+                               window_size: int,
+                               session_end_offset: int = 0
+                               ) -> Iterable[int]:
+    sequence = data[ITEM_SEQ_ENTRY_NAME]
+    return range(window_size - 1, len(sequence) - session_end_offset)
+
+
+def create_sliding_window_index(dataset_metadata: DatasetMetadata,
+                                output_file_path: Path,
+                                window_size: int,
+                                session_end_offset: int = 0
+                                ) -> None:
+    dataset = _build_item_sequence_dataset(dataset_metadata)
+
+    builder = SequencePositionIndexBuilder(functools.partial(_window_position_generator, window_size=window_size,
+                                                             session_end_offset=session_end_offset))
     builder.build(dataset, output_file_path)
 
 

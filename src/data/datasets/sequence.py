@@ -21,9 +21,15 @@ def _parse_timestamp(text: str,
                      ) -> datetime.datetime:
     return datetime.datetime.strptime(text, date_format)
 
+
 def _parse_strlist(text: str,
                    delimiter: str) -> List[str]:
     return text.split(sep=delimiter)
+
+
+def _identity(text: str
+              ) -> str:
+    return text
 
 
 # TODO: move to provider utils?
@@ -33,12 +39,16 @@ def _build_converter(converter_info: Dict[str, Any]
     if feature_type == 'int':
         return int
 
+    if feature_type == 'str':
+        return _identity
+
     if feature_type == 'bool':
         return _parse_boolean
 
     if feature_type == 'timestamp':
         return functools.partial(_parse_timestamp, date_format=converter_info['format'])
 
+    # FIXME: replace with a generic list convert that also converts the entries in the list
     if feature_type == 'strlist':
         return functools.partial(_parse_strlist, delimiter=converter_info['delimiter'])
 
@@ -85,7 +95,7 @@ class ItemSessionParser(SequenceParser):
         }
 
         for feature_key, info in self._additional_features.items():
-            feature_sequence = info['sequence']
+            feature_sequence = info.get('sequence', False)
             feature_column_name = info.get("column_name", feature_key)
             # if feature changes over the sequence parse it over all entries, else extract it form the first entry
             if feature_sequence:
