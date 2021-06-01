@@ -1,3 +1,5 @@
+.. _project_overview:
+
 The-Jane-Doe-Framework (Name subject to change)
 ===============================================
 

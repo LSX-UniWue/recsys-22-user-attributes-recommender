@@ -3,7 +3,7 @@ User Guide
 
 Pre-Requisites:
 
-- Built the virtual environment as described in the `Project Overview <./project_overview.md>`__
+- Built the virtual environment as described in the :ref:`Project Overview <_project_overview>`
 
 First of all you need to activate your virtual environment. This is
 accomplished using one of the two following commands
