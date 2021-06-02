@@ -3,6 +3,7 @@ from typing import Optional, Union, Tuple, List
 import torch
 import torch.nn as nn
 
+from asme.models.layers.data.sequence import InputSequence
 from asme.models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
@@ -77,23 +78,20 @@ class SASRecModel(SequenceRecommenderModel):
         if is_linear_layer and module.bias is not None:
             module.bias.data.zero_()
 
-    def forward(self,
-                sequence: torch.Tensor,
-                positive_items: torch.Tensor,
-                negative_items: Optional[torch.Tensor] = None,
-                position_ids: Optional[torch.Tensor] = None,
-                padding_mask: Optional[torch.Tensor] = None
-                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    def forward(self, sequence: InputSequence) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        #def forward(self,
+        #        sequence: torch.Tensor,
+        #        positive_items: torch.Tensor,
+        #        negative_items: Optional[torch.Tensor] = None,
+        #        position_ids: Optional[torch.Tensor] = None,
+        #        padding_mask: Optional[torch.Tensor] = None
+        #        ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Forward pass to generate the logits for the positive (next) items and the negative (randomly sampled items,
         that are not in the current sequence) items.
         If no negative items are provided,
 
         :param sequence: the sequence :math:`(N, S)`
-        :param positive_items: ids of the positive items (the next items in the sequence) :math:`(N)`
-        :param negative_items: random sampled negative items that are not in the session of the user :math:`(N)`
-        :param position_ids: the optional position ids if not the position ids are generated :math:`(N, S)`
-        :param padding_mask: the optional padding mask if the sequence is padded :math:`(N, S)` True if not padded
         :return: the logits of the pos_items and the logits of the negative_items, each of shape :math:`(N, S)`
                 iff neg_items is provided else the logits for the provided positive items of the same shape
 

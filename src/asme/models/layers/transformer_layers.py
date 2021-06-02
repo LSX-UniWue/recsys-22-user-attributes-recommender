@@ -5,11 +5,12 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from asme.models.layers.layers import ItemEmbedding
+from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence, SequenceRepresentation
+from asme.models.layers.layers import ItemEmbedding, SequenceElementsRepresentationLayer, SequenceRepresentationLayer
 from asme.models.layers.tensor_utils import generate_position_ids
 
 
-class TransformerEmbedding(nn.Module):
+class TransformerEmbedding(SequenceElementsRepresentationLayer):
     """
     this transformer embedding combines the item embedding and positional embedding (incl. norm and dropout)
     into a single module
@@ -46,10 +47,7 @@ class TransformerEmbedding(nn.Module):
                            ) -> torch.Tensor:
         return self.item_embedding(input_sequence, flatten=flatten)
 
-    def forward(self,
-                sequence: torch.Tensor,
-                position_ids: torch.Tensor = None
-                ) -> torch.Tensor:
+    def forward(self, sequence: InputSequence) -> EmbeddedElementsSequence:
         """
         :param sequence: the sequence input (N, S)
         :param position_ids: the position ids (N, S) optional, will be generated if not provided
@@ -57,19 +55,26 @@ class TransformerEmbedding(nn.Module):
 
         where S is the sequence length, N the batch size and H the embedding size
         """
+
+        seq_tensor = sequence.sequence
+
         # generate the position ids if not provided
-        if position_ids is None:
-            position_ids = generate_position_ids(sequence.size(), device=sequence.device)
+        if not sequence.has_attribute("position_ids"):
+            position_ids = generate_position_ids(seq_tensor.size(), device=seq_tensor.device)
+        else:
+            position_ids = sequence.has_attribute("position_ids")
 
-        sequence = self.item_embedding(sequence)
-        sequence = sequence + self.position_embedding(position_ids)
-        sequence = self.embedding_norm(sequence)
+        seq_tensor = self.item_embedding(seq_tensor)
+        seq_tensor = seq_tensor + self.position_embedding(position_ids)
+        seq_tensor = self.embedding_norm(seq_tensor)
 
-        sequence = self.dropout(sequence)
-        return sequence
+        seq_tensor = self.dropout(seq_tensor)
+
+        embedded_sequence = EmbeddedElementsSequence(seq_tensor, input_sequence=sequence)
+        return embedded_sequence
 
 
-class TransformerLayer(nn.Module):
+class TransformerLayer(SequenceRepresentationLayer):
 
     def __init__(self,
                  hidden_size: int,
@@ -86,16 +91,17 @@ class TransformerLayer(nn.Module):
                               attention_dropout=attention_dropout)
              for _ in range(num_layers)])
 
-    def forward(self,
-                input_sequence: torch.Tensor,
-                attention_mask: torch.Tensor
-                ) -> torch.Tensor:
+        def forward(self, embedded_sequence: EmbeddedElementsSequence) -> SequenceRepresentation:
+            # running over multiple transformer blocks
+            if embedded_sequence.input_sequence.has_attribute("attention_mask"):
+                attention_mask = embedded_sequence.input_sequence.get_attribute("attention_mask")
+            else:
+                attention_mask = None
 
-        # running over multiple transformer blocks
-        for transformer in self.transformer_blocks:
-            input_sequence = transformer.forward(input_sequence, attention_mask)
+            for transformer in self.transformer_blocks:
+                input_sequence = transformer.forward(input_sequence, attention_mask)
 
-        return input_sequence
+            return input_sequence
 
 
 class SublayerConnection(nn.Module):
