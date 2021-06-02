@@ -3,10 +3,12 @@ from enum import Enum
 from typing import Dict, Any, List
 from pathlib import Path
 
+from asme.init.factories.data_sources.datamodule import DataModuleFactory
 from asme.init.templating import TEMPLATES_CONFIG_KEY
 from asme.init.templating.template_processor import TemplateProcessor
 
 
+CONFIG_DATAMODULE_KEY = DataModuleFactory.CONFIG_KEY
 CONFIG_DATASOURCES_KEY = 'data_sources'
 
 TARGET_EXTRACTOR_PROCESSOR_CONFIG = {
@@ -56,7 +58,7 @@ class DataSourceTemplateProcessor(TemplateProcessor):
         validation_config = self._build_validation_datasource(data, parser)
         test_config = self._build_test_datasource(data, parser)
 
-        config[CONFIG_DATASOURCES_KEY] = {
+        config[CONFIG_DATAMODULE_KEY][CONFIG_DATASOURCES_KEY] = {
             'train': train_config,
             'test': test_config,
             'validation': validation_config

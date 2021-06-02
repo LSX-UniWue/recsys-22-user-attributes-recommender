@@ -1,10 +1,11 @@
 from typing import Dict, Any
 
-from pytorch_lightning import LightningModule
+from pytorch_lightning import LightningModule, LightningDataModule
 from torch.utils.data import DataLoader
 
 from asme.init.trainer_builder import TrainerBuilder
 from asme.tokenization.tokenizer import Tokenizer
+from data.datamodule.asme_datamodule import AsmeDataModule
 
 
 class Container:
@@ -18,14 +19,24 @@ class Container:
                  ):
         self._objects = objects
 
+    def datamodule(self) -> AsmeDataModule:
+        return self._objects["datamodule"]
+
+    def _prepare_dataloader(self):
+        if not self.datamodule().has_setup:
+            self.datamodule().setup()
+
     def train_dataloader(self) -> DataLoader:
-        return self._objects["data_sources.train"]
+        self._prepare_dataloader()
+        return self.datamodule().train_dataloader()
 
     def validation_dataloader(self) -> DataLoader:
-        return self._objects["data_sources.validation"]
+        self._prepare_dataloader()
+        return self.datamodule().val_dataloader()
 
     def test_dataloader(self) -> DataLoader:
-        return self._objects["data_sources.test"]
+        self._prepare_dataloader()
+        return self.datamodule().test_dataloader()
 
     def module(self) -> LightningModule:
         return self._objects["module"]

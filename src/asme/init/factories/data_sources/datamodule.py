@@ -5,12 +5,14 @@ from asme.init.context import Context
 from asme.init.factories.data_sources.data_sources import DataSourcesFactory
 from asme.init.factories.util import check_config_keys_exist
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
+from data.datamodule.asme_datamodule import AsmeDataModule
+from data.datamodule.config import get_preprocessing_config_provider, AsmeDataModuleConfig
 
 
 class DataModuleFactory(ObjectFactory):
 
     CONFIG_KEY = "datamodule"
-    REQUIRED_CONFIG_KEYS = ["dataset_name"]
+    REQUIRED_CONFIG_KEYS = ["dataset", "preprocessing"]
 
     def __init__(self):
         super().__init__()
@@ -27,8 +29,15 @@ class DataModuleFactory(ObjectFactory):
                 f"Could not find all required keys ({self.REQUIRED_CONFIG_KEYS}) in config."
             )
 
-    def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
-        pass
+    def build(self, config: Config, context: Context) -> AsmeDataModule:
+        dataset_name = config.get("dataset")
+        dataset_preprocessing_config_provider = get_preprocessing_config_provider(dataset_name)
+        if dataset_preprocessing_config_provider is None:
+            raise KeyError(f"No dataset registered for key '{dataset_name}'.")
+        dataset_config = dataset_preprocessing_config_provider(**config.get_config(["preprocessing"]).config)
+        data_sources_config = config.get_config(self._datasources_factory.config_path())
+        datamodule_config = AsmeDataModuleConfig(dataset_config, data_sources_config)
+        return AsmeDataModule(datamodule_config, context)
 
     def is_required(self, context: Context) -> bool:
         return True

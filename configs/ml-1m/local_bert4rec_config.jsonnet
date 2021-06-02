@@ -1,4 +1,5 @@
-local base_path = "../dataset/ml-1m/";
+local base_path = "../datasets/dataset/ml-1m/";
+local loo_path = base_path + "loo/";
 local output_path = "../dataset/ml-1m/exp/";
 local max_seq_length = 200;
 local metrics =  {
@@ -10,6 +11,15 @@ local metrics =  {
 local file_prefix = 'ml-1m';
 
 {
+    datamodule: {
+        dataset: "ml-1m",
+        preprocessing: {
+            extraction_directory: "/tmp/ml-1m/",
+            output_directory: base_path,
+            min_item_feedback: 0,
+            min_sequence_length: 2
+        }
+    },
     templates: {
         unified_output: {
             path: output_path
@@ -23,9 +33,7 @@ local file_prefix = 'ml-1m';
                 max_seq_length: max_seq_length
             },
             path: base_path,
-            train_file_prefix: file_prefix,
-            validation_file_prefix: file_prefix,
-            test_file_prefix: file_prefix,
+            file_prefix: file_prefix,
             split_type: 'leave_one_out',
             mask_probability: 0.2,
             mask_seed: 42
@@ -38,7 +46,7 @@ local file_prefix = 'ml-1m';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + "popularity.txt",
+              sample_probability_file: loo_path + file_prefix + ".popularity.title.txt",
                 num_negative_samples: 100,
                 metrics: metrics
             }
@@ -61,7 +69,7 @@ local file_prefix = 'ml-1m';
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "vocab_title.txt"
+                    file: loo_path + file_prefix+".vocabulary.title.txt"
                 }
             }
         },
@@ -77,7 +85,6 @@ local file_prefix = 'ml-1m';
         },
         gpus: 0,
         max_epochs: 10,
-        accelerator: "ddp",
         check_val_every_n_epoch: 50
     }
 }

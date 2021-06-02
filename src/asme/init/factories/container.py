@@ -6,6 +6,7 @@ from asme.init.context import Context
 from asme.init.factories.common.conditional_based_factory import ConditionalFactory
 from asme.init.factories.common.dependencies_factory import DependenciesFactory
 from asme.init.factories.data_sources.data_sources import DataSourcesFactory
+from asme.init.factories.data_sources.datamodule import DataModuleFactory
 from asme.init.factories.modules.modules import GenericModuleFactory
 from asme.init.factories.tokenizer.tokenizer_factory import TokenizersFactory
 from asme.init.factories.trainer import TrainerBuilderFactory
@@ -36,6 +37,7 @@ from asme.modules.sas_rec_module import SASRecModule
 class ContainerFactory(ObjectFactory):
     def __init__(self):
         super().__init__()
+        self.datamodule_factory = DataModuleFactory()
         self.tokenizers_factory = TokenizersFactory()
         self.dependencies = DependenciesFactory(
             [
@@ -54,7 +56,6 @@ class ContainerFactory(ObjectFactory):
                                             'bpr' : GenericModuleFactory(BprModule, None),},
                                    config_key='module',
                                    config_path=['module']),
-                DataSourcesFactory(),
                 TrainerBuilderFactory()
             ]
         )
@@ -63,6 +64,13 @@ class ContainerFactory(ObjectFactory):
                   config: Config,
                   context: Context
                   ) -> CanBuildResult:
+
+        datamodule_config = config.get_config(self.datamodule_factory.config_path())
+        can_build_result = self.datamodule_factory.can_build(datamodule_config, context)
+
+        if can_build_result.type != CanBuildResultType.CAN_BUILD:
+            return can_build_result
+
         tokenizer_config = config.get_config(self.tokenizers_factory.config_path())
         can_build_result = self.tokenizers_factory.can_build(tokenizer_config, context)
 
@@ -80,6 +88,14 @@ class ContainerFactory(ObjectFactory):
               config: Config,
               context: Context
               ) -> Container:
+
+        # We have to build the datamodule first such that we can invoke preprocessing
+        datamodule_config = config.get_config(self.datamodule_factory.config_path())
+        datamodule = self.datamodule_factory.build(datamodule_config, context)
+        context.set(self.datamodule_factory.config_path(), datamodule)
+        # Preprocess the dataset
+        datamodule.prepare_data()
+
         # we need the tokenizers in the context because many objects have dependencies
         tokenizers_config = config.get_config(self.tokenizers_factory.config_path())
 
