@@ -34,35 +34,35 @@ class AsmeDataModule(pl.LightningDataModule):
         return self._has_setup
 
     def prepare_data(self):
-        dsConfig = self.config.dataset_preprocessing_config
+        ds_config = self.config.dataset_preprocessing_config
 
         # Check whether we already preprocessed the dataset
-        if self._check_finished_flag(dsConfig.location):
+        if self._check_finished_flag(ds_config.location):
             print("Found a finished flag in the target directory. Assuming the dataset is already preprocessed.")
         else:
             print("Preprocessing dataset:")
 
-            if dsConfig.url is not None:
+            if ds_config.url is not None:
                 print(f"Downloading dataset...")
-                dataset_file = download_dataset(dsConfig.url, dsConfig.location)
+                dataset_file = download_dataset(ds_config.url, ds_config.location)
             else:
-                print(f"No download URL specified, using local copy at '{dsConfig.location}'")
-                dataset_file = dsConfig.location
+                print(f"No download URL specified, using local copy at '{ds_config.location}'")
+                dataset_file = ds_config.location
 
             # If necessary, unpack the dataset
-            if dsConfig.unpacker is not None:
+            if ds_config.unpacker is not None:
                 print(f"Unpacking dataset...", end="")
-                dsConfig.unpacker(dataset_file)
+                ds_config.unpacker(dataset_file)
                 print("Done.")
 
             # Apply preprocessing steps
-            for i, step in enumerate(dsConfig.preprocessing_actions):
-                print(f"Applying preprocessing step '{step.name()}' ({i+1}/{len(dsConfig.preprocessing_actions)})...", end="")
-                step.apply(dsConfig.context)
+            for i, step in enumerate(ds_config.preprocessing_actions):
+                print(f"Applying preprocessing step '{step.name()}' ({i+1}/{len(ds_config.preprocessing_actions)})...", end="")
+                step.apply(ds_config.context)
                 print("Done.")
 
             # Write finished flag
-            (dsConfig.location / self.PREPROCESSING_FINISHED_FLAG).touch()
+            (ds_config.location / self.PREPROCESSING_FINISHED_FLAG).touch()
 
     def setup(self, stage: Optional[str] = None):
         loaderConfig = self.config.data_sources_config

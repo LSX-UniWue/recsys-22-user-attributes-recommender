@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 from asme.init.trainer_builder import TrainerBuilder
 from asme.tokenization.tokenizer import Tokenizer
-from data.datamodule.asme_datamodule import AsmeDataModule
+from data.datamodule.datamodule import AsmeDataModule
 
 
 class Container:

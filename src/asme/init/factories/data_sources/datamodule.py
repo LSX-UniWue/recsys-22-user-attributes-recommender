@@ -5,7 +5,7 @@ from asme.init.context import Context
 from asme.init.factories.data_sources.data_sources import DataSourcesFactory
 from asme.init.factories.util import check_config_keys_exist
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
-from data.datamodule.asme_datamodule import AsmeDataModule
+from data.datamodule.datamodule import AsmeDataModule
 from data.datamodule.config import get_preprocessing_config_provider, AsmeDataModuleConfig
 
 
