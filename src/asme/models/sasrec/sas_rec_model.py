@@ -1,4 +1,4 @@
-from typing import Union, Tuple, Optional
+from typing import Union, Tuple
 
 import torch
 import torch.nn as nn
@@ -151,7 +151,6 @@ class SASRecModel(SequenceRecommenderModel):
         self.apply(self._init_weights)
 
     def _init_weights(self, module):
-        #TODO (AD) check if init weights correctly traverses the module tree
         """ Initializes the weights of the layers """
         is_linear_layer = isinstance(module, nn.Linear)
         is_embedding_layer = isinstance(module, nn.Embedding)
