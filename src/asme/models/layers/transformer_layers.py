@@ -1,12 +1,12 @@
 import math
-from typing import Tuple
+from typing import Tuple, Optional
 
 import torch
 from torch import nn
 from torch.nn import functional as F
 
-from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence, SequenceRepresentation
-from asme.models.layers.layers import SequenceElementsRepresentationLayer, SequenceRepresentationLayer
+from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence
+from asme.models.layers.layers import SequenceElementsRepresentationLayer
 from asme.models.layers.sequence_embedding import ItemEmbedding
 from asme.models.layers.tensor_utils import generate_position_ids
 
@@ -75,7 +75,7 @@ class TransformerEmbedding(SequenceElementsRepresentationLayer):
         return embedded_sequence
 
 
-class TransformerLayer(SequenceRepresentationLayer):
+class TransformerLayer(nn.Module):
 
     def __init__(self,
                  hidden_size: int,
@@ -92,19 +92,13 @@ class TransformerLayer(SequenceRepresentationLayer):
                               attention_dropout=attention_dropout)
              for _ in range(num_layers)])
 
-    def forward(self, embedded_sequence: EmbeddedElementsSequence) -> SequenceRepresentation:
+    def forward(self, sequence: torch.Tensor,
+                attention_mask: Optional[torch.Tensor] = None
+                ) -> torch.Tensor:
         # running over multiple transformer blocks
-        sequence = embedded_sequence.embedded_sequence
-        if embedded_sequence.input_sequence.has_attribute("attention_mask"):
-            attention_mask = embedded_sequence.input_sequence.get_attribute("attention_mask")
-        else:
-            attention_mask = None
-
         for transformer in self.transformer_blocks:
            sequence = transformer.forward(sequence, attention_mask)
-
-        representation = SequenceRepresentation(sequence, embedded_sequence)
-        return representation
+        return sequence
 
 
 class SublayerConnection(nn.Module):

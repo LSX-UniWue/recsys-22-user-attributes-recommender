@@ -102,9 +102,10 @@ class LinearProjectionLayer(ProjectionLayer):
         self.linear = nn.Linear(hidden_size, item_vocab_size)
 
     def forward(self,
-                sequence_representation: torch.Tensor
+                modified_sequence_representation: ModifiedSequenceRepresentation
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        return self.linear(sequence_representation)
+        representation = modified_sequence_representation.modified_encoded_sequence
+        return self.linear(representation)
 
 
 class ItemEmbeddingProjectionLayer(ProjectionLayer):
@@ -133,9 +134,10 @@ class ItemEmbeddingProjectionLayer(ProjectionLayer):
         nn.init.uniform_(self.output_bias, -bound, bound)
 
     def forward(self,
-                sequence_representation: torch.Tensor
+                modified_sequence_representation: ModifiedSequenceRepresentation
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        dense = torch.matmul(sequence_representation, self.embedding.weight.transpose(0, 1))  # (S, N, I)
+        representation = modified_sequence_representation.modified_encoded_sequence
+        dense = torch.matmul(representation, self.embedding.weight.transpose(0, 1))  # (S, N, I)
         return dense + self.output_bias
 
 

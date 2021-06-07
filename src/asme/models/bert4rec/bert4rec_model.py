@@ -4,6 +4,7 @@ from torch import nn
 
 from asme.models.layers.data.sequence import SequenceRepresentation, ModifiedSequenceRepresentation, \
     EmbeddedElementsSequence
+from asme.models.layers.layers import build_projection_layer
 from asme.models.layers.transformer_layers import TransformerLayer, TransformerEmbedding
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer, \
     SequenceRepresentationModifierLayer
@@ -96,8 +97,8 @@ class BERT4RecModel(SequenceRecommenderModel):
 
         transform_layer = FFNSequenceRepresentationModifierLayer(transformer_hidden_size)
 
-        projection_layer = self._build_projection_layer(project_layer_type, transformer_hidden_size,
-                                                        item_vocab_size)
+        projection_layer = build_projection_layer(project_layer_type, transformer_hidden_size, item_vocab_size,
+                                                  embedding_layer.item_embedding.embedding)
 
         super().__init__(embedding_layer, representation_layer, transform_layer, projection_layer)
 

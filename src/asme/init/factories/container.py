@@ -39,8 +39,12 @@ class ContainerFactory(ObjectFactory):
         self.tokenizers_factory = TokenizersFactory()
         self.dependencies = DependenciesFactory(
             [
-                ConditionalFactory('type', {'kebert4rec': GenericModuleFactory(MaskedTrainingModule, KeBERT4RecModel),
-                                            'bert4rec': GenericModuleFactory(MaskedTrainingModule, BERT4RecModel),
+                ConditionalFactory('type', {'kebert4rec': GenericModuleFactory(MaskedTrainingModule,
+                                                                               model_cls=KeBERT4RecModel,
+                                                                               loss_function=None),
+                                            'bert4rec': GenericModuleFactory(MaskedTrainingModule,
+                                                                             model_cls=BERT4RecModel,
+                                                                             loss_function=None),
                                             'caser': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
                                                                           CaserModel),
                                             'narm': GenericModuleFactory(NextItemPredictionTrainingModule, NarmModel),
