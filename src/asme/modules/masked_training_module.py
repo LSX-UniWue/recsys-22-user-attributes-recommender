@@ -1,20 +1,17 @@
-from abc import abstractmethod
-
 import torch
 import pytorch_lightning as pl
 
-from typing import Union, Dict, Optional, Any, List
+from typing import Union, Dict, Optional, Any
 
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
-from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from asme.metrics.container.metrics_container import MetricsContainer
 from asme.modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TEST_LOSS, LOG_KEY_TRAINING_LOSS
 from asme.modules.metrics_trait import MetricsTrait
-from asme.modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict, \
-    get_additional_meta_data
+from asme.modules.util.module_util import convert_target_to_multi_hot, build_eval_step_return_dict, build_model_input
 from asme.tokenization.tokenizer import Tokenizer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
@@ -26,11 +23,6 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
 
     For validation and evaluation the sequence and at the last position a masked item are fed to the model.
     """
-
-    @staticmethod
-    def get_position_ids(batch: Dict[str, torch.Tensor]
-                         ) -> Optional[torch.Tensor]:
-        return batch[POSITION_IDS] if POSITION_IDS in batch else None
 
     @save_hyperparameters
     def __init__(self,
@@ -64,16 +56,9 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
                 batch: Dict[str, torch.Tensor],
                 batch_idx: int
                 ) -> torch.Tensor:
-        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        position_ids = MaskedTrainingModule.get_position_ids(batch)
-
-        # calc the padding mask
-        padding_mask = get_padding_mask(sequence=input_seq, tokenizer=self.item_tokenizer)
-
-        additional_metadata = get_additional_meta_data(self.model, batch)
-
+        input_data = build_model_input(self.model, self.item_tokenizer, batch)
         # call the model
-        return self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids, **additional_metadata)
+        return self.model(input_data)
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],

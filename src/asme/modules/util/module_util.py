@@ -3,9 +3,11 @@ from typing import Dict
 import torch
 from torch.nn import functional as F
 
+from asme.models.layers.data.sequence import InputSequence
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.modules.constants import RETURN_KEY_PREDICTIONS, RETURN_KEY_TARGETS, RETURN_KEY_MASK, RETURN_KEY_SEQUENCE
 from asme.tokenization.tokenizer import Tokenizer
+from data.datasets import ITEM_SEQ_ENTRY_NAME
 
 
 def get_padding_mask(sequence: torch.Tensor,
@@ -127,3 +129,24 @@ def get_additional_meta_data(model: SequenceRecommenderModel, batch: Dict[str, t
             metadata[key] = None
 
     return metadata
+
+
+def build_model_input(model: SequenceRecommenderModel,
+                      item_tokenizer: Tokenizer,
+                      batch: Dict[str, torch.Tensor]
+                      ) -> InputSequence:
+    """
+    builds a simple input sequence for the model
+
+    :param model:
+    :param item_tokenizer:
+    :param batch:
+    :return: A input sequence object with all the data provided by the batch
+    """
+    input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+
+    # calc the padding mask
+    padding_mask = get_padding_mask(sequence=input_seq, tokenizer=item_tokenizer)
+    additional_metadata = get_additional_meta_data(model, batch)
+
+    return InputSequence(input_seq, padding_mask, additional_metadata)

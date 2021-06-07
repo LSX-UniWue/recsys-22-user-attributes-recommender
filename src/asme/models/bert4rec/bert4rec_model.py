@@ -4,7 +4,7 @@ from torch import nn
 
 from asme.models.layers.data.sequence import SequenceRepresentation, ModifiedSequenceRepresentation, \
     EmbeddedElementsSequence
-from asme.models.layers.transformer_layers import TransformerLayer
+from asme.models.layers.transformer_layers import TransformerLayer, TransformerEmbedding
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer, \
     SequenceRepresentationModifierLayer
 
@@ -84,8 +84,8 @@ class BERT4RecModel(SequenceRecommenderModel):
                  transformer_intermediate_size: int = None,
                  transformer_attention_dropout: float = None
                  ):
-        embedding_layer = self._init_internal(transformer_hidden_size, num_transformer_heads, num_transformer_layers, item_vocab_size,
-                                              max_seq_length, transformer_dropout, embedding_pooling_type)
+        embedding_layer = TransformerEmbedding(item_vocab_size, max_seq_length, transformer_hidden_size,
+                                               transformer_dropout, embedding_pooling_type)
 
         representation_layer = BidirectionalTransformerSequenceRepresentationLayer(transformer_hidden_size,
                                                                                    num_transformer_heads,
@@ -100,6 +100,8 @@ class BERT4RecModel(SequenceRecommenderModel):
                                                         item_vocab_size)
 
         super().__init__(embedding_layer, representation_layer, transform_layer, projection_layer)
+
+        # init the parameters
         self.initializer_range = initializer_range
         self.apply(self._init_weights)
 
