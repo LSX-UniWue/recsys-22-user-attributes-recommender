@@ -73,9 +73,7 @@ class IdentitySequenceRepresentationModifierLayer(SequenceRepresentationModifier
     """ a SequenceRepresentationModifierLayer that does nothing with the sequence representation """
 
     def forward(self, sequence_representation: SequenceRepresentation) -> ModifiedSequenceRepresentation:
-        return ModifiedSequenceRepresentation(sequence_representation.padding_mask,
-                                              sequence_representation.attributes,
-                                              sequence_representation.encoded_sequence)
+        return ModifiedSequenceRepresentation(sequence_representation.encoded_sequence, sequence_representation)
 
 
 class ItemEmbedding(nn.Module):

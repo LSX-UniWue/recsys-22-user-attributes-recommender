@@ -23,16 +23,46 @@ class InputSequence:
     """
 
     def get_attributes(self) -> List[str]:
+        """
+        Gets the a list with all attribute names.
+
+        :return: a list with attribute names.
+        """
         return list(self.attributes.keys())
 
     def has_attribute(self, name: str) -> bool:
+        """
+        Checks if an attribute is already present.
+        :param name: the attribute name.
+        :return: true if the attribute is present, false otherwise.
+        """
         return name in self.attributes
 
     def get_attribute(self, name: str) -> Optional[Any]:
+        """
+        Gets the value for an attribute.
+
+        :param name: the attribute name.
+        :return: the attribute value.
+        """
         if self.has_attribute(name):
             return self.attributes[name]
 
         return None
+
+    def set_attribute(self, name: str, value: Any, overwrite: bool = False):
+        """
+        Sets an attribute.
+
+        :param name: an attribute name.
+        :param value: a value.
+        :param overwrite: if the attribute should be overwritten if it is already present.
+
+        :return:
+        """
+        if self.has_attribute(name) and not overwrite:
+            raise Exception("Attribute is already set.")
+        self.attributes[name] = value
 
 
 @dataclass

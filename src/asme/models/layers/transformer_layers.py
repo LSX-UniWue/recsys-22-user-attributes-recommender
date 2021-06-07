@@ -91,17 +91,18 @@ class TransformerLayer(SequenceRepresentationLayer):
                               attention_dropout=attention_dropout)
              for _ in range(num_layers)])
 
-        def forward(self, embedded_sequence: EmbeddedElementsSequence) -> SequenceRepresentation:
-            # running over multiple transformer blocks
-            if embedded_sequence.input_sequence.has_attribute("attention_mask"):
-                attention_mask = embedded_sequence.input_sequence.get_attribute("attention_mask")
-            else:
-                attention_mask = None
+    def forward(self, embedded_sequence: EmbeddedElementsSequence) -> SequenceRepresentation:
+        # running over multiple transformer blocks
+        if embedded_sequence.input_sequence.has_attribute("attention_mask"):
+            attention_mask = embedded_sequence.input_sequence.get_attribute("attention_mask")
+        else:
+            attention_mask = None
 
-            for transformer in self.transformer_blocks:
-                input_sequence = transformer.forward(input_sequence, attention_mask)
+        for transformer in self.transformer_blocks:
+            input_sequence = transformer.forward(input_sequence, attention_mask)
 
-            return input_sequence
+        representation = SequenceRepresentation(input_sequence, embedded_sequence)
+        return representation
 
 
 class SublayerConnection(nn.Module):
