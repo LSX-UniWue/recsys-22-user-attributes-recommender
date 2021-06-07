@@ -1,0 +1,205 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Datasources &#8212; The-Jane-Doe-Framework  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Module" href="module.html" />
+    <link rel="prev" title="Dataset Directory" href="../dataset/refactoring_notes_dataset_cli.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="datasources">
+<h1>Datasources<a class="headerlink" href="#datasources" title="Permalink to this headline">¶</a></h1>
+<section id="parser-config">
+<h2>Parser Config<a class="headerlink" href="#parser-config" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="common-constructs">
+<h2>Common Constructs<a class="headerlink" href="#common-constructs" title="Permalink to this headline">¶</a></h2>
+<p>Here we list common data sources configurations.</p>
+<section id="positional-datasource">
+<h3>Positional Datasource<a class="headerlink" href="#positional-datasource" title="Permalink to this headline">¶</a></h3>
+<p>TODO</p>
+</section>
+<section id="positive-negative-datasource">
+<h3>Positive Negative Datasource<a class="headerlink" href="#positive-negative-datasource" title="Permalink to this headline">¶</a></h3>
+<p>This datasource returns the session excluding the last item as sequence
+(key: <code class="docutils literal notranslate"><span class="pre">TODO</span></code>) together with the successor for each sequence step
+(positive example; key: <code class="docutils literal notranslate"><span class="pre">TODO</span></code>), and a negative sampled item from the
+item space, that does not occur in the session or is the successor.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>{
+    type: &#39;session&#39;,
+    csv_file: &#39;../tests/example_dataset/train.csv&#39;,
+    csv_file_index: &#39;../tests/example_dataset/train.idx&#39;,
+    parser: {
+        &#39;item_column_name&#39;: &#39;column_name&#39;
+    },
+    processors: [
+        {
+            type: &#39;tokenizer&#39;
+        },
+        {
+            type: &#39;pos_neg&#39;,
+            &#39;seed&#39;: 42
+        }
+    ]
+}
+</pre></div>
+</div>
+</section>
+</section>
+<section id="templates-for-specific-models">
+<h2>Templates for Specific Models<a class="headerlink" href="#templates-for-specific-models" title="Permalink to this headline">¶</a></h2>
+<section id="positive-negative-datasources-template">
+<h3>Positive Negative DataSources Template<a class="headerlink" href="#positive-negative-datasources-template" title="Permalink to this headline">¶</a></h3>
+<p>This template adds data sources for</p>
+<ul class="simple">
+<li><p>train (Positive Negative Datasource)</p></li>
+<li><p>test (Positional Datasource)</p></li>
+<li><p>validation (Positional Datasource)</p></li>
+</ul>
+<p>The template is for models that use the complete sequence and train to
+predict the successor for each sequence step and compare the scores for
+the successor with a negative sample.</p>
+<p>It can be triggered by adding the following element instead of
+<code class="docutils literal notranslate"><span class="pre">data_sources</span></code>:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>pos_neg_data_sources: {
+    parser: {
+        item_column_name: &quot;column_name&quot;
+    },
+    batch_size: BATCH_SIZE,
+    max_seq_length: SEQ_LENGTH,
+    path: &quot;/path&quot;,
+    train_file_prefix: &quot;train&quot;
+    validation_file_prefix: &quot;train&quot;,
+    test_file_prefix: &quot;train&quot;,
+    seed: 42
+},
+</pre></div>
+</div>
+<p>By default, the template configures the framework to</p>
+<p>The following config parameters are available:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">parser</span></code>: configs the parser for the csv file, see parser
+configuration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">batch_size</span></code>: the batch size to use, if you want to override this
+for training, validation or test your model, add a
+<code class="docutils literal notranslate"><span class="pre">{train,validation,test}_batch_size</span></code> element to the element</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seed</span></code>: the seed used to generate negative samples</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">The-Jane-Doe-Framework</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../project_overview.html">The-Jane-Doe-Framework (Name subject to change)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../hyperparameter_search.html">Hyperparameter Search</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide.html">Project Code Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../configuration.html">Configuration of a model configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../formats/vocabulary_file.html">Format of the Vocabulary File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataset/dataset_cli.html">Dataset CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataset/indices.html">Indices created in this project</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataset/refactoring_notes_dataset_cli.html">Dataset Directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dataset/refactoring_notes_dataset_cli.html#runner-directory">Runner Directory</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Datasources</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#parser-config">Parser Config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#common-constructs">Common Constructs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#templates-for-specific-models">Templates for Specific Models</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="module.html">Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tokenizer.html">Tokenizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trainer.html">Trainer</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../dataset/refactoring_notes_dataset_cli.html" title="previous chapter">Dataset Directory</a></li>
+      <li>Next: <a href="module.html" title="next chapter">Module</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/configuration/datasources.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

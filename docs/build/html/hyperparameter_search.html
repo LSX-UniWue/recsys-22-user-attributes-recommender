@@ -1,0 +1,251 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Hyperparameter Search &#8212; The-Jane-Doe-Framework  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Project Code Overview" href="developer_guide.html" />
+    <link rel="prev" title="The-Jane-Doe-Framework (Name subject to change)" href="project_overview.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="hyperparameter-search">
+<h1>Hyperparameter Search<a class="headerlink" href="#hyperparameter-search" title="Permalink to this headline">¶</a></h1>
+<p>We use Optuna to optimize the hyperparameters of the models in the
+framework. Optional you can use MLFlow to track your current parameter
+search.</p>
+<section id="step-setup-infrastructure">
+<h2>1. Step: Setup Infrastructure<a class="headerlink" href="#step-setup-infrastructure" title="Permalink to this headline">¶</a></h2>
+<section id="optuna-storage">
+<h3>Optuna Storage<a class="headerlink" href="#optuna-storage" title="Permalink to this headline">¶</a></h3>
+<p>Setup a storage for optuna.</p>
+<p>There are kubernetes examples for redis in this repo.</p>
+</section>
+<section id="mlflow">
+<h3>MLFlow<a class="headerlink" href="#mlflow" title="Permalink to this headline">¶</a></h3>
+<p>Setup mflow, configure it in the run config</p>
+</section>
+</section>
+<section id="step-create-optuna-study">
+<h2>2. Step: Create Optuna Study<a class="headerlink" href="#step-create-optuna-study" title="Permalink to this headline">¶</a></h2>
+<p>(This is optional, by default the first hyperopt search will create a
+study provided with the study name) Create a study using your favorite
+storage backend.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>optuna create-study --study-name $STUDY_NAME --storage $STORAGE --direction $DIRECTION
+</pre></div>
+</div>
+<p>e.g. storage can be <code class="docutils literal notranslate"><span class="pre">redis://redis</span></code>, direction can be
+<code class="docutils literal notranslate"><span class="pre">{minimize,maximize}</span></code> and should be <code class="docutils literal notranslate"><span class="pre">maximize</span></code> for recall&#64;k</p>
+<p>Copy the study name from the cli output of optuna.</p>
+</section>
+<section id="step-create-run-config">
+<h2>3. Step: Create Run Config<a class="headerlink" href="#step-create-run-config" title="Permalink to this headline">¶</a></h2>
+<p>Create a run config.</p>
+<p>Instead of config a fixed value for a hyperparameter:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>model: {
+    ...
+    num_transformer_heads: 4,
+    ...
+}
+</pre></div>
+</div>
+<p>Add a hyper_opt config object to the hyperparameter:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>model: {
+    ...
+    transformer_hidden_size: {
+            hyper_opt: {
+                suggest: &quot;int&quot;,
+                params: {
+                    low: 2,
+                    high: 8,
+                    step: 2
+                }
+            }
+        }
+    },
+    ...
+}
+</pre></div>
+</div>
+<p>Possible values for the suggest function are:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial.suggest_categorical">categorical</a></p></li>
+<li><p><a class="reference external" href="https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial.suggest_discrete_uniform">discrete_uniform</a></p></li>
+<li><p><a class="reference external" href="https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial.suggest_float">float</a></p></li>
+<li><p><a class="reference external" href="https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial.suggest_int">int</a></p></li>
+<li><p><a class="reference external" href="https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial.suggest_loguniform">loguniform</a></p></li>
+<li><p><a class="reference external" href="https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial.suggest_uniform">uniform</a></p></li>
+</ul>
+<p>Please refer to the Optuna documentation for the available parameters
+for each suggest function.</p>
+<p>If a hyperparameter depends on another hyperparameter you can specify
+this also in the config:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>model {
+    ...
+    transformer_hidden_size: {
+        hyper_opt: {
+          suggest: &quot;int&quot;,
+          params: {
+            low: 2
+            high: 8
+            step: 2
+          },
+          dependency: {
+            type: &quot;multiply&quot;,
+            on: &quot;model.num_transformer_heads&quot;
+          }
+        }
+    },
+    ...
+}
+</pre></div>
+</div>
+<p>Currently, we support the following dependencies:</p>
+<ul class="simple">
+<li><p>multiply: the suggested value is multiplied with the dependent value</p></li>
+<li><p>optimize_iff: the hyperparameter will only be generated if a
+condition is satisfied based on another hyperparameter</p></li>
+</ul>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>model {
+    ...
+    transformer_hidden_size: {
+        hyper_opt: {
+          suggest: &quot;int&quot;,
+          params: {
+            low: 2
+            high: 8
+            step: 2
+          },
+          dependency: {
+            on: &quot;module.model.num_transformer_heads&quot;,
+            type: &quot;optimize_iff&quot;,
+            conditions: [{
+              type: &#39;equal&#39;,
+              compare_value: 5
+            }]
+          }
+        }
+    },
+    ...
+}
+</pre></div>
+</div>
+</section>
+<section id="step-run-study">
+<h2>4. Step: Run Study<a class="headerlink" href="#step-run-study" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">The-Jane-Doe-Framework</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project_overview.html">The-Jane-Doe-Framework (Name subject to change)</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Hyperparameter Search</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#step-setup-infrastructure">1. Step: Setup Infrastructure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-create-optuna-study">2. Step: Create Optuna Study</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-create-run-config">3. Step: Create Run Config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-run-study">4. Step: Run Study</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="developer_guide.html">Project Code Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration of a model configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="formats/vocabulary_file.html">Format of the Vocabulary File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataset/dataset_cli.html">Dataset CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataset/indices.html">Indices created in this project</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataset/refactoring_notes_dataset_cli.html">Dataset Directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dataset/refactoring_notes_dataset_cli.html#runner-directory">Runner Directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration/datasources.html">Datasources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration/module.html">Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration/tokenizer.html">Tokenizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration/trainer.html">Trainer</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="project_overview.html" title="previous chapter">The-Jane-Doe-Framework (Name subject to change)</a></li>
+      <li>Next: <a href="developer_guide.html" title="next chapter">Project Code Overview</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Author.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/hyperparameter_search.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
