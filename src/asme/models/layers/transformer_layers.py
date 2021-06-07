@@ -51,7 +51,6 @@ class TransformerEmbedding(SequenceElementsRepresentationLayer):
     def forward(self, sequence: InputSequence) -> EmbeddedElementsSequence:
         """
         :param sequence: the sequence input (N, S)
-        :param position_ids: the position ids (N, S) optional, will be generated if not provided
         :return: the embedding (item and position) :math`(N, S, H)`
 
         where S is the sequence length, N the batch size and H the embedding size

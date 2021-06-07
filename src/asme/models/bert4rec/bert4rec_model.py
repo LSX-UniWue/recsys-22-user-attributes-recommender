@@ -1,3 +1,4 @@
+import functools
 from typing import Optional
 
 from torch import nn
@@ -103,17 +104,16 @@ class BERT4RecModel(SequenceRecommenderModel):
         super().__init__(embedding_layer, representation_layer, transform_layer, projection_layer)
 
         # init the parameters
-        self.initializer_range = initializer_range
-        self.apply(self._init_weights)
+        self.apply(functools.partial(normal_initialize_weights, initializer_range=initializer_range))
 
-    def _init_weights(self, module):
-        """ Initializes the weights of the layers """
-        is_linear_layer = isinstance(module, nn.Linear)
-        is_embedding_layer = isinstance(module, nn.Embedding)
-        if is_linear_layer or is_embedding_layer:
-            module.weight.data.normal_(mean=0.0, std=self.initializer_range)
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
-        if is_linear_layer and module.bias is not None:
-            module.bias.data.zero_()
+
+def normal_initialize_weights(module: nn.Module, initializer_range: float = 0.2) -> None:
+    is_linear_layer = isinstance(module, nn.Linear)
+    is_embedding_layer = isinstance(module, nn.Embedding)
+    if is_linear_layer or is_embedding_layer:
+        module.weight.data.normal_(mean=0.0, std=initializer_range)
+    elif isinstance(module, nn.LayerNorm):
+        module.bias.data.zero_()
+        module.weight.data.fill_(1.0)
+    if is_linear_layer and module.bias is not None:
+        module.bias.data.zero_()

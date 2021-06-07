@@ -1,12 +1,13 @@
+import functools
 from typing import Dict, Any, Optional
 from torch import nn
 
 import torch
 
 from asme.models.bert4rec.bert4rec_model import BidirectionalTransformerSequenceRepresentationLayer, \
-    FFNSequenceRepresentationModifierLayer
+    FFNSequenceRepresentationModifierLayer, normal_initialize_weights
 from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence
-from asme.models.layers.layers import PROJECT_TYPE_LINEAR
+from asme.models.layers.layers import PROJECT_TYPE_LINEAR, build_projection_layer
 from asme.models.layers.transformer_layers import TransformerEmbedding
 from asme.models.sequence_recommendation_model import SequenceElementsRepresentationLayer, SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
@@ -43,18 +44,14 @@ class LinearUpscaler(nn.Module):
 class KeBERT4RecSequenceElementsRepresentationLayer(SequenceElementsRepresentationLayer):
 
     def __init__(self,
-                 item_vocab_size: int,
-                 max_sequence_length: int,
+                 item_embedding_layer: TransformerEmbedding,
                  embedding_size: int,
                  additional_attributes: Dict[str, Dict[str, Any]],
-                 embedding_pooling_type: str = None,
+                 dropout: float = 0.0
                  ):
-        super(KeBERT4RecSequenceElementsRepresentationLayer, self).__init__()
+        super().__init__()
 
-        # embedding will be normed after all embeddings are added to the representation
-        self.sequence_embedding = TransformerEmbedding(item_vocab_size, max_sequence_length, embedding_size, 0.0,
-                                                       embedding_pooling_type=embedding_pooling_type,
-                                                       norm_embedding=False)
+        self.item_embedding_layer = item_embedding_layer
 
         additional_attribute_embeddings = {}
         for attribute_name, attribute_infos in additional_attributes.items():
@@ -65,14 +62,14 @@ class KeBERT4RecSequenceElementsRepresentationLayer(SequenceElementsRepresentati
                                                                                     hidden_size=embedding_size)
         self.additional_attribute_embeddings = nn.ModuleDict(additional_attribute_embeddings)
 
-        self.dropout_embedding = nn.Dropout(embedding_size)
+        self.dropout_embedding = nn.Dropout(dropout)
         self.norm_embedding = nn.LayerNorm(embedding_size)
 
     def forward(self, sequence: InputSequence) -> EmbeddedElementsSequence:
-        position_ids = sequence.get_attribute('position_ids')  # TODO
-        embedding = self.sequence_embedding(sequence.sequence, position_ids)
+        embedding = self.item_embedding_layer(sequence)
         for input_key, module in self.additional_attribute_embeddings.items():
-            embedding += module(sequence.get_attribute(input_key))
+            additional_metadata = sequence.get_attribute(input_key)
+            embedding += module(additional_metadata)
         embedding = self.norm_embedding(embedding)
         embedding = self.dropout_embedding(embedding)
         return EmbeddedElementsSequence(embedding)
@@ -93,11 +90,19 @@ class KeBERT4RecModel(SequenceRecommenderModel):
                  initializer_range: float = 0.02,
                  transformer_intermediate_size: Optional[int] = None,
                  transformer_attention_dropout: Optional[float] = None):
-        element_representation = KeBERT4RecSequenceElementsRepresentationLayer(item_vocab_size,
-                                                                               max_seq_length,
+
+        # save for later call by the training module
+        self.additional_metadata_keys = list(additional_attributes.keys())
+
+        # embedding will be normed and dropout after all embeddings are added to the representation
+        sequence_embedding = TransformerEmbedding(item_vocab_size, max_seq_length, transformer_hidden_size, 0.0,
+                                                  embedding_pooling_type=embedding_pooling_type,
+                                                  norm_embedding=False)
+
+        element_representation = KeBERT4RecSequenceElementsRepresentationLayer(sequence_embedding,
                                                                                transformer_hidden_size,
                                                                                additional_attributes,
-                                                                               embedding_pooling_type)
+                                                                               dropout=transformer_dropout)
         sequence_representation = BidirectionalTransformerSequenceRepresentationLayer(transformer_hidden_size,
                                                                                       num_transformer_heads,
                                                                                       num_transformer_layers,
@@ -107,11 +112,13 @@ class KeBERT4RecModel(SequenceRecommenderModel):
 
         transform_layer = FFNSequenceRepresentationModifierLayer(transformer_hidden_size)
 
-        projection_layer = self._build_projection_layer(PROJECT_TYPE_LINEAR, transformer_hidden_size,
-                                                        item_vocab_size)
+        projection_layer = build_projection_layer(PROJECT_TYPE_LINEAR, transformer_hidden_size, item_vocab_size,
+                                                  sequence_embedding.item_embedding.embedding)
 
         super().__init__(element_representation, sequence_representation, transform_layer, projection_layer)
 
-        # FIXME:
-        self.initializer_range = initializer_range
-        self.apply(self._init_weights)
+        # FIXME: move init code
+        self.apply(functools.partial(normal_initialize_weights, initializer_range=initializer_range))
+
+    def required_metadata_keys(self):
+        return self.additional_metadata_keys
