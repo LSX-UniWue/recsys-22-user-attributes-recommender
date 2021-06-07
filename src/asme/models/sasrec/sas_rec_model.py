@@ -3,7 +3,7 @@ from typing import Union, Tuple, Optional
 import torch
 import torch.nn as nn
 
-from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence, SequenceRepresentation, \
+from asme.models.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation, \
     ModifiedSequenceRepresentation
 from asme.models.layers.layers import SequenceRepresentationLayer, ProjectionLayer, \
     IdentitySequenceRepresentationModifierLayer
@@ -51,7 +51,7 @@ class SASRecProjectionLayer(ProjectionLayer):
                 positive_samples: Optional[torch.Tensor] = None,
                 negative_samples: Optional[torch.Tensor] = None) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
 
-        input_sequence = modified_sequence_representation.sequence_representation.embedded_elements_sequence.input_sequence
+        input_sequence = modified_sequence_representation.input_sequence
 
         padding_mask = input_sequence.padding_mask
         transformer_output = modified_sequence_representation.modified_encoded_sequence

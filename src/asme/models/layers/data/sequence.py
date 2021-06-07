@@ -85,6 +85,13 @@ class SequenceRepresentation:  # -> Sequence Representation
 
     embedded_elements_sequence: Optional[EmbeddedElementsSequence] = None
 
+    @property
+    def input_sequence(self):
+        if self.embedded_elements_sequence.input_sequence is None:
+            return None
+
+        return self.embedded_elements_sequence.input_sequence
+
 
 @dataclass
 class ModifiedSequenceRepresentation:
@@ -95,3 +102,11 @@ class ModifiedSequenceRepresentation:
     """
 
     sequence_representation: Optional[SequenceRepresentation] = None
+
+    @property
+    def input_sequence(self):
+        if self.sequence_representation.input_sequence is None:
+            return None
+
+        return self.sequence_representation.input_sequence
+
