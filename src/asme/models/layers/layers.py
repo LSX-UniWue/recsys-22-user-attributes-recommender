@@ -1,6 +1,6 @@
 import math
 import abc
-from typing import Optional, Union, Tuple
+from typing import Union, Tuple
 from abc import ABC
 
 import torch
@@ -8,7 +8,6 @@ from torch import nn
 
 from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence, SequenceRepresentation, \
     ModifiedSequenceRepresentation
-from asme.models.layers.sequence_embedding import PooledSequenceElementsRepresentation
 
 
 class SequenceElementsRepresentationLayer(ABC, nn.Module):
@@ -72,44 +71,7 @@ class IdentitySequenceRepresentationModifierLayer(SequenceRepresentationModifier
         return ModifiedSequenceRepresentation(sequence_representation.encoded_sequence, sequence_representation)
 
 
-class ItemEmbedding(nn.Module):
-    """
-    embedding to use for the items
-    handles multiple items per sequence step, by averaging, summing or max the single embeddings
-    """
-
-    def __init__(self,
-                 item_voc_size: int,
-                 embedding_size: int,
-                 embedding_pooling_type: str = None
-                 ):
-        super().__init__()
-        self.embedding_size = embedding_size
-
-        if embedding_pooling_type:
-            self.pooling = PooledSequenceElementsRepresentation(embedding_pooling_type)
-        else:
-            self.pooling = None
-
-        self.embedding_mode = embedding_pooling_type
-        self.embedding = nn.Embedding(num_embeddings=item_voc_size,
-                                      embedding_dim=self.embedding_size)
-
-    def get_weight(self) -> torch.Tensor:
-        return self.embedding.weight
-
-    def forward(self,
-                items: torch.Tensor,
-                flatten: bool = True
-                ) -> torch.Tensor:
-        embedding = self.embedding(items)
-
-        # this is a quick hack, if a module needs the embeddings of a single item
-        if self.pooling:
-            embedding = self.pooling(embedding)
-        return embedding
-
-
+# TODO remove
 class MatrixFactorizationLayer(nn.Linear, ABC):
     """
     a matrix factorization layer

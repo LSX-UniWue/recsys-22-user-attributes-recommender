@@ -6,7 +6,8 @@ from torch import nn
 from torch.nn import functional as F
 
 from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence, SequenceRepresentation
-from asme.models.layers.layers import ItemEmbedding, SequenceElementsRepresentationLayer, SequenceRepresentationLayer
+from asme.models.layers.layers import SequenceElementsRepresentationLayer, SequenceRepresentationLayer
+from asme.models.layers.sequence_embedding import ItemEmbedding
 from asme.models.layers.tensor_utils import generate_position_ids
 
 
@@ -93,15 +94,16 @@ class TransformerLayer(SequenceRepresentationLayer):
 
     def forward(self, embedded_sequence: EmbeddedElementsSequence) -> SequenceRepresentation:
         # running over multiple transformer blocks
+        sequence = embedded_sequence.embedded_sequence
         if embedded_sequence.input_sequence.has_attribute("attention_mask"):
             attention_mask = embedded_sequence.input_sequence.get_attribute("attention_mask")
         else:
             attention_mask = None
 
         for transformer in self.transformer_blocks:
-            input_sequence = transformer.forward(input_sequence, attention_mask)
+           sequence = transformer.forward(sequence, attention_mask)
 
-        representation = SequenceRepresentation(input_sequence, embedded_sequence)
+        representation = SequenceRepresentation(sequence, embedded_sequence)
         return representation
 
 

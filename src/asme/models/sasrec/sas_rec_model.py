@@ -37,7 +37,9 @@ class SASRecTransformerLayer(SequenceRepresentationLayer):
 
         attention_mask = attention_mask.unsqueeze(1).to(dtype=torch.bool)
 
-        return self.transformer_layer(embedded_sequence, attention_mask=attention_mask)
+        input_sequence = embedded_sequence.input_sequence
+        input_sequence.set_attribute("attention_mask", attention_mask) #FIXME (AD) we wanted to avoid using the attribute dictionary to move info between layers :-(
+        return self.transformer_layer(embedded_sequence)
 
 
 class SASRecProjectionLayer(ProjectionLayer):

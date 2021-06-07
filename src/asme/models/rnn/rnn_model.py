@@ -4,7 +4,8 @@ from typing import Tuple, Optional, List
 import torch
 from torch import nn
 
-from asme.models.layers.layers import ItemEmbedding, PROJECT_TYPE_LINEAR, build_projection_layer
+from asme.models.layers.layers import PROJECT_TYPE_LINEAR, build_projection_layer
+from asme.models.layers.sequence_embedding import ItemEmbedding
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 

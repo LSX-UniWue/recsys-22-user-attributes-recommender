@@ -3,7 +3,7 @@ from typing import Optional, List
 import torch
 import torch.nn as nn
 
-from asme.models.layers.layers import ItemEmbedding
+from asme.models.layers.sequence_embedding import ItemEmbedding
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 

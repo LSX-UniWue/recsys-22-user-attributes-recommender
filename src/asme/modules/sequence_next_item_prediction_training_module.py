@@ -4,6 +4,7 @@ import torch
 
 import pytorch_lightning as pl
 from asme.losses.losses import SequenceRecommenderContrastiveLoss
+from asme.models.layers.data.sequence import InputSequence
 
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.modules import LOG_KEY_TRAINING_LOSS
@@ -89,17 +90,19 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
         """
 
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-
-        # add users and other meta data (XXX: currently only users)
-        additional_meta_data = get_additional_meta_data(self.model, batch)
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
 
         pos = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
 
-        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
+        # add users and other meta data (XXX: currently only users)
+        additional_meta_data = get_additional_meta_data(self.model, batch)
 
-        pos_logits, neg_logits = self.model(input_seq, pos, negative_items=neg, padding_mask=padding_mask,
-                                            **additional_meta_data)
+        additional_meta_data["positive_samples"] = pos
+        additional_meta_data["negative_samples"] = neg
+
+        input_sequence = InputSequence(input_seq, padding_mask, additional_meta_data)
+        pos_logits, neg_logits = self.model(input_sequence)
 
         loss = self._calc_loss(pos_logits, neg_logits, padding_mask)
         self.log(LOG_KEY_TRAINING_LOSS, loss)
@@ -165,7 +168,10 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
         items_to_rank = torch.as_tensor(self.item_tokenizer.get_vocabulary().ids(), dtype=torch.long, device=device)
         items_to_rank = items_to_rank.repeat([batch_size, 1])
 
-        return self.model(input_seq, items_to_rank, padding_mask=padding_mask, **additional_meta_data)
+        additional_meta_data["positive_samples"] = items_to_rank
+
+        input_sequence = InputSequence(input_seq, padding_mask, additional_meta_data)
+        return self.model(input_sequence)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(),

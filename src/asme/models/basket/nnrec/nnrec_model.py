@@ -5,7 +5,8 @@ from asme.models.sequence_recommendation_model import SequenceRecommenderModel, 
 from data.datasets import USER_ENTRY_NAME
 from torch import nn
 
-from asme.models.layers.layers import ItemEmbedding, LinearProjectionLayer, IdentitySequenceRepresentationModifierLayer
+from asme.models.layers.layers import LinearProjectionLayer, IdentitySequenceRepresentationModifierLayer
+from asme.models.layers.sequence_embedding import ItemEmbedding
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 

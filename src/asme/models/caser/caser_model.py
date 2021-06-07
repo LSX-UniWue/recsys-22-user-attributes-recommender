@@ -6,8 +6,9 @@ from torch import nn
 
 from asme.models.layers.data.sequence import SequenceRepresentation, ModifiedSequenceRepresentation, \
     EmbeddedElementsSequence
-from asme.models.layers.layers import ItemEmbedding, IdentitySequenceRepresentationModifierLayer, \
+from asme.models.layers.layers import IdentitySequenceRepresentationModifierLayer, \
     SequenceRepresentationModifierLayer
+from asme.models.layers.sequence_embedding import ItemEmbedding
 from asme.models.layers.util_layers import get_activation_layer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer, \
     ProjectionLayer

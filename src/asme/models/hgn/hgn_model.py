@@ -5,8 +5,9 @@ import torch.nn as nn
 
 from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence, SequenceRepresentation, \
     ModifiedSequenceRepresentation
-from asme.models.layers.layers import ItemEmbedding, SequenceElementsRepresentationLayer, SequenceRepresentationLayer,\
+from asme.models.layers.layers import SequenceElementsRepresentationLayer, SequenceRepresentationLayer,\
     IdentitySequenceRepresentationModifierLayer, ProjectionLayer
+from asme.models.layers.sequence_embedding import ItemEmbedding
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 from data.datasets import USER_ENTRY_NAME
