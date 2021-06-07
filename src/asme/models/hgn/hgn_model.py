@@ -107,14 +107,16 @@ class HGNProjectionLayer(ProjectionLayer):
         self.b2.weight.data.zero_()
 
     def forward(self,
-                modified_sequence_representation: ModifiedSequenceRepresentation,
-                positive_samples: Optional[torch.Tensor] = None,
-                negative_samples: Optional[torch.Tensor] = None
+                modified_sequence_representation: ModifiedSequenceRepresentation
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         sequence = modified_sequence_representation.sequence_representation.embedded_elements_sequence
         item_embedding = sequence.embedded_sequence
         user_embedding = sequence.embedded_user
         sequence_representation = modified_sequence_representation.modified_encoded_sequence
+
+        input_sequence = modified_sequence_representation.input_sequence
+        positive_samples = input_sequence.get_attribute("positive_samples")
+        negative_samples = input_sequence.get_attribute("negative_samples")
 
         positive_item_score = self._calc_scores(positive_samples, sequence_representation, item_embedding,
                                                 user_embedding)

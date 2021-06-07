@@ -47,11 +47,13 @@ class SASRecProjectionLayer(ProjectionLayer):
         self.embedding = embedding
 
     def forward(self,
-                modified_sequence_representation: ModifiedSequenceRepresentation,
-                positive_samples: Optional[torch.Tensor] = None,
-                negative_samples: Optional[torch.Tensor] = None) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+                modified_sequence_representation: ModifiedSequenceRepresentation
+                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
 
         input_sequence = modified_sequence_representation.input_sequence
+
+        positive_samples = input_sequence.get_attribute("positive_samples")
+        negative_samples = input_sequence.get_attribute("negative_samples")
 
         padding_mask = input_sequence.padding_mask
         transformer_output = modified_sequence_representation.modified_encoded_sequence

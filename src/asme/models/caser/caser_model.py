@@ -128,15 +128,17 @@ class CaserProjectionLayer(ProjectionLayer):
         self.b2.weight.data.zero_()
 
     def forward(self,
-                modified_sequence_representation: ModifiedSequenceRepresentation,
-                positive_samples: Optional[torch.Tensor] = None,
-                negative_samples: Optional[torch.Tensor] = None
+                modified_sequence_representation: ModifiedSequenceRepresentation
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         #if not self.training:
         #    w2 = pos_w2.squeeze()
         #    b2 = pos_b2.squeeze()
         #    w2 = w2.permute(1, 0, 2)
         #    return torch.matmul(x, w2).sum(dim=1) + b2
+        input_sequence = modified_sequence_representation.input_sequence
+        positive_samples = input_sequence.get_attribute("positive_samples")
+        negative_samples = input_sequence.get_attribute("negative_samples")
+
         sequence_representation = modified_sequence_representation.modified_encoded_sequence
         sequence_representation = sequence_representation.unsqueeze(2)
         res_pos = self._calc_scores(positive_samples, sequence_representation)

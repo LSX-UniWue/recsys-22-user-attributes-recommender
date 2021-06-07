@@ -50,15 +50,11 @@ class SequenceRepresentationModifierLayer(ABC, nn.Module):
 class ProjectionLayer(ABC, nn.Module):
     @abc.abstractmethod
     def forward(self,
-                modified_sequence_representation: ModifiedSequenceRepresentation,
-                positive_samples: Optional[torch.Tensor] = None,
-                negative_samples: Optional[torch.Tensor] = None
+                modified_sequence_representation: ModifiedSequenceRepresentation
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
 
         :param modified_sequence_representation: a modified sequence representation tensor.
-        :param positive_samples: a tensor with positive sample item ids to score. :math:`(N, P)`
-        :param negative_samples: a tensor with negative sample item ids o score. :math:`(N, NI)`
 
         :return: a score for each (provided) item.
         if no positive_samples and negative samples are provided a tensor of :math:`(N, I)` is returned
@@ -144,10 +140,7 @@ class LinearProjectionLayer(ProjectionLayer):
         self.linear = nn.Linear(hidden_size, item_vocab_size)
 
     def forward(self,
-                sequence_representation: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                positive_samples: Optional[torch.Tensor] = None,
-                negative_samples: Optional[torch.Tensor] = None
+                sequence_representation: torch.Tensor
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         return self.linear(sequence_representation)
 
@@ -178,10 +171,7 @@ class ItemEmbeddingProjectionLayer(ProjectionLayer):
         nn.init.uniform_(self.output_bias, -bound, bound)
 
     def forward(self,
-                sequence_representation: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                positive_samples: Optional[torch.Tensor] = None,
-                negative_samples: Optional[torch.Tensor] = None
+                sequence_representation: torch.Tensor
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         dense = torch.matmul(sequence_representation, self.embedding.weight.transpose(0, 1))  # (S, N, I)
         return dense + self.output_bias
