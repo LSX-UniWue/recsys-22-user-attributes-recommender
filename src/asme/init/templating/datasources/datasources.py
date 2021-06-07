@@ -192,6 +192,55 @@ class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
         }
 
 
+class LeaveOneOutSequenceWindowDatasetBuilder(DatasetBuilder):
+
+    def __init__(self,
+                 window_size: int
+                 ):
+        self.window_size = window_size
+
+    def can_build_dataset_definition(self, dataset_split_type: DatasetSplit):
+        return dataset_split_type == DatasetSplit.LEAVE_ONE_OUT
+
+    def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        base_path = Path(config['path'])
+        prefix = _get_prefix(config, prefix_id)
+        index_file_path = f"{prefix}.{prefix_id}"
+        csv_file = base_path / f'{prefix}.csv'
+        csv_file_index = base_path / f'{prefix}.session.idx'
+        nip_index_file = base_path / 'loo' / f'{index_file_path}.slidingwindow.{self.window_size}.idx'
+        return {
+            'type': 'sequence_position',
+            'csv_file': str(csv_file),
+            'csv_file_index': str(csv_file_index),
+            'nip_index_file': str(nip_index_file)
+        }
+
+
+class NextPositionWindowDatasetBuilder(DatasetBuilder):
+    def __init__(self,
+                 window_size: int
+                 ):
+        self.window_size = window_size
+
+    def can_build_dataset_definition(self, dataset_split_type: DatasetSplit):
+        return dataset_split_type == DatasetSplit.RATIO_SPLIT
+
+    def build_dataset_definition(self, prefix_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        base_path = Path(config['path'])
+        prefix = _get_prefix(config, prefix_id)
+        prefix = f"{prefix}.{prefix_id}"
+        csv_file = base_path / f'{prefix}.csv'
+        csv_file_index = base_path / f'{prefix}.session.idx'
+        nip_index_file = base_path / f'{prefix}.slidingwindow.{self.window_size}.idx'
+        return {
+            'type': 'sequence_position',
+            'csv_file': str(csv_file),
+            'csv_file_index': str(csv_file_index),
+            'nip_index_file': str(nip_index_file)
+        }
+
+
 class LeaveOneOutSessionDatasetBuilder(DatasetBuilder):
 
     def can_build_dataset_definition(self, dataset_split_type: DatasetSplit):

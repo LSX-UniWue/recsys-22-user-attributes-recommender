@@ -7,6 +7,8 @@ from asme.init.context import Context
 from asme.init.factories.common.conditional_based_factory import ConditionalFactory
 from asme.init.factories.common.config_based_factory import ListFactory
 from asme.init.factories.data_sources.datasets.processor.cloze_mask import ClozeProcessorFactory
+from asme.init.factories.data_sources.datasets.processor.cut_to_fixed_sequence_length import \
+    CutToFixedSequenceLengthProcessorFactory
 from asme.init.factories.data_sources.datasets.processor.last_item_mask import LastItemMaskProcessorFactory
 from asme.init.factories.data_sources.datasets.processor.par_pos_neg_sampler import \
     ParameterizedPositiveNegativeSamplerProcessorFactory
@@ -14,6 +16,8 @@ from asme.init.factories.data_sources.datasets.processor.pos_neg_sampler import 
 from asme.init.factories.data_sources.datasets.processor.position_token import PositionTokenProcessorFactory
 from asme.init.factories.data_sources.datasets.processor.tokenizer import TokenizerProcessorFactory
 from asme.init.object_factory import ObjectFactory, CanBuildResult
+
+FIXED_SEQUENCE_LENGTH_PROCESSOR_KEY = 'fixed_sequence_length_processor'
 
 
 class ProcessorsFactory(ObjectFactory):
@@ -31,7 +35,8 @@ class ProcessorsFactory(ObjectFactory):
                 'last_item_mask': LastItemMaskProcessorFactory(),
                 'position_token': PositionTokenProcessorFactory(),
                 'tokenizer': TokenizerProcessorFactory(),
-                'target_extractor': TargetExtractorProcessorFactory()
+                'target_extractor': TargetExtractorProcessorFactory(),
+                FIXED_SEQUENCE_LENGTH_PROCESSOR_KEY: CutToFixedSequenceLengthProcessorFactory()
             })
         )
 
