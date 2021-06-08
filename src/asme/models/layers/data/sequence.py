@@ -76,6 +76,7 @@ class EmbeddedElementsSequence:
     input_sequence: Optional[InputSequence] = None
 
 
+#TODO (AD) I think the dimensions are wrong, discuss with Daniel
 @dataclass
 class SequenceRepresentation:  # -> Sequence Representation
     encoded_sequence: torch.Tensor

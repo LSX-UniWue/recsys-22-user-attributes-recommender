@@ -5,6 +5,7 @@ from asme.models.layers.layers import SequenceElementsRepresentationLayer
 from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 
 
+# TODO rename file to elements_embedding
 class SequenceElementsEmbeddingComponent(SequenceElementsRepresentationLayer):
     """
     A component that projects every element in a sequence into an embedding space. The component also supports pooling
@@ -13,7 +14,8 @@ class SequenceElementsEmbeddingComponent(SequenceElementsRepresentationLayer):
     def __init__(self,
                  vocabulary_size: int,
                  embedding_size: int,
-                 pooling_type: Optional[str] = None):
+                 pooling_type: Optional[str] = None,
+                 dropout: Optional[float] = None):
         """
 
         :param vocabulary_size: the size of the elements vocabulary.
@@ -21,7 +23,7 @@ class SequenceElementsEmbeddingComponent(SequenceElementsRepresentationLayer):
         :param pooling_type: the type of pooling that will be performed. (max, sum or mean)
         """
         super().__init__()
-        self.elements_embedding = SequenceElementsEmbeddingLayer(vocabulary_size, embedding_size, pooling_type)
+        self.elements_embedding = SequenceElementsEmbeddingLayer(vocabulary_size, embedding_size, pooling_type, dropout)
 
     def forward(self, input_sequence: InputSequence) -> EmbeddedElementsSequence:
         embedded_sequence = self.elements_embedding(input_sequence.sequence)

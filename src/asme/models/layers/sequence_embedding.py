@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Optional
 
 import torch
 from torch import nn
@@ -42,24 +43,33 @@ class PooledSequenceElementsLayer(nn.Module):
 
 class SequenceElementsEmbeddingLayer(nn.Module):
     """
-    embedding to use for the items
-    handles multiple items per sequence step, by averaging, summing or max the single embeddings
+    A layer the embeds elements of a sequence.
+    Can handle multiple items per sequence step, by pooling (max, mean, sum) to single embeddings.
+    Also supports dropout after the embedding.
     """
 
     def __init__(self,
                  item_voc_size: int,
                  embedding_size: int,
-                 embedding_pooling_type: str = None
+                 embedding_pooling_type: Optional[str] = None,
+                 dropout: Optional[int] = None
                  ):
         super().__init__()
+        self.item_voc_size = item_voc_size
         self.embedding_size = embedding_size
+        self.embedding_mode = embedding_pooling_type
+        self.dropout = dropout
 
         if embedding_pooling_type:
             self.pooling = PooledSequenceElementsLayer(embedding_pooling_type)
         else:
             self.pooling = None
 
-        self.embedding_mode = embedding_pooling_type
+        if self.dropout and self.dropout > 0.0:
+            self.dropout_layer = nn.Dropout2d(p=self.dropout)
+        else:
+            self.dropout_layer = None
+
         self.embedding = nn.Embedding(num_embeddings=item_voc_size,
                                       embedding_dim=self.embedding_size)
 
@@ -75,4 +85,9 @@ class SequenceElementsEmbeddingLayer(nn.Module):
         # this is a quick hack, if a module needs the embeddings of a single item
         if self.pooling:
             embedding = self.pooling(embedding)
-        return embedding
+
+        #TODO (AD) maybe we should apply dropout before the pooling operation?
+        if self.dropout_layer:
+            return self.dropout_layer(embedding)
+        else:
+            return embedding
