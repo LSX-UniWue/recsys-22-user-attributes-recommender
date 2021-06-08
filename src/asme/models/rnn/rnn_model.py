@@ -5,7 +5,7 @@ import torch
 from torch import nn
 
 from asme.models.layers.layers import PROJECT_TYPE_LINEAR, build_projection_layer
-from asme.models.layers.sequence_embedding import ItemEmbedding
+from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
@@ -88,9 +88,9 @@ class RNNModel(SequenceRecommenderModel):
         super().__init__()
         self.embedding_pooling_type = embedding_pooling_type
 
-        self.item_embedding = ItemEmbedding(item_voc_size=item_vocab_size,
-                                            embedding_size=item_embedding_dim,
-                                            embedding_pooling_type=self.embedding_pooling_type)
+        self.item_embedding = SequenceElementsEmbeddingLayer(item_voc_size=item_vocab_size,
+                                                             embedding_size=item_embedding_dim,
+                                                             embedding_pooling_type=self.embedding_pooling_type)
 
         # FIXME: maybe this should not be done here
         rnn_dropout = dropout

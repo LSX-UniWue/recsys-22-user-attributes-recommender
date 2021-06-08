@@ -5,7 +5,7 @@ from typing import List
 from asme.models.caser.caser_model import UserEmbeddingConcatModifier, CaserProjectionLayer
 from asme.models.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation
 from asme.models.layers.layers import IdentitySequenceRepresentationModifierLayer
-from asme.models.layers.sequence_embedding import ItemEmbedding
+from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 from asme.models.layers.util_layers import get_activation_layer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer
 
@@ -111,7 +111,7 @@ class CosRecModel(SequenceRecommenderModel):
         super().__init__(None, seq_rep_layer, mod_layer, projection_layer)
 
         # user and item embeddings
-        self.item_embeddings = ItemEmbedding(item_vocab_size, embed_dim, embedding_pooling_type=embedding_pooling_type)
+        self.item_embeddings = SequenceElementsEmbeddingLayer(item_vocab_size, embed_dim, embedding_pooling_type=embedding_pooling_type)
 
         self.item_embeddings.get_weight().data.normal_(0, 1.0 / embed_dim)
 

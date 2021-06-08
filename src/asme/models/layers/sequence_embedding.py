@@ -40,7 +40,7 @@ class PooledSequenceElementsLayer(nn.Module):
         return self.pooling_function(sequence)
 
 
-class ItemEmbedding(nn.Module):
+class SequenceElementsEmbeddingLayer(nn.Module):
     """
     embedding to use for the items
     handles multiple items per sequence step, by averaging, summing or max the single embeddings

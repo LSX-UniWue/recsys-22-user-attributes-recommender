@@ -8,7 +8,7 @@ from asme.models.layers.data.sequence import SequenceRepresentation, ModifiedSeq
     EmbeddedElementsSequence
 from asme.models.layers.layers import IdentitySequenceRepresentationModifierLayer, \
     SequenceRepresentationModifierLayer
-from asme.models.layers.sequence_embedding import ItemEmbedding
+from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 from asme.models.layers.util_layers import get_activation_layer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer, \
     ProjectionLayer
@@ -184,9 +184,9 @@ class CaserModel(SequenceRecommenderModel):
                  embedding_pooling_type: str = None
                  ):
 
-        self.item_embedding = ItemEmbedding(item_voc_size=item_vocab_size,
-                                            embedding_size=embedding_size,
-                                            embedding_pooling_type=embedding_pooling_type)
+        self.item_embedding = SequenceElementsEmbeddingLayer(item_voc_size=item_vocab_size,
+                                                             embedding_size=embedding_size,
+                                                             embedding_pooling_type=embedding_pooling_type)
 
         user_present = user_vocab_size == 0
         seq_rep_layer = CaserSequenceRepresentationLayer(embedding_size, max_seq_length, num_vertical_filters,

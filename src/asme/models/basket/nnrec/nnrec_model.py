@@ -6,7 +6,7 @@ from data.datasets import USER_ENTRY_NAME
 from torch import nn
 
 from asme.models.layers.layers import LinearProjectionLayer, IdentitySequenceRepresentationModifierLayer
-from asme.models.layers.sequence_embedding import ItemEmbedding
+from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
@@ -50,8 +50,8 @@ class NNRecModel(SequenceRecommenderModel):
         projection_layer = LinearProjectionLayer(hidden_size, item_vocab_size) # layer 2 in the paper
         super().__init__(None, seq_rep_layer, IdentitySequenceRepresentationModifierLayer(), projection_layer)
 
-        self.item_embedding = ItemEmbedding(item_vocab_size, item_embedding_size,
-                                            embedding_pooling_type=embedding_pooling_type)
+        self.item_embedding = SequenceElementsEmbeddingLayer(item_vocab_size, item_embedding_size,
+                                                             embedding_pooling_type=embedding_pooling_type)
         # batch_size = embedded_items.size()[0]
         # embedded_items = embedded_items.view(batch_size, -1)
 

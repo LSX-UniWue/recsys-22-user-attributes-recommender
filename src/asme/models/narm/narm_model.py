@@ -3,7 +3,7 @@ from typing import Optional, List
 import torch
 import torch.nn as nn
 
-from asme.models.layers.sequence_embedding import ItemEmbedding
+from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
@@ -45,9 +45,9 @@ class NarmModel(SequenceRecommenderModel):
         """
         super(NarmModel, self).__init__()
         self.batch_first = batch_first
-        self.item_embeddings = ItemEmbedding(item_voc_size=item_vocab_size,
-                                             embedding_size=item_embedding_size,
-                                             embedding_pooling_type=embedding_pooling_type)
+        self.item_embeddings = SequenceElementsEmbeddingLayer(item_voc_size=item_vocab_size,
+                                                              embedding_size=item_embedding_size,
+                                                              embedding_pooling_type=embedding_pooling_type)
         self.item_embedding_dropout = nn.Dropout(embedding_dropout)
         self.global_encoder = nn.GRU(item_embedding_size, global_encoder_size,
                                      num_layers=global_encoder_num_layers,
@@ -162,7 +162,7 @@ class BilinearDecoder(nn.Module):
         Implementation of the bilinear decoder
     """
     def __init__(self,
-                 embedding_layer: ItemEmbedding,
+                 embedding_layer: SequenceElementsEmbeddingLayer,
                  encoded_representation_size: int,
                  apply_softmax: bool = False
                  ):

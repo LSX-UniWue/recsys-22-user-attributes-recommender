@@ -1,28 +1,29 @@
-from typing import Optional, Dict
+from typing import Optional
 
-import torch
-from torch import nn
-
+from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence
 from asme.models.layers.layers import SequenceElementsRepresentationLayer
+from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 
 
 class SequenceElementsEmbeddingComponent(SequenceElementsRepresentationLayer):
     """
-    Computes an embedding for every element in the sequence.
+    A component that projects every element in a sequence into an embedding space. The component also supports pooling
+    over elements of the sequence.
     """
     def __init__(self,
-                 item_voc_size: int,
-                 embedding_size: int):
+                 vocabulary_size: int,
+                 embedding_size: int,
+                 pooling_type: Optional[str] = None):
+        """
+
+        :param vocabulary_size: the size of the elements vocabulary.
+        :param embedding_size: the embedding size.
+        :param pooling_type: the type of pooling that will be performed. (max, sum or mean)
+        """
         super().__init__()
+        self.elements_embedding = SequenceElementsEmbeddingLayer(vocabulary_size, embedding_size, pooling_type)
 
-        self.embedding_size = embedding_size
-        self.embedding = nn.Embedding(num_embeddings=item_voc_size, embedding_dim=embedding_size)
+    def forward(self, input_sequence: InputSequence) -> EmbeddedElementsSequence:
+        embedded_sequence = self.elements_embedding(input_sequence.sequence)
 
-    def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: Optional[torch.Tensor] = None,
-                **kwargs: Dict[str, torch.Tensor]) -> torch.Tensor:
-
-        embedded_sequence = self.embedding(sequence)
-
-        return embedded_sequence
+        return EmbeddedElementsSequence(embedded_sequence, input_sequence)

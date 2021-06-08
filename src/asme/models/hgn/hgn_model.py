@@ -7,7 +7,7 @@ from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequ
     ModifiedSequenceRepresentation
 from asme.models.layers.layers import SequenceElementsRepresentationLayer, SequenceRepresentationLayer,\
     IdentitySequenceRepresentationModifierLayer, ProjectionLayer
-from asme.models.layers.sequence_embedding import ItemEmbedding
+from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 from data.datasets import USER_ENTRY_NAME
@@ -181,7 +181,7 @@ class HGNModel(SequenceRecommenderModel):
         :param dims: the dimension of the item embeddings (D)
         :param embedding_pooling_type: average or max (seems to be optional?)
         """
-        item_embedding_layer = ItemEmbedding(item_vocab_size, dims, embedding_pooling_type=embedding_pooling_type)
+        item_embedding_layer = SequenceElementsEmbeddingLayer(item_vocab_size, dims, embedding_pooling_type=embedding_pooling_type)
         # TODO: self.item_embeddings.embedding.weight.data.normal_(0, 1.0 / dims)
         seq_elements_embedding = HGNEmbeddingLayer(user_vocab_size, dims, item_embedding_layer)
 

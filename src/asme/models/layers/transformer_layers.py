@@ -7,7 +7,7 @@ from torch.nn import functional as F
 
 from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence
 from asme.models.layers.layers import SequenceElementsRepresentationLayer
-from asme.models.layers.sequence_embedding import ItemEmbedding
+from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 from asme.models.layers.tensor_utils import generate_position_ids
 
 
@@ -28,9 +28,9 @@ class TransformerEmbedding(SequenceElementsRepresentationLayer):
 
         self.embedding_size = embedding_size
 
-        self.item_embedding = ItemEmbedding(item_voc_size=item_voc_size,
-                                            embedding_size=embedding_size,
-                                            embedding_pooling_type=embedding_pooling_type)
+        self.item_embedding = SequenceElementsEmbeddingLayer(item_voc_size=item_voc_size,
+                                                             embedding_size=embedding_size,
+                                                             embedding_pooling_type=embedding_pooling_type)
         self.position_embedding = nn.Embedding(max_seq_len, self.embedding_size)
         self.embedding_norm = nn.LayerNorm(self.embedding_size) if norm_embedding else nn.Identity()
         self.dropout = nn.Dropout(p=dropout)
