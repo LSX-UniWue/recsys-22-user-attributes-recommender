@@ -5,9 +5,17 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME
 
 
 class TargetPositionExtractor:
+    """
+    Base class for different strategies regarding the extraction of target indices from a session.
+    """
 
     @abstractmethod
     def apply(self, session: Dict[str, Any]) -> Iterable[int]:
+        """
+        Extracts a set of target indices from the session.
+
+        :param session: A dictionary containing the information of a single session.
+        """
         pass
 
     def __call__(self, session: Dict[str, Any]) -> Iterable[int]:
@@ -15,8 +23,15 @@ class TargetPositionExtractor:
 
 
 class FixedOffsetPositionExtractor(TargetPositionExtractor):
+    """
+    This TargetPositionExtractor always returns the index exactly offset positions away from the end of the session.
+    """
 
     def __init__(self, offset: int):
+        """
+        :param offset: The offset of the target position from the end of the sequence. This offset ranges from 1 for the
+        last item in the sequence to sequence_length for the second item in the sequence.
+        """
         self.offset = offset
 
     def apply(self, session: Dict[str, Any]) -> Iterable[int]:
@@ -24,8 +39,16 @@ class FixedOffsetPositionExtractor(TargetPositionExtractor):
 
 
 class RemainingSessionPositionExtractor(TargetPositionExtractor):
+    """
+    This TargetPositionExtractor returns all indices between min_session_length and sequence_length
+    """
 
     def __init__(self, min_session_length: int = 1):
+        """
+        :param min_session_length: The minimum length of a subsequence of the session that has to be reached before
+        extracting targets begins. For instance, min_session_length = 5 would yield 5 (i.e the sixth entry) as the first
+        target index.
+        """
         self.min_session_length = min_session_length
 
     def apply(self, session: Dict[str, Any]) -> Iterable[int]:

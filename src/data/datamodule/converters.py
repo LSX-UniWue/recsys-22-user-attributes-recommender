@@ -10,9 +10,18 @@ from datasets.dataset_pre_processing.utils import read_csv
 
 
 class CsvConverter:
-
+    """
+    Base class for all dataset converters. Subtypes of this class should be able to convert a specific dataset into a
+    single CSV file.
+    """
     @abstractmethod
     def apply(self, input_dir: Path, output_file: Path):
+        """
+        Converts the dataset into a single CSV file and saves it at output_file.
+
+        :param input_dir: The path to the file/directory of the dataset.
+        :param output_file: The path to the resulting CSV file.
+        """
         pass
 
     def __call__(self, input_dir: Path, output_file: Path):

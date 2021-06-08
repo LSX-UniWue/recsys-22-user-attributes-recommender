@@ -39,13 +39,25 @@ def format_prefix(prefixes: List[str]) -> str:
 
 
 class PreprocessingAction:
-
+    """
+    Base class for all actions that are performed by the AsmeDatamodule during preprocessing of dataset.
+    """
     @abstractmethod
     def name(self) -> str:
+        """
+        The name of the preprocessing action. Used for logging progress.
+        """
         pass
 
     @abstractmethod
     def apply(self, context: Context) -> None:
+        """
+        Applies the preprocessing action. It can rely on information that has been saved in the context by previous
+        actions and store data itself.
+
+        :param context: Context that is preserved between actions. Actions can use the information to find new files
+                        on-the-fly and hand on new data to down-stream actions.
+        """
         pass
 
     def __call__(self, context: Context) -> None:
