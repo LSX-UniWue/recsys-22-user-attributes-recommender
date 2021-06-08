@@ -26,10 +26,10 @@ def _build_rnn_cell(cell_type: str,
                       batch_first=True)
 
     if cell_type == 'lstm':
-        return LSTMSeqItemRecommenderModule(item_embedding_size, hidden_size,
-                                            bidirectional=bidirectional,
-                                            dropout=dropout,
-                                            num_layers=num_layers)
+        return LSTMAdapter(item_embedding_size, hidden_size,
+                           bidirectional=bidirectional,
+                           dropout=dropout,
+                           num_layers=num_layers)
 
     if cell_type == 'rnn':
         return nn.RNN(item_embedding_size, hidden_size,
@@ -41,8 +41,11 @@ def _build_rnn_cell(cell_type: str,
     raise ValueError(f'cell type "{cell_type}" not supported')
 
 
-class LSTMSeqItemRecommenderModule(nn.Module):
-
+class LSTMAdapter(nn.Module):
+    """
+    Changes the output of `torch.nn.LSTM` to comply with the API for `torch.nn.GRU` by omitting the internal
+    context states `c_n`.
+    """
     def __init__(self,
                  item_embedding_size: int,
                  hidden_size: int,
