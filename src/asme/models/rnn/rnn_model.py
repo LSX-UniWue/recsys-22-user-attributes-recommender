@@ -3,12 +3,14 @@ from typing import Tuple, Optional, List, Union
 
 import torch
 from torch import nn
+from torch.nn import Embedding
+from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
 
 from asme.models.components.sequence_embedding import SequenceElementsEmbeddingComponent
 from asme.models.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation, \
     ModifiedSequenceRepresentation
 from asme.models.layers.layers import PROJECT_TYPE_LINEAR, build_projection_layer, SequenceRepresentationLayer, \
-    ProjectionLayer, IdentitySequenceRepresentationModifierLayer
+    ProjectionLayer, IdentitySequenceRepresentationModifierLayer, SequenceRepresentationModifierLayer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
@@ -97,41 +99,54 @@ class RNNSequenceRepresentationComponent(SequenceRepresentationLayer):
         self.rnn = _build_rnn_cell(cell_type, item_embedding_dim, hidden_size, num_layers, bidirectional, rnn_dropout,
                                    nonlinearity)
 
-        self.pooling = RNNPooler(bidirectional=bidirectional)
-
     def forward(self, embedded_sequence: EmbeddedElementsSequence) -> SequenceRepresentation:
         input_sequence = embedded_sequence.input_sequence
 
         lengths = input_sequence.padding_mask.sum(dim=-1).cpu()  # required by torch >= 1.7, no cuda tensor allowed
         packed_embedded_session = nn.utils.rnn.pack_padded_sequence(
-            embedded_sequence,
+            embedded_sequence.embedded_sequence,
             lengths,
             batch_first=True,
             enforce_sorted=False
         )
-        outputs, final_state = self.rnn(packed_embedded_session)
-        output = self.pooling(outputs, final_state)
+        outputs, _ = self.rnn(packed_embedded_session)
 
-        return SequenceRepresentation(output, embedded_sequence)
+        return SequenceRepresentation(outputs, embedded_sequence)
 
 
 class RNNProjectionComponent(ProjectionLayer):
 
     def __init__(self,
+                 elements_embedding: Embedding,
                  item_vocab_size: int,
                  hidden_size: int,
                  bidirectional: bool = False,
                  project_layer_type: str = PROJECT_TYPE_LINEAR):
+
         super().__init__()
         hidden_size_projection = hidden_size if not bidirectional else 2 * hidden_size
-        self.projection = build_projection_layer(project_layer_type, hidden_size_projection, item_vocab_size,
-                                                 self.item_embedding.embedding)
+        self.projection = build_projection_layer(project_layer_type,
+                                                 hidden_size_projection,
+                                                 item_vocab_size,
+                                                 elements_embedding)
 
     def forward(self, modified_sequence_representation: ModifiedSequenceRepresentation) -> Union[
         torch.Tensor, Tuple[torch.Tensor, torch.Tensor]
     ]:
-        sequence_representation = modified_sequence_representation.modified_encoded_sequence
-        return self.projection(sequence_representation)
+        return self.projection(modified_sequence_representation)
+
+
+class RNNPoolingComponent(SequenceRepresentationModifierLayer):
+
+    def __init__(self,
+                 bidirectional: bool = False):
+
+        super().__init__()
+        self.pooling = RNNPooler(bidirectional=bidirectional)
+
+    def forward(self, sequence_representation: SequenceRepresentation) -> ModifiedSequenceRepresentation:
+        modified_sequence = self.pooling(sequence_representation.encoded_sequence)
+        return ModifiedSequenceRepresentation(modified_sequence, sequence_representation)
 
 
 class RNNModel(SequenceRecommenderModel):
@@ -160,13 +175,18 @@ class RNNModel(SequenceRecommenderModel):
                                                                                dropout,
                                                                                bidirectional,
                                                                                nonlinearity)
+        pooling_component = RNNPoolingComponent(bidirectional)
 
-        projection_component = RNNProjectionComponent(item_vocab_size, hidden_size, bidirectional, project_layer_type)
+        projection_component = RNNProjectionComponent(sequence_embedding_component.elements_embedding.embedding,
+                                                      item_vocab_size,
+                                                      hidden_size,
+                                                      bidirectional,
+                                                      project_layer_type)
 
-        super().__init__(sequence_embedding_component,
-                         sequence_representation_component,
-                         IdentitySequenceRepresentationModifierLayer(),
-                         projection_component)
+        super().__init__(sequence_embedding_layer=sequence_embedding_component,
+                         sequence_representation_layer=sequence_representation_component,
+                         sequence_representation_modifier_layer=pooling_component,
+                         projection_layer=projection_component)
 
 
 class RNNStatePooler(nn.Module):
@@ -177,7 +197,6 @@ class RNNStatePooler(nn.Module):
     @abstractmethod
     def forward(self,
                 outputs: torch.Tensor,
-                hidden_representation: torch.Tensor
                 ) -> torch.Tensor:
         pass
 
@@ -185,27 +204,30 @@ class RNNStatePooler(nn.Module):
 class RNNPooler(RNNStatePooler):
 
     def __init__(self,
-                 bidirectional: bool = False
+                 bidirectional: bool = False,
                  ):
         super().__init__()
 
         self.directions = 2 if bidirectional else 1
 
     def forward(self,
-                outputs: torch.Tensor,
-                hidden_representation: torch.Tensor
+                outputs: PackedSequence
                 ) -> torch.Tensor:
+
+        sequence, lengths = pad_packed_sequence(outputs, batch_first=True)
+
+        batch_size, seq_len, hidden_size = sequence.size()
+        hidden_size = int(hidden_size / self.directions)
+
+        sequence = sequence.view(batch_size, seq_len, self.directions, hidden_size)  # B, S, D, H
+
+        batch_index = torch.arange(0, batch_size)
+        seq_pos_index = lengths - 1
+
         if self.directions == 1:
             # we "pool" the model by simply taking the hidden state of the last layer
             # of an unidirectional model
-            return hidden_representation[-1, :, :]
+            return sequence[batch_index, seq_pos_index, 0]
+        else:
+            return sequence[batch_index, seq_pos_index].view(batch_size, self.directions * hidden_size)
 
-        # FIXME: discuss this representation (state of last layer, both directions)
-        layer_direction, batch_size, hidden_size = hidden_representation.size()
-        layers = int(layer_direction / self.directions)
-
-        hidden_representation = hidden_representation.view(layers, self.directions, batch_size, hidden_size)
-
-        last_layer_representation = hidden_representation[-1]
-        representation = torch.cat([last_layer_representation[0], last_layer_representation[1]], dim=1)
-        return representation

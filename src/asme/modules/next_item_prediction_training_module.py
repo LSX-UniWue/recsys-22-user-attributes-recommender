@@ -7,6 +7,7 @@ import pytorch_lightning as pl
 from asme.losses.losses import SequenceRecommenderLoss, CrossEntropyLoss
 from pytorch_lightning.core.decorators import auto_move_data
 
+from asme.models.layers.data.sequence import InputSequence
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME
@@ -85,7 +86,8 @@ class BaseNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
 
-        return self.model(input_seq, padding_mask, **additional_meta_data)
+        sequence = InputSequence(input_seq, padding_mask, additional_meta_data)
+        return self.model(sequence)
 
     @abstractmethod
     def training_step(self,

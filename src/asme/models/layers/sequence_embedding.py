@@ -68,7 +68,7 @@ class SequenceElementsEmbeddingLayer(nn.Module):
         if self.dropout and self.dropout > 0.0:
             self.dropout_layer = nn.Dropout2d(p=self.dropout)
         else:
-            self.dropout_layer = None
+            self.dropout_layer = nn.Identity()
 
         self.embedding = nn.Embedding(num_embeddings=item_voc_size,
                                       embedding_dim=self.embedding_size)
@@ -86,8 +86,4 @@ class SequenceElementsEmbeddingLayer(nn.Module):
         if self.pooling:
             embedding = self.pooling(embedding)
 
-        #TODO (AD) maybe we should apply dropout before the pooling operation?
-        if self.dropout_layer:
-            return self.dropout_layer(embedding)
-        else:
-            return embedding
+        return self.dropout_layer(embedding)  # is set to Identity if no dropout is specified
