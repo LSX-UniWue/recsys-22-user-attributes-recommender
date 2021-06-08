@@ -6,7 +6,7 @@ from torch import nn
 from asme.models.layers.layers import SequenceElementsRepresentationLayer
 
 
-class SequenceElementsEmbeddingLayer(SequenceElementsRepresentationLayer):
+class SequenceElementsEmbeddingComponent(SequenceElementsRepresentationLayer):
     """
     Computes an embedding for every element in the sequence.
     """
