@@ -38,7 +38,7 @@ class SequenceElementsEmbeddingLayer(SequenceElementsRepresentationLayer):
         return embedded_sequence
 
 
-class PooledSequenceElementsRepresentation(nn.Module):
+class PooledSequenceElementsLayer(nn.Module):
     """
     A stateless module that provides pooling functionality over embedded sequences.
     """
@@ -80,7 +80,7 @@ class ItemEmbedding(nn.Module):
         self.embedding_size = embedding_size
 
         if embedding_pooling_type:
-            self.pooling = PooledSequenceElementsRepresentation(embedding_pooling_type)
+            self.pooling = PooledSequenceElementsLayer(embedding_pooling_type)
         else:
             self.pooling = None
 
