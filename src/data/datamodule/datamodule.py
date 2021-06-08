@@ -70,20 +70,18 @@ class AsmeDataModule(pl.LightningDataModule):
         self._has_setup = True
 
     def train_dataloader(self) -> DataLoader:
-        return self._objects["train"]
+        return self._get_dataloader("train")
 
     def val_dataloader(self) -> DataLoader:
-        return self._objects["validation"]
+        return self._get_dataloader("validation")
 
     def test_dataloader(self) -> DataLoader:
-        return self._objects["test"]
+        return self._get_dataloader("test")
+
+    def _get_dataloader(self, name: str):
+        if not self.has_setup:
+            self.setup()
+        return self._objects[name]
 
     def _check_finished_flag(self, directory: Path) -> bool:
         return os.path.exists(directory / self.PREPROCESSING_FINISHED_FLAG)
-
-
-if __name__ == "__main__":
-    dSconfig = get_ml_1m_preprocessing_config("/tmp/ml-1m", "/tmp/ml-1m/raw", min_sequence_length=100, min_item_feedback=50)
-    config = AsmeDataModuleConfig(dSconfig, Config({}))
-    module = AsmeDataModule(config)
-    module.prepare_data()

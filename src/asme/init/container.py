@@ -22,20 +22,13 @@ class Container:
     def datamodule(self) -> AsmeDataModule:
         return self._objects["datamodule"]
 
-    def _prepare_dataloader(self):
-        if not self.datamodule().has_setup:
-            self.datamodule().setup()
-
     def train_dataloader(self) -> DataLoader:
-        self._prepare_dataloader()
         return self.datamodule().train_dataloader()
 
     def validation_dataloader(self) -> DataLoader:
-        self._prepare_dataloader()
         return self.datamodule().val_dataloader()
 
     def test_dataloader(self) -> DataLoader:
-        self._prepare_dataloader()
         return self.datamodule().test_dataloader()
 
     def module(self) -> LightningModule:
