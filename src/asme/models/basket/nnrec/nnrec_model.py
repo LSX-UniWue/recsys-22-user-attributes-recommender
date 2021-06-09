@@ -1,12 +1,12 @@
 from typing import List
 
-from asme.models.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation
+from asme.models.common.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer
 from data.datasets import USER_ENTRY_NAME
 from torch import nn
 
-from asme.models.layers.layers import LinearProjectionLayer, IdentitySequenceRepresentationModifierLayer
-from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
+from asme.models.common.layers.layers import LinearProjectionLayer, IdentitySequenceRepresentationModifierLayer
+from asme.models.common.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 

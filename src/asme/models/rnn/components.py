@@ -4,9 +4,9 @@ import torch
 from torch import nn
 from torch.nn import Embedding
 
-from asme.models.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation, \
+from asme.models.common.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation, \
     ModifiedSequenceRepresentation
-from asme.models.layers.layers import SequenceRepresentationLayer, ProjectionLayer, PROJECT_TYPE_LINEAR, \
+from asme.models.common.layers.layers import SequenceRepresentationLayer, ProjectionLayer, PROJECT_TYPE_LINEAR, \
     build_projection_layer, SequenceRepresentationModifierLayer
 from asme.models.rnn.util import _build_rnn_cell
 from asme.models.rnn.layers import RNNPooler

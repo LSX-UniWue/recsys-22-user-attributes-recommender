@@ -3,7 +3,7 @@ from typing import Dict
 import torch
 from torch.nn import functional as F
 
-from asme.models.layers.data.sequence import InputSequence
+from asme.models.common.layers.data.sequence import InputSequence
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.modules.constants import RETURN_KEY_PREDICTIONS, RETURN_KEY_TARGETS, RETURN_KEY_MASK, RETURN_KEY_SEQUENCE
 from asme.tokenization.tokenizer import Tokenizer

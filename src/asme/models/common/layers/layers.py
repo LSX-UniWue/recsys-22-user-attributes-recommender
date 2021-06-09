@@ -6,7 +6,7 @@ from abc import ABC
 import torch
 from torch import nn
 
-from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence, SequenceRepresentation, \
+from asme.models.common.layers.data.sequence import InputSequence, EmbeddedElementsSequence, SequenceRepresentation, \
     ModifiedSequenceRepresentation
 
 

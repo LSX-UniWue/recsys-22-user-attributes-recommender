@@ -1,8 +1,8 @@
 from typing import Optional
 
-from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence
-from asme.models.layers.layers import SequenceElementsRepresentationLayer
-from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
+from asme.models.common.layers.data.sequence import InputSequence, EmbeddedElementsSequence
+from asme.models.common.layers.layers import SequenceElementsRepresentationLayer
+from asme.models.common.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 
 
 # TODO rename file to elements_embedding

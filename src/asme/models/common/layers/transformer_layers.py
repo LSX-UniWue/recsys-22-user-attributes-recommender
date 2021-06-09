@@ -5,10 +5,10 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence
-from asme.models.layers.layers import SequenceElementsRepresentationLayer
-from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
-from asme.models.layers.tensor_utils import generate_position_ids
+from asme.models.common.layers.data.sequence import InputSequence, EmbeddedElementsSequence
+from asme.models.common.layers.layers import SequenceElementsRepresentationLayer
+from asme.models.common.layers.sequence_embedding import SequenceElementsEmbeddingLayer
+from asme.models.common.layers.tensor_utils import generate_position_ids
 
 
 class TransformerEmbedding(SequenceElementsRepresentationLayer):

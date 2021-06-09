@@ -4,7 +4,7 @@ import torch
 
 import pytorch_lightning as pl
 from asme.losses.losses import SequenceRecommenderContrastiveLoss
-from asme.models.layers.data.sequence import InputSequence
+from asme.models.common.layers.data.sequence import InputSequence
 
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.modules import LOG_KEY_TRAINING_LOSS

@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from asme.losses.losses import SequenceRecommenderLoss, CrossEntropyLoss
 from pytorch_lightning.core.decorators import auto_move_data
 
-from asme.models.layers.data.sequence import InputSequence
+from asme.models.common.layers.data.sequence import InputSequence
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME

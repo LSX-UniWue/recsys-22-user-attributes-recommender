@@ -3,11 +3,11 @@ from typing import Optional, List, Union, Tuple
 import torch
 import torch.nn as nn
 
-from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence, SequenceRepresentation, \
+from asme.models.common.layers.data.sequence import InputSequence, EmbeddedElementsSequence, SequenceRepresentation, \
     ModifiedSequenceRepresentation
-from asme.models.layers.layers import SequenceElementsRepresentationLayer, SequenceRepresentationLayer,\
+from asme.models.common.layers.layers import SequenceElementsRepresentationLayer, SequenceRepresentationLayer,\
     IdentitySequenceRepresentationModifierLayer, ProjectionLayer
-from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
+from asme.models.common.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 from data.datasets import USER_ENTRY_NAME

@@ -1,7 +1,7 @@
 import torch
 from torch import nn as nn
 
-from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
+from asme.models.common.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 
 
 class LocalEncoderLayer(nn.Module):

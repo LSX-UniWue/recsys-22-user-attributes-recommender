@@ -4,9 +4,9 @@ from typing import Union, Tuple, List
 import torch
 from torch import nn
 
-from asme.models.layers.layers import SequenceElementsRepresentationLayer, SequenceRepresentationLayer, \
+from asme.models.common.layers.layers import SequenceElementsRepresentationLayer, SequenceRepresentationLayer, \
     SequenceRepresentationModifierLayer, ProjectionLayer
-from asme.models.layers.data.sequence import InputSequence
+from asme.models.common.layers.data.sequence import InputSequence
 
 
 class SequenceRecommenderModel(ABC, nn.Module):

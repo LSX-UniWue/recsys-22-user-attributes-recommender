@@ -6,9 +6,9 @@ import torch
 
 from asme.models.bert4rec.bert4rec_model import BidirectionalTransformerSequenceRepresentationLayer, \
     FFNSequenceRepresentationModifierLayer, normal_initialize_weights
-from asme.models.layers.data.sequence import InputSequence, EmbeddedElementsSequence
-from asme.models.layers.layers import PROJECT_TYPE_LINEAR, build_projection_layer
-from asme.models.layers.transformer_layers import TransformerEmbedding
+from asme.models.common.layers.data.sequence import InputSequence, EmbeddedElementsSequence
+from asme.models.common.layers.layers import PROJECT_TYPE_LINEAR, build_projection_layer
+from asme.models.common.layers.transformer_layers import TransformerEmbedding
 from asme.models.sequence_recommendation_model import SequenceElementsRepresentationLayer, SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 

@@ -2,10 +2,10 @@ from typing import Union, Tuple
 
 import torch
 
-from asme.models.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation, \
+from asme.models.common.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation, \
     ModifiedSequenceRepresentation
-from asme.models.layers.layers import SequenceRepresentationLayer, ProjectionLayer
-from asme.models.layers.transformer_layers import TransformerLayer, TransformerEmbedding
+from asme.models.common.layers.layers import SequenceRepresentationLayer, ProjectionLayer
+from asme.models.common.layers.transformer_layers import TransformerLayer, TransformerEmbedding
 
 
 class SASRecTransformerComponent(SequenceRepresentationLayer):

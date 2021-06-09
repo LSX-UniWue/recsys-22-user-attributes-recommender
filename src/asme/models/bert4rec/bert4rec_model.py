@@ -3,10 +3,10 @@ from typing import Optional
 
 from torch import nn
 
-from asme.models.layers.data.sequence import SequenceRepresentation, ModifiedSequenceRepresentation, \
+from asme.models.common.layers.data.sequence import SequenceRepresentation, ModifiedSequenceRepresentation, \
     EmbeddedElementsSequence
-from asme.models.layers.layers import build_projection_layer
-from asme.models.layers.transformer_layers import TransformerLayer, TransformerEmbedding
+from asme.models.common.layers.layers import build_projection_layer
+from asme.models.common.layers.transformer_layers import TransformerLayer, TransformerEmbedding
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer, \
     SequenceRepresentationModifierLayer
 

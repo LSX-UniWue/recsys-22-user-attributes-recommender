@@ -1,5 +1,5 @@
 from asme.models.common.components.sequence_embedding import SequenceElementsEmbeddingComponent
-from asme.models.layers.layers import PROJECT_TYPE_LINEAR
+from asme.models.common.layers.layers import PROJECT_TYPE_LINEAR
 from asme.models.rnn.components import RNNSequenceRepresentationComponent, RNNProjectionComponent, RNNPoolingComponent
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters

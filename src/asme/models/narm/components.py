@@ -3,10 +3,10 @@ from typing import Union, Tuple
 import torch
 from torch import nn as nn
 
-from asme.models.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation, \
+from asme.models.common.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation, \
     ModifiedSequenceRepresentation
-from asme.models.layers.layers import SequenceRepresentationLayer, ProjectionLayer
-from asme.models.layers.sequence_embedding import SequenceElementsEmbeddingLayer
+from asme.models.common.layers.layers import SequenceRepresentationLayer, ProjectionLayer
+from asme.models.common.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 from asme.models.narm.layers import LocalEncoderLayer, BilinearDecoderLayer
 
 

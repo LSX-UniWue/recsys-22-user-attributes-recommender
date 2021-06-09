@@ -1,5 +1,5 @@
 from asme.models.common.components.sequence_embedding import SequenceElementsEmbeddingComponent
-from asme.models.layers.layers import IdentitySequenceRepresentationModifierLayer
+from asme.models.common.layers.layers import IdentitySequenceRepresentationModifierLayer
 from asme.models.narm.components import NARMSequenceRepresentationComponent, BilinearProjectionComponent
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters

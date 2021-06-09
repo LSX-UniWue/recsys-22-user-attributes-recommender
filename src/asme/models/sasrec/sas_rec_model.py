@@ -1,7 +1,7 @@
 import torch.nn as nn
 
-from asme.models.layers.layers import IdentitySequenceRepresentationModifierLayer
-from asme.models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
+from asme.models.common.layers.layers import IdentitySequenceRepresentationModifierLayer
+from asme.models.common.layers.transformer_layers import TransformerEmbedding, TransformerLayer
 from asme.models.sasrec.components import SASRecTransformerComponent, SASRecProjectionComponent
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
