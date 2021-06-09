@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Union, List, Dict
+from typing import Tuple, Union, List
 
 import torch
 
@@ -52,6 +52,9 @@ class CaserSequenceRepresentationLayer(SequenceRepresentationLayer):
                  ):
         super().__init__()
 
+        self.num_vertical_filters = num_vertical_filters
+        self.num_horizontal_filters = num_horizontal_filters
+
         # vertical conv layer
         self.conv_vertical = nn.Conv2d(1, num_vertical_filters, (max_sequence_length, 1))
 
@@ -70,9 +73,9 @@ class CaserSequenceRepresentationLayer(SequenceRepresentationLayer):
         self.dropout = nn.Dropout(dropout)
 
         # fully-connected layer
-        fc1_dim_vertical = num_vertical_filters * embedding_size
+        self.fc1_dim_vertical = num_vertical_filters * embedding_size
         fc1_dim_horizontal = num_horizontal_filters * len(lengths)
-        fc1_dim = fc1_dim_vertical + fc1_dim_horizontal
+        fc1_dim = self.fc1_dim_vertical + fc1_dim_horizontal
 
         self.fc1 = nn.Linear(fc1_dim, embedding_size)
 
@@ -80,6 +83,8 @@ class CaserSequenceRepresentationLayer(SequenceRepresentationLayer):
 
     def forward(self, embedded_sequence: EmbeddedElementsSequence) -> SequenceRepresentation:
         sequence = embedded_sequence.embedded_sequence
+
+        sequence = sequence.unsqueeze(1)
 
         # Convolutional Layers
         out_vertical = None
@@ -183,12 +188,11 @@ class CaserModel(SequenceRecommenderModel):
                  dropout: float,
                  embedding_pooling_type: str = None
                  ):
+        item_embedding = SequenceElementsEmbeddingComponent(vocabulary_size=item_vocab_size,
+                                                            embedding_size=embedding_size,
+                                                            pooling_type=embedding_pooling_type)
 
-        self.item_embedding = SequenceElementsEmbeddingLayer(item_voc_size=item_vocab_size,
-                                                             embedding_size=embedding_size,
-                                                             embedding_pooling_type=embedding_pooling_type)
-
-        user_present = user_vocab_size == 0
+        user_present = user_vocab_size != 0
         seq_rep_layer = CaserSequenceRepresentationLayer(embedding_size, max_seq_length, num_vertical_filters,
                                                          num_horizontal_filters, conv_activation_fn, fc_activation_fn,
                                                          dropout)
@@ -198,7 +202,7 @@ class CaserModel(SequenceRecommenderModel):
             mod_layer = IdentitySequenceRepresentationModifierLayer()
 
         projection_layer = CaserProjectionLayer(item_vocab_size, 2 * embedding_size if user_present else embedding_size)
-        super().__init__(None, seq_rep_layer, mod_layer, projection_layer)
+        super().__init__(item_embedding, seq_rep_layer, mod_layer, projection_layer)
 
     def optional_metadata_keys(self) -> List[str]:
         return [USER_ENTRY_NAME]
