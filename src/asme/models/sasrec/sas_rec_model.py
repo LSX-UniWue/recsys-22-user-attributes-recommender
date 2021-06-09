@@ -12,7 +12,7 @@ from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-class SASRecTransformerLayer(SequenceRepresentationLayer):
+class SASRecTransformerComponent(SequenceRepresentationLayer):
 
     def __init__(self, transformer_layer: TransformerLayer):
         super().__init__()
@@ -40,7 +40,7 @@ class SASRecTransformerLayer(SequenceRepresentationLayer):
         return SequenceRepresentation(representation)
 
 
-class SASRecProjectionLayer(ProjectionLayer):
+class SASRecProjectionComponent(ProjectionLayer):
 
     def __init__(self, embedding: TransformerEmbedding):
         super().__init__()
@@ -137,10 +137,10 @@ class SASRecModel(SequenceRecommenderModel):
                                              transformer_intermediate_size,
                                              transformer_dropout,
                                              attention_dropout=transformer_attention_dropout)
-        sasrec_transformer_layer = SASRecTransformerLayer(transformer_layer)
+        sasrec_transformer_layer = SASRecTransformerComponent(transformer_layer)
 
         modified_seq_representation_layer = IdentitySequenceRepresentationModifierLayer()
-        sasrec_projection_layer = SASRecProjectionLayer(embedding_layer)
+        sasrec_projection_layer = SASRecProjectionComponent(embedding_layer)
 
         super().__init__(sequence_embedding_layer=embedding_layer,
                          sequence_representation_layer=sasrec_transformer_layer,
