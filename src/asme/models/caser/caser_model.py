@@ -4,6 +4,7 @@ import torch
 
 from torch import nn
 
+from asme.models.common.components.sequence_embedding import SequenceElementsEmbeddingComponent
 from asme.models.common.layers.data.sequence import SequenceRepresentation, ModifiedSequenceRepresentation, \
     EmbeddedElementsSequence
 from asme.models.common.layers.layers import IdentitySequenceRepresentationModifierLayer, \
