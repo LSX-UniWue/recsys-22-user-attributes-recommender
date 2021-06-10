@@ -9,7 +9,6 @@ from asme.models.common.layers.data.sequence import SequenceRepresentation, Modi
     EmbeddedElementsSequence
 from asme.models.common.layers.layers import IdentitySequenceRepresentationModifierLayer, \
     SequenceRepresentationModifierLayer
-from asme.models.common.layers.sequence_embedding import SequenceElementsEmbeddingLayer
 from asme.models.common.layers.util_layers import get_activation_layer
 from asme.models.sequence_recommendation_model import SequenceRecommenderModel, SequenceRepresentationLayer, \
     ProjectionLayer
