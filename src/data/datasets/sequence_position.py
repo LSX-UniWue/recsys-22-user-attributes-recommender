@@ -1,5 +1,5 @@
 import random
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Optional
 
 from torch.utils.data import Dataset
 
@@ -18,16 +18,22 @@ class SequencePositionDataset(Dataset, MultiProcessSupport, ExampleLogger):
 
     e.g. if the csv contains the sequence [9, 5, 6, 7] and the position 2 in the position index the sequence
     [9, 5, 6] is returned
+
+    this is also applied to all other meta data that was parsed as a sequence
     """
 
     def __init__(self,
                  dataset: PlainSequenceDataset,
                  index: SequencePositionIndex,
-                 processors: List[Processor] = None
+                 sequences_to_truncate: Optional[List[str]] = None,
+                 processors: Optional[List[Processor]] = None
                  ):
         super().__init__()
         self._dataset = dataset
         self._index = index
+        if sequences_to_truncate is None:
+            sequences_to_truncate = [ITEM_SEQ_ENTRY_NAME]
+        self.sequences_to_truncate = sequences_to_truncate
         if processors is None:
             processors = []
         self._processors = processors
@@ -47,7 +53,8 @@ class SequencePositionDataset(Dataset, MultiProcessSupport, ExampleLogger):
         parsed_session[SAMPLE_IDS] = sequence_idx
         parsed_session['pos'] = position
 
-        parsed_session[ITEM_SEQ_ENTRY_NAME] = parsed_session[ITEM_SEQ_ENTRY_NAME][:position + 1]
+        for sequence_to_truncate in self.sequences_to_truncate:
+            parsed_session[sequence_to_truncate] = parsed_session[sequence_to_truncate][:position + 1]
         return parsed_session
 
     def _process_sequence(self,

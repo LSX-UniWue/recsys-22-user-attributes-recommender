@@ -6,6 +6,7 @@ from asme.init.context import Context
 from asme.init.factories.common.conditional_based_factory import ConditionalFactory
 from asme.init.factories.common.dependencies_factory import DependenciesFactory
 from asme.init.factories.data_sources.data_sources import DataSourcesFactory
+from asme.init.factories.features.features_factory import FeaturesFactory
 from asme.init.factories.modules.modules import GenericModuleFactory
 from asme.init.factories.tokenizer.tokenizer_factory import TokenizersFactory
 from asme.init.factories.trainer import TrainerBuilderFactory
@@ -37,6 +38,7 @@ class ContainerFactory(ObjectFactory):
     def __init__(self):
         super().__init__()
         self.tokenizers_factory = TokenizersFactory()
+        self.features_factory = FeaturesFactory()
         self.dependencies = DependenciesFactory(
             [
                 ConditionalFactory('type', {'kebert4rec': GenericModuleFactory(MaskedTrainingModule,
@@ -63,7 +65,8 @@ class ContainerFactory(ObjectFactory):
                                             'dream': GenericModuleFactory(NextItemPredictionWithNegativeSampleTrainingModule,
                                                                           DreamContrastiveLoss(),
                                                                           RNNModel),
-                                            'nnrec': GenericModuleFactory(module_cls=NextItemPredictionTrainingModule, model_cls=NNRecModel),
+                                            'nnrec': GenericModuleFactory(module_cls=NextItemPredictionTrainingModule,
+                                                                          model_cls=NNRecModel),
                                             'pop': GenericModuleFactory(PopModule, model_cls=None),
                                             'session_pop': GenericModuleFactory(SessionPopModule, model_cls=None),
                                             'markov': GenericModuleFactory(MarkovModule, model_cls=None),
@@ -98,13 +101,15 @@ class ContainerFactory(ObjectFactory):
               ) -> Container:
         # we need the tokenizers in the context because many objects have dependencies
         tokenizers_config = config.get_config(self.tokenizers_factory.config_path())
-
         tokenizers = self.tokenizers_factory.build(tokenizers_config, context)
-
         for key, tokenizer in tokenizers.items():
             path = list(tokenizers_config.base_path)
             path.append(key)
             context.set(path, tokenizer)
+
+        features_config = config.get_config(self.features_factory.config_path())
+        meta_information = list(self.features_factory.build(features_config, context).values())
+        context.set(features_config.base_path, meta_information)
 
         all_dependencies = self.dependencies.build(config, context)
 

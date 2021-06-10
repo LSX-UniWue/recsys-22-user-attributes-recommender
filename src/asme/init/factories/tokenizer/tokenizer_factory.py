@@ -86,6 +86,7 @@ class TokenizersFactory(ObjectFactory):
     def config_key(self) -> str:
         return self.KEY
 
+
 """
 the special key for the item tokenizer that must at least present in the config
 """

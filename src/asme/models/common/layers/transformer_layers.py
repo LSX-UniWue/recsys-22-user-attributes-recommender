@@ -70,8 +70,7 @@ class TransformerEmbedding(SequenceElementsRepresentationLayer):
 
         seq_tensor = self.dropout(seq_tensor)
 
-        embedded_sequence = EmbeddedElementsSequence(seq_tensor, input_sequence=sequence)
-        return embedded_sequence
+        return EmbeddedElementsSequence(seq_tensor, input_sequence=sequence)
 
 
 class TransformerLayer(nn.Module):

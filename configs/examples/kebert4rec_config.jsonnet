@@ -13,23 +13,13 @@ local metrics =  {
             path: "/tmp/experiments/bert4rec"
         },
         mask_data_sources: {
-            parser: {
-                item_column_name: "item_id",
-                features: {
-                    attr_one: {
-                        type: "str",
-                        sequence: true
-                    }
-                }
-            },
             loader: {
                 batch_size: 9,
-                max_seq_length: max_seq_length,
+                num_workers: 0
             },
             path: base_path,
             file_prefix: prefix,
             mask_probability: 0.1,
-            mask_seed: 123456,
             split_type: 'leave_one_out'
         }
     },
@@ -61,10 +51,20 @@ local metrics =  {
             transformer_dropout: 0.1,
             additional_attributes: {
                 attr_one: {
-                    embedding_type: 'linear_upscale',
-                    vocab_size: 5
+                    embedding_type: 'content_embedding',
+                    vocab_size: 7
                 }
             }
+        }
+    },
+    features: {
+        item: {
+            column_name: "item_id",
+            sequence_length: max_seq_length
+        },
+        attr_one: {
+            sequence: true,
+            sequence_length: max_seq_length
         }
     },
     tokenizers: {
