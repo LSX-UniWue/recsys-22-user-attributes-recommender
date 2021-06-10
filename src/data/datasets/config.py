@@ -15,6 +15,7 @@ from data.datamodule.extractors import RemainingSessionPositionExtractor
 from data.datamodule.unpacker import Unzipper
 from data.datamodule.preprocessing import PREFIXES_KEY
 
+
 def get_ml_1m_preprocessing_config(output_directory: str,
                                    extraction_directory: str,
                                    min_item_feedback: int = 0,

@@ -87,23 +87,3 @@ class Movielens1MConverter(CsvConverter):
         os.makedirs(output_file.parent, exist_ok=True)
 
         merged_df.to_csv(output_file, sep=self.delimiter, index=False)
-
-    @staticmethod
-    def filter_ratings(ratings_df: pd.DataFrame,
-                       min_user_feedback: int = 0,
-                       min_item_feedback: int = 0
-                       ):
-        def _filter_dataframe(column: str, min_count: int, dataframe: pd.DataFrame) -> pd.DataFrame:
-            sizes = ratings_df.groupby(column).size()
-            good_entities = sizes.index[sizes >= min_count]
-
-            return dataframe[ratings_df[column].isin(good_entities)]
-
-        # (AD) we adopt the order used in bert4rec preprocessing
-        if min_item_feedback > 1:
-            ratings_df = _filter_dataframe(Movielens1MConverter.RATING_MOVIE_COLUMN_NAME, min_item_feedback, ratings_df)
-
-        if min_user_feedback > 1:
-            ratings_df = _filter_dataframe(Movielens1MConverter.RATING_USER_COLUMN_NAME, min_user_feedback, ratings_df)
-
-        return ratings_df
