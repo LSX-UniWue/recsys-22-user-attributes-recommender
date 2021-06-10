@@ -11,12 +11,9 @@ local metrics =  {
             path: "/tmp/experiments/cosrec"
         },
         par_pos_neg_data_sources: {
-            parser: {
-                item_column_name: "item_id"
-            },
             loader: {
                 batch_size: 9,
-                max_seq_length: max_seq_length
+                num_workers: 0
             },
             path: base_path + "ratio-0.8_0.1_0.1/",
             file_prefix: "example",

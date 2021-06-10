@@ -12,12 +12,8 @@ local metrics =  {
             path: "/tmp/experiments/session_pop"
         },
         plain_training_next_item_test_and_validation_data_sources: {
-            parser: {
-                item_column_name: "item_id"
-            },
             loader: {
-                batch_size: 8,
-                max_seq_length: max_seq_length,
+                batch_size: 8
             },
             path: base_path + 'ratio_split/',
             file_prefix: prefix,
@@ -40,6 +36,12 @@ local metrics =  {
                 metrics: metrics
             }
         },
+    },
+    features: {
+        item: {
+            column_name: "item_id",
+            sequence_length: max_seq_length
+        }
     },
     tokenizers: {
         item: {

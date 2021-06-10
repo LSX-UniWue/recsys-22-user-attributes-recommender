@@ -11,12 +11,8 @@ local metrics =  {
             path: "/tmp/experiments/sasrec"
         },
         pos_neg_data_sources: {
-            parser: {
-                item_column_name: "item_id"
-            },
             loader: {
-                batch_size: 9,
-                max_seq_length: max_seq_length
+                batch_size: 9
             },
             path: base_path + "ratio-0.8_0.1_0.1/",
             file_prefix: "example",
@@ -45,6 +41,12 @@ local metrics =  {
             num_transformer_layers: 1,
             max_seq_length: max_seq_length,
             transformer_dropout: 0.1
+        }
+    },
+    features: {
+        item: {
+            column_name: "item_id",
+            sequence_length: max_seq_length
         }
     },
     tokenizers: {

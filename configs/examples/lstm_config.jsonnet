@@ -11,12 +11,9 @@ local metrics =  {
             path: "/tmp/experiments/lstm"
         },
         next_sequence_step_data_sources: {
-            parser: {
-                item_column_name: "item_id"
-            },
             loader: {
                 batch_size: 9,
-                max_seq_length: max_seq_length
+                num_workers: 0
             },
             path: base_path + "ratio-0.8_0.1_0.1/",
             file_prefix: "example"
@@ -44,6 +41,12 @@ local metrics =  {
             hidden_size: 4,
             num_layers: 1,
             dropout: 0.0
+        }
+    },
+    features: {
+        item: {
+            column_name: "item_id",
+            sequence_length: max_seq_length
         }
     },
     tokenizers: {

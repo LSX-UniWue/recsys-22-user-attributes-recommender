@@ -63,7 +63,6 @@ local metrics =  {
             sequence_length: max_seq_length
         },
         attr_one: {
-            sequence: true,
             sequence_length: max_seq_length
         }
     },
