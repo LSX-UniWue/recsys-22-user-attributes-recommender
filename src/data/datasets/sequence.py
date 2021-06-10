@@ -4,7 +4,7 @@ import io
 from typing import Dict, List, Any, Callable, Optional
 import csv
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from torch.utils.data import Dataset
 
 from data.base.reader import CsvDatasetReader
@@ -39,11 +39,11 @@ class MetaInformation:
 
     feature_name: str
     type: str
-    is_sequence: bool = False
+    is_sequence: bool = True
     sequence_length: Optional[int] = None
     is_generated: bool = False  # True iff the feature will be generated based on other features
     column_name: Optional[str] = None
-    configs: Dict[str, Any] = None
+    configs: Dict[str, Any] = field(default_factory=dict)
 
     def get_config(self, config_key: str) -> Optional[Any]:
         return self.configs.get(config_key, None)
