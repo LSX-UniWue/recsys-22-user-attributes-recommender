@@ -38,7 +38,7 @@ class HGNEmbeddingLayer(SequenceElementsRepresentationLayer):
         self.user_embeddings.weight.data.normal_(0, 1.0 / dims)
 
     def forward(self, sequence: InputSequence) -> HGNEEmbeddedElementsSequence:
-        item_embedding = self.item_embedding_layer(sequence).embedded_sequence
+        item_embedding = self.item_embedding_layer(sequence.sequence)
 
         sequence_result = HGNEEmbeddedElementsSequence(item_embedding)
 
@@ -182,7 +182,7 @@ class HGNModel(SequenceRecommenderModel):
         :param embedding_pooling_type: average or max (seems to be optional?)
         """
         item_embedding_layer = SequenceElementsEmbeddingLayer(item_vocab_size, dims, embedding_pooling_type=embedding_pooling_type)
-        # TODO: self.item_embeddings.embedding.weight.data.normal_(0, 1.0 / dims)
+
         seq_elements_embedding = HGNEmbeddingLayer(user_vocab_size, dims, item_embedding_layer)
 
         seq_rep_layer = HGNSequenceRepresentationLayer(dims, num_successive_items)
@@ -193,6 +193,8 @@ class HGNModel(SequenceRecommenderModel):
                          seq_rep_layer,
                          IdentitySequenceRepresentationModifierLayer(),
                          projection_layer)
+
+        item_embedding_layer.embedding.weight.data.normal_(0, 1.0 / dims)
 
     def optional_metadata_keys(self) -> List[str]:
         return [USER_ENTRY_NAME]

@@ -125,8 +125,6 @@ def get_additional_meta_data(model: SequenceRecommenderModel, batch: Dict[str, t
     for key in optional_metadata_keys:
         if key in batch:
             metadata[key] = batch[key]
-        else:
-            metadata[key] = None
 
     return metadata
 

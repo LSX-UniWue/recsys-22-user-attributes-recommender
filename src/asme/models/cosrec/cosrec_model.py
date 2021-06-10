@@ -32,11 +32,11 @@ class CosRecSequenceRepresentationLayer(SequenceRepresentationLayer):
         self.cnnBlock = nn.ModuleList(CNNBlock(block_dim[i], block_dim[i + 1]) for i in range(block_num))
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
 
-        cnn_out_dim = block_dim[-1]  # dimension of output of last cnn block
+        self.cnn_out_dim = block_dim[-1]  # dimension of output of last cnn block
 
         # dropout and fc layer
         self.dropout = nn.Dropout(dropout)
-        self.fc1 = nn.Linear(cnn_out_dim, fc_dim)
+        self.fc1 = nn.Linear(self.cnn_out_dim, fc_dim)
         self.activation_function = get_activation_layer(activation_function)
 
     def forward(self, embedded_sequence: EmbeddedElementsSequence) -> SequenceRepresentation:
@@ -54,8 +54,8 @@ class CosRecSequenceRepresentationLayer(SequenceRepresentationLayer):
         out = all_embed.permute(0, 3, 1, 2)  # (N, 2 * D, S, S)
 
         # 2D CNN
-        for i in range(self.block_num):
-            out = self.cnnBlock[i](out)
+        for cnn_block in self.cnnBlock:
+            out = cnn_block(out)
 
         out = self.avg_pool(out).reshape(batch_size, self.cnn_out_dim)  # (N, C_O)
         out = out.squeeze(-1).squeeze(-1)
@@ -98,7 +98,11 @@ class CosRecModel(SequenceRecommenderModel):
                  dropout: float,
                  embedding_pooling_type: str = None
                  ):
-        user_present = user_vocab_size > 0
+        user_present = user_vocab_size != 0
+
+        item_embedding = SequenceElementsEmbeddingComponent(vocabulary_size=item_vocab_size,
+                                                            embedding_size=embed_dim,
+                                                            pooling_type=embedding_pooling_type)
 
         seq_rep_layer = CosRecSequenceRepresentationLayer(embed_dim, block_num, block_dim, fc_dim, activation_function,
                                                           dropout)
@@ -108,12 +112,10 @@ class CosRecModel(SequenceRecommenderModel):
 
         projection_layer = CaserProjectionLayer(item_vocab_size, repesentation_size)
 
-        super().__init__(None, seq_rep_layer, mod_layer, projection_layer)
+        super().__init__(item_embedding, seq_rep_layer, mod_layer, projection_layer)
 
         # user and item embeddings
-        self.item_embeddings = SequenceElementsEmbeddingLayer(item_vocab_size, embed_dim, embedding_pooling_type=embedding_pooling_type)
-
-        self.item_embeddings.get_weight().data.normal_(0, 1.0 / embed_dim)
+        item_embedding.elements_embedding.get_weight().data.normal_(0, 1.0 / embed_dim)
 
     def optional_metadata_keys(self) -> List[str]:
         return [USER_ENTRY_NAME]
