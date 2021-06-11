@@ -5,7 +5,7 @@ from asme.init.factories.data_sources.datasets.processor.last_item_mask import g
 from data.datasets.processors.cloze_mask import ClozeMaskProcessor
 from asme.init.config import Config
 from asme.init.context import Context
-from asme.init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc, ITEM_TOKENIZER_ID
+from asme.init.factories.features.tokenizer_factory import get_tokenizer_key_for_voc, ITEM_TOKENIZER_ID
 from asme.init.factories.util import check_config_keys_exist
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 

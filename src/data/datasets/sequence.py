@@ -5,6 +5,8 @@ from typing import Dict, List, Any, Callable, Optional
 import csv
 
 from dataclasses import dataclass, field
+
+from asme.tokenization.tokenizer import Tokenizer
 from torch.utils.data import Dataset
 
 from data.base.reader import CsvDatasetReader
@@ -39,6 +41,7 @@ class MetaInformation:
 
     feature_name: str
     type: str
+    tokenizer: Optional[Tokenizer] = None
     is_sequence: bool = True
     sequence_length: Optional[int] = None
     is_generated: bool = False  # True iff the feature will be generated based on other features

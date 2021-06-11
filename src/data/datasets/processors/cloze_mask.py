@@ -2,7 +2,7 @@ from typing import Dict, Any, List
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from data.datasets.processors.processor import Processor
-from asme.init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc, \
+from asme.init.factories.features.tokenizer_factory import get_tokenizer_key_for_voc, \
     ITEM_TOKENIZER_ID
 from asme.tokenization.tokenizer import Tokenizer
 from data.datasets.processors.utils import random_uniform, random_, get_tokenizer, get_mask_token

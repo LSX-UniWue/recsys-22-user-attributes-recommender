@@ -5,7 +5,7 @@ from asme.init.context import Context
 
 from asme.init.factories.common.dependencies_factory import DependenciesFactory
 from asme.init.factories.common.list_elements_factory import NamedListElementsFactory
-from asme.init.factories.tokenizer.vocabulary_factory import VocabularyFactory
+from asme.init.factories.features.tokenizer_factory import TokenizerFactory
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from data.datasets.sequence import MetaInformation
 
@@ -17,10 +17,10 @@ class MetaInformationFactory(ObjectFactory):
     """
     KEY = "meta_information"
 
-    CONFIG_KEYS = ['type', 'sequence', 'column_name']
+    CONFIG_KEYS = ['type', 'sequence', 'column_name', "tokenizer"]
 
     def __init__(self,
-                 dependencies=DependenciesFactory([VocabularyFactory()])
+                 dependencies=DependenciesFactory([TokenizerFactory()])
                  ):
         super().__init__()
         self._dependencies = dependencies
@@ -29,7 +29,9 @@ class MetaInformationFactory(ObjectFactory):
                   config: Config,
                   context: Context
                   ) -> CanBuildResult:
-        return CanBuildResult(CanBuildResultType.CAN_BUILD)
+        dependencies_result = self._dependencies.can_build(config, context)
+        if dependencies_result.type != CanBuildResultType.CAN_BUILD:
+            return dependencies_result
 
     def build(self,
               config: Config,
@@ -43,11 +45,13 @@ class MetaInformationFactory(ObjectFactory):
 
         feature_config = {}
 
+        tokenizer = self._dependencies.build(config, context)['tokenizer']
+
         for key in config.get_keys():
             if key not in self.CONFIG_KEYS:
                 feature_config[key] = config.get(key)
-        return MetaInformation(feature_name, feature_type, is_sequence=feature_is_sequence, column_name=column_name,
-                               configs=feature_config, sequence_length=sequence_length)
+        return MetaInformation(feature_name, feature_type, tokenizer=tokenizer, is_sequence=feature_is_sequence,
+                               column_name=column_name, configs=feature_config, sequence_length=sequence_length)
 
     def is_required(self, context: Context) -> bool:
         return True

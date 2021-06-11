@@ -47,11 +47,7 @@ local metrics =  {
     features: {
         item: {
             column_name: "item_id",
-            sequence_length: max_seq_length
-        }
-    },
-    tokenizers: {
-        item: {
+            sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",

@@ -13,7 +13,7 @@ from asme.init.context import Context
 from asme.init.factories.common.dependencies_factory import DependenciesFactory
 from asme.init.factories.common.union_factory import UnionFactory
 from asme.init.factories.data_sources.datasets.item_session import ItemSessionDatasetFactory
-from asme.init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc
+from asme.init.factories.features.tokenizer_factory import get_tokenizer_key_for_voc
 from asme.init.factories.data_sources.datasets.sequence_position import SequencePositionDatasetFactory
 from asme.init.factories.util import check_config_keys_exist, check_context_entries_exists
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType

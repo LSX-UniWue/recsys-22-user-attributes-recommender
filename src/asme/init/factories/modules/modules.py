@@ -6,7 +6,7 @@ from typing import List, Any, Dict, Optional, Union, Callable
 from asme.init.config import Config
 from asme.init.context import Context
 from asme.init.factories.metrics.metrics_container import MetricsContainerFactory
-from asme.init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc
+from asme.init.factories.features.tokenizer_factory import get_tokenizer_key_for_voc
 from asme.init.factories.util import require_config_keys
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.tokenization.tokenizer import Tokenizer

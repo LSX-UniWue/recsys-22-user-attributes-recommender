@@ -7,8 +7,8 @@ from asme.init.factories.common.conditional_based_factory import ConditionalFact
 from asme.init.factories.common.dependencies_factory import DependenciesFactory
 from asme.init.factories.data_sources.data_sources import DataSourcesFactory
 from asme.init.factories.features.features_factory import FeaturesFactory
+from asme.init.factories.features.tokenizer_factory import TOKENIZERS_PREFIX
 from asme.init.factories.modules.modules import GenericModuleFactory
-from asme.init.factories.tokenizer.tokenizer_factory import TokenizersFactory
 from asme.init.factories.trainer import TrainerBuilderFactory
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.losses.basket.dream.dream_loss import DreamContrastiveLoss
@@ -37,7 +37,6 @@ from asme.modules.sequence_next_item_prediction_training_module import SequenceN
 class ContainerFactory(ObjectFactory):
     def __init__(self):
         super().__init__()
-        self.tokenizers_factory = TokenizersFactory()
         self.features_factory = FeaturesFactory()
         self.dependencies = DependenciesFactory(
             [
@@ -82,12 +81,6 @@ class ContainerFactory(ObjectFactory):
                   config: Config,
                   context: Context
                   ) -> CanBuildResult:
-        tokenizer_config = config.get_config(self.tokenizers_factory.config_path())
-        can_build_result = self.tokenizers_factory.can_build(tokenizer_config, context)
-
-        if can_build_result.type != CanBuildResultType.CAN_BUILD:
-            return can_build_result
-
         can_build_result = self.dependencies.can_build(config, context)
 
         if can_build_result.type != CanBuildResultType.CAN_BUILD:
@@ -99,18 +92,12 @@ class ContainerFactory(ObjectFactory):
               config: Config,
               context: Context
               ) -> Container:
-        # we need the tokenizers in the context because many objects have dependencies
-        tokenizers_config = config.get_config(self.tokenizers_factory.config_path())
-        tokenizers = self.tokenizers_factory.build(tokenizers_config, context)
-        for key, tokenizer in tokenizers.items():
-            path = list(tokenizers_config.base_path)
-            path.append(key)
-            context.set(path, tokenizer)
-
         features_config = config.get_config(self.features_factory.config_path())
         meta_information = list(self.features_factory.build(features_config, context).values())
         context.set(features_config.base_path, meta_information)
-
+        for info in meta_information:
+            if info.tokenizer:
+                context.set([TOKENIZERS_PREFIX, info.feature_name], info.tokenizer)
         all_dependencies = self.dependencies.build(config, context)
 
         for key, object in all_dependencies.items():
