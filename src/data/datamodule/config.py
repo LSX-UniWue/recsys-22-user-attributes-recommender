@@ -32,6 +32,7 @@ class AsmeDataModuleConfig:
     """
     dataset_preprocessing_config: DatasetPreprocessingConfig
     data_sources_config: Config
+    cache_path: Optional[str]
 
 
 class PreprocessingConfigProvider:

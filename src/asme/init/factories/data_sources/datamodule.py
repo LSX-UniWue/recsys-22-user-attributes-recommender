@@ -36,7 +36,8 @@ class DataModuleFactory(ObjectFactory):
             raise KeyError(f"No dataset registered for key '{dataset_name}'.")
         dataset_config = dataset_preprocessing_config_provider(**config.get_config(["preprocessing"]).config)
         data_sources_config = config.get_config(self._datasources_factory.config_path())
-        datamodule_config = AsmeDataModuleConfig(dataset_config, data_sources_config)
+        cache_path = config.get_or_default("cache_path", None)
+        datamodule_config = AsmeDataModuleConfig(dataset_config, data_sources_config, cache_path)
         return AsmeDataModule(datamodule_config, context)
 
     def is_required(self, context: Context) -> bool:

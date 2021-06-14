@@ -1,4 +1,5 @@
 import os
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Callable, List
@@ -65,8 +66,16 @@ class AsmeDataModule(pl.LightningDataModule):
             (ds_config.location / self.PREPROCESSING_FINISHED_FLAG).touch()
 
     def setup(self, stage: Optional[str] = None):
-        loaderConfig = self.config.data_sources_config
-        self._objects = self._datasource_factory.build(loaderConfig, self.context)
+        # Check whether we should copy the dataset to some cache location
+        if self.config.cache_path is not None:
+            print(f"Copying dataset to cache ({self.config.cache_path})")
+            # Empty cache
+            shutil.rmtree(self.config.cache_path)
+            # Copy dataset to cache
+            shutil.copytree(self.config.dataset_preprocessing_config.location, self.config.cache_path)
+
+        loader_config = self.config.data_sources_config
+        self._objects = self._datasource_factory.build(loader_config, self.context)
         self._has_setup = True
 
     def train_dataloader(self) -> DataLoader:

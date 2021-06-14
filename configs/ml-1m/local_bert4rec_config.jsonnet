@@ -1,5 +1,6 @@
-local base_path = "../datasets/dataset/ml-1m/";
-local loo_path = base_path + "loo/";
+local raw_dataset_path = "../datasets/dataset/ml-1m/";
+local cached_dataset_path = "/tmp/ssd/";
+local loo_path = cached_dataset_path + "loo/";
 local output_path = "../dataset/ml-1m/exp/";
 local max_seq_length = 200;
 local metrics =  {
@@ -13,9 +14,10 @@ local file_prefix = 'ml-1m';
 {
     datamodule: {
         dataset: "ml-1m",
+        cache_path: "/tmp/ssd",
         preprocessing: {
             extraction_directory: "/tmp/ml-1m/",
-            output_directory: base_path,
+            output_directory: raw_dataset_path,
             min_item_feedback: 0,
             min_sequence_length: 2
         }
@@ -32,7 +34,7 @@ local file_prefix = 'ml-1m';
                 batch_size: 4,
                 max_seq_length: max_seq_length
             },
-            path: base_path,
+            path: cached_dataset_path,
             file_prefix: file_prefix,
             split_type: 'leave_one_out',
             mask_probability: 0.2,
