@@ -110,7 +110,8 @@ class GroupedFilter:
 
     :param aggregator: An aggregation function provided by pandas either as a string or a function reference, e.g "count".
     :param apply: The actual filter function which determines whether a row should by kept based on the aggregated values.
-    :param aggregated_column: The name of the column to which the filter will be applied.
+    :param aggregated_column: The name of the column to which the filter will be applied. If this is None, the first
+                              column of the grouped dataframe is used.
     """
     aggregator: Any
     apply: Callable[[Any], bool]

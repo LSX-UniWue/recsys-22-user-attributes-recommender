@@ -37,17 +37,20 @@ def get_ml_1m_preprocessing_config(output_directory: str,
                              CreateRatioSplit(0.8, 0.1, 0.1,
                                               per_split_actions=
                                               [CreateSessionIndex(["userId"]),
-                                               CreateNextItemIndex("title", RemainingSessionPositionExtractor(min_sequence_length))],
+                                               CreateNextItemIndex("title", RemainingSessionPositionExtractor(
+                                                   min_sequence_length))],
                                               complete_split_actions=
-                                              [CreateVocabulary(columns, special_tokens=special_tokens, prefixes=[prefix]),
+                                              [CreateVocabulary(columns, special_tokens=special_tokens,
+                                                                prefixes=[prefix]),
                                                CreatePopularity(columns, prefixes=[prefix])]),
                              CreateLeaveOneOutSplit("title",
                                                     inner_actions=
-                                                    [CreateNextItemIndex("title", RemainingSessionPositionExtractor(min_sequence_length)),
+                                                    [CreateNextItemIndex("title", RemainingSessionPositionExtractor(
+                                                        min_sequence_length)),
                                                      CreateVocabulary(columns, special_tokens=special_tokens),
                                                      CreatePopularity(columns)])]
     return DatasetPreprocessingConfig(prefix,
-                         "http://files.grouplens.org/datasets/movielens/ml-1m.zip",
+                                      "http://files.grouplens.org/datasets/movielens/ml-1m.zip",
                                       Path(output_directory),
                                       Unzipper(Path(extraction_directory)),
                                       preprocessing_actions,
@@ -76,14 +79,18 @@ def get_dota_shop_preprocessing_config(output_directory: str,
     columns = [ColumnInfo("id"), ColumnInfo("winner"), ColumnInfo("leaver_status"), ColumnInfo("hero_id"),
                ColumnInfo("team"), ColumnInfo("item_id"), ColumnInfo("is_start_item")]
 
-    # TODO: Ask Alex which filters should be applied to the raw csv file.
+    # TODO: @Alex, you can insert filtering steps by adding TransformCsv and GroupAndFilter object after the conversion
+    #  step. The former transforms the current file using an arbitrary function f: pd.DataFrame -> pd.DataFrame. The
+    #  latter groups the data by some column and allows you to filter based on some aggregation of the grouped
+    #  dataframe. Refer to the ml-1m converter for some examples.
     preprocessing_actions = [ConvertToCsv(DotaShopConverter()),
-                             CreateSessionIndex(["id"]),
+                             CreateSessionIndex(["id", "hero_id"]),
                              CreateRatioSplit(0.8, 0.1, 0.1, per_split_actions=
-                                              [CreateSessionIndex(["id"]),
-                                               CreateNextItemIndex("item_id", RemainingSessionPositionExtractor(min_sequence_length))],
+                             [CreateSessionIndex(["id", "hero_id"]),
+                              CreateNextItemIndex("item_id", RemainingSessionPositionExtractor(min_sequence_length))],
                                               complete_split_actions=
-                                              [CreateVocabulary(columns, special_tokens=special_tokens, prefixes=[prefix]),
+                                              [CreateVocabulary(columns, special_tokens=special_tokens,
+                                                                prefixes=[prefix]),
                                                CreatePopularity(columns, prefixes=[prefix])]),
                              CreateLeaveOneOutSplit("item_id",
                                                     inner_actions=
@@ -94,11 +101,11 @@ def get_dota_shop_preprocessing_config(output_directory: str,
                              ]
 
     return DatasetPreprocessingConfig(prefix,
-                                       None,
-                                       Path(output_directory),
-                                       None,
-                                       preprocessing_actions,
-                                       context)
+                                      None,
+                                      Path(output_directory),
+                                      None,
+                                      preprocessing_actions,
+                                      context)
 
 
 register_preprocessing_config_provider("dota-shop",
