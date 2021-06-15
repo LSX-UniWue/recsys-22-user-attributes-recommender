@@ -1,4 +1,5 @@
 import os
+import shutil
 from abc import abstractmethod
 from datetime import datetime
 from pathlib import Path
@@ -87,3 +88,14 @@ class Movielens1MConverter(CsvConverter):
         os.makedirs(output_file.parent, exist_ok=True)
 
         merged_df.to_csv(output_file, sep=self.delimiter, index=False)
+
+
+class DotaShopConverter(CsvConverter):
+
+    def __init__(self):
+        pass
+
+    def apply(self, input_dir: Path, output_file: Path):
+        # We assume `input_dir` to be the path to the raw csv file.
+        shutil.copy(input_dir, output_file)
+

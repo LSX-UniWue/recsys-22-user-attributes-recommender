@@ -65,14 +65,15 @@ class AsmeDataModule(pl.LightningDataModule):
             # Write finished flag
             (ds_config.location / self.PREPROCESSING_FINISHED_FLAG).touch()
 
+        # We need to copy to cache since the tokenizers etc need the vocabularies to be there before setup is called.
+        if self.config.cache_path is not None:
+            self._copy_to_cache()
+
     def setup(self, stage: Optional[str] = None):
         # Check whether we should copy the dataset to some cache location
         if self.config.cache_path is not None:
             print(f"Copying dataset to cache ({self.config.cache_path})")
-            # Empty cache
-            shutil.rmtree(self.config.cache_path)
-            # Copy dataset to cache
-            shutil.copytree(self.config.dataset_preprocessing_config.location, self.config.cache_path)
+            self._copy_to_cache()
 
         loader_config = self.config.data_sources_config
         self._objects = self._datasource_factory.build(loader_config, self.context)
@@ -94,3 +95,10 @@ class AsmeDataModule(pl.LightningDataModule):
 
     def _check_finished_flag(self, directory: Path) -> bool:
         return os.path.exists(directory / self.PREPROCESSING_FINISHED_FLAG)
+
+    def _copy_to_cache(self):
+        # Empty cache
+        if os.path.exists(self.config.cache_path):
+            shutil.rmtree(self.config.cache_path)
+        # Copy dataset to cache
+        shutil.copytree(self.config.dataset_preprocessing_config.location, self.config.cache_path)

@@ -25,13 +25,14 @@ from datasets.data_structures.split_names import SplitNames
 from datasets.data_structures.train_validation_test_splits_indices import TrainValidationTestSplitIndices
 from datasets.vocabulary.create_vocabulary import create_token_vocabulary
 
-EXTRACTED_DIRECTORY_KEY = "raw_file"
+EXTRACTED_DIRECTORY_KEY = "extract_directory"
 MAIN_FILE_KEY = "main_file"
 SESSION_INDEX_KEY = "session_index"
 OUTPUT_DIR_KEY = "output_dir"
 PREFIXES_KEY = "prefixes"
 DELIMITER_KEY = "delimiter"
 SEED_KEY = "seed"
+RAW_INPUT_FILE_PATH_KEY = "raw_file_path"
 
 
 def format_prefix(prefixes: List[str]) -> str:
@@ -73,11 +74,15 @@ class ConvertToCsv(PreprocessingAction):
         return "Converting to CSV"
 
     def apply(self, context: Context) -> None:
-        extracted_dir = context.get(EXTRACTED_DIRECTORY_KEY)
+        if context.has_path(RAW_INPUT_FILE_PATH_KEY):
+            input_dir = context.get(RAW_INPUT_FILE_PATH_KEY)
+        else:
+            input_dir = context.get(EXTRACTED_DIRECTORY_KEY)
+
         output_directory = context.get(OUTPUT_DIR_KEY)
         prefix = format_prefix(context.get(PREFIXES_KEY))
         output_file = output_directory / f"{prefix}.csv"
-        self.converter(extracted_dir, output_file)
+        self.converter(input_dir, output_file)
         context.set(MAIN_FILE_KEY, output_file)
 
 
