@@ -1,13 +1,13 @@
-from typing import Optional, Union, Tuple
-
-import torch
 import torch.nn as nn
 
-from asme.models.layers.transformer_layers import TransformerEmbedding, TransformerLayer
+from asme.models.common.layers.layers import IdentitySequenceRepresentationModifierLayer
+from asme.models.common.layers.transformer_layers import TransformerEmbedding, TransformerLayer
+from asme.models.sasrec.components import SASRecTransformerComponent, SASRecProjectionComponent
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-class SASRecModel(nn.Module):
+class SASRecModel(SequenceRecommenderModel):
     """
     Implementation of the "Self-Attentive Sequential Recommendation" paper.
     see https://doi.org/10.1109%2fICDM.2018.00035 for more details
@@ -39,29 +39,33 @@ class SASRecModel(nn.Module):
         :param transformer_intermediate_size: the intermediate size of the transformer (default 4 * transformer_hidden_size)
         :param transformer_attention_dropout: the attention dropout (default transformer_dropout)
         """
-        super().__init__()
 
         if transformer_intermediate_size is None:
             transformer_intermediate_size = 4 * transformer_hidden_size
 
-        self.transformer_dropout = transformer_dropout
-        self.max_seq_length = max_seq_length
-        self.transformer_hidden_size = transformer_hidden_size
-        self.num_transformer_heads = num_transformer_heads
-        self.num_transformer_layers = num_transformer_layers
-        self.item_vocab_size = item_vocab_size
-        self.embedding_mode = embedding_pooling_type
+        embedding_layer = TransformerEmbedding(item_voc_size=item_vocab_size,
+                                               max_seq_len=max_seq_length,
+                                               embedding_size=transformer_hidden_size,
+                                               dropout=transformer_dropout,
+                                               embedding_pooling_type=embedding_pooling_type)
 
-        self.embedding = TransformerEmbedding(item_voc_size=self.item_vocab_size,
-                                              max_seq_len=self.max_seq_length,
-                                              embedding_size=self.transformer_hidden_size,
-                                              dropout=self.transformer_dropout,
-                                              embedding_pooling_type=self.embedding_mode)
+        transformer_layer = TransformerLayer(transformer_hidden_size,
+                                             num_transformer_heads,
+                                             num_transformer_layers,
+                                             transformer_intermediate_size,
+                                             transformer_dropout,
+                                             attention_dropout=transformer_attention_dropout)
+        sasrec_transformer_layer = SASRecTransformerComponent(transformer_layer)
 
-        self.transformer_encoder = TransformerLayer(transformer_hidden_size, num_transformer_heads,
-                                                    num_transformer_layers, transformer_intermediate_size,
-                                                    transformer_dropout, attention_dropout=transformer_attention_dropout)
+        modified_seq_representation_layer = IdentitySequenceRepresentationModifierLayer()
+        sasrec_projection_layer = SASRecProjectionComponent(embedding_layer)
 
+        super().__init__(sequence_embedding_layer=embedding_layer,
+                         sequence_representation_layer=sasrec_transformer_layer,
+                         sequence_representation_modifier_layer=modified_seq_representation_layer,
+                         projection_layer=sasrec_projection_layer)
+
+        # FIXME (AD) I think we should move this out of the model and call it through a callback before training starts
         self.apply(self._init_weights)
 
     def _init_weights(self, module):
@@ -75,73 +79,3 @@ class SASRecModel(nn.Module):
             module.weight.data.fill_(1.0)
         if is_linear_layer and module.bias is not None:
             module.bias.data.zero_()
-
-    def forward(self,
-                sequence: torch.Tensor,
-                pos_items: torch.Tensor,
-                neg_items: Optional[torch.Tensor] = None,
-                position_ids: Optional[torch.Tensor] = None,
-                padding_mask: Optional[torch.Tensor] = None
-                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        """
-        Forward pass to generate the logits for the positive (next) items and the negative (randomly sampled items,
-        that are not in the current sequence) items.
-        If no negative items are provided,
-
-        :param sequence: the sequence :math:`(N, S)`
-        :param pos_items: ids of the positive items (the next items in the sequence) :math:`(N)`
-        :param neg_items: random sampled negative items that are not in the session of the user :math:`(N)`
-        :param position_ids: the optional position ids if not the position ids are generated :math:`(N, S)`
-        :param padding_mask: the optional padding mask if the sequence is padded :math:`(N, S)` True if not padded
-        :return: the logits of the pos_items and the logits of the negative_items, each of shape :math:`(N, S)`
-                iff neg_items is provided else the logits for the provided positive items of the same shape
-
-        Where S is the (max) sequence length of the batch and N the batch size.
-        """
-
-        # embed the input sequence
-        embedded_sequence = self.embedding(sequence, position_ids)  # (N, S, H)
-
-        # pipe the embedded sequence to the transformer
-        # first build the attention mask
-        input_size = sequence.size()
-        batch_size = input_size[0]
-        sequence_length = input_size[1]
-
-        attention_mask = torch.triu(torch.ones([sequence_length, sequence_length], device=sequence.device))\
-            .transpose(1, 0).unsqueeze(0).repeat(batch_size, 1, 1)
-        if padding_mask is not None:
-            attention_mask = attention_mask * padding_mask.unsqueeze(1).repeat(1, sequence_length, 1)
-        attention_mask = attention_mask.unsqueeze(1).to(dtype=torch.bool)
-
-        transformer_output = self.transformer_encoder(embedded_sequence, attention_mask=attention_mask)
-
-        # when training the model we multiply the seq embedding with the positive and negative items
-        if neg_items is not None:
-            emb_pos_items = self.embedding.get_item_embedding(pos_items)  # (N, H)
-            emb_neg_items = self.embedding.get_item_embedding(neg_items)  # (N, H)
-
-            pos_output = emb_pos_items * transformer_output  # (N, S, H)
-            neg_output = emb_neg_items * transformer_output  # (N, S, H)
-
-            pos_output = torch.sum(pos_output, -1)  # (N, S)
-            neg_output = torch.sum(neg_output, -1)  # (N, S)
-
-            return pos_output, neg_output
-
-        # inference step (I is the number of positive items to test)
-        # embeddings of pos_items
-        item_embeddings = self.embedding.get_item_embedding(pos_items, flatten=False)  # (N, I, H)
-
-        # we use "advanced" indexing to slice the right elements from the transformer output
-        batch_size = sequence.size()[0]
-        batch_index = torch.arange(0, batch_size)
-
-        # calculate indices from the padding mask
-        seq_index = padding_mask.sum(-1) - 1
-        transformer_last_pos_output = transformer_output[batch_index, seq_index]  # (N, H)
-
-        # now matmul it with the item embeddings
-        logits = item_embeddings.matmul(transformer_last_pos_output.unsqueeze(-1))
-
-        return logits.squeeze(-1)

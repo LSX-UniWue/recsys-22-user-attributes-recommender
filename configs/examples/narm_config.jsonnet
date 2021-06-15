@@ -11,9 +11,6 @@ local metrics =  {
             path: "/tmp/experiments/narm"
         },
         next_sequence_step_data_sources: {
-            parser: {
-                item_column_name: "item_id"
-            },
             loader: {
                 batch_size: 9,
                 max_seq_length: max_seq_length
@@ -47,8 +44,10 @@ local metrics =  {
             item_embedding_size: 180
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "item_id",
+            sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",

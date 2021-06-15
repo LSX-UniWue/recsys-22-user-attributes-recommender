@@ -1,7 +1,6 @@
 import torch
 
 from typing import Union, List, Dict, Any, Set, Optional
-from numpy.random._generator import default_rng
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
 from data.datasets.processors.processor import Processor
@@ -31,12 +30,10 @@ class ParameterizedPositiveNegativeSamplerProcessor(Processor):
 
     def __init__(self,
                  tokenizer: Tokenizer,
-                 seed: int = 42,
                  t: Optional[int] = DEFAULT_SAMPLE_SIZE
                  ):
         super().__init__()
         self._tokenizer = tokenizer
-        self._rng = default_rng(seed=seed)
         self.t = DEFAULT_SAMPLE_SIZE if t is None else t
 
     def _sample_negative_target(self,

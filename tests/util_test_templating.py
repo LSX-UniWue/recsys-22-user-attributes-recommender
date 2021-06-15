@@ -1,5 +1,6 @@
 from typing import Dict, Any
 
+from data.datasets.sequence import MetaInformation
 from torch.utils.data import DataLoader
 
 from asme.init.config import Config
@@ -71,7 +72,12 @@ def load_dataset(template: Dict[str, Any]
     modified_template = TemplateEngine().modify(template)
     print(modified_template)
     context = Context()
+
+    item_seq_feature_info = MetaInformation('item', type='str', column_name="item_id", is_sequence=True,
+                                            sequence_length=4)
+
     context.set('tokenizers.item', create_tokenizer())
+    context.set('features', [item_seq_feature_info])
 
     config = Config(modified_template.get('data_sources'))
     return DataSourcesFactory().build(config, context)

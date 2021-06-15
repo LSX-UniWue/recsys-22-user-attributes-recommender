@@ -18,7 +18,7 @@ class BprModule(MetricsTrait, pl.LightningModule):
                  embedding_size: int,
                  regularization_factor: float,
                  metrics: MetricsContainer):
-        super(BprModule, self).__init__()
+        super().__init__()
         self.item_tokenizer = item_tokenizer
         self.user_tokenizer = user_tokenizer
         self.embedding_size = embedding_size
@@ -33,7 +33,10 @@ class BprModule(MetricsTrait, pl.LightningModule):
     def get_metrics(self) -> MetricsContainer:
         return self.metrics
     
-    def forward(self, user: torch.Tensor, item: torch.Tensor):
+    def forward(self,
+                user: torch.Tensor,
+                item: torch.Tensor
+                ):
         """
         Computes the score of a user-item pair by calculating the dot product of the corresponding rows in the
         user matrix W and item matrix H

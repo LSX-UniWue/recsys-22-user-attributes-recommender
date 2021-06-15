@@ -3,6 +3,7 @@ from typing import Union, Any, Dict, List, Type
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger, MLFlowLogger, WandbLogger, LightningLoggerBase, CSVLogger
 
+from asme.callbacks.best_model_writing_model_checkpoint import BestModelWritingModelCheckpoint
 from asme.init.config import Config
 from asme.init.context import Context
 from asme.init.factories.common.dependencies_factory import DependenciesFactory
@@ -101,7 +102,13 @@ class CheckpointFactory(ObjectFactory):
             config.set("filename", "{epoch}-" + f"{{{monitored_metric}}}")
         if not config.has_path("save_last"):
             config.set("save_last", True)
-        return ModelCheckpoint(**config.config)
+        output_base_path = config.get_or_default("output_base_path", None)
+        config.config.pop('output_base_path', None)
+        output_filename = config.get_or_default("output_filename", None)
+        config.config.pop('output_filename', None)
+        model_checkpoint = ModelCheckpoint(**config.config)
+        wrapped_checkpoint = BestModelWritingModelCheckpoint(model_checkpoint, output_base_path, output_filename)
+        return wrapped_checkpoint
 
     def is_required(self, context: Context) -> bool:
         return True

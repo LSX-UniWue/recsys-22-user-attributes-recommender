@@ -3,35 +3,46 @@ from typing import Union, Dict, Optional
 import torch
 
 import pytorch_lightning as pl
+from asme.losses.losses import SequenceRecommenderContrastiveLoss
+from asme.models.common.layers.data.sequence import InputSequence
 
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.modules import LOG_KEY_TRAINING_LOSS
-from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, NEGATIVE_SAMPLES_ENTRY_NAME
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
+    NEGATIVE_SAMPLES_ENTRY_NAME
 from asme.losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
 from asme.metrics.container.metrics_container import MetricsContainer
 from asme.modules.metrics_trait import MetricsTrait
-from asme.modules.util.module_util import get_padding_mask, build_eval_step_return_dict
-from asme.models.sasrec.sas_rec_model import SASRecModel
+from asme.modules.util.module_util import get_padding_mask, build_eval_step_return_dict, get_additional_meta_data
 from asme.tokenization.tokenizer import Tokenizer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-class SASRecModule(MetricsTrait, pl.LightningModule):
+class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
 
     """
-    the module for training a SASRec model
+    the module for training a model using a sequence and positve and negative items based on the sequence
+
+    models that can be trained with this module are:
+    - SASRec
+    - Caser
+    - CosRec
+    - HGN
     """
 
     @save_hyperparameters
     def __init__(self,
-                 model: SASRecModel,
+                 model: SequenceRecommenderModel,
                  item_tokenizer: Tokenizer,
                  metrics: MetricsContainer,
                  learning_rate: float = 0.001,
                  beta_1: float = 0.99,
-                 beta_2: float = 0.998
+                 beta_2: float = 0.998,
+                 weight_decay: float = 1e-3,
+                 loss_function: SequenceRecommenderContrastiveLoss = SASRecBinaryCrossEntropyLoss()
                  ):
         """
-        inits the SASRec module
+        inits the training module
         :param model: the model to train
         :param learning_rate: the learning rate
         :param beta_1: the beta1 of the adam optimizer
@@ -45,8 +56,12 @@ class SASRecModule(MetricsTrait, pl.LightningModule):
         self.learning_rate = learning_rate
         self.beta_1 = beta_1
         self.beta_2 = beta_2
+        self.weight_decay = weight_decay
+
         self.item_tokenizer = item_tokenizer
         self.metrics = metrics
+
+        self.loss_function = loss_function
 
         self.save_hyperparameters(self.hyperparameters)
 
@@ -75,22 +90,32 @@ class SASRecModule(MetricsTrait, pl.LightningModule):
         """
 
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
+
         pos = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         neg = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
 
-        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
+        # add users and other meta data (XXX: currently only users)
+        additional_meta_data = get_additional_meta_data(self.model, batch)
 
-        pos_logits, neg_logits = self.model(input_seq, pos, neg_items=neg, padding_mask=padding_mask)
+        additional_meta_data["positive_samples"] = pos
+        additional_meta_data["negative_samples"] = neg
 
-        loss_func = SASRecBinaryCrossEntropyLoss()
-        loss = loss_func(pos_logits, neg_logits, mask=padding_mask)
-        # TODO: check: the original code
-        # (https://github.com/kang205/SASRec/blob/641c378fcfac265ea8d1e5fe51d4d53eb892d1b4/model.py#L92)
-        # adds regularization losses, but they are empty, as far as I can see (dzo)
+        input_sequence = InputSequence(input_seq, padding_mask, additional_meta_data)
+        pos_logits, neg_logits = self.model(input_sequence)
+
+        loss = self._calc_loss(pos_logits, neg_logits, padding_mask)
         self.log(LOG_KEY_TRAINING_LOSS, loss)
         return {
             "loss": loss
         }
+
+    def _calc_loss(self,
+                   pos_logits: torch.Tensor,
+                   neg_logits: torch.Tensor,
+                   padding_mask: torch.Tensor
+                   ) -> torch.Tensor:
+        return self.loss_function(pos_logits, neg_logits, mask=padding_mask)
 
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
@@ -113,7 +138,6 @@ class SASRecModule(MetricsTrait, pl.LightningModule):
         """
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
-
         prediction = self.predict(batch, batch_idx)
 
         return build_eval_step_return_dict(input_seq, prediction, targets)
@@ -130,6 +154,10 @@ class SASRecModule(MetricsTrait, pl.LightningModule):
                 dataloader_idx: Optional[int] = None
                 ) -> torch.Tensor:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+
+        # add users and other meta data (XXX: currently only users)
+        additional_meta_data = get_additional_meta_data(self.model, batch)
+
         # calc the padding mask
         padding_mask = get_padding_mask(input_seq, self.item_tokenizer)
 
@@ -140,9 +168,13 @@ class SASRecModule(MetricsTrait, pl.LightningModule):
         items_to_rank = torch.as_tensor(self.item_tokenizer.get_vocabulary().ids(), dtype=torch.long, device=device)
         items_to_rank = items_to_rank.repeat([batch_size, 1])
 
-        return self.model(input_seq, items_to_rank, padding_mask=padding_mask)
+        additional_meta_data["positive_samples"] = items_to_rank
+
+        input_sequence = InputSequence(input_seq, padding_mask, additional_meta_data)
+        return self.model(input_sequence)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(),
                                 lr=self.learning_rate,
-                                betas=(self.beta_1, self.beta_2))
+                                betas=(self.beta_1, self.beta_2),
+                                weight_decay=self.weight_decay)

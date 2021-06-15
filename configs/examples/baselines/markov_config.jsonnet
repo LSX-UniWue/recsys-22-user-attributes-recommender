@@ -39,6 +39,12 @@ local metrics =  {
             }
         },
     },
+    features: {
+        item: {
+            column_name: "item_id",
+            sequence_length: max_seq_length
+        }
+    },
     tokenizers: {
         item: {
             tokenizer: {

@@ -1,72 +1,11 @@
-from abc import abstractmethod
-from typing import Tuple
-
-import torch
-from torch import nn
-
-from asme.models.layers.layers import ItemEmbedding, PROJECT_TYPE_LINEAR, build_projection_layer
+from asme.models.common.components.sequence_embedding import SequenceElementsEmbeddingComponent
+from asme.models.common.layers.layers import PROJECT_TYPE_LINEAR
+from asme.models.rnn.components import RNNSequenceRepresentationComponent, RNNProjectionComponent, RNNPoolingComponent
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-def _build_rnn_cell(cell_type: str,
-                    item_embedding_size: int,
-                    hidden_size: int,
-                    num_layers: int,
-                    bidirectional: bool,
-                    dropout: float,
-                    nonlinearity: str  # only for Elman RNN
-                    ) -> nn.Module:
-    if cell_type == 'gru':
-        return nn.GRU(item_embedding_size, hidden_size,
-                      bidirectional=bidirectional,
-                      dropout=dropout,
-                      num_layers=num_layers,
-                      batch_first=True)
-
-    if cell_type == 'lstm':
-        return LSTMSeqItemRecommenderModule(item_embedding_size, hidden_size,
-                                            bidirectional=bidirectional,
-                                            dropout=dropout,
-                                            num_layers=num_layers)
-
-    if cell_type == 'rnn':
-        return nn.RNN(item_embedding_size, hidden_size,
-                      bidirectional=bidirectional,
-                      dropout=dropout,
-                      num_layers=num_layers,
-                      nonlinearity=nonlinearity)
-
-    raise ValueError(f'cell type "{cell_type}" not supported')
-
-
-class LSTMSeqItemRecommenderModule(nn.Module):
-
-    def __init__(self,
-                 item_embedding_size: int,
-                 hidden_size: int,
-                 num_layers: int,
-                 bidirectional: bool,
-                 dropout: float
-                 ):
-        super().__init__()
-
-        self.lstm = nn.LSTM(item_embedding_size, hidden_size,
-                            bidirectional=bidirectional,
-                            dropout=dropout,
-                            num_layers=num_layers,
-                            batch_first=True)
-
-    def forward(self,
-                packed_embedded_session: torch.Tensor
-                ) -> Tuple[torch.Tensor, torch.Tensor]:
-        outputs, final_state = self.lstm(packed_embedded_session)
-
-        # currently we ignore the context information and only return
-        # the hidden representation (as the gru model)
-        return outputs, final_state[0]
-
-
-class RNNModel(nn.Module):
+class RNNModel(SequenceRecommenderModel):
 
     @save_hyperparameters
     def __init__(self,
@@ -80,97 +19,29 @@ class RNNModel(nn.Module):
                  nonlinearity: str = None,  # for Elman RNN
                  embedding_pooling_type: str = None,
                  project_layer_type: str = PROJECT_TYPE_LINEAR):
-        super().__init__()
-        self.embedding_pooling_type = embedding_pooling_type
 
-        self.item_embedding = ItemEmbedding(item_voc_size=item_vocab_size,
-                                            embedding_size=item_embedding_dim,
-                                            embedding_pooling_type=self.embedding_pooling_type)
+        sequence_embedding_component = SequenceElementsEmbeddingComponent(vocabulary_size=item_vocab_size,
+                                                                          embedding_size=item_embedding_dim,
+                                                                          pooling_type=embedding_pooling_type)
 
-        # FIXME: maybe this should not be done here
-        rnn_dropout = dropout
-        if num_layers == 1 and dropout > 0:
-            print("setting the dropout of the rnn to 0 because the number of layers is 1")
-            rnn_dropout = 0.0
+        sequence_representation_component = RNNSequenceRepresentationComponent(cell_type,
+                                                                               item_embedding_dim,
+                                                                               hidden_size,
+                                                                               num_layers,
+                                                                               dropout,
+                                                                               bidirectional,
+                                                                               nonlinearity)
+        pooling_component = RNNPoolingComponent(bidirectional)
 
-        self.rnn = _build_rnn_cell(cell_type, item_embedding_dim, hidden_size, num_layers, bidirectional, rnn_dropout,
-                                   nonlinearity)
+        projection_component = RNNProjectionComponent(sequence_embedding_component.elements_embedding.embedding,
+                                                      item_vocab_size,
+                                                      hidden_size,
+                                                      bidirectional,
+                                                      project_layer_type)
 
-        self.pooling = RNNPooler(bidirectional=bidirectional)
-
-        hidden_size_projection = hidden_size if not bidirectional else 2 * hidden_size
-        self.projection = build_projection_layer(project_layer_type, hidden_size_projection, item_vocab_size,
-                                                 self.item_embedding.embedding)
-
-        self.dropout = nn.Dropout2d(p=dropout)
-
-    def forward(self,
-                sequence: torch.Tensor,
-                padding_mask: torch.Tensor
-                ) -> torch.Tensor:
-        """
-        calc the logits given the sequence and the mask
-        :param sequence: the sequence :math`(N, S)` or :math`(N, S, BS)`
-        :param padding_mask: a mask indicating the padding, True iff step i in the sequence is
-        not masked :math´(N, S)´
-        :return: the logits :math`(N, I)`
-
-        where N is the batch size, S the max sequence length and BS the max basket size
-        """
-        embedded_sequence = self.item_embedding(sequence)
-        embedded_sequence = self.dropout(embedded_sequence)
-
-        # calc the lengths, because padding => mask = false, we can use the sum here to calculate the lengths
-        lengths = padding_mask.sum(dim=-1).cpu()  # required by torch >= 1.7, no cuda tensor allowed
-        packed_embedded_session = nn.utils.rnn.pack_padded_sequence(
-            embedded_sequence,
-            lengths,
-            batch_first=True,
-            enforce_sorted=False
-        )
-        outputs, final_state = self.rnn(packed_embedded_session)
-        output = self.pooling(outputs, final_state)
-        output = self.projection(output)
-        return output
+        super().__init__(sequence_embedding_layer=sequence_embedding_component,
+                         sequence_representation_layer=sequence_representation_component,
+                         sequence_representation_modifier_layer=pooling_component,
+                         projection_layer=projection_component)
 
 
-class RNNStatePooler(nn.Module):
-
-    def __init__(self):
-        super().__init__()
-
-    @abstractmethod
-    def forward(self,
-                outputs: torch.Tensor,
-                hidden_representation: torch.Tensor
-                ) -> torch.Tensor:
-        pass
-
-
-class RNNPooler(RNNStatePooler):
-
-    def __init__(self,
-                 bidirectional: bool = False
-                 ):
-        super().__init__()
-
-        self.directions = 2 if bidirectional else 1
-
-    def forward(self,
-                outputs: torch.Tensor,
-                hidden_representation: torch.Tensor
-                ) -> torch.Tensor:
-        if self.directions == 1:
-            # we "pool" the model by simply taking the hidden state of the last layer
-            # of an unidirectional model
-            return hidden_representation[-1, :, :]
-
-        # FIXME: discuss this representation (state of last layer, both directions)
-        layer_direction, batch_size, hidden_size = hidden_representation.size()
-        layers = int(layer_direction / self.directions)
-
-        hidden_representation = hidden_representation.view(layers, self.directions, batch_size, hidden_size)
-
-        last_layer_representation = hidden_representation[-1]
-        representation = torch.cat([last_layer_representation[0], last_layer_representation[1]], dim=1)
-        return representation

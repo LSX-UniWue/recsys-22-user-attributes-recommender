@@ -1,15 +1,17 @@
 import math
-from typing import Tuple
+from typing import Tuple, Optional
 
 import torch
 from torch import nn
 from torch.nn import functional as F
 
-from asme.models.layers.layers import ItemEmbedding
-from asme.models.layers.tensor_utils import generate_position_ids
+from asme.models.common.layers.data.sequence import InputSequence, EmbeddedElementsSequence
+from asme.models.common.layers.layers import SequenceElementsRepresentationLayer
+from asme.models.common.layers.sequence_embedding import SequenceElementsEmbeddingLayer
+from asme.models.common.layers.tensor_utils import generate_position_ids
 
 
-class TransformerEmbedding(nn.Module):
+class TransformerEmbedding(SequenceElementsRepresentationLayer):
     """
     this transformer embedding combines the item embedding and positional embedding (incl. norm and dropout)
     into a single module
@@ -26,9 +28,9 @@ class TransformerEmbedding(nn.Module):
 
         self.embedding_size = embedding_size
 
-        self.item_embedding = ItemEmbedding(item_voc_size=item_voc_size,
-                                            embedding_size=embedding_size,
-                                            embedding_pooling_type=embedding_pooling_type)
+        self.item_embedding = SequenceElementsEmbeddingLayer(item_voc_size=item_voc_size,
+                                                             embedding_size=embedding_size,
+                                                             embedding_pooling_type=embedding_pooling_type)
         self.position_embedding = nn.Embedding(max_seq_len, self.embedding_size)
         self.embedding_norm = nn.LayerNorm(self.embedding_size) if norm_embedding else nn.Identity()
         self.dropout = nn.Dropout(p=dropout)
@@ -46,27 +48,29 @@ class TransformerEmbedding(nn.Module):
                            ) -> torch.Tensor:
         return self.item_embedding(input_sequence, flatten=flatten)
 
-    def forward(self,
-                sequence: torch.Tensor,
-                position_ids: torch.Tensor = None
-                ) -> torch.Tensor:
+    def forward(self, sequence: InputSequence) -> EmbeddedElementsSequence:
         """
         :param sequence: the sequence input (N, S)
-        :param position_ids: the position ids (N, S) optional, will be generated if not provided
         :return: the embedding (item and position) :math`(N, S, H)`
 
         where S is the sequence length, N the batch size and H the embedding size
         """
+
+        seq_tensor = sequence.sequence
+
         # generate the position ids if not provided
-        if position_ids is None:
-            position_ids = generate_position_ids(sequence.size(), device=sequence.device)
+        if not sequence.has_attribute("position_ids"):
+            position_ids = generate_position_ids(seq_tensor.size(), device=seq_tensor.device)
+        else:
+            position_ids = sequence.has_attribute("position_ids")
 
-        sequence = self.item_embedding(sequence)
-        sequence = sequence + self.position_embedding(position_ids)
-        sequence = self.embedding_norm(sequence)
+        seq_tensor = self.item_embedding(seq_tensor)
+        seq_tensor = seq_tensor + self.position_embedding(position_ids)
+        seq_tensor = self.embedding_norm(seq_tensor)
 
-        sequence = self.dropout(sequence)
-        return sequence
+        seq_tensor = self.dropout(seq_tensor)
+
+        return EmbeddedElementsSequence(seq_tensor, input_sequence=sequence)
 
 
 class TransformerLayer(nn.Module):
@@ -86,16 +90,13 @@ class TransformerLayer(nn.Module):
                               attention_dropout=attention_dropout)
              for _ in range(num_layers)])
 
-    def forward(self,
-                input_sequence: torch.Tensor,
-                attention_mask: torch.Tensor
+    def forward(self, sequence: torch.Tensor,
+                attention_mask: Optional[torch.Tensor] = None
                 ) -> torch.Tensor:
-
         # running over multiple transformer blocks
         for transformer in self.transformer_blocks:
-            input_sequence = transformer.forward(input_sequence, attention_mask)
-
-        return input_sequence
+           sequence = transformer.forward(sequence, attention_mask)
+        return sequence
 
 
 class SublayerConnection(nn.Module):

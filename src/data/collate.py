@@ -85,6 +85,7 @@ def _padded_session_collate(entries_to_pad: Dict[str, PadInformation],
             if isinstance(value, list) and entry_name in entries_to_pad:
                 pad_info = entries_to_pad[entry_name]
                 configured_max_seq_length = pad_info.max_seq_length
+
                 max_length = min(configured_max_seq_length, max_length_values.get(entry_name)) if dynamic_padding else configured_max_seq_length
                 padding_token_id = pad_info.pad_token_id
 

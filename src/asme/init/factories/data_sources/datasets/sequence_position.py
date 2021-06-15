@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import List
 
+from asme.init.factories.data_sources.datasets.processor.last_item_mask import get_sequence_feature_names
 from data.datasets.index import SequencePositionIndex
 from data.datasets.sequence_position import SequencePositionDataset
 from data.datasets.processors.processor import Processor
@@ -41,6 +42,9 @@ class SequencePositionDatasetFactory(DatasetFactory):
         nip_index_file_path = Path(config.get('nip_index_file'))
         basic_dataset = self.plain_session_factory.build(config, context)
 
+        sequences_to_truncate = get_sequence_feature_names(config, context)
+
         return SequencePositionDataset(basic_dataset,
                                        SequencePositionIndex(nip_index_file_path),
+                                       sequences_to_truncate=sequences_to_truncate,
                                        processors=processors)

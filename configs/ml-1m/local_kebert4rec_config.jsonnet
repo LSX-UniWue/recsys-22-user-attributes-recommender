@@ -1,6 +1,6 @@
-local base_path = "../dataset/ml-1m/";
-local output_path = "../dataset/ml-1m/exp/";
-local max_seq_length = 200;
+local base_path = "./dataset/ml-1m/";
+local output_path = "./dataset/ml-1m/exp/";
+local max_seq_length = 10;
 local metrics =  {
     mrr: [1, 5, 10],
     recall: [1, 5, 10],
@@ -19,13 +19,14 @@ local additional_attributes_list = ['genres'];
         mask_data_sources: {
             parser: {
                 item_column_name: "title",
-                additional_attributes: {
+                features: {
                     genres: {
                         type: "strlist",
                         sequence: true,
                         delimiter: "|"
                     }
                 }
+
             },
             loader: {
                 batch_size: 4,
@@ -52,7 +53,7 @@ local additional_attributes_list = ['genres'];
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + "popularity.txt",
+                sample_probability_file: base_path + file_prefix + ".popularity.title.txt",
                 num_negative_samples: 100,
                 metrics: metrics
             }
@@ -82,7 +83,7 @@ local additional_attributes_list = ['genres'];
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "vocab_title.txt"
+                    file: base_path + file_prefix + ".vocabulary.title.txt"
                 }
             }
         },
@@ -94,7 +95,7 @@ local additional_attributes_list = ['genres'];
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "vocab_genres.txt"
+                    file: base_path + file_prefix + ".vocabulary.genres.txt"
                 }
             }
         },
@@ -108,9 +109,7 @@ local additional_attributes_list = ['genres'];
             save_top_k: 3,
             mode: 'max'
         },
-        gpus: 0,
         max_epochs: 10,
-        accelerator: "ddp",
         check_val_every_n_epoch: 50
     }
 }
