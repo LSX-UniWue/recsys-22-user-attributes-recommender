@@ -15,6 +15,9 @@ local file_prefix = 'dota-shop';
     datamodule: {
         dataset: "dota-shop",
         cache_path: "/tmp/ssd",
+        data_sources: {
+            type: "mask"
+        },
         preprocessing: {
             output_directory: raw_dataset_path,
             raw_csv_file_path: raw_dataset_path + "dota-shop-raw.csv",
@@ -25,7 +28,7 @@ local file_prefix = 'dota-shop';
         unified_output: {
             path: output_path
         },
-        mask_data_sources: {
+        /*mask_data_sources: {
             parser: {
                 item_column_name: "item_id"
             },
@@ -38,7 +41,7 @@ local file_prefix = 'dota-shop';
             split_type: 'leave_one_out',
             mask_probability: 0.2,
             mask_seed: 42
-        }
+        }*/
     },
     module: {
         type: "bert4rec",

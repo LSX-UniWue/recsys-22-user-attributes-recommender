@@ -5,7 +5,6 @@ from asme.init.container import Container
 from asme.init.context import Context
 from asme.init.factories.common.conditional_based_factory import ConditionalFactory
 from asme.init.factories.common.dependencies_factory import DependenciesFactory
-from asme.init.factories.data_sources.data_sources import DataSourcesFactory
 from asme.init.factories.features.features_factory import FeaturesFactory
 from asme.init.factories.features.tokenizer_factory import TOKENIZERS_PREFIX
 from asme.init.factories.data_sources.datamodule import DataModuleFactory
@@ -100,12 +99,6 @@ class ContainerFactory(ObjectFactory):
               config: Config,
               context: Context
               ) -> Container:
-        features_config = config.get_config(self.features_factory.config_path())
-        meta_information = list(self.features_factory.build(features_config, context).values())
-        context.set(features_config.base_path, meta_information)
-        for info in meta_information:
-            if info.tokenizer:
-                context.set([TOKENIZERS_PREFIX, info.feature_name], info.tokenizer)
 
         # We have to build the datamodule first such that we can invoke preprocessing
         datamodule_config = config.get_config(self.datamodule_factory.config_path())
@@ -113,6 +106,14 @@ class ContainerFactory(ObjectFactory):
         context.set(self.datamodule_factory.config_path(), datamodule)
         # Preprocess the dataset
         datamodule.prepare_data()
+
+        features_config = config.get_config(self.features_factory.config_path())
+        meta_information = list(self.features_factory.build(features_config, context).values())
+        context.set(features_config.base_path, meta_information)
+        for info in meta_information:
+            if info.tokenizer:
+                context.set([TOKENIZERS_PREFIX, info.feature_name], info.tokenizer)
+
 
         all_dependencies = self.dependencies.build(config, context)
 

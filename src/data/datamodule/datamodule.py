@@ -6,15 +6,10 @@ from typing import Optional, Callable, List
 
 import pytorch_lightning.core as pl
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 
-from asme.init.config import Config
 from asme.init.context import Context
 from asme.init.factories.data_sources.data_sources import DataSourcesFactory
 from data.datamodule.config import AsmeDataModuleConfig
-from data.datamodule.preprocessing import PreprocessingAction, EXTRACTED_DIRECTORY_KEY
-from data.datamodule.unpacker import Unpacker
-from data.datasets.config import get_ml_1m_preprocessing_config
 from datasets.dataset_pre_processing.utils import download_dataset
 
 
