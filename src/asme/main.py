@@ -46,7 +46,7 @@ app = typer.Typer()
 
 @app.command()
 def train(config_file: Path = typer.Argument(..., help='the path to the config file', exists=True),
-          resume: bool = typer.Option(False, help='flag iff the model should resume training from a checkpoint'),
+          do_resume: bool = typer.Option(False, help='flag iff the model should resume training from a checkpoint'),
           print_train_val_examples: bool = typer.Option(True, help='print examples of the training'
                                                                     'and evaluation dataset before starting training')
     ) -> None:
@@ -61,8 +61,8 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
     log_dir = determine_log_dir(trainer)
     save_config(config, log_dir)
 
-    if resume:
-        resume(log_dir)
+    if do_resume:
+        resume(log_dir, None)
 
     else:
         train_dataloader = container.train_dataloader()
