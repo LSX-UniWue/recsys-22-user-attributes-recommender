@@ -7,6 +7,7 @@ local metrics =  {
     ndcg: [1, 5, 10]
 };
 
+local loo_path = base_path + "loo/";
 local file_prefix = 'ml-1m';
 
 {
@@ -15,12 +16,8 @@ local file_prefix = 'ml-1m';
             path: output_path
         },
         mask_data_sources: {
-            parser: {
-                item_column_name: "title"
-            },
             loader: {
-                batch_size: 4,
-                max_seq_length: max_seq_length
+                batch_size: 4
             },
             path: base_path,
             train_file_prefix: file_prefix,
@@ -38,7 +35,7 @@ local file_prefix = 'ml-1m';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + "popularity.txt",
+                sample_probability_file: loo_path + file_prefix + ".popularity.title.txt",
                 num_negative_samples: 100,
                 metrics: metrics
             }
@@ -52,8 +49,10 @@ local file_prefix = 'ml-1m';
             project_layer_type: 'linear'
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "title",
+            sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",
@@ -61,7 +60,7 @@ local file_prefix = 'ml-1m';
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "vocab_title.txt"
+                    file: loo_path + file_prefix + "vocabulary.title.txt"
                 }
             }
         },

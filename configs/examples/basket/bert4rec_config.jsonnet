@@ -11,20 +11,12 @@ local metrics =  {
             path: "/tmp/experiments/bert4rec_basket"
         },
         mask_data_sources: {
-            parser: {
-                item_column_name: "item_id",
-                item_separator: ' + '
-            },
             loader: {
-                batch_size: 9,
-                max_seq_length: max_seq_length,
-                max_seq_step_length: 5
+                batch_size: 9
             },
-            path: base_path,
-            validation_file_prefix: "train",
-            test_file_prefix: "train",
-            mask_probability: 0.1,
-            mask_seed: 123456
+            path: base_path + "ratio-0.8_0.1_0.1/",
+            file_prefix: "example",
+            mask_probability: 0.1
         }
     },
     module: {
@@ -34,12 +26,12 @@ local metrics =  {
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + "popularity.txt",
+                sample_probability_file: base_path + "example.popularity.item_id.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             },
             fixed: {
-                item_file: base_path + "relevant_items.txt",
+                item_file: base_path + "example.relevant_items.item_id.txt",
                 metrics: metrics
             }
         },
@@ -52,8 +44,13 @@ local metrics =  {
             embedding_pooling_type: 'mean'
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "item_id",
+            type: "strlist",
+            delimiter: " + ",
+            sequence_length: max_seq_length,
+            max_sequence_step_length: 5,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",
@@ -61,7 +58,7 @@ local metrics =  {
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "vocab.txt"
+                    file: base_path + "example.vocabulary.item_id.txt"
                 }
             }
         }

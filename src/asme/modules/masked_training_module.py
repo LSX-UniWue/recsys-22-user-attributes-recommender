@@ -1,5 +1,3 @@
-from abc import abstractmethod
-
 import torch
 import pytorch_lightning as pl
 
@@ -8,29 +6,27 @@ from typing import Union, Dict, Optional, Any
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
-from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITION_IDS
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
+from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from asme.metrics.container.metrics_container import MetricsContainer
 from asme.modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TEST_LOSS, LOG_KEY_TRAINING_LOSS
 from asme.modules.metrics_trait import MetricsTrait
-from asme.modules.util.module_util import get_padding_mask, convert_target_to_multi_hot, build_eval_step_return_dict
+from asme.modules.util.module_util import convert_target_to_multi_hot, build_eval_step_return_dict, build_model_input
 from asme.tokenization.tokenizer import Tokenizer
-from asme.models.bert4rec.bert4rec_model import BERT4RecModel, BERT4RecBaseModel
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-class BERT4RecBaseModule(MetricsTrait, pl.LightningModule):
+class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
     """
-    BERT4Rec module for the BERT4Rec model
-    """
+    base module to train a model using the masking restore objective:
+    in the sequence items are masked randomly and the model must predict the masked items
 
-    @staticmethod
-    def get_position_ids(batch: Dict[str, torch.Tensor]
-                         ) -> Optional[torch.Tensor]:
-        return batch[POSITION_IDS] if POSITION_IDS in batch else None
+    For validation and evaluation the sequence and at the last position a masked item are fed to the model.
+    """
 
     @save_hyperparameters
     def __init__(self,
-                 model: BERT4RecBaseModel,
+                 model: SequenceRecommenderModel,
                  item_tokenizer: Tokenizer,
                  metrics: MetricsContainer,
                  learning_rate: float = 0.001,
@@ -40,6 +36,7 @@ class BERT4RecBaseModule(MetricsTrait, pl.LightningModule):
                  num_warmup_steps: int = 10000
                  ):
         super().__init__()
+
         self.model = model
 
         self.learning_rate = learning_rate
@@ -59,13 +56,9 @@ class BERT4RecBaseModule(MetricsTrait, pl.LightningModule):
                 batch: Dict[str, torch.Tensor],
                 batch_idx: int
                 ) -> torch.Tensor:
-        return self._forward_internal(batch, batch_idx)
-
-    @abstractmethod
-    def _forward_internal(self, batch: Dict[str, torch.Tensor],
-                          batch_idx: int
-                          ) -> torch.Tensor:
-        pass
+        input_data = build_model_input(self.model, self.item_tokenizer, batch)
+        # call the model
+        return self.model(input_data)
 
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
@@ -85,6 +78,10 @@ class BERT4RecBaseModule(MetricsTrait, pl.LightningModule):
     def _get_prediction_for_masked_item(self, batch: Any, batch_idx: int) -> torch.Tensor:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target_mask = input_seq.eq(self.item_tokenizer.mask_token_id)
+
+        # XXX: another switch for the basket recommendation setting
+        if len(target_mask.size()) == 3:
+            target_mask = target_mask.max(dim=-1).values
 
         # get predictions for all seq steps
         prediction = self(batch, batch_idx)
@@ -187,41 +184,3 @@ class BERT4RecBaseModule(MetricsTrait, pl.LightningModule):
             ]
             return [optimizer], schedulers
         return [optimizer]
-
-
-class BERT4RecModule(BERT4RecBaseModule):
-    """
-    BERT4Rec module for the BERT4Rec model
-    """
-
-    @save_hyperparameters
-    def __init__(self,
-                 model: BERT4RecModel,
-                 item_tokenizer: Tokenizer,
-                 metrics: MetricsContainer,
-                 learning_rate: float = 0.001,
-                 beta_1: float = 0.99,
-                 beta_2: float = 0.998,
-                 weight_decay: float = 0.001,
-                 num_warmup_steps: int = 10000
-                 ):
-        super().__init__(model=model,
-                         item_tokenizer=item_tokenizer,
-                         metrics=metrics,
-                         learning_rate=learning_rate,
-                         beta_1=beta_1,
-                         beta_2=beta_2,
-                         weight_decay=weight_decay,
-                         num_warmup_steps=num_warmup_steps)
-
-    def _forward_internal(self, batch: Dict[str, torch.Tensor],
-                          batch_idx: int
-                          ) -> torch.Tensor:
-        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        position_ids = BERT4RecModule.get_position_ids(batch)
-
-        # calc the padding mask
-        padding_mask = get_padding_mask(sequence=input_seq, tokenizer=self.item_tokenizer)
-
-        # call the model
-        return self.model(input_seq, padding_mask=padding_mask, position_ids=position_ids)

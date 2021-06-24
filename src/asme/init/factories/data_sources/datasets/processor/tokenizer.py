@@ -4,7 +4,7 @@ from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.processors.tokenizer import TokenizerProcessor
 from asme.init.config import Config
 from asme.init.context import Context
-from asme.init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc, TOKENIZERS_PREFIX,\
+from asme.init.factories.features.tokenizer_factory import get_tokenizer_key_for_voc, TOKENIZERS_PREFIX,\
     ITEM_TOKENIZER_ID
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
@@ -34,7 +34,7 @@ class TokenizerProcessorFactory(ObjectFactory):
         tokenizers_map = {}
         for name, tokenizer in tokenizers.items():
             if name.startswith(TOKENIZERS_PREFIX):
-                keys_to_tokenize = name.replace(TOKENIZERS_PREFIX, "")
+                keys_to_tokenize = name.replace(TOKENIZERS_PREFIX + ".", "")
                 tokenizers_map[ITEM_SEQ_ENTRY_NAME if keys_to_tokenize == ITEM_TOKENIZER_ID else keys_to_tokenize] = tokenizer
 
         return TokenizerProcessor(tokenizers_map)

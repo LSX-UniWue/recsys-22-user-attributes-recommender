@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, List
+from typing import Any, List, Dict
 
 from data.datasets.sequence import ItemSessionParser
 from data.utils.csv import create_indexed_header, read_csv_header
@@ -20,16 +20,11 @@ class ItemSessionParserFactory(ObjectFactory):
         csv_file = Path(config.get('csv_file'))
         parser_config = config.get_config(['parser'])
         delimiter = parser_config.get_or_default('delimiter', '\t')
-        item_column_name = parser_config.get('item_column_name')
-        item_separator = parser_config.get('item_separator')
 
-        additional_features = parser_config.get_or_default('features', None)
+        features = context.get('features')
 
         header = create_indexed_header(read_csv_header(csv_file, delimiter=delimiter))
-        return ItemSessionParser(header, item_column_name,
-                                 additional_features=additional_features,
-                                 item_separator=item_separator,
-                                 delimiter=delimiter)
+        return ItemSessionParser(header, features, delimiter=delimiter)
 
     def is_required(self, context: Context) -> bool:
         return True

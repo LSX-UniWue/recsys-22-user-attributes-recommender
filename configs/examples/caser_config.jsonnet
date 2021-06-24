@@ -12,12 +12,9 @@ local metrics =  {
             path: "/tmp/experiments/caser"
         },
         sliding_window_data_sources: {
-            parser: {
-                item_column_name: "item_id"
-            },
             loader: {
                 batch_size: 9,
-                max_seq_length: max_seq_length,
+                num_workers: 0,
                 dynamic_padding: false
             },
             path: base_path + "ratio-0.8_0.1_0.1/",
@@ -52,8 +49,10 @@ local metrics =  {
             conv_activation_fn: "relu",
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "item_id",
+            sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",
