@@ -3,7 +3,6 @@ from typing import List, Union, Any, Dict
 from asme.init.config import Config
 from asme.init.context import Context
 from asme.init.factories.common.conditional_based_factory import ConditionalFactory
-from asme.init.factories.data_sources.data_sources import MaskDataSourcesFactory, DataSourcesFactory
 from asme.init.factories.util import check_config_keys_exist
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from data.datamodule.datamodule import AsmeDataModule
@@ -13,33 +12,38 @@ from data.datamodule.config import get_preprocessing_config_provider, AsmeDataMo
 class DataModuleFactory(ObjectFactory):
 
     CONFIG_KEY = "datamodule"
-    REQUIRED_CONFIG_KEYS = ["dataset", "data_sources", "preprocessing"]
+    REQUIRED_CONFIG_KEYS = ["dataset"]
 
     def __init__(self):
         super().__init__()
-        self._datasources_factory = DataSourcesFactory()
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
-        dependencies_result = self._datasources_factory.can_build(config.get_config(self._datasources_factory.config_path()), context)
-        if dependencies_result.type != CanBuildResultType.CAN_BUILD:
-            return dependencies_result
-
         if not check_config_keys_exist(config, self.REQUIRED_CONFIG_KEYS):
             return CanBuildResult(
                 CanBuildResultType.MISSING_CONFIGURATION,
                 f"Could not find all required keys ({self.REQUIRED_CONFIG_KEYS}) in config."
             )
 
+        return CanBuildResult(CanBuildResultType.CAN_BUILD)
+
     def build(self, config: Config, context: Context) -> AsmeDataModule:
-        self.can_build(config, context)
+        import data.datasets.config
         dataset_name = config.get("dataset")
         dataset_preprocessing_config_provider = get_preprocessing_config_provider(dataset_name)
         if dataset_preprocessing_config_provider is None:
-            raise KeyError(f"No dataset registered for key '{dataset_name}'.")
-        dataset_config = dataset_preprocessing_config_provider(**config.get_config(["preprocessing"]).config)
-        data_sources_config = config.get_config(["data_sources"])
-        cache_path = config.get_or_default("cache_path", None)
-        datamodule_config = AsmeDataModuleConfig(dataset_config, data_sources_config, cache_path)
+            print(f"No dataset registered for key '{dataset_name}'. No preprocessing will be applied.")
+            dataset_preprocessing_config = None
+        else:
+            preprocessing_config_values = {**config.get_config(["preprocessing"]).config} if config.has_path(["preprocessing"]) else {}
+            dataset_preprocessing_config = dataset_preprocessing_config_provider(**preprocessing_config_values)
+
+        if config.has_path("template") and config.has_path("data_sources"):
+            raise KeyError("Found both keys 'template' and 'data_sources'. Please specify exactly one.")
+
+        data_sources_config = config.get(["data_sources"]) if config.has_path("data_sources") else None
+        template_config = config.get_config(["template"]) if config.has_path("template") else None
+
+        datamodule_config = AsmeDataModuleConfig(dataset_name, template_config, data_sources_config, dataset_preprocessing_config)
         return AsmeDataModule(datamodule_config, context)
 
     def is_required(self, context: Context) -> bool:

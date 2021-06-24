@@ -30,9 +30,10 @@ class AsmeDataModuleConfig:
     Container for all information that is necessary for the AsmeDatamodule to be able to correctly preprocess and load
     a dataset.
     """
-    dataset_preprocessing_config: DatasetPreprocessingConfig
-    data_sources_config: Config
-    cache_path: Optional[str]
+    dataset: str
+    template: Optional[Config]
+    data_sources: Optional[Config]
+    dataset_preprocessing_config: Optional[DatasetPreprocessingConfig]
 
 
 class PreprocessingConfigProvider:

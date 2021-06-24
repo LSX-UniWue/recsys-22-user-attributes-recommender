@@ -1,5 +1,5 @@
 local raw_dataset_path = "../datasets/dataset/ml-1m/";
-local cached_dataset_path = "/tmp/ssd/";
+local cached_dataset_path = raw_dataset_path;
 local loo_path = cached_dataset_path + "loo/";
 local output_path = "../dataset/ml-1m/exp/";
 local max_seq_length = 200;
@@ -9,12 +9,18 @@ local metrics =  {
     ndcg: [1, 5, 10]
 };
 
-local file_prefix = 'ml-1m';
+local dataset = 'ml-1m';
 
 {
     datamodule: {
-        dataset: "ml-1m",
-        cache_path: "/tmp/ssd",
+        dataset: dataset,
+        template: {
+            name: "masked",
+            split: "leave_one_out",
+            path: raw_dataset_path,
+            file_prefix: dataset,
+            num_workers: 4
+        },
         preprocessing: {
             extraction_directory: "/tmp/ml-1m/",
             output_directory: raw_dataset_path,
@@ -26,7 +32,7 @@ local file_prefix = 'ml-1m';
         unified_output: {
             path: output_path
         },
-        mask_data_sources: {
+        /*mask_data_sources: {
             parser: {
                 item_column_name: "title"
             },
@@ -39,8 +45,9 @@ local file_prefix = 'ml-1m';
             split_type: 'leave_one_out',
             mask_probability: 0.2,
             mask_seed: 42
-        }
+        } */
     },
+
     module: {
         type: "bert4rec",
         metrics: {
@@ -48,22 +55,27 @@ local file_prefix = 'ml-1m';
                 metrics: metrics
             },
             sampled: {
-              sample_probability_file: loo_path + file_prefix + ".popularity.title.txt",
-                num_negative_samples: 100,
+                sample_probability_file: loo_path + "ml-1m.popularity.title.txt",
+                num_negative_samples: 2,
                 metrics: metrics
-            }
+            },
+            random_negative_sampled: {
+                num_negative_samples: 2,
+                metrics: metrics
+            },
         },
         model: {
             max_seq_length: max_seq_length,
             num_transformer_heads: 1,
             num_transformer_layers: 1,
-            transformer_hidden_size: 32,
-            transformer_dropout: 0.2,
-            project_layer_type: 'linear'
+            transformer_hidden_size: 2,
+            transformer_dropout: 0.1
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "title",
+            sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",
@@ -71,11 +83,12 @@ local file_prefix = 'ml-1m';
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: loo_path + file_prefix+".vocabulary.title.txt"
+                    file: loo_path + "ml-1m.vocabulary.title.txt"
                 }
             }
-        },
+        }
     },
+
     trainer: {
         loggers: {
             tensorboard: {}

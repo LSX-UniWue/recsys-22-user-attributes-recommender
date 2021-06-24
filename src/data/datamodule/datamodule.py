@@ -1,6 +1,6 @@
+import copy
 import os
-import shutil
-from dataclasses import dataclass
+
 from pathlib import Path
 from typing import Optional, Callable, List
 
@@ -8,7 +8,7 @@ import pytorch_lightning.core as pl
 from torch.utils.data import DataLoader
 
 from asme.init.context import Context
-from asme.init.factories.data_sources.data_sources import DataSourcesFactory
+from asme.init.factories.data_sources.data_sources import TemplateDataSourcesFactory
 from data.datamodule.config import AsmeDataModuleConfig
 from datasets.dataset_pre_processing.utils import download_dataset
 
@@ -21,7 +21,7 @@ class AsmeDataModule(pl.LightningDataModule):
         super().__init__()
         self.config = config
         self.context = context
-        self._datasource_factory = DataSourcesFactory()
+
         self._objects = {}
         self._has_setup = False
 
@@ -60,18 +60,16 @@ class AsmeDataModule(pl.LightningDataModule):
             # Write finished flag
             (ds_config.location / self.PREPROCESSING_FINISHED_FLAG).touch()
 
-        # We need to copy to cache since the tokenizers etc need the vocabularies to be there before setup is called.
-        if self.config.cache_path is not None:
-            self._copy_to_cache()
-
     def setup(self, stage: Optional[str] = None):
-        # Check whether we should copy the dataset to some cache location
-        if self.config.cache_path is not None:
-            print(f"Copying dataset to cache ({self.config.cache_path})")
-            self._copy_to_cache()
+        if len(msg := self._validate_config()) > 0:
+            raise KeyError(f"Invalid config due to: {msg}.")
 
-        loader_config = self.config.data_sources_config
-        self._objects = self._datasource_factory.build(loader_config, self.context)
+        if self.config.template is not None:
+            factory = TemplateDataSourcesFactory("name")
+            self._objects = factory.build(self.config.template, self.context)
+        else:
+            factory = None  # Handle explict case
+
         self._has_setup = True
 
     def train_dataloader(self) -> DataLoader:
@@ -91,9 +89,9 @@ class AsmeDataModule(pl.LightningDataModule):
     def _check_finished_flag(self, directory: Path) -> bool:
         return os.path.exists(directory / self.PREPROCESSING_FINISHED_FLAG)
 
-    def _copy_to_cache(self):
-        # Empty cache
-        if os.path.exists(self.config.cache_path):
-            shutil.rmtree(self.config.cache_path)
-        # Copy dataset to cache
-        shutil.copytree(self.config.dataset_preprocessing_config.location, self.config.cache_path)
+    def _validate_config(self) -> List[str]:
+        errors = []
+        if self.config.template is not None and self.config.data_sources is not None:
+            errors.append("Please specify one of 'template' or 'data_sources'")
+
+        return errors

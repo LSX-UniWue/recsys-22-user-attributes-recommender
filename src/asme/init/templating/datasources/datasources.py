@@ -3,12 +3,10 @@ from enum import Enum
 from typing import Dict, Any, List
 from pathlib import Path
 
-from asme.init.factories.data_sources.datamodule import DataModuleFactory
 from asme.init.templating import TEMPLATES_CONFIG_KEY
 from asme.init.templating.template_processor import TemplateProcessor
 
 
-CONFIG_DATAMODULE_KEY = DataModuleFactory.CONFIG_KEY
 CONFIG_DATASOURCES_KEY = 'data_sources'
 
 TARGET_EXTRACTOR_PROCESSOR_CONFIG = {
@@ -49,8 +47,6 @@ class DataSourceTemplateProcessor(TemplateProcessor):
 
         template_config = config.get(TEMPLATES_CONFIG_KEY)
         template_present = self._get_template_key() in template_config
-        if CONFIG_DATASOURCES_KEY in template_config and template_present:
-            raise KeyError('data_sources already specified. Can not apply template.')
 
         return template_present
 
@@ -66,7 +62,7 @@ class DataSourceTemplateProcessor(TemplateProcessor):
         validation_config = self._build_validation_datasource(data)
         test_config = self._build_test_datasource(data)
 
-        config[CONFIG_DATAMODULE_KEY][CONFIG_DATASOURCES_KEY] = {
+        config[CONFIG_DATASOURCES_KEY] = {
             Stage.TRAIN.value: train_config,
             Stage.VALIDATION.value: validation_config,
             Stage.TEST.value: test_config
