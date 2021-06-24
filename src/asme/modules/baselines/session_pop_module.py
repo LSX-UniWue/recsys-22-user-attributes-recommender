@@ -17,9 +17,9 @@ class SessionPopModule(MetricsTrait, pl.LightningModule):
 
     def __init__(self,
                  item_tokenizer: Tokenizer,
-                 metrics: MetricsContainer):
-
-        super(SessionPopModule, self).__init__()
+                 metrics: MetricsContainer
+                 ):
+        super().__init__()
         self.item_vocab_size = len(item_tokenizer)
         self.tokenizer = item_tokenizer
         self.metrics = metrics
@@ -33,7 +33,9 @@ class SessionPopModule(MetricsTrait, pl.LightningModule):
     def get_metrics(self) -> MetricsContainer:
         return self.metrics
 
-    def forward(self, input_seq: torch.tensor):
+    def forward(self,
+                input_seq: torch.Tensor
+                ) -> torch.Tensor:
         batch_size = input_seq.shape[0]
         padding_mask = get_padding_mask(input_seq, self.tokenizer)
         masked = input_seq * padding_mask
@@ -47,26 +49,44 @@ class SessionPopModule(MetricsTrait, pl.LightningModule):
             predictions[i, most_frequent] = 1
         return predictions
 
-    def training_step(self, batch: Dict[str, torch.tensor], batch_idx):
-        # Since we simply predict the most frequent item of each session, we do not need to train at all
-        return {'loss': torch.tensor(0., device=self.device)}
+    def training_step(self,
+                      batch: Dict[str, torch.Tensor],
+                      batch_idx
+                      ) -> Dict[str, float]:
+        # since we simply predict the most frequent item of each session, we do not need to train at all
+        return {
+            'loss': 0.0
+        }
 
-    def eval_step(self, batch: Dict[str, torch.tensor], batch_idx):
+    def eval_step(self,
+                  batch: Dict[str, torch.Tensor],
+                  batch_idx: int
+                  ) -> Dict[str, torch.Tensor]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
         prediction = self.forward(input_seq)
 
         return build_eval_step_return_dict(input_seq, prediction, targets)
 
-    def validation_step(self, batch: Dict[str, torch.tensor], batch_idx):
+    def validation_step(self,
+                        batch: Dict[str, torch.Tensor],
+                        batch_idx: int
+                        ) -> Dict[str, torch.Tensor]:
         return self.eval_step(batch, batch_idx)
 
-    def test_step(self, batch: Dict[str, torch.tensor], batch_idx):
+    def test_step(self,
+                  batch: Dict[str, torch.Tensor],
+                  batch_idx: int):
         return self.eval_step(batch, batch_idx)
 
     # Do nothing on backward since we only count occurrences
-    def backward(self, loss: torch.Tensor, optimizer: torch.optim.Optimizer, optimizer_idx: int, *args,
-                 **kwargs) -> None:
+    def backward(self,
+                 loss: torch.Tensor,
+                 optimizer: torch.optim.Optimizer,
+                 optimizer_idx: int,
+                 *args,
+                 **kwargs
+                 ) -> None:
         pass
 
     def configure_optimizers(self):

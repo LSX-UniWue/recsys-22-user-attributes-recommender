@@ -12,25 +12,12 @@ local metrics =  {
             path: "../experiments/bert4rec"
         },
         mask_data_sources: {
-            parser: {
-                item_column_name: "item_id"
-            },
             loader: {
-                batch_size: 9,
-                max_seq_length: max_seq_length,
+                batch_size: 9
             },
             path: base_path,
             file_prefix: prefix,
             mask_probability: 0.1,
-            mask_seed: {
-                hyper_opt: {
-                    suggest: "int",
-                    params: {
-                       low: 0,
-                       high: 21312313
-                    }
-                }
-            },
             split_type: 'leave_one_out'
         }
     },
@@ -105,8 +92,10 @@ local metrics =  {
             }
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "item_id",
+            sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",

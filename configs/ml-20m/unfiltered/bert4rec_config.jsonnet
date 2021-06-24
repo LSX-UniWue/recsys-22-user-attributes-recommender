@@ -1,4 +1,5 @@
 local base_path = "/ssd/ml-20m/";
+local output_path = "/scratch/jane-doe-framework/experiments/ml-20m/bert4rec_new0.1";
 local max_seq_length = 200;
 local metrics =  {
     mrr: [1, 5, 10],
@@ -11,15 +12,11 @@ local file_prefix = 'ml-20m';
 {
     templates: {
         unified_output: {
-            path: "/scratch/jane-doe-framework/experiments/ml-20m/bert4rec_new0.1"
+            path: output_path
         },
         mask_data_sources: {
-            parser: {
-                item_column_name: "title"
-            },
             loader: {
-                batch_size: 64,
-                max_seq_length: max_seq_length
+                batch_size: 64
             },
             path: base_path,
             file_prefix: file_prefix,
@@ -48,8 +45,10 @@ local file_prefix = 'ml-20m';
             transformer_dropout: 0.1
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "title",
+            sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",

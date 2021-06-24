@@ -16,12 +16,8 @@ local file_prefix = 'preprocessed-games';
             path: output_path
         },
         pos_neg_data_sources: {
-            parser: {
-                item_column_name: "product_id"
-            },
             loader: {
                 batch_size: 64,
-                max_seq_length: max_seq_length,
                 num_workers: 4
             },
             path: base_path,
@@ -49,8 +45,10 @@ local file_prefix = 'preprocessed-games';
             transformer_dropout: 0.2
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "product_id",
+            sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",

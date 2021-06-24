@@ -1,38 +1,17 @@
 import torch
+from asme.losses.losses import SequenceRecommenderContrastiveLoss, DEFAULT_REDUCTION
 from pytorch_lightning.metrics.utils import reduce
-from torch import nn
-
-DEFAULT_REDUCTION = 'elementwise_mean'
 
 
-class SASRecBinaryCrossEntropyLoss(nn.Module):
+class SASRecBinaryCrossEntropyLoss(SequenceRecommenderContrastiveLoss):
     """
     The adapted binary cross entropy loss from the SASRec paper
     """
-
-    def __init__(self, reduction: str = DEFAULT_REDUCTION):
-        """
-        inits the binary cross entropy loss of the SASRec paper
-        :param reduction: the reduction to use
-        """
-        super().__init__()
-        self.reduction = reduction
 
     def forward(self,
                 pos_input: torch.Tensor,
                 neg_input: torch.Tensor,
                 mask: torch.Tensor):
-        """
-        calculates the adapted binary cross entropy of the given positive and negative logits
-        :param pos_input: the positive logits :math `(N, S)`
-        :param neg_input: the negative logits :math `(N, S)`
-        :param mask: the mask to apply (e.g. for padding) :math `(N, S)`
-        true if the position i should be considered for the loss
-        :return: the sas rec binary cross entropy
-
-        where N is batch size and S the max sequence length
-        """
-
         return sas_rec_binary_cross_entropy(pos_input, neg_input, mask, self.reduction)
 
 

@@ -1,9 +1,11 @@
 from typing import List
 
+from asme.init.factories.data_sources.datasets.processor.last_item_mask import get_all_tokenizers_from_context, \
+    get_sequence_feature_names
 from data.datasets.processors.cloze_mask import ClozeMaskProcessor
 from asme.init.config import Config
 from asme.init.context import Context
-from asme.init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc, ITEM_TOKENIZER_ID
+from asme.init.factories.features.tokenizer_factory import get_tokenizer_key_for_voc, ITEM_TOKENIZER_ID
 from asme.init.factories.util import check_config_keys_exist
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
@@ -32,11 +34,12 @@ class ClozeProcessorFactory(ObjectFactory):
               context: Context
               ) -> ClozeMaskProcessor:
 
-        tokenizers = context.as_dict()
+        tokenizers = get_all_tokenizers_from_context(context)
 
         mask_probability = config.get('mask_probability')
         only_last_item_mask_prob = config.get('only_last_item_mask_prob')
-        masking_targets = config.get("masking_targets")
+
+        masking_targets = get_sequence_feature_names(config, context)
 
         return ClozeMaskProcessor(tokenizers, mask_probability, only_last_item_mask_prob, masking_targets)
 

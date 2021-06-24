@@ -37,7 +37,6 @@ item space, that does not occur in the session or is the successor.
             },
             {
                 type: 'pos_neg',
-                'seed': 42
             }
         ]
     }
@@ -72,8 +71,7 @@ It can be triggered by adding the following element instead of
         path: "/path",
         train_file_prefix: "train"
         validation_file_prefix: "train",
-        test_file_prefix: "train",
-        seed: 42
+        test_file_prefix: "train"
     },
 
 By default, the template configures the framework to
@@ -85,5 +83,3 @@ The following config parameters are available:
 -  ``batch_size``: the batch size to use, if you want to override this
    for training, validation or test your model, add a
    ``{train,validation,test}_batch_size`` element to the element
--  ``seed``: the seed used to generate negative samples
-

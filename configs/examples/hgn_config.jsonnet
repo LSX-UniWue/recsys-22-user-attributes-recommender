@@ -14,16 +14,12 @@ local num_successive_items = 3;
             path: "/tmp/experiments/hgn"
         },
         pos_neg_data_sources: {
-            parser: {
-                item_column_name: "item_id"
-            },
             loader: {
                 batch_size: 9,
-                max_seq_length: max_seq_length
+                num_workers: 0
             },
             path: base_path + "ratio-0.8_0.1_0.1/",
-            file_prefix: "example",
-            seed: 123456
+            file_prefix: "example"
         }
     },
     module: {
@@ -48,8 +44,10 @@ local num_successive_items = 3;
             num_successive_items: num_successive_items
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "item_id",
+            sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",

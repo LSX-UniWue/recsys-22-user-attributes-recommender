@@ -15,12 +15,8 @@ local file_prefix = 'ml-1m';
             path: output_path
         },
         next_sequence_step_data_sources: {
-            parser: {
-                item_column_name: "title"
-            },
             loader: {
                 batch_size: 128,
-                max_seq_length: max_seq_length,
                 num_workers: 4
             },
             path: base_path,
@@ -48,8 +44,10 @@ local file_prefix = 'ml-1m';
             dropout: 0.2
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "title",
+            sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",

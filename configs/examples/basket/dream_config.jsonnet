@@ -11,18 +11,11 @@ local metrics =  {
             path: "/tmp/experiments/dream_basket"
         },
         pos_neg_data_sources: {
-            parser: {
-                item_column_name: "item_id",
-                item_separator: ' + '
-            },
             loader: {
-                batch_size: 9,
-                max_seq_length: max_seq_length,
-                max_seq_step_length: 5
+                batch_size: 9
             },
             file_prefix: "example",
-            path: base_path + "ratio_split/",
-            seed: 42
+            path: base_path + "ratio-0.8_0.1_0.1/"
         }
     },
     module: {
@@ -50,20 +43,25 @@ local metrics =  {
             embedding_pooling_type: 'mean'
         }
     },
-    tokenizers: {
-            item: {
-                tokenizer: {
-                    special_tokens: {
-                        pad_token: "<PAD>",
-                        mask_token: "<MASK>",
-                        unk_token: "<UNK>"
-                    },
-                    vocabulary: {
-                        file: base_path + "example.vocabulary.item_id.txt"
-                    }
+    features: {
+        item: {
+            column_name: "item_id",
+            type: "strlist",
+            delimiter: ' + ',
+            sequence_length: max_seq_length,
+            max_sequence_step_length: 5,
+            tokenizer: {
+                special_tokens: {
+                    pad_token: "<PAD>",
+                    mask_token: "<MASK>",
+                    unk_token: "<UNK>"
+                },
+                vocabulary: {
+                    file: base_path + "example.vocabulary.item_id.txt"
                 }
             }
-        },
+        }
+    },
     trainer: {
         loggers: {
             tensorboard: {}

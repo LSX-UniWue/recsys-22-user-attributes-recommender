@@ -1,11 +1,17 @@
-import torch
-from torch import nn
+from typing import List
 
-from asme.models.layers.layers import ItemEmbedding
+from asme.models.basket.nnrec.components import NNRecSequenceRepresentationComponent
+from asme.models.common.components.representations.sequence_elements_embedding_user import \
+    SequenceElementsEmbeddingWithUserEmbeddingComponent
+from asme.models.common.layers.sequence_embedding import SequenceElementsEmbeddingLayer
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
+from data.datasets import USER_ENTRY_NAME
+
+from asme.models.common.layers.layers import LinearProjectionLayer, IdentitySequenceRepresentationModifierLayer
 from asme.utils.hyperparameter_utils import save_hyperparameters
 
 
-class NNRecModel(nn.Module):
+class NNRecModel(SequenceRecommenderModel):
 
     """
     NNRec implementation from the paper "Next Basket Recommendation with Neural Networks"
@@ -23,43 +29,19 @@ class NNRecModel(nn.Module):
                  max_sequence_length: int,  # k, number of last baskets in the paper
                  embedding_pooling_type: str
                  ):
-        super().__init__()
+        item_embedding_layer = SequenceElementsEmbeddingLayer(item_vocab_size, item_embedding_size,
+                                                              embedding_pooling_type=embedding_pooling_type)
 
-        self.item_embedding = ItemEmbedding(item_vocab_size, item_embedding_size,
-                                            embedding_pooling_type=embedding_pooling_type)
-
-        # if we have no user the embedding can be ignored
-        self.user_embedding_size = user_embedding_size
-        if user_embedding_size > 0:
-            self.user_embedding = nn.Embedding(user_vocab_size, user_embedding_size)
+        seq_elements_embedding = SequenceElementsEmbeddingWithUserEmbeddingComponent(user_vocab_size,
+                                                                                     user_embedding_size,
+                                                                                     item_embedding_layer)
 
         # layer 1 in the paper
-        self.hidden_layer = nn.Linear(max_sequence_length * item_embedding_size + user_embedding_size, hidden_size)
-        self.act1 = nn.Tanh()
+        seq_rep_layer = NNRecSequenceRepresentationComponent(max_sequence_length * item_embedding_size + user_embedding_size, hidden_size)
 
-        self.projection_layer = nn.Linear(hidden_size, item_vocab_size)  # layer 2 in the paper
+        projection_layer = LinearProjectionLayer(hidden_size, item_vocab_size)  # layer 2 in the paper
+        super().__init__(seq_elements_embedding, seq_rep_layer, IdentitySequenceRepresentationModifierLayer(),
+                         projection_layer)
 
-    def forward(self,
-                input_sequence: torch.Tensor,
-                user: torch.Tensor = None
-                ) -> torch.Tensor:
-        """
-        performs a forward path
-        :param input_sequence: input sequence :math`(N, S)`
-        :param user: the user id :math`(N)`
-        :return: the logits for each item :math`(N, I)`
-        """
-
-        embedded_items = self.item_embedding(input_sequence)
-        batch_size = embedded_items.size()[0]
-        embedded_items = embedded_items.view(batch_size, -1)
-
-        if user is not None:
-            embedded_user = self.user_embedding(user)
-            overall_representation = torch.cat([embedded_user, embedded_items])
-        else:
-            overall_representation = embedded_items
-
-        first_hidden = self.act1(self.hidden_layer(overall_representation))
-
-        return self.projection_layer(first_hidden)
+    def optional_metadata_keys(self) -> List[str]:
+        return [USER_ENTRY_NAME]

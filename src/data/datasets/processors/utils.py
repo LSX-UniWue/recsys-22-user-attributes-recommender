@@ -1,7 +1,7 @@
 from typing import Dict, Union, List
 
 import torch
-from asme.init.factories.tokenizer.tokenizer_factory import ITEM_TOKENIZER_ID, get_tokenizer_key_for_voc
+from asme.init.factories.features.tokenizer_factory import ITEM_TOKENIZER_ID, get_tokenizer_key_for_voc
 from asme.tokenization.tokenizer import Tokenizer
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 

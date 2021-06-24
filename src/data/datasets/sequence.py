@@ -1,13 +1,19 @@
 import datetime
 import functools
 import io
-from typing import Dict, List, Any, Callable, Union
+import random
+from typing import Dict, List, Any, Callable, Optional
 import csv
+
+from dataclasses import dataclass, field
+
+from asme.tokenization.tokenizer import Tokenizer
 from torch.utils.data import Dataset
 
 from data.base.reader import CsvDatasetReader
-from data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS
+from data.datasets import SAMPLE_IDS
 from data.datasets.processors.processor import Processor
+from data.example_logging import ExampleLogger, Example
 from data.multi_processing import MultiProcessSupport
 
 
@@ -32,10 +38,26 @@ def _identity(text: str
     return text
 
 
+@dataclass
+class MetaInformation:
+
+    feature_name: str
+    type: str
+    tokenizer: Optional[Tokenizer] = None
+    is_sequence: bool = True
+    sequence_length: Optional[int] = None
+    is_generated: bool = False  # True iff the feature will be generated based on other features
+    column_name: Optional[str] = None
+    configs: Dict[str, Any] = field(default_factory=dict)
+
+    def get_config(self, config_key: str) -> Optional[Any]:
+        return self.configs.get(config_key, None)
+
+
 # TODO: move to provider utils?
-def _build_converter(converter_info: Dict[str, Any]
+def _build_converter(info: MetaInformation
                      ) -> Callable[[str], Any]:
-    feature_type = converter_info['type']
+    feature_type = info.type
     if feature_type == 'int':
         return int
 
@@ -46,13 +68,13 @@ def _build_converter(converter_info: Dict[str, Any]
         return _parse_boolean
 
     if feature_type == 'timestamp':
-        return functools.partial(_parse_timestamp, date_format=converter_info['format'])
+        return functools.partial(_parse_timestamp, date_format=info.get_config('format'))
 
     # FIXME: replace with a generic list convert that also converts the entries in the list
     if feature_type == 'strlist':
-        return functools.partial(_parse_strlist, delimiter=converter_info['delimiter'])
+        return functools.partial(_parse_strlist, delimiter=info.get_config('delimiter'))
 
-    raise KeyError(f'{feature_type} not supported. Currently only bool, timestamp and int are supported.'
+    raise KeyError(f'{feature_type} not supported. Currently only bool, timestamp and int are supported. '
                    f'See documentation for more details')
 
 
@@ -65,64 +87,42 @@ class ItemSessionParser(SequenceParser):
 
     def __init__(self,
                  indexed_headers: Dict[str, int],
-                 item_header_name: str,
-                 additional_features: Dict[str, Dict[str, Any]] = None,
-                 item_separator: str = None,
+                 features: List[MetaInformation],
                  delimiter: str = "\t"
                  ):
         super().__init__()
         self._indexed_headers = indexed_headers
-        self._item_header_name = item_header_name
-
-        if additional_features is None:
-            additional_features = {}
-        self._additional_features = additional_features
-
-        self._item_separator = item_separator
-
+        self._features = features
         self._delimiter = delimiter
 
     def parse(self,
               raw_session: str
               ) -> Dict[str, Any]:
-        reader = csv.reader(io.StringIO(raw_session),
-                            delimiter=self._delimiter)
-
+        reader = csv.reader(io.StringIO(raw_session), delimiter=self._delimiter)
         entries = list(reader)
-        items = [self._get_item(entry) for entry in entries]
-        parsed_sequence = {
-            ITEM_SEQ_ENTRY_NAME: items
-        }
-
-        for feature_key, info in self._additional_features.items():
-            feature_sequence = info.get('sequence', False)
-            feature_column_name = info.get("column_name", feature_key)
+        parsed_data = {}
+        for meta_info in self._features:
+            feature_sequence = meta_info.is_sequence
+            name = meta_info.column_name
+            feature_key = meta_info.feature_name
+            feature_column_name = name if name else feature_key
             # if feature changes over the sequence parse it over all entries, else extract it form the first entry
             if feature_sequence:
-                feature = [self._get_feature(entry, feature_column_name, info) for entry in entries]
+                feature = [self._get_feature(entry, feature_column_name, meta_info) for entry in entries]
             else:
-                feature = self._get_feature(entries[0], feature_column_name, info)
-            parsed_sequence[feature_key] = feature
+                feature = self._get_feature(entries[0], feature_column_name, meta_info)
+            parsed_data[feature_key] = feature
 
-        return parsed_sequence
+        return parsed_data
 
     def _get_feature(self,
                      entry: List[str],
                      feature_key: str,
-                     info: Dict[str, Any]
+                     info: MetaInformation
                      ) -> Any:
         converter = _build_converter(info)
         feature_idx = self._indexed_headers[feature_key]
         return converter(entry[feature_idx])
-
-    def _get_item(self,
-                  entry: List[str]
-                  ) -> Union[str, List[str]]:
-        item_column_idx = self._indexed_headers[self._item_header_name]
-        entry = entry[item_column_idx]
-        if self._item_separator is None:
-            return entry
-        return entry.split(self._item_separator)
 
 
 class PlainSequenceDataset(Dataset, MultiProcessSupport):
@@ -156,7 +156,7 @@ class PlainSequenceDataset(Dataset, MultiProcessSupport):
         pass
 
 
-class ItemSequenceDataset(Dataset, MultiProcessSupport):
+class ItemSequenceDataset(Dataset, MultiProcessSupport, ExampleLogger):
 
     def __init__(self,
                  plain_sequence_dataset: PlainSequenceDataset,
@@ -172,13 +172,31 @@ class ItemSequenceDataset(Dataset, MultiProcessSupport):
         return len(self._plain_sequence_dataset)
 
     def __getitem__(self, idx):
-        parsed_sequence = self._plain_sequence_dataset[idx]
+        example = self._get_example(idx)
+        return example.processed_data
 
+    def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
+        # nothing to do here
+        pass
+
+    def _get_raw_sequence(self, idx: int) -> Dict[str, Any]:
+        return self._plain_sequence_dataset[idx]
+
+    def _process_sequence(self,
+                          parsed_sequence: Dict[str, Any]
+                          ) -> Dict[str, Any]:
         for processor in self._processors:
             parsed_sequence = processor.process(parsed_sequence)
 
         return parsed_sequence
 
-    def _init_class_for_worker(self, worker_id: int, num_worker: int, seed: int):
-        # nothing to do here
-        pass
+    def _get_example(self, idx: int) -> Example:
+        sequence_data = self._get_raw_sequence(idx)
+        processed_data = self._process_sequence(sequence_data.copy())
+
+        return Example(sequence_data, processed_data)
+
+    def get_data_examples(self, num_examples: int = 1) -> List[Example]:
+        return [
+            self._get_example(example_id) for example_id in random.sample(range(0, len(self)), num_examples)
+        ]

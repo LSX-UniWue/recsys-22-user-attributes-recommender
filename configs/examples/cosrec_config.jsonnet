@@ -1,5 +1,5 @@
 local base_path = "../tests/example_dataset/";
-local max_seq_length = 5;
+local max_seq_length = 10;
 local metrics =  {
     mrr: [1, 3, 5],
     recall: [1, 3, 5],
@@ -11,16 +11,14 @@ local metrics =  {
             path: "/tmp/experiments/cosrec"
         },
         par_pos_neg_data_sources: {
-            parser: {
-                item_column_name: "item_id"
-            },
             loader: {
                 batch_size: 9,
-                max_seq_length: max_seq_length
+                num_workers: 0
             },
             path: base_path + "ratio-0.8_0.1_0.1/",
             file_prefix: "example",
-            seed: 123456
+            seed: 123456,
+            t: 1
         }
     },
     module: {
@@ -43,18 +41,19 @@ local metrics =  {
         },
         model: {
             user_vocab_size: 0,
-            max_seq_length: 5,
+            max_seq_length: max_seq_length,
             embed_dim: 50,
-            block_num: 2,
-            block_dim: [128, 256],
+            block_num: 1,
+            block_dim: [128],
             fc_dim: 150,
             activation_function: 'relu',
-            dropout: 0.5,
-
+            dropout: 0.5
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "item_id",
+            sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",

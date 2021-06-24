@@ -6,20 +6,17 @@ local metrics =  {
     f1: [1, 3, 5]
 };
 {
-    output_directory: "/tmp/experiments/narm_basket",
-    next_sequence_step_data_sources: {
-        parser: {
-            item_column_name: "item_id",
-            item_separator: ' + '
+    templates: {
+        unified_output: {
+                path: "/tmp/experiments/narm_basket"
         },
-        loader: {
-            batch_size: 9,
-            max_seq_length: max_seq_length,
-            max_seq_step_length: 5
-        },
-        path: base_path,
-        validation_file_prefix: "train",
-        test_file_prefix: "train"
+        next_sequence_step_data_sources: {
+            loader: {
+                batch_size: 9
+            },
+            path: base_path + "ratio-0.8_0.1_0.1/",
+            file_prefix: "example"
+        }
     },
     module: {
         type: "narm",
@@ -28,12 +25,12 @@ local metrics =  {
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + "popularity.txt",
+                sample_probability_file: base_path + "example.popularity.item_id.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             },
             fixed: {
-                item_file: base_path + "relevant_items.txt",
+                item_file: base_path + "example.relevant_items.item_id.txt",
                 metrics: metrics
             }
         },
@@ -47,8 +44,13 @@ local metrics =  {
             embedding_pooling_type: 'mean'
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "item_id",
+            type: "strlist",
+            delimiter: " + ",
+            sequence_length: max_seq_length,
+            max_sequence_step_length: 5,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",
@@ -56,7 +58,7 @@ local metrics =  {
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "vocab.txt"
+                    file: base_path + "example.vocabulary.item_id.txt"
                 }
             }
         }
