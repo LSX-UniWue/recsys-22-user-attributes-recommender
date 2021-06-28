@@ -173,6 +173,30 @@ class PositiveNegativeTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory)
         return self._build_datasource(loader_config, context)
 
 
+class PlainTrainingTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
+
+    DATASET_BUILDER_TRAINING = [SequenceDatasetRatioSplitBuilder()]
+    DATASET_BUILDERS_VALIDATION_AND_TEST = [NextPositionDatasetBuilder()]
+
+    def _build_train_datasource(self, config: Config, context: Context) -> DataLoader:
+        loader_config = build_default_loader_config(config, Stage.TRAIN, self.DATASET_BUILDER_TRAINING)
+        return self._build_datasource(loader_config, context)
+
+    def _build_validation_datasource(self, config: Config, context: Context) -> DataLoader:
+        loader_config = build_default_loader_config(config,
+                                                    Stage.VALIDATION,
+                                                    self.DATASET_BUILDERS_VALIDATION_AND_TEST,
+                                                    [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+        return self._build_datasource(loader_config, context)
+
+    def _build_test_datasource(self, config: Config, context: Context) -> DataLoader:
+        loader_config = build_default_loader_config(config,
+                                                    Stage.TEST,
+                                                    self.DATASET_BUILDERS_VALIDATION_AND_TEST,
+                                                    [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+        return self._build_datasource(loader_config, context)
+
+
 def build_dataset_config(dataset_builders: List[DatasetBuilder], config: Config, stage: Stage, additional_processors: List[Dict[str, Any]] = None) -> Dict[str, Any]:
 
     if additional_processors is None:
