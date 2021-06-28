@@ -6,7 +6,7 @@ import torch
 import typer
 import optuna
 import json
-
+import logging as python_logging
 from tempfile import NamedTemporaryFile
 from pathlib import Path
 from typing import Optional, Callable, List, Iterator, Tuple
@@ -39,6 +39,11 @@ _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at leas
                                                     " the study name and study storage to infer the config and " \
                                                     "checkpoint path"
 
+# FIXME for now we use an environment variable to configure log level, later we can switch to a cli flag.
+if "LOG_LEVEL" in os.environ:
+    logging.config_logging(int(os.environ["LOG_LEVEL"]))
+else:
+    logging.config_logging(python_logging.INFO)
 
 logger = logging.get_logger(__name__)
 app = typer.Typer()

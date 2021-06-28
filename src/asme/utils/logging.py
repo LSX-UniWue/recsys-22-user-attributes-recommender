@@ -5,11 +5,13 @@ from typing import Optional
 
 _lock = threading.Lock()
 _default_handler: Optional[logging.Handler] = None
+_root_logger: Optional[logging.Logger] = None
 
 
-def _config_logging():
+def config_logging(level: int = logging.INFO):
 
     global _default_handler
+    global _root_logger
 
     with _lock:
         if _default_handler:
@@ -21,8 +23,10 @@ def _config_logging():
         # Apply our default configuration to the library root logger.
         library_root_logger = _get_asme_root_logger()
         library_root_logger.addHandler(_default_handler)
-        library_root_logger.setLevel(logging.INFO)
+        library_root_logger.setLevel(level)
         library_root_logger.propagate = False
+
+        _root_logger = library_root_logger
 
 
 def _get_asme_root_logger() -> logging.Logger:
@@ -33,10 +37,21 @@ def _get_lib_name() -> str:
     return __name__.split(".")[0]
 
 
+def get_root_logger() -> logging.Logger:
+    """
+    Returns the root logger.
+
+    :return: the root logger.
+    """
+    return get_logger()
+
+
 def get_logger(name: Optional[str] = None) -> logging.Logger:
     """
-    Return a logger with the specified name.
+    Returns a logger derived from the root logger with the specified name.
+    If no name is supplied the root logger is returned.
     """
+    if name is None:
+        return _root_logger
 
-    _config_logging()
-    return logging.getLogger(name)
+    return _root_logger.getChild(name)
