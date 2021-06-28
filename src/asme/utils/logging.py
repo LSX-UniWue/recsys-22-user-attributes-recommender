@@ -1,3 +1,4 @@
+import os
 import logging
 import sys
 import threading
@@ -8,10 +9,16 @@ _default_handler: Optional[logging.Handler] = None
 _root_logger: Optional[logging.Logger] = None
 
 
-def config_logging(level: int = logging.INFO):
+def config_logging():
 
     global _default_handler
     global _root_logger
+
+    # FIXME for now we use an environment variable to configure log level, later we can switch to a cli flag?
+    if "LOG_LEVEL" in os.environ:
+        level = int(os.environ["LOG_LEVEL"])
+    else:
+        level = logging.INFO
 
     with _lock:
         if _default_handler:
@@ -51,6 +58,9 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
     Returns a logger derived from the root logger with the specified name.
     If no name is supplied the root logger is returned.
     """
+    if _root_logger is None:
+        config_logging()
+
     if name is None:
         return _root_logger
 
