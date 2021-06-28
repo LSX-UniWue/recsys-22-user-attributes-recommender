@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from pathlib import Path
 from typing import Any, List, Union, Dict
 
 from torch.utils.data import DataLoader
@@ -7,12 +6,14 @@ from torch.utils.data import DataLoader
 from asme.init.config import Config
 from asme.init.context import Context
 from asme.init.factories.common.conditional_based_factory import ConditionalFactory
+from asme.init.factories.data_sources.datasets.processor.processors import FIXED_SEQUENCE_LENGTH_PROCESSOR_KEY
 from asme.init.factories.data_sources.loader import LoaderFactory
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.init.templating.datasources.datasources import Stage, DatasetSplit, DatasetBuilder, \
     SequenceDatasetRatioSplitBuilder, LeaveOneOutSessionDatasetBuilder, _transfer_properties, \
     NextPositionDatasetBuilder, TARGET_EXTRACTOR_PROCESSOR_CONFIG, LeaveOneOutNextPositionDatasetBuilder, \
-    ConditionalSequenceOrSequencePositionDatasetBuilder, POS_NEG_PROCESSOR_CONFIG
+    ConditionalSequenceOrSequencePositionDatasetBuilder, POS_NEG_PROCESSOR_CONFIG, NextPositionWindowDatasetBuilder, \
+    LeaveOneOutSequenceWindowDatasetBuilder
 
 
 class TemplateDataSourcesFactory(ObjectFactory):
@@ -25,7 +26,8 @@ class TemplateDataSourcesFactory(ObjectFactory):
             "pos_neg": PositiveNegativeTemplateDataSourcesFactory(),
             "next_sequence_step": NextSequenceStepTemplateDataSourcesFactory(),
             "par_pos_neg": ParameterizedPositiveNegativeTemplateDataSourcesFactory(),
-            "plain": PlainTrainingTemplateDataSourcesFactory()
+            "plain": PlainTrainingTemplateDataSourcesFactory(),
+            "sliding_window": SlidingWindowTemplateDataSourcesFactory()
         })
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
@@ -230,6 +232,65 @@ class ParameterizedPositiveNegativeTemplateDataSourcesFactory(BaseTemplateDataSo
                                                     self.TEST_VALID_DATASET_BUILDERS,
                                                     [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
         return self._build_datasource(loader_config, context)
+
+
+class SlidingWindowTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
+    TARGET_INTERACTION_CONFIG_KEY = 'number_target_interactions'
+    WINDOW_CONFIG_KEY = 'window_size'
+
+    TRAIN_DATASET_BUILDERS = [SequenceDatasetRatioSplitBuilder(), LeaveOneOutSessionDatasetBuilder()]
+    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
+
+    def _build_train_datasource(self, config: Config, context: Context) -> DataLoader:
+        window_size = config.get(self.WINDOW_CONFIG_KEY)
+        number_target_interactions = config.get_or_default(self.TARGET_INTERACTION_CONFIG_KEY, 1)
+        sequence_length = window_size + number_target_interactions
+
+        fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(sequence_length)
+
+        par_pos_neg_sampler_processor = {
+            'type': "par_pos_neg",
+            't': number_target_interactions
+        }
+
+        builders = [NextPositionWindowDatasetBuilder(sequence_length),
+                    LeaveOneOutSequenceWindowDatasetBuilder(sequence_length)]
+
+        processors = [fixed_sequence_length_processor, par_pos_neg_sampler_processor]
+
+        loader_config = build_default_loader_config(config, Stage.TRAIN, builders, processors)
+        return self._build_datasource(loader_config, context)
+
+    def _build_validation_datasource(self, config: Config, context: Context) -> DataLoader:
+        window_size = config.get(self.WINDOW_CONFIG_KEY)
+        number_target_interactions = config.get_or_default(self.TARGET_INTERACTION_CONFIG_KEY, 1)
+        sequence_length = window_size + number_target_interactions
+
+        fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(sequence_length)
+        loader_config = build_default_loader_config(config,
+                                                    Stage.VALIDATION,
+                                                    self.TEST_VALID_DATASET_BUILDERS,
+                                                    [fixed_sequence_length_processor, TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+        return self._build_datasource(loader_config, context)
+
+    def _build_test_datasource(self, config: Config, context: Context) -> DataLoader:
+        window_size = config.get(self.WINDOW_CONFIG_KEY)
+        number_target_interactions = config.get_or_default(self.TARGET_INTERACTION_CONFIG_KEY, 1)
+        sequence_length = window_size + number_target_interactions
+
+        fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(sequence_length)
+        loader_config = build_default_loader_config(config,
+                                                    Stage.TEST,
+                                                    self.TEST_VALID_DATASET_BUILDERS,
+                                                    [fixed_sequence_length_processor, TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+        return self._build_datasource(loader_config, context)
+
+
+def _build_fixed_sequence_length_processor_config(sequence_length: int) -> Dict[str, Any]:
+    return {
+        'type': FIXED_SEQUENCE_LENGTH_PROCESSOR_KEY,
+        'fixed_length': sequence_length
+    }
 
 
 def build_dataset_config(dataset_builders: List[DatasetBuilder], config: Config, stage: Stage, additional_processors: List[Dict[str, Any]] = None) -> Dict[str, Any]:
