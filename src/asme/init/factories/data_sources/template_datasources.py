@@ -23,7 +23,9 @@ class TemplateDataSourcesFactory(ObjectFactory):
         self._factory = ConditionalFactory(key, {
             "masked": MaskTemplateDataSourcesFactory(),
             "pos_neg": PositiveNegativeTemplateDataSourcesFactory(),
-            "next_sequence_step": NextSequenceStepTemplateDataSourcesFactory()
+            "next_sequence_step": NextSequenceStepTemplateDataSourcesFactory(),
+            "par_pos_neg": ParameterizedPositiveNegativeTemplateDataSourcesFactory(),
+            "plain": PlainTrainingTemplateDataSourcesFactory()
         })
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
@@ -193,6 +195,39 @@ class PlainTrainingTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
         loader_config = build_default_loader_config(config,
                                                     Stage.TEST,
                                                     self.DATASET_BUILDERS_VALIDATION_AND_TEST,
+                                                    [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+        return self._build_datasource(loader_config, context)
+
+
+class ParameterizedPositiveNegativeTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
+    TRAIN_DATASET_BUILDERS = [ConditionalSequenceOrSequencePositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
+    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
+
+    def _build_train_datasource(self, config: Config, context: Context) -> DataLoader:
+        par_pos_neg_sampler_processor = {
+            'type': "par_pos_neg",
+            'seed': config.get('seed'),
+            't': config.get('t')
+        }
+
+        loader_config = build_default_loader_config(config,
+                                                    Stage.TRAIN,
+                                                    self.TRAIN_DATASET_BUILDERS,
+                                                    [par_pos_neg_sampler_processor])
+
+        return self._build_datasource(loader_config, context)
+
+    def _build_validation_datasource(self, config: Config, context: Context) -> DataLoader:
+        loader_config = build_default_loader_config(config,
+                                                    Stage.VALIDATION,
+                                                    self.TEST_VALID_DATASET_BUILDERS,
+                                                    [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+        return self._build_datasource(loader_config, context)
+
+    def _build_test_datasource(self, config: Config, context: Context) -> DataLoader:
+        loader_config = build_default_loader_config(config,
+                                                    Stage.TEST,
+                                                    self.TEST_VALID_DATASET_BUILDERS,
                                                     [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
         return self._build_datasource(loader_config, context)
 
