@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from datasets.dataset_pre_processing.utils import read_csv
+##from src.datasets.dataset_pre_processing.utils import read_csv
 
 
 class CsvConverter:
@@ -55,6 +56,45 @@ class YooChooseConverter(CsvConverter):
         data.to_csv(path_or_buf=output_file)
 
 
+class Movielens20MConverter(CsvConverter):
+    RATING_USER_COLUMN_NAME = 'userId'
+    RATING_MOVIE_COLUMN_NAME = 'movieId'
+    RATING_TIMESTAMP_COLUMN_NAME = 'timestamp'
+
+    def __init__(self, delimiter="\t", min_user_feedback: int = 0, min_item_feedback: int = 0):
+        self.delimiter = delimiter
+        self.min_user_feedback = min_user_feedback
+        self.min_item_feedback = min_item_feedback
+
+    def apply(self, input_dir: Path, output_file: Path):
+        file_type = ".csv"
+        header = 0
+        sep = ","
+        name = "ml-20m"
+        location = input_dir / name
+        ratings_df = read_csv(location, "ratings", file_type, sep, header)
+
+
+        links_df = read_csv(input_dir, "links", file_type, sep, header)
+        ratings_df = pd.merge(ratings_df, links_df)
+
+        ratings_df = ratings_df(ratings_df,
+                                    min_user_feedback=self.min_user_feedback,
+                                    min_item_feedback=self.min_item_feedback)
+
+        movies_df = read_csv(input_dir, "movies", file_type, sep, header)
+        
+        links_df = read_csv(input_dir, "links", file_type, sep, header)
+        ratings_df = pd.merge(ratings_df, links_df)
+
+        merged_df = pd.merge(ratings_df, movies_df).sort_values(
+            by=[Movielens20MConverter.RATING_USER_COLUMN_NAME, Movielens20MConverter.RATING_TIMESTAMP_COLUMN_NAME])
+
+        os.makedirs(output_file.parent, exist_ok=True)
+
+        merged_df.to_csv(output_file, sep=self.delimiter, index=False)
+
+
 class Movielens1MConverter(CsvConverter):
     RATING_USER_COLUMN_NAME = 'userId'
     RATING_MOVIE_COLUMN_NAME = 'movieId'
@@ -62,6 +102,7 @@ class Movielens1MConverter(CsvConverter):
 
     def __init__(self, delimiter="\t"):
         self.delimiter = delimiter
+
 
     def apply(self, input_dir: Path, output_file: Path):
         file_type = ".dat"
@@ -99,3 +140,8 @@ class DotaShopConverter(CsvConverter):
         # We assume `input_dir` to be the path to the raw csv file.
         shutil.copy(input_dir, output_file)
 
+
+
+if __name__ == "__main__":
+    converter = Movielens20MConverter()
+    converter.apply("///Applications/Wichtig/ml-20m/ml-20m","///Applications/Wichtig")
