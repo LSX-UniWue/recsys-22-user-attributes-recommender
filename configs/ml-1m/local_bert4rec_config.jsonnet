@@ -21,6 +21,20 @@ local dataset = 'ml-1m';
             file_prefix: dataset,
             num_workers: 4
         },
+        /*data_sources: {
+            split: "leave_one_out",
+            path: raw_dataset_path,
+            file_prefix: dataset,
+            train: {
+                type: "session"
+            },
+            validation: {
+                type: "session"
+            },
+            test: {
+                type: "session"
+            }
+        },*/
         preprocessing: {
             extraction_directory: "/tmp/ml-1m/",
             output_directory: raw_dataset_path,

@@ -321,11 +321,14 @@ def build_datasource(dataset_builders: List[DatasetBuilder],
 
 def _transfer_properties(source_dict: Dict[str, Any],
                          target_dict: Dict[str, Any],
-                         keys_to_transfer: List[str]
+                         keys_to_transfer: List[str],
+                         target_key_names: List[str] = None,
                          ) -> Dict[str, Any]:
-    for key in keys_to_transfer:
-        value = source_dict.get(key)
+    if target_key_names is None:
+        target_key_names = keys_to_transfer
+    for source_key, target_key in zip(keys_to_transfer, target_key_names):
+        value = source_dict.get(source_key)
         if value is not None:
-            target_dict[key] = value
+            target_dict[target_key] = value
 
     return target_dict
