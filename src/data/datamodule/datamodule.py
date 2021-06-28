@@ -8,7 +8,8 @@ import pytorch_lightning.core as pl
 from torch.utils.data import DataLoader
 
 from asme.init.context import Context
-from asme.init.factories.data_sources.data_sources import TemplateDataSourcesFactory
+from asme.init.factories.data_sources.template_datasources import TemplateDataSourcesFactory
+from asme.init.factories.data_sources.user_defined_datasources import UserDefinedDataSourcesFactory
 from data.datamodule.config import AsmeDataModuleConfig
 from datasets.dataset_pre_processing.utils import download_dataset
 
@@ -68,7 +69,8 @@ class AsmeDataModule(pl.LightningDataModule):
             factory = TemplateDataSourcesFactory("name")
             self._objects = factory.build(self.config.template, self.context)
         else:
-            factory = None  # Handle explict case
+            factory = UserDefinedDataSourcesFactory()
+            self._objects = factory.build(self.config.data_sources, self.context)
 
         self._has_setup = True
 

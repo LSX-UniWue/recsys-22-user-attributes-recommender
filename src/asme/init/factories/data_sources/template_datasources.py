@@ -20,8 +20,8 @@ class TemplateDataSourcesFactory(ObjectFactory):
         super().__init__()
         self._key = key
         self._factory = ConditionalFactory(key, {
-            "masked": MaskTemplateDataSourcesFactory()
-        }, "data_sources", ["data_sources"])
+            "masked": MaskTemplateDataSourcesFactory(),
+        })
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         return self._factory.can_build(config, context)
@@ -33,10 +33,10 @@ class TemplateDataSourcesFactory(ObjectFactory):
         return True
 
     def config_path(self) -> List[str]:
-        return ["data_sources"]
+        return ["template"]
 
     def config_key(self) -> str:
-        return "data_sources"
+        return "template"
 
 
 class BaseTemplateDataSourcesFactory(ObjectFactory):
