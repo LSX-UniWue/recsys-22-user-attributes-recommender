@@ -13,6 +13,10 @@ TARGET_EXTRACTOR_PROCESSOR_CONFIG = {
     'type': 'target_extractor'
 }
 
+POS_NEG_PROCESSOR_CONFIG = {
+    'type': 'pos_neg'
+}
+
 
 class DatasetSplit(Enum):
 

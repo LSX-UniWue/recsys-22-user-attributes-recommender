@@ -1,8 +1,7 @@
-import copy
 import os
 
 from pathlib import Path
-from typing import Optional, Callable, List
+from typing import Optional, List
 
 import pytorch_lightning.core as pl
 from torch.utils.data import DataLoader

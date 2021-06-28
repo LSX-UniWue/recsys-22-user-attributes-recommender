@@ -11,7 +11,8 @@ from asme.init.factories.data_sources.loader import LoaderFactory
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.init.templating.datasources.datasources import Stage, DatasetSplit, DatasetBuilder, \
     SequenceDatasetRatioSplitBuilder, LeaveOneOutSessionDatasetBuilder, _transfer_properties, \
-    NextPositionDatasetBuilder, TARGET_EXTRACTOR_PROCESSOR_CONFIG
+    NextPositionDatasetBuilder, TARGET_EXTRACTOR_PROCESSOR_CONFIG, LeaveOneOutNextPositionDatasetBuilder, \
+    ConditionalSequenceOrSequencePositionDatasetBuilder, POS_NEG_PROCESSOR_CONFIG
 
 
 class TemplateDataSourcesFactory(ObjectFactory):
@@ -21,6 +22,8 @@ class TemplateDataSourcesFactory(ObjectFactory):
         self._key = key
         self._factory = ConditionalFactory(key, {
             "masked": MaskTemplateDataSourcesFactory(),
+            "pos_neg": PositiveNegativeTemplateDataSourcesFactory(),
+            "next_sequence_step": NextSequenceStepTemplateDataSourcesFactory()
         })
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
@@ -113,6 +116,60 @@ class MaskTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
         }
         loader_config = build_default_loader_config(config, Stage.VALIDATION, self.TEST_VALID_DATASET_BUILDERS,
                                                     [TARGET_EXTRACTOR_PROCESSOR_CONFIG, mask_last_item_processor])
+        return self._build_datasource(loader_config, context)
+
+
+class NextSequenceStepTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
+
+    TRAIN_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutNextPositionDatasetBuilder()]
+    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
+
+    def __init__(self):
+        super().__init__()
+
+    def _build_train_datasource(self, config: Config, context: Context) -> DataLoader:
+        loader_config = build_default_loader_config(config, Stage.TRAIN, self.TRAIN_DATASET_BUILDERS,
+                                                    [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+        return self._build_datasource(loader_config, context)
+
+    def _build_validation_datasource(self, config: Config, context: Context) -> DataLoader:
+        loader_config = build_default_loader_config(config, Stage.VALIDATION, self.TEST_VALID_DATASET_BUILDERS,
+                                                    [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+        return self._build_datasource(loader_config, context)
+
+    def _build_test_datasource(self, config: Config, context: Context) -> DataLoader:
+        loader_config = build_default_loader_config(config, Stage.VALIDATION, self.TEST_VALID_DATASET_BUILDERS,
+                                                    [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+        return self._build_datasource(loader_config, context)
+
+
+class PositiveNegativeTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
+
+    TRAIN_DATASET_BUILDERS = [ConditionalSequenceOrSequencePositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
+    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
+
+    def __init__(self):
+        super().__init__()
+
+    def _build_train_datasource(self, config: Config, context: Context) -> DataLoader:
+        loader_config = build_default_loader_config(config,
+                                                    Stage.TRAIN,
+                                                    self.TRAIN_DATASET_BUILDERS,
+                                                    [POS_NEG_PROCESSOR_CONFIG])
+        return self._build_datasource(loader_config, context)
+
+    def _build_validation_datasource(self, config: Config, context: Context) -> DataLoader:
+        loader_config = build_default_loader_config(config,
+                                                    Stage.VALIDATION,
+                                                    self.TEST_VALID_DATASET_BUILDERS,
+                                                    [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+        return self._build_datasource(loader_config, context)
+
+    def _build_test_datasource(self, config: Config, context: Context) -> DataLoader:
+        loader_config = build_default_loader_config(config,
+                                                    Stage.TEST,
+                                                    self.TEST_VALID_DATASET_BUILDERS,
+                                                    [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
         return self._build_datasource(loader_config, context)
 
 
