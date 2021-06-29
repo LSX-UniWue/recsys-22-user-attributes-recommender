@@ -14,27 +14,51 @@ local dataset = 'ml-1m';
 {
     datamodule: {
         dataset: dataset,
-        template: {
+        // This template is equivalent to the explicit definition given in "data_sources"
+        /*template: {
             name: "masked",
             split: "leave_one_out",
             path: raw_dataset_path,
             file_prefix: dataset,
             num_workers: 4
-        },
-        /*data_sources: {
+        },*/
+        data_sources: {
             split: "leave_one_out",
             path: raw_dataset_path,
             file_prefix: dataset,
             train: {
-                type: "session"
+                type: "session",
+                processors: [
+                    {
+                        "type": "cloze",
+                        "mask_probability": 0.2,
+                        "only_last_item_mask_prob": 0.1
+                    }
+                ]
             },
             validation: {
-                type: "session"
+                type: "session",
+                processors: [
+                    {
+                        "type": "target_extractor"
+                    },
+                    {
+                        "type": "last_item_mask"
+                    }
+                ]
             },
             test: {
-                type: "session"
+             type: "session",
+                processors: [
+                    {
+                        "type": "target_extractor"
+                    },
+                    {
+                        "type": "last_item_mask"
+                    }
+                ]
             }
-        },*/
+        },
         preprocessing: {
             extraction_directory: "/tmp/ml-1m/",
             output_directory: raw_dataset_path,

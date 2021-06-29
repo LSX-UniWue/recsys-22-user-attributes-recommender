@@ -167,7 +167,6 @@ class Config:
 
             current_section.pop(path[-1])
 
-
     def get_config(self, path: List[str]) -> 'Config':
         if not isinstance(path, list):
             raise Exception(f"{path} must be a list!")
