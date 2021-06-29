@@ -203,21 +203,20 @@ class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
 
 class LeaveOneOutSequenceWindowDatasetBuilder(DatasetBuilder):
 
-    def __init__(self,
-                 window_size: int
-                 ):
-        self.window_size = window_size
+    def __init__(self):
+        pass
 
     def can_build_dataset_definition(self, dataset_split_type: DatasetSplit):
         return dataset_split_type == DatasetSplit.LEAVE_ONE_OUT
 
     def build_dataset_definition(self, stage: Stage, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = Path(config['path'])
+        window_size = config["window_size"]
         prefix = _get_prefix(config, stage)
         index_file_path = f"{prefix}.{stage}"
         csv_file = base_path / f'{prefix}.csv'
         csv_file_index = base_path / f'{prefix}.session.idx'
-        nip_index_file = base_path / 'loo' / f'{index_file_path}.slidingwindow.{self.window_size}.idx'
+        nip_index_file = base_path / 'loo' / f'{index_file_path}.slidingwindow.{window_size}.idx'
         return {
             'type': 'sequence_position',
             'csv_file': str(csv_file),
@@ -227,21 +226,20 @@ class LeaveOneOutSequenceWindowDatasetBuilder(DatasetBuilder):
 
 
 class NextPositionWindowDatasetBuilder(DatasetBuilder):
-    def __init__(self,
-                 window_size: int
-                 ):
-        self.window_size = window_size
+    def __init__(self):
+        pass
 
     def can_build_dataset_definition(self, dataset_split_type: DatasetSplit):
         return dataset_split_type == DatasetSplit.RATIO_SPLIT
 
     def build_dataset_definition(self, stage: Stage, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = Path(config['path'])
+        window_size = config["window_size"]
         prefix = _get_prefix(config, stage)
         prefix = f"{prefix}.{stage}"
         csv_file = base_path / f'{prefix}.csv'
         csv_file_index = base_path / f'{prefix}.session.idx'
-        nip_index_file = base_path / f'{prefix}.slidingwindow.{self.window_size}.idx'
+        nip_index_file = base_path / f'{prefix}.slidingwindow.{window_size}.idx'
         return {
             'type': 'sequence_position',
             'csv_file': str(csv_file),

@@ -245,6 +245,7 @@ class SlidingWindowTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
         window_size = config.get(self.WINDOW_CONFIG_KEY)
         number_target_interactions = config.get_or_default(self.TARGET_INTERACTION_CONFIG_KEY, 1)
         sequence_length = window_size + number_target_interactions
+        config.set(self.WINDOW_CONFIG_KEY, sequence_length)
 
         fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(sequence_length)
 
@@ -253,8 +254,8 @@ class SlidingWindowTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
             't': number_target_interactions
         }
 
-        builders = [NextPositionWindowDatasetBuilder(sequence_length),
-                    LeaveOneOutSequenceWindowDatasetBuilder(sequence_length)]
+        builders = [NextPositionWindowDatasetBuilder(),
+                    LeaveOneOutSequenceWindowDatasetBuilder()]
 
         processors = [fixed_sequence_length_processor, par_pos_neg_sampler_processor]
 

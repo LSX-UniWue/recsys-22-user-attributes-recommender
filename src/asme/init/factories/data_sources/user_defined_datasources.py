@@ -39,7 +39,6 @@ class UserDefinedDataSourcesFactory(ObjectFactory):
 
     def build(self, config: Config, context: Context) -> Dict[str, Any]:
         objects = {}
-        # TODO: Add pop method to config class
         split = DatasetSplit[config.pop("split").upper()]
         for stage in Stage:
             stage_config = config.get_config(stage.value)
