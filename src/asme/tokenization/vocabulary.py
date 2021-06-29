@@ -84,6 +84,10 @@ class CSVVocabularyReaderWriter(VocabularyReaderWriter):
              file_input: TextIO
              ) -> Vocabulary:
         reader = csv.reader(file_input, delimiter=self.delimiter)
+
+        for token, id in reader:
+            print(f"{token} / {id}")
+
         vocabulary_entries = [(token, int(id)) for [token, id] in reader]
 
         return Vocabulary(collections.OrderedDict(vocabulary_entries))

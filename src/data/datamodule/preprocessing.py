@@ -19,7 +19,7 @@ from data.datamodule.converters import CsvConverter
 from data.datamodule.extractors import TargetPositionExtractor, FixedOffsetPositionExtractor
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.index_builder import SequencePositionIndexBuilder
-from data.datasets.sequence import ItemSessionParser, ItemSequenceDataset, PlainSequenceDataset
+from data.datasets.sequence import ItemSessionParser, ItemSequenceDataset, PlainSequenceDataset, MetaInformation
 from data.utils.csv import read_csv_header, create_indexed_header
 from datasets.data_structures.split_names import SplitNames
 from datasets.data_structures.train_validation_test_splits_indices import TrainValidationTestSplitIndices
@@ -65,6 +65,7 @@ class PreprocessingAction:
         self.apply(context)
 
 
+# FIXME (AD) Johannes please fix this!!! we need some way to document context entries that functions rely on.
 class ConvertToCsv(PreprocessingAction):
 
     def __init__(self, converter: CsvConverter):
@@ -80,6 +81,10 @@ class ConvertToCsv(PreprocessingAction):
             input_dir = context.get(EXTRACTED_DIRECTORY_KEY)
 
         output_directory = context.get(OUTPUT_DIR_KEY)
+
+        if not output_directory.exists():
+            output_directory.mkdir(parents=True)
+
         prefix = format_prefix(context.get(PREFIXES_KEY))
         output_file = output_directory / f"{prefix}.csv"
         self.converter(input_dir, output_file)
@@ -163,9 +168,9 @@ class CreateSessionIndex(PreprocessingAction):
 
 class CreateNextItemIndex(PreprocessingAction):
 
-    def __init__(self, column: str, extractor: TargetPositionExtractor):
+    def __init__(self, columns: List[MetaInformation], extractor: TargetPositionExtractor):
         self.extractor = extractor
-        self.column = column
+        self.columns = columns
 
     def name(self) -> str:
         return "Creating next item index"
@@ -182,8 +187,7 @@ class CreateNextItemIndex(PreprocessingAction):
         reader = CsvDatasetReader(main_file, session_index)
         parser = ItemSessionParser(
             create_indexed_header(read_csv_header(main_file, delimiter)),
-            self.column,
-            item_separator=delimiter,
+            self.columns,
             delimiter=delimiter
         )
         dataset = ItemSequenceDataset(PlainSequenceDataset(reader, parser))
@@ -193,7 +197,7 @@ class CreateNextItemIndex(PreprocessingAction):
 
 class CreateLeaveOneOutSplit(PreprocessingAction):
 
-    def __init__(self, column: str, training_target_offset=2, validation_target_offset=1, test_target_offset=0,
+    def __init__(self, column: MetaInformation, training_target_offset=2, validation_target_offset=1, test_target_offset=0,
                  inner_actions: List[PreprocessingAction] = None):
         """
         This action allows to create a leave-one-out split for a dataset.
@@ -228,8 +232,7 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
         reader = CsvDatasetReader(main_file, session_index)
         parser = ItemSessionParser(
             create_indexed_header(read_csv_header(main_file, delimiter)),
-            self.column,
-            item_separator=delimiter,
+            [self.column],
             delimiter=delimiter
         )
         dataset = ItemSequenceDataset(PlainSequenceDataset(reader, parser))
@@ -247,7 +250,7 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
 
 class CreateVocabulary(PreprocessingAction):
 
-    def __init__(self, columns: List[ColumnInfo],
+    def __init__(self, columns: List[MetaInformation],
                  special_tokens: List[str] = None,
                  prefixes: List[str] = None):
         self.columns = columns
@@ -264,8 +267,8 @@ class CreateVocabulary(PreprocessingAction):
         prefix = format_prefix(context.get(PREFIXES_KEY) if self.prefixes is None else self.prefixes)
         delimiter = context.get(DELIMITER_KEY)
         for column in self.columns:
-            filename = column.columnName
-            if column.delimiter is not None:
+            filename = column.column_name
+            if column.get_config("delimiter") is not None:
                 filename += "-splitted"
             output_file = output_dir / f"{prefix}.vocabulary.{filename}.txt"
             create_token_vocabulary(column, main_file, session_index_path,
@@ -388,7 +391,7 @@ class CreateRatioSplit(PreprocessingAction):
 
 
 class CreatePopularity(PreprocessingAction):
-    def __init__(self, columns: List[ColumnInfo], prefixes: List[str] = None):
+    def __init__(self, columns: List[MetaInformation], prefixes: List[str] = None):
         self.columns = columns
         self.prefixes = prefixes
 
@@ -405,14 +408,14 @@ class CreatePopularity(PreprocessingAction):
         session_index = CsvDatasetIndex(session_index_path)
         reader = CsvDatasetReader(main_file, session_index)
         for column in self.columns:
-            session_parser = ItemSessionParser(header, column.columnName, delimiter=delimiter)
+            session_parser = ItemSessionParser(header, [column], delimiter=delimiter)
             plain_dataset = PlainSequenceDataset(reader, session_parser)
             dataset = ItemSequenceDataset(plain_dataset)
             prefix = format_prefix(prefixes)
-            sub_delimiter = column.delimiter
+            sub_delimiter = column.get_config("delimiter")
 
-            filename = column.columnName
-            if column.delimiter is not None:
+            filename = column.column_name
+            if column.get_config("delimiter") is not None:
                 filename += "-splitted"
 
             # Read the vocabulary for this column
@@ -421,7 +424,7 @@ class CreatePopularity(PreprocessingAction):
                 vocabulary = CSVVocabularyReaderWriter().read(f)
 
             # Get occurrence count of every token
-            counts = self._count_items(dataset, vocabulary, sub_delimiter)
+            counts = self._count_items(dataset, vocabulary, column, sub_delimiter)
             # Compute popularity
             total_count = sum(counts.values())
             popularities = [count / total_count for count in counts.values()]
@@ -429,13 +432,13 @@ class CreatePopularity(PreprocessingAction):
             output_file = output_dir / f"{prefix}.popularity.{filename}.txt"
             self._write_popularity(popularities, output_file)
 
-    def _count_items(self, dataset: ItemSequenceDataset, vocabulary: Vocabulary, sub_delimiter: str = None) -> Dict[int, int]:
+    def _count_items(self, dataset: ItemSequenceDataset, vocabulary: Vocabulary, column: MetaInformation, sub_delimiter: str = None) -> Dict[int, int]:
         tokenizer = Tokenizer(vocabulary)
         counts = defaultdict(int)
 
         for session_idx in range(len(dataset)):
             session = dataset[session_idx]
-            items = session[ITEM_SEQ_ENTRY_NAME]
+            items = session[column.feature_name]
             if sub_delimiter is not None:
                 items = [label for entry in items for label in entry.split(sub_delimiter)]
             converted_tokens = tokenizer.convert_tokens_to_ids(items)
