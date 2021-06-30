@@ -28,6 +28,7 @@ wandb = "^0.10.22"
 mlflow = "^1.14.1"
 optuna = "2.6.0"
 redis = "^3.5.3"
+dataclasses-json = "^0.5.4"
 
 [tool.poetry.dev-dependencies]
 coverage = "^5.5"
