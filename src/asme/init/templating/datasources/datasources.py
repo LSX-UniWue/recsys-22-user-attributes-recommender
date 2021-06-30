@@ -273,7 +273,7 @@ def build_datasource(dataset_builders: List[DatasetBuilder],
     :return:
     """
     loader_config = config['loader']
-    parser_config = config['parser']
+    parser_config = config.get('parser')
 
     base_batch_size = loader_config.get('batch_size', 0)
     batch_size = loader_config.get(f'{stage.value}_batch_size', base_batch_size)

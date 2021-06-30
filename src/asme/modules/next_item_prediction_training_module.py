@@ -4,7 +4,7 @@ from typing import Union, Dict, Optional
 import torch
 
 import pytorch_lightning as pl
-from asme.losses.losses import SequenceRecommenderLoss, CrossEntropyLoss
+from asme.losses.losses import CrossEntropyLoss
 from pytorch_lightning.core.decorators import auto_move_data
 
 from asme.models.common.layers.data.sequence import InputSequence
@@ -37,7 +37,7 @@ class BaseNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
                  beta_1: float = 0.99,
                  beta_2: float = 0.998,
                  weight_decay: float = 0,
-                 loss_function: Optional[SequenceRecommenderLoss] = None
+                 loss_function: Optional = None
                  ):
         """
         Initializes the training module.
@@ -55,8 +55,8 @@ class BaseNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
         self.metrics = metrics
 
         if loss_function is None:
-            loss_function = CrossEntropyLoss(item_tokenizer)
-        self.loss_function = loss_function
+            loss_function = CrossEntropyLoss
+        self.loss_function = loss_function(item_tokenizer)
 
         self.save_hyperparameters(self.hyperparameters)
 

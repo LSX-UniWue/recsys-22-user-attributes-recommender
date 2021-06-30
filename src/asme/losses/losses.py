@@ -36,7 +36,7 @@ class SequenceRecommenderLoss(nn.Module):
 class CrossEntropyLoss(SequenceRecommenderLoss):
 
     """
-    XXX: discuss currently we need the item tokenizer to generate the correct targets for the
+    XXX: discuss: currently we need the item tokenizer to generate the correct targets for the
     basket recommendation setting
     """
 
