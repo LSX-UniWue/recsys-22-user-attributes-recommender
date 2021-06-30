@@ -111,7 +111,7 @@ class ContainerFactory(ObjectFactory):
         meta_information = list(self.features_factory.build(features_config, context).values())
         context.set(features_config.base_path, meta_information)
         for info in meta_information:
-            if info.tokenizer:
+            if info.tokenizer is not None:
                 context.set([TOKENIZERS_PREFIX, info.feature_name], info.tokenizer)
 
 

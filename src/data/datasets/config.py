@@ -138,8 +138,7 @@ def get_example_preprocessing_config(output_directory: str,
 
     special_tokens = ["<PAD>", "<MASK>", "<UNK>"]
     #FIXME (AD) we're forced to set column_name because vocabulary and popularity code relies on it being set.
-    columns = [MetaInformation("item", column_name="session_id", type="str"), #TODO (AD) find out why setting type to int prevents correct vocabulary creation (vocabulary is not saved with consecutive ids)
-               MetaInformation("item_id", column_name="item_id", type="str"),
+    columns = [MetaInformation("item_id", column_name="item_id", type="str"), #TODO (AD) find out why setting type to int prevents correct vocabulary creation (vocabulary is not saved with consecutive ids)
                MetaInformation("user_id", column_name="user_id", type="str"),
                MetaInformation("attr_one", column_name="attr_one", type="str")]
 

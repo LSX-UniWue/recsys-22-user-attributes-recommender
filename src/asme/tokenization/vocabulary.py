@@ -8,6 +8,7 @@ class Vocabulary(object):
     def __init__(self,
                  token_to_id: OrderedDict[str, int]
                  ):
+        #FIXME (AD): make sure that tokens are strings, otherwise get_id fails to retrieve the correct id
         self.token_to_id = token_to_id
         self.id_to_token = collections.OrderedDict([(id, token) for token, id in token_to_id.items()])
 
@@ -84,10 +85,6 @@ class CSVVocabularyReaderWriter(VocabularyReaderWriter):
              file_input: TextIO
              ) -> Vocabulary:
         reader = csv.reader(file_input, delimiter=self.delimiter)
-
-        for token, id in reader:
-            print(f"{token} / {id}")
-
         vocabulary_entries = [(token, int(id)) for [token, id] in reader]
 
         return Vocabulary(collections.OrderedDict(vocabulary_entries))
