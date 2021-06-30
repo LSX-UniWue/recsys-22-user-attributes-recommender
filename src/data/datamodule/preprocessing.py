@@ -391,9 +391,10 @@ class CreateRatioSplit(PreprocessingAction):
 
 
 class CreatePopularity(PreprocessingAction):
-    def __init__(self, columns: List[MetaInformation], prefixes: List[str] = None):
+    def __init__(self, columns: List[MetaInformation], prefixes: List[str] = None, special_tokens: Dict[str, str] = None):
         self.columns = columns
         self.prefixes = prefixes
+        self.special_tokens = special_tokens
 
     def name(self) -> str:
         return f"Creating popularities for: {self.columns}"
@@ -433,7 +434,8 @@ class CreatePopularity(PreprocessingAction):
             self._write_popularity(popularities, output_file)
 
     def _count_items(self, dataset: ItemSequenceDataset, vocabulary: Vocabulary, column: MetaInformation, sub_delimiter: str = None) -> Dict[int, int]:
-        tokenizer = Tokenizer(vocabulary)
+
+        tokenizer = Tokenizer(vocabulary, **self.special_tokens)
         counts = defaultdict(int)
 
         for session_idx in range(len(dataset)):
@@ -448,7 +450,7 @@ class CreatePopularity(PreprocessingAction):
         # Include special tokens in popularity
         for special_token_id in tokenizer.get_special_token_ids():
             if special_token_id not in counts:
-                counts[special_token_id] = 1
+                counts[special_token_id] = 0
 
         return counts
 

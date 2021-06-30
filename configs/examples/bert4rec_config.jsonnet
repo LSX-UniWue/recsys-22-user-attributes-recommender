@@ -65,19 +65,19 @@ local metrics =  {
             full: {
                 metrics: metrics
             },
-            #sampled: {
-            #    sample_probability_file: dataset_path + "/loo/example.popularity.item_id.txt",
-            #    num_negative_samples: 2,
+            sampled: {
+                sample_probability_file: dataset_path + "loo/example.popularity.item_id.txt",
+                num_negative_samples: 2,
+                metrics: metrics
+            },
+            random_negative_sampled: {
+                num_negative_samples: 2,
+                metrics: metrics
+            },
+            #fixed: {
+            #    item_file: dataset_path + "loo/example.relevant_items.item_id.txt",
             #    metrics: metrics
-            #},
-            #random_negative_sampled: {
-            #    num_negative_samples: 2,
-            #    metrics: metrics
-            #},
-           # fixed: {
-           #     item_file: dataset_path + "/loo/example.relevant_items.item_id.txt",
-           #     metrics: metrics
-           # }
+            #}
         },
         model: {
             max_seq_length: max_seq_length,
@@ -98,7 +98,7 @@ local metrics =  {
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: dataset_path + "/loo/example.vocabulary.item_id.txt"
+                    file: dataset_path + "loo/example.vocabulary.item_id.txt"
                 }
             }
         }

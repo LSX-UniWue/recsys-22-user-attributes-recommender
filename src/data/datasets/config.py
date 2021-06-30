@@ -136,7 +136,14 @@ def get_example_preprocessing_config(output_directory: str,
     context.set(OUTPUT_DIR_KEY, Path(output_directory))
     context.set(RAW_INPUT_FILE_PATH_KEY, input_file_path)
 
-    special_tokens = ["<PAD>", "<MASK>", "<UNK>"]
+    special_tokens_mapping = {
+        "pad_token": "<PAD>",
+        "mask_token": "<MASK>",
+        "unk_token": "<UNK>",
+    }
+
+    special_tokens = [token for _, token in special_tokens_mapping.items()]
+
     #FIXME (AD) we're forced to set column_name because vocabulary and popularity code relies on it being set.
     columns = [MetaInformation("item_id", column_name="item_id", type="str"), #TODO (AD) find out why setting type to int prevents correct vocabulary creation (vocabulary is not saved with consecutive ids)
                MetaInformation("user_id", column_name="user_id", type="str"),
@@ -150,13 +157,13 @@ def get_example_preprocessing_config(output_directory: str,
                                  RemainingSessionPositionExtractor(min_sequence_length))],
                                 complete_split_actions=[CreateVocabulary(columns, special_tokens=special_tokens,
                                     prefixes=[prefix]),
-                                    CreatePopularity(columns, prefixes=[prefix])]),
+                                    CreatePopularity(columns, prefixes=[prefix], special_tokens=special_tokens_mapping)]),
                              CreateLeaveOneOutSplit(MetaInformation("item", column_name="item_id", type="str"),
                                                     inner_actions=
                                                     [CreateNextItemIndex([MetaInformation("item", column_name="item_id", type="str")], RemainingSessionPositionExtractor(
                                                         min_sequence_length)),
                                                      CreateVocabulary(columns, special_tokens=special_tokens),
-                                                     CreatePopularity(columns)])
+                                                     CreatePopularity(columns, special_tokens=special_tokens_mapping)])
                              ]
 
     return DatasetPreprocessingConfig(prefix,
