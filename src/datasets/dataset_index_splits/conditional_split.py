@@ -103,7 +103,7 @@ def _build_item_sequence_dataset(dataset_metadata: DatasetMetadata,
                                  ) -> ItemSequenceDataset:
     features = [MetaInformation('item', 'str', column_name=dataset_metadata.item_header_name)]
     if additional_features is not None:
-        for feature_name, info in additional_features:
+        for feature_name, info in additional_features.items():
             feature_meta_data = MetaInformation(feature_name, 'bool')
             features.append(feature_meta_data)
 
