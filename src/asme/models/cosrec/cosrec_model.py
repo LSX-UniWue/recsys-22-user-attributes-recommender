@@ -50,11 +50,14 @@ class CosRecModel(SequenceRecommenderModel):
 
         seq_rep_layer = CosRecSequenceRepresentationComponent(embed_dim, block_num, block_dim, fc_dim, activation_function,
                                                               dropout)
-        mod_layer = UserEmbeddingConcatModifier(user_vocab_size, embed_dim) if user_present else IdentitySequenceRepresentationModifierLayer()
+        if user_present:
+            mod_layer = UserEmbeddingConcatModifier(user_vocab_size, embed_dim)
+        else:
+            mod_layer = IdentitySequenceRepresentationModifierLayer()
 
-        repesentation_size = fc_dim + embed_dim if user_present else fc_dim
+        representation_size = fc_dim + embed_dim if user_present else fc_dim
 
-        projection_layer = SparseProjectionComponent(item_vocab_size, repesentation_size)
+        projection_layer = SparseProjectionComponent(item_vocab_size, representation_size)
 
         super().__init__(item_embedding, seq_rep_layer, mod_layer, projection_layer)
 
