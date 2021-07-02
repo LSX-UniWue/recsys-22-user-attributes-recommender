@@ -227,7 +227,7 @@ class NextPositionWindowDatasetBuilder(DatasetBuilder):
     def build_dataset_definition(self, stage: Stage, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = Path(config['path'])
         prefix = _get_prefix(config, stage)
-        prefix = f"{prefix}.{stage}"
+        prefix = f"{prefix}.{stage.value}"
         csv_file = base_path / f'{prefix}.csv'
         csv_file_index = base_path / f'{prefix}.session.idx'
         nip_index_file = base_path / f'{prefix}.slidingwindow.{self.window_size}.idx'
