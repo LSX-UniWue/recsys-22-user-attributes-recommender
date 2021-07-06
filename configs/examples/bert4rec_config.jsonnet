@@ -14,27 +14,50 @@ local metrics =  {
 {
     datamodule: {
         dataset: dataset,
-        template: {
+        /*template: {
             name: "masked",
             split: "leave_one_out",
             path: dataset_path,
             file_prefix: dataset,
             num_workers: 0
-        },
-        /*data_sources: {
-            split: "leave_one_out",
-            path: raw_dataset_path,
+        },*/
+        data_sources: {
+            split: "ratio_split",
+            #path: dataset_path,
             file_prefix: dataset,
             train: {
-                type: "session"
+                type: "session",
+                processors: [
+                    {
+                        "type": "cloze",
+                        "mask_probability": 0.2,
+                        "only_last_item_mask_prob": 0.1
+                    }
+                ]
             },
             validation: {
-                type: "session"
+                type: "session",
+                processors: [
+                    {
+                        "type": "target_extractor"
+                    },
+                    {
+                        "type": "last_item_mask"
+                    }
+                ]
             },
             test: {
-                type: "session"
+             type: "session",
+                processors: [
+                    {
+                        "type": "target_extractor"
+                    },
+                    {
+                        "type": "last_item_mask"
+                    }
+                ]
             }
-        },*/
+        },
         preprocessing: {
             output_directory: dataset_path,
             min_sequence_length: 2

@@ -9,7 +9,10 @@ from torch.utils.data import DataLoader
 from asme.init.context import Context
 from asme.init.factories.data_sources.template_datasources import TemplateDataSourcesFactory
 from asme.init.factories.data_sources.user_defined_datasources import UserDefinedDataSourcesFactory
+from asme.init.templating.datasources.datasources import DatasetSplit
+from data import BASE_DATASET_PATH_CONTEXT_KEY, CURRENT_SPLIT_PATH_CONTEXT_KEY
 from data.datamodule.config import AsmeDataModuleConfig
+from data.datamodule.metadata import DatasetMetadata
 from datasets.dataset_pre_processing.utils import download_dataset
 
 
@@ -33,7 +36,8 @@ class AsmeDataModule(pl.LightningDataModule):
         ds_config = self.config.dataset_preprocessing_config
 
         # Check whether we already preprocessed the dataset
-        if self._check_finished_flag(ds_config.location):
+        if self._check_preprocessing_finished():
+            metadata = self._load_metadata()
             print("Found a finished flag in the target directory. Assuming the dataset is already preprocessed.")
         else:
             print("Preprocessing dataset:")
@@ -57,8 +61,15 @@ class AsmeDataModule(pl.LightningDataModule):
                 step.apply(ds_config.context)
                 print("Done.")
 
-            # Write finished flag
-            (ds_config.location / self.PREPROCESSING_FINISHED_FLAG).touch()
+            # Save dataset metadata
+            metadata = DatasetMetadata.from_context(ds_config.context)
+            self._write_metadata(metadata)
+
+        # Populate context with the dataset path
+        self.context.set(BASE_DATASET_PATH_CONTEXT_KEY, self.config.dataset_preprocessing_config.location)
+        split = self._determine_split()
+        split_path = metadata.ratio_path if split == DatasetSplit.RATIO_SPLIT else metadata.loo_path
+        self.context.set(CURRENT_SPLIT_PATH_CONTEXT_KEY, split_path)
 
     def setup(self, stage: Optional[str] = None):
         if len(msg := self._validate_config()) > 0:
@@ -87,12 +98,37 @@ class AsmeDataModule(pl.LightningDataModule):
             self.setup()
         return self._objects[name]
 
-    def _check_finished_flag(self, directory: Path) -> bool:
-        return os.path.exists(directory / self.PREPROCESSING_FINISHED_FLAG)
+    def _check_preprocessing_finished(self) -> bool:
+        return os.path.exists(
+            self.config.dataset_preprocessing_config.location / self.PREPROCESSING_FINISHED_FLAG)
+
+    def _write_metadata(self, metadata: DatasetMetadata):
+        metadata_path = self.config.dataset_preprocessing_config.location / self.PREPROCESSING_FINISHED_FLAG
+        with open(metadata_path, "w") as f:
+            f.write(metadata.to_json())
+
+    def _load_metadata(self) -> DatasetMetadata:
+        metadata_path = self.config.dataset_preprocessing_config.location / self.PREPROCESSING_FINISHED_FLAG
+        with open(metadata_path, "r") as f:
+            return DatasetMetadata.from_json(f.read())
+
+    def _determine_split(self) -> Optional[DatasetSplit]:
+        if self.config.data_sources is not None:
+            split = self.config.data_sources.get("split")
+        else:
+            split = self.config.template.get("split")
+
+        if split is None:
+            return None
+        else:
+            return DatasetSplit[split.upper()]
 
     def _validate_config(self) -> List[str]:
         errors = []
         if self.config.template is not None and self.config.data_sources is not None:
             errors.append("Please specify one of 'template' or 'data_sources'")
+
+        if self._determine_split() is None:
+            errors.append("Please specify a split type via the 'split' attribute. (Either 'leave_one_out' or 'ratio').")
 
         return errors

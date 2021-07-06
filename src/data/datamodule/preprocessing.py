@@ -12,6 +12,7 @@ import pandas as pd
 from asme.init.context import Context
 from asme.tokenization.tokenizer import Tokenizer
 from asme.tokenization.vocabulary import CSVVocabularyReaderWriter, Vocabulary
+from data import RATIO_SPLIT_PATH_CONTEXT_KEY, LOO_SPLIT_PATH_CONTEXT_KEY
 from data.base.csv_index_builder import CsvSessionIndexer
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datamodule.column_info import ColumnInfo
@@ -227,6 +228,8 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
         delimiter = context.get(DELIMITER_KEY)
 
         output_dir.mkdir(parents=True, exist_ok=True)
+        # Save the path to the split in the context for the datamodule to use later
+        context.set(LOO_SPLIT_PATH_CONTEXT_KEY, output_dir)
 
         session_index = CsvDatasetIndex(session_index_path)
         reader = CsvDatasetReader(main_file, session_index)
@@ -303,6 +306,9 @@ class CreateRatioSplit(PreprocessingAction):
 
         # Create output dir
         output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save the path to the split in the context for the datamodule to use later
+        context.set(RATIO_SPLIT_PATH_CONTEXT_KEY, output_dir)
 
         # Split the dataset
         split_indices = self._generate_split_indices(session_index, {

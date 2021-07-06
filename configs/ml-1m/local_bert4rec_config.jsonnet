@@ -1,4 +1,4 @@
-local raw_dataset_path = "../datasets/dataset/ml-1m/";
+local raw_dataset_path = "datasets/dataset/ml-1m/";
 local cached_dataset_path = raw_dataset_path;
 local loo_path = cached_dataset_path + "loo/";
 local output_path = "../dataset/ml-1m/exp/";

@@ -14,6 +14,7 @@ from asme.init.templating.datasources.datasources import Stage, SequenceDatasetR
     NextPositionDatasetBuilder, TARGET_EXTRACTOR_PROCESSOR_CONFIG, LeaveOneOutNextPositionDatasetBuilder, \
     ConditionalSequenceOrSequencePositionDatasetBuilder, POS_NEG_PROCESSOR_CONFIG, NextPositionWindowDatasetBuilder, \
     LeaveOneOutSequenceWindowDatasetBuilder
+from data import CURRENT_SPLIT_PATH_CONTEXT_KEY
 
 
 class TemplateDataSourcesFactory(ObjectFactory):
@@ -34,6 +35,8 @@ class TemplateDataSourcesFactory(ObjectFactory):
         return self._factory.can_build(config, context)
 
     def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
+        # If no dataset path was specified, try to the use the one provided by the datamodule
+        config.set_if_absent("path", context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY))
         return self._factory.build(config, context)
 
     def is_required(self, context: Context) -> bool:
