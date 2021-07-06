@@ -10,7 +10,7 @@ from asme.init.context import Context
 from asme.init.factories.data_sources.template_datasources import TemplateDataSourcesFactory
 from asme.init.factories.data_sources.user_defined_datasources import UserDefinedDataSourcesFactory
 from asme.init.templating.datasources.datasources import DatasetSplit
-from data import BASE_DATASET_PATH_CONTEXT_KEY, CURRENT_SPLIT_PATH_CONTEXT_KEY
+from data import BASE_DATASET_PATH_CONTEXT_KEY, CURRENT_SPLIT_PATH_CONTEXT_KEY, DATASET_PREFIX_CONTEXT_KEY
 from data.datamodule.config import AsmeDataModuleConfig
 from data.datamodule.metadata import DatasetMetadata
 from datasets.dataset_pre_processing.utils import download_dataset
@@ -70,6 +70,8 @@ class AsmeDataModule(pl.LightningDataModule):
         split = self._determine_split()
         split_path = metadata.ratio_path if split == DatasetSplit.RATIO_SPLIT else metadata.loo_path
         self.context.set(CURRENT_SPLIT_PATH_CONTEXT_KEY, split_path)
+        # Also put the prefix into the context
+        self.context.set(DATASET_PREFIX_CONTEXT_KEY, self.config.dataset)
 
     def setup(self, stage: Optional[str] = None):
         if len(msg := self._validate_config()) > 0:

@@ -121,7 +121,7 @@ local metrics =  {
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: dataset_path + "loo/example.vocabulary.item_id.txt"
+                    #file: dataset_path + "loo/example.vocabulary.item_id.txt"
                 }
             }
         }

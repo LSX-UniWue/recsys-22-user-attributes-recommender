@@ -44,7 +44,7 @@ class Config:
                 return None
             if key not in current_section and make_parents:
                 current_section[key] = dict()
-            else:
+            elif key not in current_section and not make_parents:
                 return None
 
             current_section = current_section[key]
