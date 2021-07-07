@@ -40,10 +40,12 @@ class DataModuleFactory(ObjectFactory):
         if config.has_path("template") and config.has_path("data_sources"):
             raise KeyError("Found both keys 'template' and 'data_sources'. Please specify exactly one.")
 
+        cache_path = config.get("cache_path")
         data_sources_config = config.get_config(["data_sources"]) if config.has_path("data_sources") else None
         template_config = config.get_config(["template"]) if config.has_path("template") else None
 
-        datamodule_config = AsmeDataModuleConfig(dataset_name, template_config, data_sources_config, dataset_preprocessing_config)
+        datamodule_config = AsmeDataModuleConfig(dataset_name, cache_path, template_config, data_sources_config,
+                                                 dataset_preprocessing_config)
         return AsmeDataModule(datamodule_config, context)
 
     def is_required(self, context: Context) -> bool:

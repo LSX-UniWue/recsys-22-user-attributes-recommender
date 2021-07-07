@@ -31,6 +31,7 @@ class AsmeDataModuleConfig:
     a dataset.
     """
     dataset: str
+    cache_path: Optional[str]
     template: Optional[Config]
     data_sources: Optional[Config]
     dataset_preprocessing_config: Optional[DatasetPreprocessingConfig]

@@ -13,6 +13,7 @@ local metrics =  {
 };
 {
     datamodule: {
+        cache_path: "/tmp/cache",
         dataset: dataset,
         /*template: {
             name: "masked",
