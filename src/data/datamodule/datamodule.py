@@ -17,12 +17,11 @@ from data.datamodule.config import AsmeDataModuleConfig
 from data.datamodule.metadata import DatasetMetadata
 from datasets.dataset_pre_processing.utils import download_dataset
 
-
 logger = get_logger(__name__)
 
-class AsmeDataModule(pl.LightningDataModule):
 
-    PREPROCESSING_FINISHED_FLAG = ".PREPROCESSING_FINISHED"
+class AsmeDataModule(pl.LightningDataModule):
+    PREPROCESSING_FINISHED_FLAG = ".METADATA"
 
     def __init__(self, config: AsmeDataModuleConfig, context: Context = Context()):
         super().__init__()
@@ -42,28 +41,28 @@ class AsmeDataModule(pl.LightningDataModule):
         # Check whether we already preprocessed the dataset
         if self._check_preprocessing_finished():
             metadata = self._load_metadata()
-            print("Found a finished flag in the target directory. Assuming the dataset is already preprocessed.")
+            logger.info("Found a finished flag in the target directory. Assuming the dataset is already preprocessed.")
         else:
-            print("Preprocessing dataset:")
+            logger.info("Preprocessing dataset:")
 
             if ds_config.url is not None:
-                print(f"Downloading dataset...")
+                logger.info(
+                    f"Downloading dataset {self.config.dataset} from {self.config.dataset_preprocessing_config.url}.")
                 dataset_file = download_dataset(ds_config.url, ds_config.location)
             else:
-                print(f"No download URL specified, using local copy at '{ds_config.location}'")
+                logger.info(f"No download URL specified, using local copy at '{ds_config.location}'.")
                 dataset_file = ds_config.location
 
             # If necessary, unpack the dataset
             if ds_config.unpacker is not None:
-                print(f"Unpacking dataset...", end="")
+                logger.info(f"Unpacking dataset.")
                 ds_config.unpacker(dataset_file)
-                print("Done.")
 
             # Apply preprocessing steps
             for i, step in enumerate(ds_config.preprocessing_actions):
-                print(f"Applying preprocessing step '{step.name()}' ({i+1}/{len(ds_config.preprocessing_actions)})...", end="")
+                logger.info(
+                    f"Applying preprocessing step '{step.name()}' ({i + 1}/{len(ds_config.preprocessing_actions)})")
                 step.apply(ds_config.context)
-                print("Done.")
 
             # Save dataset metadata
             metadata = DatasetMetadata.from_context(ds_config.context)
@@ -86,10 +85,12 @@ class AsmeDataModule(pl.LightningDataModule):
             ds_location = self.config.dataset_preprocessing_config.location
             logger.info(f"Caching dataset from '{ds_location}' to '{self.config.cache_path}'.")
             shutil.copytree(ds_location, self.config.cache_path, dirs_exist_ok=True)
+
             # adjust the context values such that the factories infer correct paths
             self.context.set(BASE_DATASET_PATH_CONTEXT_KEY, self.config.cache_path, overwrite=True)
             self._adjust_split_path_for_caching(CURRENT_SPLIT_PATH_CONTEXT_KEY)
 
+        # Build the datasources depending on what the user specified
         if self.config.template is not None:
             factory = TemplateDataSourcesFactory("name")
             self._objects = factory.build(self.config.template, self.context)
@@ -139,6 +140,9 @@ class AsmeDataModule(pl.LightningDataModule):
             return DatasetSplit[split.upper()]
 
     def _adjust_split_path_for_caching(self, key: Union[str, List[str]]):
+        """
+        Adjusts the split path stored in the context with the specified key to point to the cache directory instead.
+        """
         current_value = self.context.get(key)
         split_dir = os.path.split(current_value)[-1]
         self.context.set(key, os.path.join(self.config.cache_path, split_dir), overwrite=True)
