@@ -89,7 +89,7 @@ local metrics =  {
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: dataset_path + "loo/example.popularity.item_id.txt",
+                sample_probability_file: "example.popularity.item_id.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             },
@@ -121,7 +121,7 @@ local metrics =  {
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    #file: dataset_path + "loo/example.vocabulary.item_id.txt"
+                    #file: "example.vocabulary.item_id.txt"
                 }
             }
         }

@@ -8,6 +8,7 @@ from asme.init.context import Context
 from asme.init.factories.common.dependencies_factory import DependenciesFactory
 from asme.init.factories.common.list_elements_factory import NamedListElementsFactory
 from asme.init.factories.features.tokenizer_factory import TokenizerFactory
+from asme.init.factories.util import infer_whole_path
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from data import CURRENT_SPLIT_PATH_CONTEXT_KEY, DATASET_PREFIX_CONTEXT_KEY
 from data.datasets.sequence import MetaInformation
@@ -49,12 +50,10 @@ class MetaInformationFactory(ObjectFactory):
         feature_config = {}
 
         # If no explicit location for the vocabulary was provided, try to infer it
-        # TODO: Should we log a warning or something whenever we infer something?
-        if not config.has_path(["tokenizer", "vocabulary", "file"]):
-            split_path = context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY)
-            prefix = context.get(DATASET_PREFIX_CONTEXT_KEY)
-            inferred_vocabulary_location = os.path.join(split_path, f"{prefix}.vocabulary.{column_name}.txt")
-            config.set(["tokenizer", "vocabulary", "file"], inferred_vocabulary_location)
+        split_path = context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY)
+        prefix = context.get(DATASET_PREFIX_CONTEXT_KEY)
+        vocabulary_file = f"{prefix}.vocabulary.{column_name}.txt"
+        infer_whole_path(config, ["tokenizer", "vocabulary", "file"], split_path, vocabulary_file)
 
         tokenizer = self._dependencies.build(config, context)['tokenizer']
 

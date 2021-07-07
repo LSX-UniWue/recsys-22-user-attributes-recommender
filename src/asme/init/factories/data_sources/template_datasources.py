@@ -9,6 +9,7 @@ from asme.init.factories.common.conditional_based_factory import ConditionalFact
 from asme.init.factories.data_sources.common import build_default_loader_config
 from asme.init.factories.data_sources.datasets.processor.processors import FIXED_SEQUENCE_LENGTH_PROCESSOR_KEY
 from asme.init.factories.data_sources.loader import LoaderFactory
+from asme.init.factories.util import infer_whole_path
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.init.templating.datasources.datasources import Stage, SequenceDatasetRatioSplitBuilder, LeaveOneOutSessionDatasetBuilder, \
     NextPositionDatasetBuilder, TARGET_EXTRACTOR_PROCESSOR_CONFIG, LeaveOneOutNextPositionDatasetBuilder, \
