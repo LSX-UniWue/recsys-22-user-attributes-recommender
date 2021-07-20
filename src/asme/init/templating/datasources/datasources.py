@@ -204,10 +204,10 @@ class LeaveOneOutSequenceWindowDatasetBuilder(DatasetBuilder):
         base_path = Path(config['path'])
         window_size = config["window_size"]
         prefix = _get_prefix(config, stage)
-        index_file_path = f"{prefix}.{stage}"
+        prefix = f"{prefix}.{stage.value}"
         csv_file = base_path / f'{prefix}.csv'
         csv_file_index = base_path / f'{prefix}.session.idx'
-        nip_index_file = base_path / 'loo' / f'{index_file_path}.slidingwindow.{window_size}.idx'
+        nip_index_file = base_path / 'loo' / f'{prefix}.slidingwindow.{window_size}.idx'
         return {
             'type': 'sequence_position',
             'csv_file': str(csv_file),
@@ -227,7 +227,7 @@ class NextPositionWindowDatasetBuilder(DatasetBuilder):
         base_path = Path(config['path'])
         window_size = config["window_size"]
         prefix = _get_prefix(config, stage)
-        prefix = f"{prefix}.{stage}"
+        prefix = f"{prefix}.{stage.value}"
         csv_file = base_path / f'{prefix}.csv'
         csv_file_index = base_path / f'{prefix}.session.idx'
         nip_index_file = base_path / f'{prefix}.slidingwindow.{window_size}.idx'

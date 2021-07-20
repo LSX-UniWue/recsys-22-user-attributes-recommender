@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 from asme.init.context import Context
 from data.datamodule.config import DatasetPreprocessingConfig, register_preprocessing_config_provider, \
@@ -6,10 +7,11 @@ from data.datamodule.config import DatasetPreprocessingConfig, register_preproce
 from data.datamodule.preprocessing import ConvertToCsv, TransformCsv, CreateSessionIndex, \
     GroupAndFilter, GroupedFilter, CreateVocabulary, DELIMITER_KEY, EXTRACTED_DIRECTORY_KEY, \
     OUTPUT_DIR_KEY, CreateRatioSplit, CreateNextItemIndex, CreateLeaveOneOutSplit, CreatePopularity, \
-    RAW_INPUT_FILE_PATH_KEY, MAIN_FILE_KEY, UseExistingCsv, UseExistingSplit, SPLIT_BASE_DIRECTORY_PATH
+    RAW_INPUT_FILE_PATH_KEY, MAIN_FILE_KEY, UseExistingCsv, UseExistingSplit, SPLIT_BASE_DIRECTORY_PATH, \
+    CreateSlidingWindowIndex
 from data.datamodule.column_info import ColumnInfo
 from data.datamodule.converters import YooChooseConverter, Movielens1MConverter, ExampleConverter
-from data.datamodule.extractors import RemainingSessionPositionExtractor
+from data.datamodule.extractors import RemainingSessionPositionExtractor, SlidingWindowPositionExtractor
 from data.datamodule.unpacker import Unzipper
 from data.datamodule.preprocessing import PREFIXES_KEY
 from data.datasets.sequence import MetaInformation
@@ -78,7 +80,9 @@ register_preprocessing_config_provider("ml-1m",
 def get_dota_shop_preprocessing_config(output_directory: str,
                                        raw_csv_file_path: str,
                                        split_directory: str,
-                                       min_sequence_length: int) -> DatasetPreprocessingConfig:
+                                       min_sequence_length: int,
+                                       window_size: Optional[int] = None,
+                                       session_end_offset: Optional[int] = None) -> DatasetPreprocessingConfig:
     prefix = "dota"
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
@@ -108,6 +112,10 @@ def get_dota_shop_preprocessing_config(output_directory: str,
                                      CreateNextItemIndex(
                                          [MetaInformation("item", column_name="item_id", type="str")],
                                          RemainingSessionPositionExtractor(min_sequence_length)
+                                     ),
+                                     CreateSlidingWindowIndex(
+                                         [MetaInformation("item", column_name="item_id", type="str")],
+                                         SlidingWindowPositionExtractor(window_size, session_end_offset)
                                      )
                                  ])
                              ]

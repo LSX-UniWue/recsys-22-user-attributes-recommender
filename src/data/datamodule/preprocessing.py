@@ -1,4 +1,5 @@
 import copy
+import functools
 import math
 import random
 from abc import abstractmethod
@@ -17,7 +18,8 @@ from data.base.csv_index_builder import CsvSessionIndexer
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from data.datamodule.column_info import ColumnInfo
 from data.datamodule.converters import CsvConverter
-from data.datamodule.extractors import TargetPositionExtractor, FixedOffsetPositionExtractor
+from data.datamodule.extractors import TargetPositionExtractor, FixedOffsetPositionExtractor, \
+    SlidingWindowPositionExtractor
 from data.datasets import ITEM_SEQ_ENTRY_NAME
 from data.datasets.index_builder import SequencePositionIndexBuilder
 from data.datasets.sequence import ItemSessionParser, ItemSequenceDataset, PlainSequenceDataset, MetaInformation
@@ -229,6 +231,41 @@ class CreateNextItemIndex(PreprocessingAction):
         )
         dataset = ItemSequenceDataset(PlainSequenceDataset(reader, parser))
         builder = SequencePositionIndexBuilder(target_positions_extractor=self.extractor)
+        builder.build(dataset, output_file)
+
+
+class CreateSlidingWindowIndex(PreprocessingAction):
+
+    def __init__(self,
+                 columns: List[MetaInformation],
+                 extractor: SlidingWindowPositionExtractor):
+
+        self.extractor = extractor
+        self.columns = columns
+
+    def name(self) -> str:
+        return f"Creating sliding window index with {self.extractor.window_size}/{self.extractor.session_end_offset}"
+
+    def apply(self, context: Context) -> None:
+        output_dir = context.get(OUTPUT_DIR_KEY)
+        main_file = context.get(MAIN_FILE_KEY)
+        session_index_path = context.get(SESSION_INDEX_KEY)
+        delimiter = context.get(DELIMITER_KEY)
+        prefix = format_prefix(context.get(PREFIXES_KEY))
+
+        ws = self.extractor.window_size + self.extractor.session_end_offset
+
+        output_file = output_dir / f"{prefix}.slidingwindow.{ws}.idx"
+
+        session_index = CsvDatasetIndex(session_index_path)
+        reader = CsvDatasetReader(main_file, session_index)
+        parser = ItemSessionParser(
+            create_indexed_header(read_csv_header(main_file, delimiter)),
+            self.columns,
+            delimiter=delimiter
+        )
+        dataset = ItemSequenceDataset(PlainSequenceDataset(reader, parser))
+        builder = SequencePositionIndexBuilder(self.extractor)
         builder.build(dataset, output_file)
 
 
