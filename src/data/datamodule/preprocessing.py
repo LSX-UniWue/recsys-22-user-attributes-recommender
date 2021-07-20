@@ -26,6 +26,7 @@ from datasets.data_structures.split_names import SplitNames
 from datasets.data_structures.train_validation_test_splits_indices import TrainValidationTestSplitIndices
 from datasets.vocabulary.create_vocabulary import create_token_vocabulary
 
+# TODO (AD): check handling of prefixes, i think that is overengineered
 EXTRACTED_DIRECTORY_KEY = "extract_directory"
 MAIN_FILE_KEY = "main_file"
 SESSION_INDEX_KEY = "session_index"
@@ -34,7 +35,9 @@ PREFIXES_KEY = "prefixes"
 DELIMITER_KEY = "delimiter"
 SEED_KEY = "seed"
 RAW_INPUT_FILE_PATH_KEY = "raw_file_path"
-
+SPLIT_BASE_DIRECTORY_PATH = "split_base_directory"
+SPLIT_FILE_PREFIX = "split_file_prefix"
+SPLIT_FILE_SUFFIX = "split_file_suffix"
 
 def format_prefix(prefixes: List[str]) -> str:
     return ".".join(prefixes)
@@ -66,9 +69,41 @@ class PreprocessingAction:
         self.apply(context)
 
 
-# FIXME (AD) Johannes please fix this!!! we need some way to document context entries that functions rely on.
-class ConvertToCsv(PreprocessingAction):
+class UseExistingCsv(PreprocessingAction):
+    """
+    Registers a pre-processed CSV file in context.
 
+    Required context parameters:
+    - `RAW_RAW_INPUT_FILE_PATH_KEY` - the path to the pre-processed CSV file.
+
+    Sets context parameters:
+    - `MAIN_FILE_KEY` - the path to the pre-processed CSV file.
+    """
+    def name(self) -> str:
+        return "Use existing CSV file"
+
+    def apply(self, context: Context) -> None:
+        if not context.has_path(RAW_INPUT_FILE_PATH_KEY):
+            raise Exception(f"A pre-processed CSV file must be present in context at: {RAW_INPUT_FILE_PATH_KEY}")
+
+        context.set(MAIN_FILE_KEY, context.get(RAW_INPUT_FILE_PATH_KEY))
+
+
+# FIXME (AD) Johannes please fix this!!! we need some way to document context entries (and their types) that functions rely on.
+class ConvertToCsv(PreprocessingAction):
+    """
+    Applies a conversion to the CSV format on a dataset.
+
+    Required context parameters:
+    - `RAW_RAW_INPUT_FILE_PATH_KEY` - the path to a dataset file (takes precedence over `EXTRACTED_DIRECTORY_KEY`)
+    - `EXTRACTED_DIRECTORY_KEY` - the path to a directory containing a dataset
+    - `OUTPUT_DIRECTORY_KEY` - the directory where the final converted CSV file will be placed
+    - `PREFIXES_KEY` - the prefixes used to generate the name of the final CSV file.
+
+
+    Sets context parameters:
+    - `MAIN_FILE_KEY` - the path to the pre-processed CSV file.
+    """
     def __init__(self, converter: CsvConverter):
         self.converter = converter
 
@@ -76,6 +111,7 @@ class ConvertToCsv(PreprocessingAction):
         return "Converting to CSV"
 
     def apply(self, context: Context) -> None:
+        #FIXME (AD) it seems that we can use a single key for this information?
         if context.has_path(RAW_INPUT_FILE_PATH_KEY):
             input_dir = context.get(RAW_INPUT_FILE_PATH_KEY)
         else:
@@ -276,6 +312,43 @@ class CreateVocabulary(PreprocessingAction):
             output_file = output_dir / f"{prefix}.vocabulary.{filename}.txt"
             create_token_vocabulary(column, main_file, session_index_path,
                                     output_file, self.special_tokens, delimiter, None)
+
+
+class UseExistingSplit(PreprocessingAction):
+    def __init__(self, split_names: List[str], per_split_actions: List[PreprocessingAction] = None):
+        if split_names is None or len(split_names) == 0:
+            raise Exception(f"At least one name for a split must be supplied.")
+        self.split_names = split_names
+        self.per_split_actions = [] if per_split_actions is None else per_split_actions
+
+    def name(self) -> str:
+        return f"Use existing split."
+
+    def apply(self, context: Context) -> None:
+
+        split_base_directory = context.get(SPLIT_BASE_DIRECTORY_PATH)
+
+        for split_name in self.split_names:
+            self._process_split(context, split_base_directory, split_name)
+
+    def _process_split(self,
+                       context: Context,
+                       split_base_directory: Path,
+                       split_name: str):
+
+        # Modify context such that the operations occur in the new output directory using the split file
+        cloned = copy.deepcopy(context)
+        cloned.set(OUTPUT_DIR_KEY, split_base_directory, overwrite=True)
+
+        split_prefix_list = cloned.get(PREFIXES_KEY) + [split_name]
+        split_prefix = format_prefix(split_prefix_list)
+        cloned.set(MAIN_FILE_KEY, split_base_directory / f"{split_prefix}.csv", overwrite=True)
+        cloned.set(PREFIXES_KEY, split_prefix_list, overwrite=True)
+
+        # Apply the necessary preprocessing, i.e. session index generation
+        for action in self.per_split_actions:
+            action(cloned)
+
 
 
 class CreateRatioSplit(PreprocessingAction):

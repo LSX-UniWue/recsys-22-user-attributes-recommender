@@ -107,7 +107,8 @@ local dataset = 'ml-1m';
             num_transformer_heads: 1,
             num_transformer_layers: 1,
             transformer_hidden_size: 2,
-            transformer_dropout: 0.1
+            transformer_dropout: 0.1,
+            project_layer_type: 'linear'
         }
     },
     features: {
