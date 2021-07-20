@@ -12,14 +12,9 @@ local metrics =  {
             path: "/tmp/experiments/nnrec_basket"
         },
         next_sequence_step_data_sources: {
-            parser: {
-                item_column_name: "item_id",
-                item_separator: ' + '
-            },
             loader: {
                 batch_size: 9,
-                max_seq_length: max_seq_length,
-                max_seq_step_length: 5
+                dynamic_padding: false
             },
             path: base_path,
             file_prefix: prefix,
@@ -51,8 +46,13 @@ local metrics =  {
             max_sequence_length: max_seq_length
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "item_id",
+            type: "strlist",
+            delimiter: " + ",
+            sequence_length: max_seq_length,
+            max_sequence_step_length: 5,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",

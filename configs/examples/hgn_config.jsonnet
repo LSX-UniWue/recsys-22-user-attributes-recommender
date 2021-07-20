@@ -19,8 +19,7 @@ local num_successive_items = 3;
                 num_workers: 0
             },
             path: base_path + "ratio-0.8_0.1_0.1/",
-            file_prefix: "example",
-            seed: 123456
+            file_prefix: "example"
         }
     },
     module: {

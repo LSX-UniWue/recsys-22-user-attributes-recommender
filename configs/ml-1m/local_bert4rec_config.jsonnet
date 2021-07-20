@@ -106,7 +106,7 @@ local dataset = 'ml-1m';
             max_seq_length: max_seq_length,
             num_transformer_heads: 1,
             num_transformer_layers: 1,
-            transformer_hidden_size: 2,
+            transformer_hidden_size: 32,
             transformer_dropout: 0.1,
             project_layer_type: 'linear'
         }
@@ -122,7 +122,7 @@ local dataset = 'ml-1m';
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: loo_path + "ml-1m.vocabulary.title.txt"
+                    file: loo_path + file_prefix + "vocabulary.title.txt"
                 }
             }
         }

@@ -1,5 +1,5 @@
-local base_path = "./dataset/ml-1m/";
-local output_path = "./dataset/ml-1m/exp/";
+local base_path = "datasets/dataset/ml-1m/";
+local output_path = "dataset/datassts/ml-1m/exp/";
 local max_seq_length = 10;
 local metrics =  {
     mrr: [1, 5, 10],
@@ -17,23 +17,9 @@ local additional_attributes_list = ['genres'];
             path: output_path
         },
         mask_data_sources: {
-            parser: {
-                item_column_name: "title",
-                features: {
-                    genres: {
-                        type: "strlist",
-                        sequence: true,
-                        delimiter: "|"
-                    }
-                }
-
-            },
             loader: {
                 batch_size: 4,
-                max_seq_length: max_seq_length,
-                max_seq_step_length: {
-                    genres: 5
-                }
+                num_workers: 0
             },
             path: base_path,
             train_file_prefix: file_prefix,
@@ -53,7 +39,7 @@ local additional_attributes_list = ['genres'];
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + file_prefix + ".popularity.title.txt",
+                sample_probability_file: base_path + "loo/" + file_prefix + ".popularity.title.txt",
                 num_negative_samples: 100,
                 metrics: metrics
             }
@@ -69,13 +55,15 @@ local additional_attributes_list = ['genres'];
             additional_attributes: {
                 genres: {
                     embedding_type: 'linear_upscale',
-                    vocab_size: 21
-                    },
+                    vocab_size: 301
+                }
             }
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "title",
+            sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",
@@ -83,11 +71,15 @@ local additional_attributes_list = ['genres'];
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + file_prefix + ".vocabulary.title.txt"
+                    file: base_path + "loo/" + file_prefix + ".vocabulary.title.txt"
                 }
             }
         },
         genres: {
+            type: "strlist",
+            delimiter: "|",
+            sequence_length: max_seq_length,
+            max_sequence_step_length: 5,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",
@@ -95,7 +87,7 @@ local additional_attributes_list = ['genres'];
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + file_prefix + ".vocabulary.genres.txt"
+                    file: base_path + "loo/" + file_prefix + ".vocabulary.genres.txt"
                 }
             }
         },

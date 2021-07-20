@@ -13,8 +13,7 @@ local metrics =  {
         },
         mask_data_sources: {
             loader: {
-                batch_size: 9,
-                max_seq_length: max_seq_length,
+                batch_size: 9
             },
             path: base_path,
             file_prefix: prefix,

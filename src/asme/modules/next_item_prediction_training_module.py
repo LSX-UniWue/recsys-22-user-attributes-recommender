@@ -54,7 +54,9 @@ class BaseNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
 
         self.metrics = metrics
 
-        self.loss_function = loss_function
+        if loss_function is None:
+            loss_function = CrossEntropyLoss
+        self.loss_function = loss_function(item_tokenizer)
 
         self.save_hyperparameters(self.hyperparameters)
 
@@ -186,7 +188,6 @@ class NextItemPredictionTrainingModule(BaseNextItemPredictionTrainingModule):
         self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
         mask = None if len(target.size()) == 1 else ~ target.eq(self.item_tokenizer.pad_token_id)
-
         return build_eval_step_return_dict(input_seq, logits, target, mask=mask)
 
 

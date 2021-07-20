@@ -11,12 +11,8 @@ local metrics =  {
             path: "/tmp/experiments/cosrec"
         },
         pos_neg_data_sources: {
-            parser: {
-                item_column_name: "item_id"
-            },
             loader: {
-                batch_size: 9,
-                max_seq_length: max_seq_length
+                batch_size: 9
             },
             path: base_path + "ratio_split/",
             file_prefix: "example",
@@ -43,8 +39,8 @@ local metrics =  {
         },
         model: {
             user_vocab_size: 0,
-            max_seq_length: 5,
-          # chosen from {10, 20, 30, 50, 100}, ML-1M: 50, Gowalla: 100
+            max_seq_length: max_seq_length,
+            # chosen from {10, 20, 30, 50, 100}, ML-1M: 50, Gowalla: 100
             embed_dim: 50,
             block_num: 2,
             block_dim:[128,256],
@@ -54,8 +50,13 @@ local metrics =  {
 
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "item_id",
+            type: "strlist",
+            delimiter: " + ",
+            sequence_length: max_seq_length,
+            max_sequence_step_length: 5,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",

@@ -79,6 +79,10 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         target_mask = input_seq.eq(self.item_tokenizer.mask_token_id)
 
+        # XXX: another switch for the basket recommendation setting
+        if len(target_mask.size()) == 3:
+            target_mask = target_mask.max(dim=-1).values
+
         # get predictions for all seq steps
         prediction = self(batch, batch_idx)
         # extract the relevant seq steps, where the mask was set, here only one mask per sequence steps exists

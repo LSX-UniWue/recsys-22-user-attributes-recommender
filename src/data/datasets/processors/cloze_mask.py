@@ -59,7 +59,6 @@ class ClozeMaskProcessor(Processor):
         # first we decide if we only mask the last item
         mask_last_item_prob = random_uniform()
         if mask_last_item_prob <= self.only_last_item_mask_prob:
-
             for mask_target, sequence in sequences.items():
                 tokenizer = get_tokenizer(self.tokenizers, mask_target)
 
@@ -84,8 +83,9 @@ class ClozeMaskProcessor(Processor):
                             random_index = random_(0, len(get_tokenizer(self.tokenizers, mask_target)) - 1)
                             sequence_to_mask[index] = [random_index] if isinstance(sequence_to_mask[0], list) else random_index
                 else:
-                    # we use the padding token as masking the cross entropy loss
-                    target[index] = self.tokenizers[get_tokenizer_key_for_voc(ITEM_TOKENIZER_ID)].pad_token_id
+                    # we use the padding token for masking the cross entropy loss
+                    loss_mask = self.tokenizers[get_tokenizer_key_for_voc(ITEM_TOKENIZER_ID)].pad_token_id
+                    target[index] = [loss_mask] if isinstance(sequence[0], list) else loss_mask
 
         parsed_sequence[TARGET_ENTRY_NAME] = target
 

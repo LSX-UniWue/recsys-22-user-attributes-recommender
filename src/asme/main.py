@@ -45,11 +45,10 @@ app = typer.Typer()
 
 @app.command()
 def train(config_file: Path = typer.Argument(..., help='the path to the config file', exists=True),
-          resume: bool = typer.Option(False, help='flag iff the model should resume training from a checkpoint'),
-          print_train_val_examples: bool = typer.Option(True, help='print examples of the training'
-                                                                    'and evaluation dataset before starting training')
-    ) -> None:
-
+          do_resume: bool = typer.Option(False, help='flag iff the model should resume training from a checkpoint'),
+          print_train_val_examples: bool = typer.Option(True, help='print examples of the training '
+                                                                   'and evaluation dataset before starting training')
+          ) -> None:
     config_file_path = Path(config_file)
     config = load_config(config_file_path)
 
@@ -60,8 +59,8 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
     log_dir = determine_log_dir(trainer)
     save_config(config, log_dir)
 
-    if resume:
-        resume(log_dir)
+    if do_resume:
+        resume(log_dir, None)
 
     else:
         train_dataloader = container.train_dataloader()
@@ -282,7 +281,9 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
             :return: A list of all metrics in the module's metric container with per-sample-storage enabled.
             """
             metrics_container = module.metrics
-            metric_names_and_values = list(filter(lambda x: x[1]._storage_mode == MetricStorageMode.PER_SAMPLE, zip(metrics_container.get_metric_names(), metrics_container.get_metrics())))
+            metric_names_and_values = list(filter(lambda x: x[1]._storage_mode == MetricStorageMode.PER_SAMPLE,
+                                                  zip(metrics_container.get_metric_names(),
+                                                      metrics_container.get_metrics())))
             return list(map(lambda x: (x[0], x[1].raw_metric_values()), metric_names_and_values))
 
         def _create_batch_loader(dataset: Dataset,
@@ -385,7 +386,8 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
                     sequence = remove_special_tokens(sequence, item_tokenizer)
                     sequence = item_tokenizer.convert_ids_to_tokens(sequence)
 
-                output_writer.write_values(f'{sample_id}', tokens, scores, true_target, metric_name_and_values, sequence)
+                output_writer.write_values(f'{sample_id}', tokens, scores, true_target, metric_name_and_values,
+                                           sequence)
 
 
 @app.command()

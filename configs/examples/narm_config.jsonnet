@@ -12,8 +12,7 @@ local metrics =  {
         },
         next_sequence_step_data_sources: {
             loader: {
-                batch_size: 9,
-                max_seq_length: max_seq_length
+                batch_size: 9
             },
             path: base_path + "ratio-0.8_0.1_0.1/",
             file_prefix: "example"

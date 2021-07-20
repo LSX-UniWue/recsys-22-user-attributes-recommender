@@ -11,14 +11,8 @@ local metrics =  {
             path: "/tmp/experiments/gru_basket"
         },
         next_sequence_step_data_sources: {
-            parser: {
-                item_column_name: "item_id",
-                item_separator: ' + '
-            },
             loader: {
-                batch_size: 9,
-                max_seq_length: max_seq_length,
-                max_seq_step_length: 5
+                batch_size: 9
             },
             path: base_path,
             validation_file_prefix: "train",
@@ -50,8 +44,13 @@ local metrics =  {
             embedding_pooling_type: 'mean'
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "item_id",
+            type: "strlist",
+            delimiter: " + ",
+            sequence_length: max_seq_length,
+            max_sequence_step_length: 5,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",

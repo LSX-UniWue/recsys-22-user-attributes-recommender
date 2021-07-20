@@ -96,15 +96,6 @@ PARSER_ITEM_COLUMN_NAME = 'item_column_name'
 PARSER_ITEM_SEPARATOR = 'item_separator'
 
 
-def build_parser_config(parser_config: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    builds the parser config, currently just pass the config, because nothing is currently modified by the datasources
-    templates
-    :param parser_config:
-    :return:
-    """
-    return parser_config
-
 
 def _get_prefix(config: Dict[str, Any],
                 stage: Stage
@@ -282,6 +273,7 @@ def build_datasource(dataset_builders: List[DatasetBuilder],
     :return:
     """
     loader_config = config['loader']
+    parser_config = config.get('parser')
 
     base_batch_size = loader_config.get('batch_size', 0)
     batch_size = loader_config.get(f'{stage.value}_batch_size', base_batch_size)
@@ -306,6 +298,9 @@ def build_datasource(dataset_builders: List[DatasetBuilder],
 
     dataset_config = _build_dataset_config()
     dataset_config['processors'] = processors
+
+    if parser_config is not None:
+        dataset_config['parser'] = parser_config
 
     loader_config_dict = {
         'dataset': dataset_config,
