@@ -34,7 +34,7 @@ def get_ml_1m_preprocessing_config(output_directory: str,
                MetaInformation("gender", type="str"),
                MetaInformation("age", type="int"),
                MetaInformation("occupation", type="str"),
-               MetaInformation("zip", type="int"),
+               MetaInformation("zip", type="str"),
                MetaInformation("title", type="str"),
                MetaInformation("genres", type="str", configs={"delimiter": "|"})]
 
@@ -46,17 +46,17 @@ def get_ml_1m_preprocessing_config(output_directory: str,
                                               per_split_actions=
                                               [CreateSessionIndex(["userId"]),
                                                CreateNextItemIndex(
-                                                   [MetaInformation("item", column_name="item_id", type="str")],
+                                                   [MetaInformation("item", column_name="title", type="str")],
                                                    RemainingSessionPositionExtractor(
                                                        min_sequence_length))],
                                               complete_split_actions=
                                               [CreateVocabulary(columns, special_tokens=special_tokens,
                                                                 prefixes=[prefix]),
                                                CreatePopularity(columns, prefixes=[prefix])]),
-                             CreateLeaveOneOutSplit(MetaInformation("item", column_name="item_id", type="str"),
+                             CreateLeaveOneOutSplit(MetaInformation("item", column_name="title", type="str"),
                                                     inner_actions=
                                                     [CreateNextItemIndex(
-                                                        [MetaInformation("item", column_name="item_id", type="str")],
+                                                        [MetaInformation("item", column_name="title", type="str")],
                                                         RemainingSessionPositionExtractor(
                                                             min_sequence_length)),
                                                         CreateVocabulary(columns, special_tokens=special_tokens),
