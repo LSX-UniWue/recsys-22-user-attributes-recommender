@@ -46,12 +46,14 @@ class MetaInformation:
     tokenizer: Optional[Tokenizer] = None
     is_sequence: bool = True
     sequence_length: Optional[int] = None
+    run_tokenization: bool = True  #TODO (AD) maybe think about finding a more user friendly default?
     is_generated: bool = False  # True iff the feature will be generated based on other features
     column_name: Optional[str] = None
     configs: Dict[str, Any] = field(default_factory=dict)
 
     def get_config(self, config_key: str) -> Optional[Any]:
         return self.configs.get(config_key, None)
+
 
 
 # TODO: move to provider utils?
