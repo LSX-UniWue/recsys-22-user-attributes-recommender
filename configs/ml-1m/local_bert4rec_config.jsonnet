@@ -70,20 +70,6 @@ local dataset = 'ml-1m';
         unified_output: {
             path: output_path
         },
-        /*mask_data_sources: {
-            parser: {
-                item_column_name: "title"
-            },
-            loader: {
-                batch_size: 4,
-                max_seq_length: max_seq_length
-            },
-            path: cached_dataset_path,
-            file_prefix: file_prefix,
-            split_type: 'leave_one_out',
-            mask_probability: 0.2,
-            mask_seed: 42
-        } */
     },
 
     module: {
@@ -93,7 +79,7 @@ local dataset = 'ml-1m';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: loo_path + "ml-1m.popularity.title.txt",
+                sample_probability_file: "ml-1m.popularity.title.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             },
@@ -122,7 +108,7 @@ local dataset = 'ml-1m';
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: loo_path + file_prefix + "vocabulary.title.txt"
+                    #file: loo_path + file_prefix + "vocabulary.title.txt"
                 }
             }
         }
@@ -133,12 +119,12 @@ local dataset = 'ml-1m';
             tensorboard: {}
         },
         checkpoint: {
-            monitor: "recall@10_sampled(100)",
+            monitor: "recall@10",
             save_top_k: 3,
             mode: 'max'
         },
         gpus: 0,
         max_epochs: 10,
-        check_val_every_n_epoch: 50
+        check_val_every_n_epoch: 1
     }
 }

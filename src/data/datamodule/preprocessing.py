@@ -16,7 +16,6 @@ from asme.tokenization.vocabulary import CSVVocabularyReaderWriter, Vocabulary
 from data import RATIO_SPLIT_PATH_CONTEXT_KEY, LOO_SPLIT_PATH_CONTEXT_KEY
 from data.base.csv_index_builder import CsvSessionIndexer
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
-from data.datamodule.column_info import ColumnInfo
 from data.datamodule.converters import CsvConverter
 from data.datamodule.extractors import TargetPositionExtractor, FixedOffsetPositionExtractor, \
     SlidingWindowPositionExtractor
@@ -343,7 +342,7 @@ class CreateVocabulary(PreprocessingAction):
         prefix = format_prefix(context.get(PREFIXES_KEY) if self.prefixes is None else self.prefixes)
         delimiter = context.get(DELIMITER_KEY)
         for column in self.columns:
-            filename = column.column_name
+            filename = column.column_name if column.column_name is not None else column.feature_name
             if column.get_config("delimiter") is not None:
                 filename += "-splitted"
             output_file = output_dir / f"{prefix}.vocabulary.{filename}.txt"
@@ -531,7 +530,8 @@ class CreatePopularity(PreprocessingAction):
             prefix = format_prefix(prefixes)
             sub_delimiter = column.get_config("delimiter")
 
-            filename = column.column_name
+            # TODO: Is this the right precedence?
+            filename = column.column_name if column.column_name is not None else column.feature_name
             if column.get_config("delimiter") is not None:
                 filename += "-splitted"
 
