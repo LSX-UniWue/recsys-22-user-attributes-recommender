@@ -46,6 +46,7 @@ class MetaInformationFactory(ObjectFactory):
         feature_is_sequence = config.get_or_default('sequence', True)
         column_name = config.get('column_name')
         sequence_length = config.get('sequence_length')
+        run_tokenization = config.get_or_default('run_tokenization', False)
 
         feature_config = {}
 
@@ -55,7 +56,10 @@ class MetaInformationFactory(ObjectFactory):
         vocabulary_file = f"{prefix}.vocabulary.{column_name}.txt"
         infer_whole_path(config, ["tokenizer", "vocabulary", "file"], split_path, vocabulary_file)
 
-        tokenizer = self._dependencies.build(config, context)['tokenizer']
+        if run_tokenization:
+            tokenizer = self._dependencies.build(config, context)['tokenizer']
+        else:
+            tokenizer = None
 
         for key in config.get_keys():
             if key not in self.CONFIG_KEYS:
