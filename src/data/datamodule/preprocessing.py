@@ -29,17 +29,17 @@ from datasets.data_structures.train_validation_test_splits_indices import TrainV
 from datasets.vocabulary.create_vocabulary import create_token_vocabulary
 
 # TODO (AD): check handling of prefixes, i think that is overengineered
-EXTRACTED_DIRECTORY_KEY = "extract_directory"
 MAIN_FILE_KEY = "main_file"
 SESSION_INDEX_KEY = "session_index"
 OUTPUT_DIR_KEY = "output_dir"
 PREFIXES_KEY = "prefixes"
 DELIMITER_KEY = "delimiter"
 SEED_KEY = "seed"
-RAW_INPUT_FILE_PATH_KEY = "raw_file_path"
+INPUT_DIR_KEY = "input_dir"
 SPLIT_BASE_DIRECTORY_PATH = "split_base_directory"
 SPLIT_FILE_PREFIX = "split_file_prefix"
 SPLIT_FILE_SUFFIX = "split_file_suffix"
+
 
 def format_prefix(prefixes: List[str]) -> str:
     return ".".join(prefixes)
@@ -76,7 +76,7 @@ class UseExistingCsv(PreprocessingAction):
     Registers a pre-processed CSV file in context.
 
     Required context parameters:
-    - `RAW_RAW_INPUT_FILE_PATH_KEY` - the path to the pre-processed CSV file.
+    - `INPUT_DIR` - the path to the pre-processed CSV file.
 
     Sets context parameters:
     - `MAIN_FILE_KEY` - the path to the pre-processed CSV file.
@@ -85,23 +85,21 @@ class UseExistingCsv(PreprocessingAction):
         return "Use existing CSV file"
 
     def apply(self, context: Context) -> None:
-        if not context.has_path(RAW_INPUT_FILE_PATH_KEY):
-            raise Exception(f"A pre-processed CSV file must be present in context at: {RAW_INPUT_FILE_PATH_KEY}")
+        if not context.has_path(INPUT_DIR_KEY):
+            raise Exception(f"A pre-processed CSV file must be present in context at: '{INPUT_DIR_KEY}'")
 
-        context.set(MAIN_FILE_KEY, context.get(RAW_INPUT_FILE_PATH_KEY))
+        context.set(MAIN_FILE_KEY, context.get(INPUT_DIR_KEY))
 
 
-# FIXME (AD) Johannes please fix this!!! we need some way to document context entries (and their types) that functions rely on.
 class ConvertToCsv(PreprocessingAction):
     """
     Applies a conversion to the CSV format on a dataset.
 
     Required context parameters:
-    - `RAW_RAW_INPUT_FILE_PATH_KEY` - the path to a dataset file (takes precedence over `EXTRACTED_DIRECTORY_KEY`)
+    - `INPUT_DIR_KEY` - the path to a dataset file
     - `EXTRACTED_DIRECTORY_KEY` - the path to a directory containing a dataset
     - `OUTPUT_DIRECTORY_KEY` - the directory where the final converted CSV file will be placed
     - `PREFIXES_KEY` - the prefixes used to generate the name of the final CSV file.
-
 
     Sets context parameters:
     - `MAIN_FILE_KEY` - the path to the pre-processed CSV file.
@@ -113,12 +111,7 @@ class ConvertToCsv(PreprocessingAction):
         return "Converting to CSV"
 
     def apply(self, context: Context) -> None:
-        #FIXME (AD) it seems that we can use a single key for this information?
-        if context.has_path(RAW_INPUT_FILE_PATH_KEY):
-            input_dir = context.get(RAW_INPUT_FILE_PATH_KEY)
-        else:
-            input_dir = context.get(EXTRACTED_DIRECTORY_KEY)
-
+        input_dir = context.get(INPUT_DIR_KEY)
         output_directory = context.get(OUTPUT_DIR_KEY)
 
         if not output_directory.exists():
@@ -131,9 +124,20 @@ class ConvertToCsv(PreprocessingAction):
 
 
 class TransformCsv(PreprocessingAction):
+    """
+    Reads the current main CSV file and transforms it via the provided function. The main CSV file is overwritten with
+    the transformed one.
+    
+    Required context parameters:
+    - `MAIN_FILE_KEY` - The path to the main CSV file.
+    - `DELIMITER_KEY` - The delimiter used to separate columns in the main CSV file.
+    
+    Sets context parameters:
+        None
+    """
 
-    def __init__(self, filter: Callable[[pd.DataFrame], pd.DataFrame]):
-        self.filter = filter
+    def __init__(self, transform: Callable[[pd.DataFrame], pd.DataFrame]):
+        self.filter = transform
 
     def name(self) -> str:
         return "Filtering CSV"
@@ -163,7 +167,17 @@ class GroupedFilter:
 
 
 class GroupAndFilter(PreprocessingAction):
-
+    """
+    Groups a dataframe by a key, then aggregates and filters the grouped dataframe. 
+    
+    Required context parameters:
+    - `MAIN_FILE_KEY` - The path to the main CSV file.
+    - `DELIMITER_KEY` - The delimiter used to separate columns in the main CSV file.
+    
+    Sets context parameters:
+        None
+ 
+    """
     def __init__(self, group_by: str, filter: GroupedFilter):
         def apply_filter(d):
             if filter.aggregated_column is None:
@@ -187,7 +201,19 @@ class GroupAndFilter(PreprocessingAction):
 
 
 class CreateSessionIndex(PreprocessingAction):
-
+    """
+    Creates a session index for the provided session key.
+    
+    Required context parameters:
+    - `MAIN_FILE_KEY` - The path to the main CSV file.
+    - `OUTPUT_DIR_KEY` - The directory where the index should be saved.
+    - `PREFIXES_KEY` - The prefixes to use when naming the index file.
+    - `DELIMITER_KEY` - The delimiter that is used to separate columns in the main CSV file.
+    
+    Sets context parameters:
+    - `SESSION_INDEX_KEY` - The path to the session index that was created in this step.
+    """
+    
     def __init__(self, session_key: List[str]):
         self.session_key = session_key
 
@@ -198,15 +224,27 @@ class CreateSessionIndex(PreprocessingAction):
         main_file = context.get(MAIN_FILE_KEY)
         output_dir = context.get(OUTPUT_DIR_KEY)
         prefix = format_prefix(context.get(PREFIXES_KEY))
-        session_index = output_dir / f"{prefix}.session.idx"
+        session_index_path = output_dir / f"{prefix}.session.idx"
         delimiter = context.get(DELIMITER_KEY)
         csv_index = CsvSessionIndexer(delimiter=delimiter)
-        csv_index.create(main_file, session_index, self.session_key)
-        context.set(SESSION_INDEX_KEY, session_index, overwrite=True)
+        csv_index.create(main_file, session_index_path, self.session_key)
+        context.set(SESSION_INDEX_KEY, session_index_path, overwrite=True)
 
 
 class CreateNextItemIndex(PreprocessingAction):
-
+    """
+    Creates a next-item-index for each of the provided columns using the specified target position extractor.
+    
+    Required context parameters:
+    - `MAIN_FILE_KEY` - The path to the main CSV file.
+    - `OUTPUT_DIR_KEY` - The directory where the index should be saved.
+    - `PREFIXES_KEY` - The prefixes to use when naming the index file.
+    - `DELIMITER_KEY` - The delimiter that is used to separate columns in the main CSV file.
+    - `SESSION_INDEX_KEY` - The path to the session index to consider to create the next-item index.
+    
+    Sets context parameters:
+        None
+    """
     def __init__(self, columns: List[MetaInformation], extractor: TargetPositionExtractor):
         self.extractor = extractor
         self.columns = columns
@@ -235,6 +273,19 @@ class CreateNextItemIndex(PreprocessingAction):
 
 
 class CreateSlidingWindowIndex(PreprocessingAction):
+    """
+    Creates a sliding-window index for each of the provided columns using the specified extractor.
+    
+    Required context parameters:
+    - `MAIN_FILE_KEY` - The path to the main CSV file.
+    - `OUTPUT_DIR_KEY` - The directory where the index should be saved.
+    - `PREFIXES_KEY` - The prefixes to use when naming the index file.
+    - `DELIMITER_KEY` - The delimiter that is used to separate columns in the main CSV file.
+    - `SESSION_INDEX_KEY` - The path to the session index to consider to create the sliding-window index.
+    
+    Sets context parameters:
+        None
+    """
 
     def __init__(self,
                  columns: List[MetaInformation],
@@ -270,7 +321,21 @@ class CreateSlidingWindowIndex(PreprocessingAction):
 
 
 class CreateLeaveOneOutSplit(PreprocessingAction):
-
+    """
+    Creates a leave-one-out-split for the dataset using the provided column. Each supplied inner action is applied to 
+    the split afterwards.
+    
+    Required context parameters:
+    - `MAIN_FILE_KEY` - The path to the main CSV file.
+    - `OUTPUT_DIR_KEY` - The directory where the index should be saved.
+    - `PREFIXES_KEY` - The prefixes to use when naming the index file.
+    - `DELIMITER_KEY` - The delimiter that is used to separate columns in the main CSV file.
+    - `SESSION_INDEX_KEY` - The path to the session index to consider to create the leave-one-out split.
+    
+    Sets context parameters:
+    - `LOO_SPLIT_PATH_CONTEXT_KEY` - The base path of the leave-one-out split.
+    
+    """
     def __init__(self, column: MetaInformation, training_target_offset=2, validation_target_offset=1, test_target_offset=0,
                  inner_actions: List[PreprocessingAction] = None):
         """
@@ -325,7 +390,20 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
 
 
 class CreateVocabulary(PreprocessingAction):
-
+    """
+    Creates a vocabulary file for each provided column.
+    
+    Required context parameters:
+    - `MAIN_FILE_KEY` - The path to the main CSV file.
+    - `OUTPUT_DIR_KEY` - The directory where the vocabulary should be saved.
+    - `PREFIXES_KEY` - The prefixes to use when naming the vocabulary file.
+    - `DELIMITER_KEY` - The delimiter that is used to separate columns in the main CSV file.
+    - `SESSION_INDEX_KEY` - The path to the session index to consider to create the vocabulary.
+    
+    Sets context parameters:
+        None
+    """
+    
     def __init__(self, columns: List[MetaInformation],
                  special_tokens: List[str] = None,
                  prefixes: List[str] = None):
@@ -356,6 +434,16 @@ class CreateVocabulary(PreprocessingAction):
 
 
 class UseExistingSplit(PreprocessingAction):
+    """
+    Enables the usage of pre-split datasets from outside of the ASME preprocessing pipeline.
+    
+    Required context parameters:
+    - `SPLIT_BASE_DIRECTORY_PATH` - The path to the existing split. 
+    - `PREFIXES_KEY` - The prefixes to use when naming files in the split.
+    
+    Sets context parameters:
+        None
+    """
     def __init__(self, split_names: List[str], per_split_actions: List[PreprocessingAction] = None):
         if split_names is None or len(split_names) == 0:
             raise Exception(f"At least one name for a split must be supplied.")
@@ -392,7 +480,22 @@ class UseExistingSplit(PreprocessingAction):
 
 
 class CreateRatioSplit(PreprocessingAction):
-
+    """
+    Creates a ratio-split using the provided train/validation/test percentages. Each per-split action is executed for
+    the train/validation/test split separately while each complete-split action is executed once for the entire ratio-
+    split.
+    
+    Required context parameters:
+    - `MAIN_FILE_KEY` - The path to the main CSV file.
+    - `OUTPUT_DIR_KEY` - The directory where the ratio-split should be created.
+    - `PREFIXES_KEY` - The prefixes to use when naming files of the split.
+    - `DELIMITER_KEY` - The delimiter that is used to separate columns in the main CSV file.
+    - `SESSION_INDEX_KEY` - The path to the session index to consider to create the ratio split.
+    
+    Sets context parameters:
+    - `RATIO_SPLIT_PATH_CONTEXT_KEY` - The base path to the ratio-split directory.
+    
+    """
     def __init__(self, train_percentage: float, validation_percentage: float, test_percentage: float,
                  per_split_actions: List[PreprocessingAction] = None,
                  complete_split_actions: List[PreprocessingAction] = None,
@@ -510,6 +613,19 @@ class CreateRatioSplit(PreprocessingAction):
 
 
 class CreatePopularity(PreprocessingAction):
+    """
+    Creates item popularities for each of the provided columns.
+   
+    Required context parameters:
+    - `MAIN_FILE_KEY` - The path to the main CSV file.
+    - `OUTPUT_DIR_KEY` - The directory where the popularity files should be saved.
+    - `PREFIXES_KEY` - The prefixes to use when naming the popularity files.
+    - `DELIMITER_KEY` - The delimiter that is used to separate columns in the main CSV file.
+    - `SESSION_INDEX_KEY` - The path to the session index to consider to create the popularities.
+    
+    Sets context parameters:
+        None
+    """
     def __init__(self, columns: List[MetaInformation], prefixes: List[str] = None, special_tokens: Dict[str, str] = None):
         self.columns = columns
         self.prefixes = prefixes
@@ -579,7 +695,8 @@ class CreatePopularity(PreprocessingAction):
 
         return counts
 
-    def _write_popularity(self, popularities: List[float], output_file: Path):
+    @staticmethod
+    def _write_popularity(popularities: List[float], output_file: Path):
         with open(output_file, 'w') as f:
             for popularity in popularities:
                 f.write(f"{popularity}\n")

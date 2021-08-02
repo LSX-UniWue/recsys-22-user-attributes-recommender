@@ -5,10 +5,10 @@ from asme.init.context import Context
 from data.datamodule.config import DatasetPreprocessingConfig, register_preprocessing_config_provider, \
     PreprocessingConfigProvider
 from data.datamodule.preprocessing import ConvertToCsv, TransformCsv, CreateSessionIndex, \
-    GroupAndFilter, GroupedFilter, CreateVocabulary, DELIMITER_KEY, EXTRACTED_DIRECTORY_KEY, \
+    GroupAndFilter, GroupedFilter, CreateVocabulary, DELIMITER_KEY, \
     OUTPUT_DIR_KEY, CreateRatioSplit, CreateNextItemIndex, CreateLeaveOneOutSplit, CreatePopularity, \
-    RAW_INPUT_FILE_PATH_KEY, MAIN_FILE_KEY, UseExistingCsv, UseExistingSplit, SPLIT_BASE_DIRECTORY_PATH, \
-    CreateSlidingWindowIndex
+    MAIN_FILE_KEY, UseExistingCsv, UseExistingSplit, SPLIT_BASE_DIRECTORY_PATH, \
+    CreateSlidingWindowIndex, INPUT_DIR_KEY
 from data.datamodule.converters import YooChooseConverter, Movielens1MConverter, ExampleConverter
 from data.datamodule.extractors import RemainingSessionPositionExtractor, SlidingWindowPositionExtractor
 from data.datamodule.unpacker import Unzipper
@@ -25,7 +25,7 @@ def get_ml_1m_preprocessing_config(output_directory: str,
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
     context.set(DELIMITER_KEY, "\t")
-    context.set(EXTRACTED_DIRECTORY_KEY, Path(extraction_directory))
+    context.set(INPUT_DIR_KEY, Path(extraction_directory))
     context.set(OUTPUT_DIR_KEY, Path(output_directory))
 
     special_tokens_mapping = {
@@ -97,7 +97,7 @@ def get_dota_shop_preprocessing_config(output_directory: str,
     context.set(OUTPUT_DIR_KEY, Path(output_directory))
 
     full_csv_file_path = Path(raw_csv_file_path)
-    context.set(RAW_INPUT_FILE_PATH_KEY, full_csv_file_path)
+    context.set(INPUT_DIR_KEY, full_csv_file_path)
 
     # assume that the split directory is relative to the full csv file.
     split_directory_path = full_csv_file_path.parent / split_directory
@@ -151,7 +151,7 @@ def get_example_preprocessing_config(output_directory: str,
     context.set(PREFIXES_KEY, [prefix])
     context.set(DELIMITER_KEY, "\t")
     context.set(OUTPUT_DIR_KEY, Path(output_directory))
-    context.set(RAW_INPUT_FILE_PATH_KEY, input_file_path)
+    context.set(INPUT_DIR_KEY, input_file_path)
 
     special_tokens_mapping = {
         "pad_token": "<PAD>",
