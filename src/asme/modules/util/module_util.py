@@ -3,8 +3,11 @@ from typing import Dict
 import torch
 from torch.nn import functional as F
 
+from asme.models.common.layers.data.sequence import InputSequence
+from asme.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.modules.constants import RETURN_KEY_PREDICTIONS, RETURN_KEY_TARGETS, RETURN_KEY_MASK, RETURN_KEY_SEQUENCE
 from asme.tokenization.tokenizer import Tokenizer
+from data.datasets import ITEM_SEQ_ENTRY_NAME
 
 
 def get_padding_mask(sequence: torch.Tensor,
@@ -97,3 +100,51 @@ def build_eval_step_return_dict(input_sequence: torch.Tensor,
         return_dict.update({RETURN_KEY_MASK: mask})
 
     return return_dict
+
+
+def get_additional_meta_data(model: SequenceRecommenderModel, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    """
+    Collects all relevant additional metadata from the batch, according to `SequenceRecommendationModel.additional_metadata_keys(self)`) and
+    returns it as a dictionary.
+
+    :param model: the recommender model
+    :param batch: the full batch
+    :return: a dictionary with the collected additional metadata used by this model.
+    :raises Exception: if an entry for a relevant additional metadata item can not be found in the batch.
+    """
+    required_metadata_keys = model.required_metadata_keys()
+
+    metadata = {}
+    for key in required_metadata_keys:
+        if key not in batch:
+            raise Exception(f"The batch does not contain the following additional metadata: {key}. "
+                            f"Found the following batch entries: {', '.join(batch.keys())}")
+        metadata[key] = batch[key]
+
+    optional_metadata_keys = model.optional_metadata_keys()
+    for key in optional_metadata_keys:
+        if key in batch:
+            metadata[key] = batch[key]
+
+    return metadata
+
+
+def build_model_input(model: SequenceRecommenderModel,
+                      item_tokenizer: Tokenizer,
+                      batch: Dict[str, torch.Tensor]
+                      ) -> InputSequence:
+    """
+    builds a simple input sequence for the model
+
+    :param model:
+    :param item_tokenizer:
+    :param batch:
+    :return: A input sequence object with all the data provided by the batch
+    """
+    input_seq = batch[ITEM_SEQ_ENTRY_NAME]
+
+    # calc the padding mask
+    padding_mask = get_padding_mask(sequence=input_seq, tokenizer=item_tokenizer)
+    additional_metadata = get_additional_meta_data(model, batch)
+
+    return InputSequence(input_seq, padding_mask, additional_metadata)

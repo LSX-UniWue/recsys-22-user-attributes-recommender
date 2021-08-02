@@ -1,7 +1,7 @@
 from typing import Dict, Any
 
 from asme.init.templating.datasources.datasources import DataSourceTemplateProcessor, build_datasource, \
-    NextPositionDatasetBuilder, SequenceDatasetRatioSplitBuilder, TARGET_EXTRACTOR_PROCESSOR_CONFIG
+    NextPositionDatasetBuilder, SequenceDatasetRatioSplitBuilder, TARGET_EXTRACTOR_PROCESSOR_CONFIG, Stage
 
 
 class PlainTrainingSourcesTemplateProcessor(DataSourceTemplateProcessor):
@@ -19,13 +19,13 @@ class PlainTrainingSourcesTemplateProcessor(DataSourceTemplateProcessor):
     def _get_template_key(self) -> str:
         return 'plain_training_next_item_test_and_validation_data_sources'
 
-    def _build_train_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource(self.DATASET_BUILDER_TRAINING, parser, config, 'train')
+    def _build_train_datasource(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        return build_datasource(self.DATASET_BUILDER_TRAINING, config, Stage.TRAIN)
 
-    def _build_validation_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource(self.DATASET_BUILDERS_VALIDATION_AND_TEST, parser, config, 'validation',
+    def _build_validation_datasource(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        return build_datasource(self.DATASET_BUILDERS_VALIDATION_AND_TEST, config, Stage.VALIDATION,
                                 [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
 
-    def _build_test_datasource(self, config: Dict[str, Any], parser: Dict[str, Any]) -> Dict[str, Any]:
-        return build_datasource(self.DATASET_BUILDERS_VALIDATION_AND_TEST, parser, config, 'test',
+    def _build_test_datasource(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        return build_datasource(self.DATASET_BUILDERS_VALIDATION_AND_TEST, config, Stage.TEST,
                                 [TARGET_EXTRACTOR_PROCESSOR_CONFIG])

@@ -3,8 +3,7 @@ from typing import List
 from data.datasets.processors.par_pos_neg_sampler import ParameterizedPositiveNegativeSamplerProcessor
 from asme.init.config import Config
 from asme.init.context import Context
-from asme.init.factories.tokenizer.tokenizer_factory import TokenizerFactory, get_tokenizer_key_for_voc,\
-    ITEM_TOKENIZER_ID
+from asme.init.factories.features.tokenizer_factory import get_tokenizer_key_for_voc, ITEM_TOKENIZER_ID
 from asme.init.factories.util import check_config_keys_exist
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
@@ -19,7 +18,7 @@ class ParameterizedPositiveNegativeSamplerProcessorFactory(ObjectFactory):
                   config: Config,
                   context: Context
                   ) -> CanBuildResult:
-        config_keys_exist = check_config_keys_exist(config, ['seed'])
+        config_keys_exist = check_config_keys_exist(config, ['t'])  # FIXME: rename parameter
         if not config_keys_exist:
             return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION)
 
@@ -33,10 +32,9 @@ class ParameterizedPositiveNegativeSamplerProcessorFactory(ObjectFactory):
               context: Context
               ) -> ParameterizedPositiveNegativeSamplerProcessor:
         tokenizer = context.get(get_tokenizer_key_for_voc(ITEM_TOKENIZER_ID))
-        seed = config.get('seed')
         t = config.get('t')
 
-        return ParameterizedPositiveNegativeSamplerProcessor(tokenizer, seed, t)
+        return ParameterizedPositiveNegativeSamplerProcessor(tokenizer, t)
 
     def is_required(self, context: Context) -> bool:
         return False

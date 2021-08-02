@@ -23,7 +23,7 @@ def _get_hyperparameters(args, kwargs, init_func):
         if isinstance(value, (MetricsContainer, pl.metrics.Metric, Tokenizer)):  # excluding non-hyperparameters like Metrics and Tokenizer
             continue
         hyperparameters[arg] = value
-        if isinstance(value, nn.Module):                    # special handling of the model parameter
+        if isinstance(value, nn.Module) and hasattr(value, 'hyperparameters'):                    # special handling of the model parameter
             model_hyperparameters = value.hyperparameters
             hyperparameters[arg] = model_hyperparameters
 

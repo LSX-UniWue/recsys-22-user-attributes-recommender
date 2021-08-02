@@ -18,7 +18,6 @@ LEAVE_ONE_OUT_TEMPLATE = {
             },
             'loader': {
                 'batch_size': 2,
-                'max_seq_length': 4,
                 'num_workers': 0
             },
             'path': TEST_DATASET_BASE_PATH,
@@ -36,7 +35,6 @@ RATIO_TEMPLATE = {
             },
             'loader': {
                 'batch_size': 2,
-                'max_seq_length': 4,
                 'num_workers': 0
             },
             'path': TEST_DATASET_BASE_PATH / 'ratio-0.8_0.1_0.1',

@@ -12,16 +12,6 @@ local metrics =  {
             path: "/tmp/experiments/bpr"
         },
         pos_neg_data_sources: {
-            parser: {
-                item_column_name: "item_id",
-                additional_attributes: {
-                    user_id: {
-                        type: "int",
-                        sequence: false,
-                    }
-                }
-
-            },
             loader: {
                 batch_size: 9,
                 max_seq_length: max_seq_length
@@ -50,6 +40,16 @@ local metrics =  {
                 metrics: metrics
             }
         },
+    },
+    features: {
+        item: {
+            column_name: "item_id",
+            sequence_length: max_seq_length
+        },
+        user_id: {
+            type: "int",
+            sequence: false
+        }
     },
     tokenizers: {
         item: {

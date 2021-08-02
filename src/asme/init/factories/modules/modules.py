@@ -6,13 +6,14 @@ from typing import List, Any, Dict, Optional, Union, Callable
 from asme.init.config import Config
 from asme.init.context import Context
 from asme.init.factories.metrics.metrics_container import MetricsContainerFactory
-from asme.init.factories.tokenizer.tokenizer_factory import get_tokenizer_key_for_voc
+from asme.init.factories.features.tokenizer_factory import get_tokenizer_key_for_voc
 from asme.init.factories.util import require_config_keys
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.tokenization.tokenizer import Tokenizer
 
 MODEL_PARAM_NAME = 'model'
 METRICS_PARAM_NAME = 'metrics'
+LOSS_FUNCTION_PARAM_NAME = 'loss_function'
 TOKENIZER_SUFFIX = '_tokenizer'
 VOCAB_SIZE_SUFFIX = '_vocab_size'
 
@@ -53,7 +54,11 @@ class GenericModuleFactory(ObjectFactory):
 
     """
 
-    def __init__(self, module_cls, model_cls=None):
+    def __init__(self,
+                 module_cls,
+                 loss_function=None,
+                 model_cls=None
+                 ):
         super().__init__()
 
         self._module_csl = module_cls
@@ -63,6 +68,7 @@ class GenericModuleFactory(ObjectFactory):
         if self.should_build_model:
             self.model_factory = GenericModelFactory(model_cls)
         self.metrics_container_factory = MetricsContainerFactory()
+        self.loss_function = loss_function
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         metrics_can_build = self.metrics_container_factory.can_build(
@@ -116,6 +122,9 @@ class GenericModuleFactory(ObjectFactory):
             named_parameters[MODEL_PARAM_NAME] = model
 
         named_parameters[METRICS_PARAM_NAME] = metrics
+
+        if self.loss_function is not None:
+            named_parameters[LOSS_FUNCTION_PARAM_NAME] = self.loss_function
 
         return self._module_csl(**named_parameters)
 

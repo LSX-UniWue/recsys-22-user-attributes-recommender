@@ -16,16 +16,20 @@ from asme.tokenization.tokenizer import Tokenizer
 
 class PopModule(MetricsTrait, pl.LightningModule):
 
+    """
+    module that provides a baseline, that returns the most popular items in the dataset for recommendation
+    """
+
     def __init__(self,
                  item_tokenizer: Tokenizer,
-                 metrics: MetricsContainer):
-
-        super(PopModule, self).__init__()
+                 metrics: MetricsContainer
+                 ):
+        super().__init__()
         self.item_tokenizer = item_tokenizer
         self.item_vocab_size = len(item_tokenizer)
         self.metrics = metrics
 
-        # We artificially promote this Tensor to a parameter to make PL save it in the model checkpoints
+        # we artificially promote this Tensor to a parameter to make PL save it in the model checkpoints
         self.item_frequencies = Parameter(torch.zeros(self.item_vocab_size, device=self.device), requires_grad=False)
 
     def on_train_start(self) -> None:
@@ -37,7 +41,9 @@ class PopModule(MetricsTrait, pl.LightningModule):
     def get_metrics(self) -> MetricsContainer:
         return self.metrics
 
-    def forward(self, input_seq: torch.tensor):
+    def forward(self,
+                input_seq: torch.Tensor
+                ) -> torch.Tensor:
         batch_size = input_seq.shape[0]
         # We simply predict 0's for all but the most frequently seen item
         predictions = torch.zeros((batch_size, self.item_vocab_size), device=self.device)
@@ -45,24 +51,38 @@ class PopModule(MetricsTrait, pl.LightningModule):
         predictions[:, pop] = 1
         return predictions
 
-    def training_step(self, batch: Dict[str, torch.tensor], batch_idx):
+    def training_step(self,
+                      batch: Dict[str, torch.Tensor],
+                      batch_idx: int
+                      ) -> Dict[str, float]:
         input_seq = torch.flatten(batch[ITEM_SEQ_ENTRY_NAME])
         input_seq = input_seq[input_seq > 0]
         self.item_frequencies += torch.bincount(input_seq, minlength=self.item_vocab_size)
 
-        return {'loss': torch.tensor(0., device=self.device)}
+        return {
+            'loss': 0.0
+        }
 
-    def eval_step(self, batch: Dict[str, torch.tensor], batch_idx):
+    def eval_step(self,
+                  batch: Dict[str, torch.Tensor],
+                  batch_idx: int
+                  ) -> Dict[str, torch.Tensor]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
         prediction = self.forward(input_seq)
 
         return build_eval_step_return_dict(input_seq, prediction, targets)
 
-    def validation_step(self, batch: Dict[str, torch.tensor], batch_idx):
+    def validation_step(self,
+                        batch: Dict[str, torch.tensor],
+                        batch_idx: int
+                        ) -> Dict[str, torch.Tensor]:
         return self.eval_step(batch, batch_idx)
 
-    def test_step(self, batch: Dict[str, torch.tensor], batch_idx):
+    def test_step(self,
+                  batch: Dict[str, torch.Tensor],
+                  batch_idx: int
+                  ) -> Dict[str, torch.Tensor]:
         return self.eval_step(batch, batch_idx)
 
     # Do nothing on backward since we only count occurrences

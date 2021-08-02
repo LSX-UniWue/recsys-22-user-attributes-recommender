@@ -1,4 +1,4 @@
-local base_path = "/scratch/jane-doe-framework/datasets/ml-1m/";
+local base_path = "/scratch/jane-doe-framework/datasets/ml-1m/ml-1m/";
 local output_path = "/scratch/jane-doe-framework/experiments/ml-1m/gru";
 local max_seq_length = 50;
 local metrics =  {
@@ -7,6 +7,7 @@ local metrics =  {
     ndcg: [3, 5, 10]
 };
 
+local loo_path = base_path + "loo/";
 local file_prefix = 'ml-1m';
 
 {
@@ -15,12 +16,8 @@ local file_prefix = 'ml-1m';
             path: output_path
         },
         next_sequence_step_data_sources: {
-            parser: {
-                item_column_name: "title"
-            },
             loader: {
                 batch_size: 128,
-                max_seq_length: max_seq_length,
                 num_workers: 4
             },
             path: base_path,
@@ -37,7 +34,7 @@ local file_prefix = 'ml-1m';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + "popularity.txt",
+                sample_probability_file: loo_path + file_prefix + ".popularity.title.txt",
                 num_negative_samples: 100,
                 metrics: metrics
             }
@@ -50,8 +47,10 @@ local file_prefix = 'ml-1m';
             dropout: 0.2
         }
     },
-    tokenizers: {
+    features: {
         item: {
+            column_name: "title",
+            sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
                     pad_token: "<PAD>",
@@ -60,7 +59,7 @@ local file_prefix = 'ml-1m';
                 },
                 vocabulary: {
                     delimiter: "\t",
-                    file: base_path + "vocab_title.txt"
+                    file: loo_path + file_prefix + ".vocabulary.title.txt"
                 }
             }
         }
