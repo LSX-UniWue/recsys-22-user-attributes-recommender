@@ -13,6 +13,7 @@ import pandas as pd
 from asme.init.context import Context
 from asme.tokenization.tokenizer import Tokenizer
 from asme.tokenization.vocabulary import CSVVocabularyReaderWriter, Vocabulary
+from asme.utils.logging import get_root_logger
 from data import RATIO_SPLIT_PATH_CONTEXT_KEY, LOO_SPLIT_PATH_CONTEXT_KEY
 from data.base.csv_index_builder import CsvSessionIndexer
 from data.base.reader import CsvDatasetIndex, CsvDatasetReader
@@ -343,6 +344,10 @@ class CreateVocabulary(PreprocessingAction):
         delimiter = context.get(DELIMITER_KEY)
         for column in self.columns:
             filename = column.column_name if column.column_name is not None else column.feature_name
+            if not column.run_tokenization:
+                get_root_logger().warning(f"Skipping vocabulary generation for '{filename}' since tokenization was "
+                                          f"disabled for this feature (via 'run_tokenization = False'.")
+                continue
             if column.get_config("delimiter") is not None:
                 filename += "-splitted"
             output_file = output_dir / f"{prefix}.vocabulary.{filename}.txt"
@@ -384,7 +389,6 @@ class UseExistingSplit(PreprocessingAction):
         # Apply the necessary preprocessing, i.e. session index generation
         for action in self.per_split_actions:
             action(cloned)
-
 
 
 class CreateRatioSplit(PreprocessingAction):
@@ -524,14 +528,19 @@ class CreatePopularity(PreprocessingAction):
         session_index = CsvDatasetIndex(session_index_path)
         reader = CsvDatasetReader(main_file, session_index)
         for column in self.columns:
+            # TODO: Is this the right precedence?
+            filename = column.column_name if column.column_name is not None else column.feature_name
+
+            if not column.run_tokenization:
+                get_root_logger().warning(f"Skipping popularity generation for '{filename}' since tokenization was "
+                                          f"disabled for this feature (via 'run_tokenization = False').")
+                continue
             session_parser = ItemSessionParser(header, [column], delimiter=delimiter)
             plain_dataset = PlainSequenceDataset(reader, session_parser)
             dataset = ItemSequenceDataset(plain_dataset)
             prefix = format_prefix(prefixes)
             sub_delimiter = column.get_config("delimiter")
 
-            # TODO: Is this the right precedence?
-            filename = column.column_name if column.column_name is not None else column.feature_name
             if column.get_config("delimiter") is not None:
                 filename += "-splitted"
 

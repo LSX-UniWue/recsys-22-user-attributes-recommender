@@ -28,7 +28,6 @@ def get_ml_1m_preprocessing_config(output_directory: str,
     context.set(EXTRACTED_DIRECTORY_KEY, Path(extraction_directory))
     context.set(OUTPUT_DIR_KEY, Path(output_directory))
 
-
     special_tokens_mapping = {
         "pad_token": "<PAD>",
         "mask_token": "<MASK>",
@@ -36,9 +35,9 @@ def get_ml_1m_preprocessing_config(output_directory: str,
     }
 
     special_tokens = [token for _, token in special_tokens_mapping.items()]
-    columns = [MetaInformation("rating", type="str"),
+    columns = [MetaInformation("rating", type="int", run_tokenization=False),
                MetaInformation("gender", type="str"),
-               MetaInformation("age", type="str"),
+               MetaInformation("age", type="int", run_tokenization=False),
                MetaInformation("occupation", type="str"),
                MetaInformation("zip", type="str"),
                MetaInformation("title", type="str"),
@@ -50,23 +49,25 @@ def get_ml_1m_preprocessing_config(output_directory: str,
                              CreateSessionIndex(["userId"]),
                              CreateRatioSplit(0.8, 0.1, 0.1,
                                               per_split_actions=
-                                              [CreateSessionIndex(["userId"]),
-                                               CreateNextItemIndex(
-                                                   [MetaInformation("item", column_name="title", type="str")],
-                                                   RemainingSessionPositionExtractor(
-                                                       min_sequence_length))],
+                                                  [CreateSessionIndex(["userId"]),
+                                                   CreateNextItemIndex(
+                                                       [MetaInformation("item", column_name="title", type="str")],
+                                                       RemainingSessionPositionExtractor(
+                                                           min_sequence_length))],
                                               complete_split_actions=
-                                              [CreateVocabulary(columns, special_tokens=special_tokens,
-                                                                prefixes=[prefix]),
-                                               CreatePopularity(columns, prefixes=[prefix], special_tokens=special_tokens_mapping)]),
+                                                  [CreateVocabulary(columns, special_tokens=special_tokens,
+                                                                    prefixes=[prefix]),
+                                                   CreatePopularity(columns, prefixes=[prefix],
+                                                                    special_tokens=special_tokens_mapping)]),
                              CreateLeaveOneOutSplit(MetaInformation("item", column_name="title", type="str"),
                                                     inner_actions=
-                                                    [CreateNextItemIndex(
+                                                     [CreateNextItemIndex(
                                                         [MetaInformation("item", column_name="title", type="str")],
                                                         RemainingSessionPositionExtractor(
                                                             min_sequence_length)),
-                                                        CreateVocabulary(columns, special_tokens=special_tokens),
-                                                        CreatePopularity(columns, special_tokens=special_tokens_mapping)])]
+                                                      CreateVocabulary(columns, special_tokens=special_tokens),
+                                                      CreatePopularity(columns, special_tokens=special_tokens_mapping)])
+                             ]
     return DatasetPreprocessingConfig(prefix,
                                       "http://files.grouplens.org/datasets/movielens/ml-1m.zip",
                                       Path(output_directory),
@@ -75,7 +76,6 @@ def get_ml_1m_preprocessing_config(output_directory: str,
                                       context)
 
 
-# TODO: Move to init
 register_preprocessing_config_provider("ml-1m",
                                        PreprocessingConfigProvider(get_ml_1m_preprocessing_config,
                                                                    output_directory="./ml-1m",
