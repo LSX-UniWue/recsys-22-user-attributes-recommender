@@ -105,6 +105,9 @@ class ConvertToCsv(PreprocessingAction):
     - `MAIN_FILE_KEY` - the path to the pre-processed CSV file.
     """
     def __init__(self, converter: CsvConverter):
+        """
+        :param converter: The converter that is used to create an authoritative CSV file for the dataset.
+        """
         self.converter = converter
 
     def name(self) -> str:
@@ -137,7 +140,10 @@ class TransformCsv(PreprocessingAction):
     """
 
     def __init__(self, transform: Callable[[pd.DataFrame], pd.DataFrame]):
-        self.filter = transform
+        """
+        :param transform: A function that accepts a data-frame, processes it in some manner and returns it afterwards.
+        """
+        self.transform = transform
 
     def name(self) -> str:
         return "Filtering CSV"
@@ -146,7 +152,7 @@ class TransformCsv(PreprocessingAction):
         current_file = context.get(MAIN_FILE_KEY)
         delimiter = context.get(DELIMITER_KEY)
         df = pd.read_csv(current_file, delimiter=delimiter, index_col=False)
-        filtered = self.filter(df)
+        filtered = self.transform(df)
         filtered.to_csv(current_file, sep=delimiter, index=False)
 
 
@@ -179,6 +185,11 @@ class GroupAndFilter(PreprocessingAction):
  
     """
     def __init__(self, group_by: str, filter: GroupedFilter):
+        """
+        :param group_by: The column the data-frame should be grouped by.
+        :param filter: A grouped filter instance containing the necessary information to perform aggregation and
+                       filtering.
+        """
         def apply_filter(d):
             if filter.aggregated_column is None:
                 agg_column = d.columns[0]
@@ -215,6 +226,10 @@ class CreateSessionIndex(PreprocessingAction):
     """
     
     def __init__(self, session_key: List[str]):
+        """
+        :param session_key: The columns to be used to differentiate between sessions. If multiple keys are passed, they
+                            are used lexicographically in the order of their appearance in the list.
+        """
         self.session_key = session_key
 
     def name(self) -> str:
@@ -246,6 +261,11 @@ class CreateNextItemIndex(PreprocessingAction):
         None
     """
     def __init__(self, columns: List[MetaInformation], extractor: TargetPositionExtractor):
+        """
+        :param columns: A list of all columns for which a next-item-index should be generated.
+        :param extractor: A target-position-extractor which is used to determine which elements of a session are used
+                          as targets.
+        """
         self.extractor = extractor
         self.columns = columns
 
@@ -290,7 +310,11 @@ class CreateSlidingWindowIndex(PreprocessingAction):
     def __init__(self,
                  columns: List[MetaInformation],
                  extractor: SlidingWindowPositionExtractor):
-
+        """
+        :param columns: A list of all columns for which a sliding-window index should be generated.
+        :param extractor: A sliding-window-position-extractor which is used to determine which elements of a session are
+                          used as targets.
+        """
         self.extractor = extractor
         self.columns = columns
 
@@ -407,6 +431,15 @@ class CreateVocabulary(PreprocessingAction):
     def __init__(self, columns: List[MetaInformation],
                  special_tokens: List[str] = None,
                  prefixes: List[str] = None):
+
+        """
+        :param columns: A list of all columns for which a vocabulary should be generated. Note that a column is skipped,
+                        if its `run_tokenization` flag is set to false.
+        :param special_tokens: A list of special tokens (e.g. '<PAD>', '<UNK>', '<MASK>') to artificially insert into
+                               the vocabulary.
+        :param prefixes: Allows to overwrite the prefixes used for naming the vocabulary files. If None is passed, the
+                         prefixes are determined from the context.
+        """
         self.columns = columns
         self.special_tokens = [] if special_tokens is None else special_tokens
         self.prefixes = prefixes
@@ -445,6 +478,10 @@ class UseExistingSplit(PreprocessingAction):
         None
     """
     def __init__(self, split_names: List[str], per_split_actions: List[PreprocessingAction] = None):
+        """
+        :param split_names: Names of splits to process (e.g. ["train", "validation", "test"].
+        :param per_split_actions: A list of action that should be applied for each split.
+        """
         if split_names is None or len(split_names) == 0:
             raise Exception(f"At least one name for a split must be supplied.")
         self.split_names = split_names
@@ -500,6 +537,16 @@ class CreateRatioSplit(PreprocessingAction):
                  per_split_actions: List[PreprocessingAction] = None,
                  complete_split_actions: List[PreprocessingAction] = None,
                  update_paths: bool = True):
+        """
+        :param train_percentage: Percentage of the data to use for the training split.
+        :param validation_percentage: Percentage of the data to use for the validation split.
+        :param test_percentage: Percentage of the data to use for the test split.
+        :param per_split_actions: A list of actions that should be executed for each split.
+        :param complete_split_actions: A list of actions that should be executed once for the entire split.
+        :param update_paths: If this is set to true, the context passed to the complete split actions will be modified,
+                             such that all paths (e.g. session index path, main file path, etc.) point to the train
+                             split instead of the actual ones for the whole dataset.
+        """
         self.test_percentage = test_percentage
         self.validation_percentage = validation_percentage
         self.train_percentage = train_percentage
@@ -627,6 +674,16 @@ class CreatePopularity(PreprocessingAction):
         None
     """
     def __init__(self, columns: List[MetaInformation], prefixes: List[str] = None, special_tokens: Dict[str, str] = None):
+        """
+        :param columns: A list of all columns for which a popularity should be generated. Note that a column is skipped,
+                        if its `run_tokenization` flag is set to false.
+        :param special_tokens: A mapping of special tokens (e.g. { 'pad_token': '<PAD>',
+                                                                    'unk_token': '<UNK>',
+                                                                    'mask_token': '<MASK>' })
+                               to pass to the tokenizer when counting the occurrence of each token.
+        :param prefixes: Allows to overwrite the prefixes used for naming the popularity files. If None is passed, the
+                         prefixes are determined from the context.
+        """
         self.columns = columns
         self.prefixes = prefixes
         self.special_tokens = special_tokens
@@ -644,7 +701,6 @@ class CreatePopularity(PreprocessingAction):
         session_index = CsvDatasetIndex(session_index_path)
         reader = CsvDatasetReader(main_file, session_index)
         for column in self.columns:
-            # TODO: Is this the right precedence?
             filename = column.column_name if column.column_name is not None else column.feature_name
 
             if not column.run_tokenization:
