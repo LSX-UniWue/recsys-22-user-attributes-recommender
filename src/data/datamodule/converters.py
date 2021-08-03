@@ -68,7 +68,7 @@ class Movielens20MConverter(CsvConverter):
 
     def apply(self, input_dir: Path, output_file: Path):
         file_type = ".csv"
-        header = 0
+        header = None
         sep = ","
         name = "ml-20m"
         location = input_dir / name
@@ -82,14 +82,13 @@ class Movielens20MConverter(CsvConverter):
 
         merged_df = pd.merge(ratings_df, movies_df).sort_values(
             by=[Movielens20MConverter.RATING_USER_COLUMN_NAME, Movielens20MConverter.RATING_TIMESTAMP_COLUMN_NAME])
-        
-        merged_df1 = merged_df.drop('movieId', axis=1)
-        merged_df2 = merged_df1.drop('imdbId', axis=1)
-        merged_df3 = merged_df2.drop('tmdbId', axis=1)
+
+        # Remove unnecessary columns
+        merged_df = merged_df.drop('movieId', axis=1).drop('imdbId', axis=1).drop('tmdbId', axis=1)
 
         os.makedirs(output_file.parent, exist_ok=True)
 
-        merged_df3.to_csv(output_file, sep=self.delimiter, index=False)
+        merged_df.to_csv(output_file, sep=self.delimiter, index=False)
 
 
 class Movielens1MConverter(CsvConverter):
