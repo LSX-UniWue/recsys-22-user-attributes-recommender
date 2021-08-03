@@ -1,5 +1,4 @@
 local raw_dataset_path = "../tests/example_dataset/";
-local cached_dataset_path = raw_dataset_path;
 local dataset_path = "/tmp/example/";
 local max_seq_length = 7;
 local prefix = 'example';
@@ -67,21 +66,7 @@ local metrics =  {
     templates: {
         unified_output: {
             path: output_path
-        },
-        /*mask_data_sources: {
-            parser: {
-                item_column_name: "title"
-            },
-            loader: {
-                batch_size: 4,
-                max_seq_length: max_seq_length
-            },
-            path: cached_dataset_path,
-            file_prefix: file_prefix,
-            split_type: 'leave_one_out',
-            mask_probability: 0.2,
-            mask_seed: 42
-        } */
+        }
     },
     module: {
         type: "bert4rec",
@@ -133,12 +118,12 @@ local metrics =  {
             csv: {}
         },
         checkpoint: {
-            monitor: "recall@5_fixed",
+            monitor: "recall@5",
             save_top_k: 3,
             mode: 'max'
         },
         early_stopping: {
-          monitor: 'recall@5_fixed',
+          monitor: 'recall@5',
           min_delta: 0.00,
           patience: 10,
           mode: 'max'
