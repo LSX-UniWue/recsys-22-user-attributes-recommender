@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from datasets.dataset_pre_processing.utils import read_csv
-##from src.datasets.dataset_pre_processing.utils import read_csv
+
 
 
 class CsvConverter:
@@ -74,25 +74,22 @@ class Movielens20MConverter(CsvConverter):
         location = input_dir / name
         ratings_df = read_csv(location, "ratings", file_type, sep, header)
 
+        movies_df = read_csv(location, "movies", file_type, sep, header)
 
-        links_df = read_csv(input_dir, "links", file_type, sep, header)
+        links_df = read_csv(location, "links", file_type, sep, header)
         ratings_df = pd.merge(ratings_df, links_df)
 
-        ratings_df = ratings_df(ratings_df,
-                                    min_user_feedback=self.min_user_feedback,
-                                    min_item_feedback=self.min_item_feedback)
-
-        movies_df = read_csv(input_dir, "movies", file_type, sep, header)
-        
-        links_df = read_csv(input_dir, "links", file_type, sep, header)
-        ratings_df = pd.merge(ratings_df, links_df)
 
         merged_df = pd.merge(ratings_df, movies_df).sort_values(
             by=[Movielens20MConverter.RATING_USER_COLUMN_NAME, Movielens20MConverter.RATING_TIMESTAMP_COLUMN_NAME])
+        
+        merged_df1 = merged_df.drop('movieId', axis=1)
+        merged_df2 = merged_df1.drop('imdbId', axis=1)
+        merged_df3 = merged_df2.drop('tmdbId', axis=1)
 
         os.makedirs(output_file.parent, exist_ok=True)
 
-        merged_df.to_csv(output_file, sep=self.delimiter, index=False)
+        merged_df3.to_csv(output_file, sep=self.delimiter, index=False)
 
 
 class Movielens1MConverter(CsvConverter):
@@ -142,6 +139,3 @@ class DotaShopConverter(CsvConverter):
 
 
 
-if __name__ == "__main__":
-    converter = Movielens20MConverter()
-    converter.apply("///Applications/Wichtig/ml-20m/ml-20m","///Applications/Wichtig")
