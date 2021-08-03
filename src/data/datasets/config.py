@@ -9,7 +9,7 @@ from data.datamodule.preprocessing import ConvertToCsv, TransformCsv, CreateSess
     OUTPUT_DIR_KEY, CreateRatioSplit, CreateNextItemIndex, CreateLeaveOneOutSplit, CreatePopularity, \
     MAIN_FILE_KEY, UseExistingCsv, UseExistingSplit, SPLIT_BASE_DIRECTORY_PATH, \
     CreateSlidingWindowIndex, INPUT_DIR_KEY
-from data.datamodule.converters import YooChooseConverter, Movielens1MConverter, ExampleConverter
+from data.datamodule.converters import YooChooseConverter, Movielens1MConverter, ExampleConverter, Movielens20MConverter
 from data.datamodule.extractors import RemainingSessionPositionExtractor, SlidingWindowPositionExtractor
 from data.datamodule.unpacker import Unzipper
 from data.datamodule.preprocessing import PREFIXES_KEY
@@ -18,8 +18,8 @@ from data.datasets.sequence import MetaInformation
 
 def get_ml_1m_preprocessing_config(output_directory: str,
                                    extraction_directory: str,
-                                   min_item_feedback: int = 0,
-                                   min_sequence_length: int = 2,
+                                   min_item_feedback: int,
+                                   min_sequence_length: int,
                                    ) -> DatasetPreprocessingConfig:
     prefix = "ml-1m"
     context = Context()
@@ -80,6 +80,74 @@ register_preprocessing_config_provider("ml-1m",
                                        PreprocessingConfigProvider(get_ml_1m_preprocessing_config,
                                                                    output_directory="./ml-1m",
                                                                    extraction_directory="./tmp/ml-1m",
+                                                                   min_item_feedback=0,
+                                                                   min_sequence_length=2))
+
+
+def get_ml_20m_preprocessing_config(output_directory: str,
+                                    extraction_directory: str,
+                                    min_item_feedback: int,
+                                    min_sequence_length: int
+                                    ) -> DatasetPreprocessingConfig:
+    prefix = "ml-20m"
+    context = Context()
+    context.set(PREFIXES_KEY, [prefix])
+    context.set(DELIMITER_KEY, "\t")
+    context.set(INPUT_DIR_KEY, Path(extraction_directory))
+    context.set(OUTPUT_DIR_KEY, Path(output_directory))
+
+    special_tokens_mapping = {
+        "pad_token": "<PAD>",
+        "mask_token": "<MASK>",
+        "unk_token": "<UNK>",
+    }
+
+    special_tokens = [token for _, token in special_tokens_mapping.items()]
+    columns = [MetaInformation("rating", type="int", run_tokenization=False),
+               MetaInformation("gender", type="str"),
+               MetaInformation("age", type="int", run_tokenization=False),
+               MetaInformation("occupation", type="str"),
+               MetaInformation("zip", type="str"),
+               MetaInformation("title", type="str"),
+               MetaInformation("genres", type="str", configs={"delimiter": "|"})]
+
+    preprocessing_actions = [ConvertToCsv(Movielens20MConverter()),
+                             GroupAndFilter("movieId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
+                             GroupAndFilter("userId", GroupedFilter("count", lambda v: v >= min_sequence_length)),
+                             CreateSessionIndex(["userId"]),
+                             CreateRatioSplit(0.8, 0.1, 0.1,
+                                              per_split_actions=
+                                              [CreateSessionIndex(["userId"]),
+                                               CreateNextItemIndex(
+                                                   [MetaInformation("item", column_name="title", type="str")],
+                                                   RemainingSessionPositionExtractor(
+                                                       min_sequence_length))],
+                                              complete_split_actions=
+                                              [CreateVocabulary(columns, special_tokens=special_tokens,
+                                                                prefixes=[prefix]),
+                                               CreatePopularity(columns, prefixes=[prefix],
+                                                                special_tokens=special_tokens_mapping)]),
+                             CreateLeaveOneOutSplit(MetaInformation("item", column_name="title", type="str"),
+                                                    inner_actions=
+                                                    [CreateNextItemIndex(
+                                                        [MetaInformation("item", column_name="title", type="str")],
+                                                        RemainingSessionPositionExtractor(
+                                                            min_sequence_length)),
+                                                        CreateVocabulary(columns, special_tokens=special_tokens),
+                                                        CreatePopularity(columns, special_tokens=special_tokens_mapping)])
+                             ]
+    return DatasetPreprocessingConfig(prefix,
+                                      "http://files.grouplens.org/datasets/movielens/ml-20m.zip",
+                                      Path(output_directory),
+                                      Unzipper(Path(extraction_directory)),
+                                      preprocessing_actions,
+                                      context)
+
+
+register_preprocessing_config_provider("ml-20m",
+                                       PreprocessingConfigProvider(get_ml_20m_preprocessing_config,
+                                                                   output_directory="./ml-20m",
+                                                                   extraction_directory="./tmp/ml-20m",
                                                                    min_item_feedback=0,
                                                                    min_sequence_length=2))
 
