@@ -9,7 +9,8 @@ from data.datamodule.preprocessing import ConvertToCsv, TransformCsv, CreateSess
     OUTPUT_DIR_KEY, CreateRatioSplit, CreateNextItemIndex, CreateLeaveOneOutSplit, CreatePopularity, \
     MAIN_FILE_KEY, UseExistingCsv, UseExistingSplit, SPLIT_BASE_DIRECTORY_PATH, \
     CreateSlidingWindowIndex, INPUT_DIR_KEY, SESSION_INDEX_KEY
-from data.datamodule.converters import YooChooseConverter, Movielens1MConverter, ExampleConverter, Movielens20MConverter
+from data.datamodule.converters import YooChooseConverter, Movielens1MConverter, ExampleConverter, \
+    Movielens20MConverter, AmazonConverter
 from data.datamodule.extractors import RemainingSessionPositionExtractor, SlidingWindowPositionExtractor
 from data.datamodule.unpacker import Unzipper
 from data.datamodule.preprocessing import PREFIXES_KEY
@@ -93,9 +94,7 @@ def get_ml_20m_preprocessing_config(output_directory: str,
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
     context.set(DELIMITER_KEY, "\t")
-    #context.set(INPUT_DIR_KEY, Path(extraction_directory))
-    context.set(INPUT_DIR_KEY, Path("datasets/dataset/ml-20m/ml-20m.csv"))
-    context.set(SESSION_INDEX_KEY, Path("datasets/dataset/ml-20m/ml-20m.session.idx"))
+    context.set(INPUT_DIR_KEY, Path(extraction_directory))
     context.set(OUTPUT_DIR_KEY, Path(output_directory))
 
     columns = [MetaInformation("rating", type="int", run_tokenization=False),
@@ -103,23 +102,22 @@ def get_ml_20m_preprocessing_config(output_directory: str,
                MetaInformation("title", type="str"),
                MetaInformation("genres", type="str", configs={"delimiter": "|"})]
 
-    preprocessing_actions = [#ConvertToCsv(Movielens20MConverter()),
-                              UseExistingCsv(),
-                             #GroupAndFilter("movieId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
-                             ## We can drop the movieId column after filtering
-                             #TransformCsv(lambda df: df.drop("movieId", axis=1)),
+    preprocessing_actions = [ConvertToCsv(Movielens20MConverter()),
+                             GroupAndFilter("movieId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
+                             # We can drop the movieId column after filtering
+                             TransformCsv(lambda df: df.drop("movieId", axis=1)),
                              GroupAndFilter("userId", GroupedFilter("count", lambda v: v >= min_sequence_length)),
-                             #CreateSessionIndex(["userId"]),
-                             #CreateRatioSplit(0.8, 0.1, 0.1,
-                             #                 per_split_actions=
-                             #                 [CreateSessionIndex(["userId"]),
-                             #                  CreateNextItemIndex(
-                             #                      [MetaInformation("item", column_name="title", type="str")],
-                             #                      RemainingSessionPositionExtractor(
-                             #                          min_sequence_length))],
-                             #                 complete_split_actions=
-                             #                 [CreateVocabulary(columns, prefixes=[prefix]),
-                             #                  CreatePopularity(columns, prefixes=[prefix])]),
+                             CreateSessionIndex(["userId"]),
+                             CreateRatioSplit(0.8, 0.1, 0.1,
+                                              per_split_actions=
+                                              [CreateSessionIndex(["userId"]),
+                                               CreateNextItemIndex(
+                                                   [MetaInformation("item", column_name="title", type="str")],
+                                                   RemainingSessionPositionExtractor(
+                                                       min_sequence_length))],
+                                              complete_split_actions=
+                                              [CreateVocabulary(columns, prefixes=[prefix]),
+                                               CreatePopularity(columns, prefixes=[prefix])]),
                              CreateLeaveOneOutSplit(MetaInformation("item", column_name="title", type="str"),
                                                     inner_actions=
                                                     [CreateNextItemIndex(
@@ -160,17 +158,22 @@ def get_amazon_preprocessing_config(prefix: str,
         "beauty": "http://snap.stanford.edu/data/amazon/productGraph/categoryFiles/reviews_Beauty.json.gz"
     }
 
+    AMAZON_ZIPPED_FILE_NAMES = {
+        "games": "reviews_Video_Games.json.gz",
+        "beauty": "reviews_Beauty.json.gz"
+    }
+
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
     context.set(DELIMITER_KEY, "\t")
-    context.set(INPUT_DIR_KEY, Path(extraction_directory))
+    context.set(INPUT_DIR_KEY, Path(extraction_directory) / AMAZON_ZIPPED_FILE_NAMES[prefix])
     context.set(OUTPUT_DIR_KEY, Path(output_directory))
 
     columns = [MetaInformation("reviewer_id", type="str"),
                MetaInformation("product_id", type="str"),
                MetaInformation("timestamp", type="timestamp")]
 
-    preprocessing_actions = [ConvertToCsv(None),
+    preprocessing_actions = [ConvertToCsv(AmazonConverter()),
                              GroupAndFilter("product_id", GroupedFilter("count", lambda v: v >= min_item_feedback)),
                              GroupAndFilter("reviewer_id", GroupedFilter("count", lambda v: v >= min_sequence_length)),
                              CreateSessionIndex(["reviewer_id"]),
@@ -200,6 +203,23 @@ def get_amazon_preprocessing_config(prefix: str,
                                       None,
                                       preprocessing_actions,
                                       context)
+
+
+register_preprocessing_config_provider("beauty",
+                                       PreprocessingConfigProvider(get_amazon_preprocessing_config,
+                                                                   prefix="beauty",
+                                                                   output_directory="./beauty",
+                                                                   extraction_directory="/tmp/beauty",
+                                                                   min_item_feedback=0,
+                                                                   min_sequence_length=2))
+
+register_preprocessing_config_provider("games",
+                                       PreprocessingConfigProvider(get_amazon_preprocessing_config,
+                                                                   prefix="games",
+                                                                   output_directory="./games",
+                                                                   extraction_directory="/tmp/games",
+                                                                   min_item_feedback=0,
+                                                                   min_sequence_length=2))
 
 
 def get_dota_shop_preprocessing_config(output_directory: str,
