@@ -8,6 +8,9 @@ import numpy as np
 import pandas as pd
 
 from datasets.dataset_pre_processing.utils import read_csv
+import json
+import csv
+import gzip
 
 
 
@@ -125,6 +128,23 @@ class Movielens1MConverter(CsvConverter):
         os.makedirs(output_file.parent, exist_ok=True)
 
         merged_df.to_csv(output_file, sep=self.delimiter, index=False)
+
+class AmazonConverter(CsvConverter):
+    AMAZON_SESSION_ID = "reviewer_id"
+    AMAZON_ITEM_ID = "product_id"
+    AMAZON_REVIEW_TIMESTAMP_ID = "timestamp"
+
+    def __init__(self, delimiter="\t"):
+        self.delimiter = delimiter
+
+    def apply(self, input_dir: Path, output_file: Path):
+        os.makedirs(output_file.parent, exist_ok=True)
+        with gzip.open(input_dir) as file, output_file.open("w") as output_file:
+            writer = csv.writer(output_file, delimiter=self.delimiter)
+            writer.writerow([AmazonConverter.AMAZON_SESSION_ID, AmazonConverter.AMAZON_ITEM_ID, AmazonConverter.AMAZON_REVIEW_TIMESTAMP_ID])
+            for line in file:
+                parsed = json.loads(line)
+                writer.writerow([parsed["reviewerID"], parsed["asin"], parsed["unixReviewTime"]])
 
 
 class DotaShopConverter(CsvConverter):
