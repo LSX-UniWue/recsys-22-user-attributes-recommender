@@ -1,4 +1,5 @@
 import os
+import pickle
 import shutil
 
 from pathlib import Path
@@ -13,6 +14,7 @@ from asme.init.factories.data_sources.user_defined_datasources import UserDefine
 from asme.init.templating.datasources.datasources import DatasetSplit
 from asme.utils.logging import get_logger
 from data import BASE_DATASET_PATH_CONTEXT_KEY, CURRENT_SPLIT_PATH_CONTEXT_KEY, DATASET_PREFIX_CONTEXT_KEY
+from data.datamodule.checkpoint import PreprocessingCheckpoint
 from data.datamodule.config import AsmeDataModuleConfig
 from data.datamodule.metadata import DatasetMetadata
 from datasets.dataset_pre_processing.utils import download_dataset
@@ -22,6 +24,7 @@ logger = get_logger(__name__)
 
 class AsmeDataModule(pl.LightningDataModule):
     PREPROCESSING_FINISHED_FLAG = ".METADATA"
+    CHECKPOINT_NAME = ".CHECKPOINT"
 
     def __init__(self, config: AsmeDataModuleConfig, context: Context = Context()):
         super().__init__()
@@ -45,28 +48,40 @@ class AsmeDataModule(pl.LightningDataModule):
         else:
             logger.info("Preprocessing dataset:")
 
-            if ds_config.url is not None:
-                logger.info(
-                    f"Downloading dataset {self.config.dataset} from {self.config.dataset_preprocessing_config.url}.")
-                dataset_file = download_dataset(ds_config.url, ds_config.location)
+            first_step = 0
+            if (checkpoint := self._load_checkpoint()) is not None:
+                logger.info(f"Found a checkpoint for step {checkpoint.step + 1}. Continuing from there.")
+                first_step = checkpoint.step + 1
+                ds_config.context = checkpoint.context
             else:
-                logger.info(f"No download URL specified, using local copy at '{ds_config.location}'.")
-                dataset_file = ds_config.location
+                if ds_config.url is not None:
+                    logger.info(
+                        f"Downloading dataset {self.config.dataset} from {self.config.dataset_preprocessing_config.url}.")
+                    dataset_file = download_dataset(ds_config.url, ds_config.location)
+                else:
+                    logger.info(f"No download URL specified, using local copy at '{ds_config.location}'.")
+                    dataset_file = ds_config.location
 
-            # If necessary, unpack the dataset
-            if ds_config.unpacker is not None:
-                logger.info(f"Unpacking dataset.")
-                ds_config.unpacker(dataset_file)
+                # If necessary, unpack the dataset
+                if ds_config.unpacker is not None:
+                    logger.info(f"Unpacking dataset.")
+                    ds_config.unpacker(dataset_file)
 
             # Apply preprocessing steps
-            for i, step in enumerate(ds_config.preprocessing_actions):
+            actions_left = ds_config.preprocessing_actions[first_step:]
+            for i, step in enumerate(actions_left):
                 logger.info(
-                    f"Applying preprocessing step '{step.name()}' ({i + 1}/{len(ds_config.preprocessing_actions)})")
+                    f"Applying preprocessing step '{step.name()}' ({i + first_step + 1}/{len(ds_config.preprocessing_actions)})")
                 step.apply(ds_config.context)
+                checkpoint = PreprocessingCheckpoint(i, ds_config.context)
+                checkpoint.save(self.config.dataset_preprocessing_config.location / self.CHECKPOINT_NAME)
 
             # Save dataset metadata
             metadata = DatasetMetadata.from_context(ds_config.context)
             self._write_metadata(metadata)
+
+            # Remove the checkpoint after we are done processing
+            os.remove(self.config.dataset_preprocessing_config.location / self.CHECKPOINT_NAME)
 
         # Populate context with the dataset path
         self.context.set(BASE_DATASET_PATH_CONTEXT_KEY, self.config.dataset_preprocessing_config.location)
@@ -117,6 +132,17 @@ class AsmeDataModule(pl.LightningDataModule):
     def _check_preprocessing_finished(self) -> bool:
         return os.path.exists(
             self.config.dataset_preprocessing_config.location / self.PREPROCESSING_FINISHED_FLAG)
+
+    def _load_checkpoint(self) -> Optional[PreprocessingCheckpoint]:
+        checkpoint_path = self.config.dataset_preprocessing_config.location / self.CHECKPOINT_NAME
+        if os.path.exists(checkpoint_path):
+            try:
+                return PreprocessingCheckpoint.load(checkpoint_path)
+            except:
+                logger.warning("Failed to parse the checkpoint file. Removing it and starting over.")
+                os.remove(checkpoint_path)
+        else:
+            return None
 
     def _write_metadata(self, metadata: DatasetMetadata):
         metadata_path = self.config.dataset_preprocessing_config.location / self.PREPROCESSING_FINISHED_FLAG

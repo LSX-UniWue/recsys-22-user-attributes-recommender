@@ -464,7 +464,7 @@ class CreateVocabulary(PreprocessingAction):
             filename = column.column_name if column.column_name is not None else column.feature_name
             if not column.run_tokenization:
                 get_root_logger().warning(f"Skipping vocabulary generation for '{filename}' since tokenization was "
-                                          f"disabled for this feature (via 'run_tokenization = False'.")
+                                          f"disabled for this feature (via 'run_tokenization = False').")
                 continue
             if column.get_config("delimiter") is not None:
                 filename += "-splitted"

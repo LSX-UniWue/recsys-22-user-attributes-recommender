@@ -1,7 +1,7 @@
-local raw_dataset_path = "datasets/dataset/ml-20m/";
+local raw_dataset_path = "datasets/dataset/amazon-games/";
 local cached_dataset_path = raw_dataset_path;
 local loo_path = cached_dataset_path + "loo/";
-local output_path = "../dataset/ml-20m/exp/";
+local output_path = "../dataset/amazon-games/exp/";
 local max_seq_length = 200;
 local metrics =  {
     mrr: [1, 5, 10],
@@ -9,7 +9,7 @@ local metrics =  {
     ndcg: [1, 5, 10]
 };
 
-local dataset = 'ml-20m';
+local dataset = 'games';
 
 {
     datamodule: {
@@ -23,10 +23,10 @@ local dataset = 'ml-20m';
         },
 
         preprocessing: {
-            extraction_directory: "/tmp/ml-20m/",
+            extraction_directory: "/tmp/games/",
             output_directory: raw_dataset_path,
-            min_item_feedback: 5,
-            min_sequence_length: 5
+            min_item_feedback: 0,
+            min_sequence_length: 2
         }
     },
     templates: {
@@ -42,7 +42,7 @@ local dataset = 'ml-20m';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: "ml-20m.popularity.title.txt",
+                sample_probability_file: "games.popularity.title.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             },

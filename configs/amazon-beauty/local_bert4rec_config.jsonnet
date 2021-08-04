@@ -42,7 +42,7 @@ local dataset = 'beauty';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: "ml-1m.popularity.title.txt",
+                sample_probability_file: "beauty.popularity.title.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             },
