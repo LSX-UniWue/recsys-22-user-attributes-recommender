@@ -76,7 +76,7 @@ class UseExistingCsv(PreprocessingAction):
     Registers a pre-processed CSV file in context.
 
     Required context parameters:
-    - `INPUT_DIR` - the path to the pre-processed CSV file.
+    - `INPUT_DIR_KEY` - the path to the pre-processed CSV file.
 
     Sets context parameters:
     - `MAIN_FILE_KEY` - the path to the pre-processed CSV file.
@@ -190,17 +190,24 @@ class GroupAndFilter(PreprocessingAction):
         :param filter: A grouped filter instance containing the necessary information to perform aggregation and
                        filtering.
         """
+
+        self.group_by = group_by
+        self.filter = filter
+
         def apply_filter(d):
             if filter.aggregated_column is None:
-                agg_column = d.columns[0]
+                agg_column = d.axes[0][0]
             else:
                 agg_column = filter.aggregated_column
-            agg_value = d[agg_column].aggregate(filter.aggregator)
+            agg_value = d[agg_column]
             return filter.apply(agg_value)
 
         def filter_fn(df: pd.DataFrame) -> pd.DataFrame:
-            aggregated = df.groupby(group_by).filter(apply_filter)
-            return aggregated
+            aggregated = df.groupby(self.group_by).agg(self.filter.aggregator)
+            filtered = aggregated[aggregated.apply(apply_filter, axis=1)]
+            filtered = filtered.reset_index()
+            ids = filtered[self.group_by].unique().tolist()
+            return df[df[group_by].isin(ids)]
 
         self.transform = TransformCsv(filter_fn)
 
@@ -435,13 +442,13 @@ class CreateVocabulary(PreprocessingAction):
         """
         :param columns: A list of all columns for which a vocabulary should be generated. Note that a column is skipped,
                         if its `run_tokenization` flag is set to false.
-        :param special_tokens: A list of special tokens (e.g. '<PAD>', '<UNK>', '<MASK>') to artificially insert into
-                               the vocabulary.
+        :param special_tokens: A list of special tokens to artificially insert into
+                               the vocabulary. By default ['<PAD>', '<UNK>', '<MASK>'] are inserted.
         :param prefixes: Allows to overwrite the prefixes used for naming the vocabulary files. If None is passed, the
                          prefixes are determined from the context.
         """
         self.columns = columns
-        self.special_tokens = [] if special_tokens is None else special_tokens
+        self.special_tokens = ['<PAD>', '<MASK>', '<UNK>'] if special_tokens is None else special_tokens
         self.prefixes = prefixes
 
     def name(self) -> str:
@@ -677,16 +684,21 @@ class CreatePopularity(PreprocessingAction):
         """
         :param columns: A list of all columns for which a popularity should be generated. Note that a column is skipped,
                         if its `run_tokenization` flag is set to false.
-        :param special_tokens: A mapping of special tokens (e.g. { 'pad_token': '<PAD>',
-                                                                    'unk_token': '<UNK>',
-                                                                    'mask_token': '<MASK>' })
-                               to pass to the tokenizer when counting the occurrence of each token.
+        :param special_tokens: A mapping of special tokens to pass to the tokenizer when counting the occurrence of each
+                               token. Per default the following special tokens are supplied:
+                               { 'pad_token': '<PAD>',
+                                 'unk_token': '<UNK>',
+                                 'mask_token': '<MASK>' }
         :param prefixes: Allows to overwrite the prefixes used for naming the popularity files. If None is passed, the
                          prefixes are determined from the context.
         """
         self.columns = columns
         self.prefixes = prefixes
-        self.special_tokens = special_tokens
+        self.special_tokens = {
+            "pad_token": "<PAD>",
+            "mask_token": "<MASK>",
+            "unk_token": "<UNK>",
+        } if special_tokens is None else special_tokens
 
     def name(self) -> str:
         return f"Creating popularities for: {self.columns}"

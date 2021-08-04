@@ -8,7 +8,7 @@ from data.datamodule.preprocessing import ConvertToCsv, TransformCsv, CreateSess
     GroupAndFilter, GroupedFilter, CreateVocabulary, DELIMITER_KEY, \
     OUTPUT_DIR_KEY, CreateRatioSplit, CreateNextItemIndex, CreateLeaveOneOutSplit, CreatePopularity, \
     MAIN_FILE_KEY, UseExistingCsv, UseExistingSplit, SPLIT_BASE_DIRECTORY_PATH, \
-    CreateSlidingWindowIndex, INPUT_DIR_KEY
+    CreateSlidingWindowIndex, INPUT_DIR_KEY, SESSION_INDEX_KEY
 from data.datamodule.converters import YooChooseConverter, Movielens1MConverter, ExampleConverter, Movielens20MConverter
 from data.datamodule.extractors import RemainingSessionPositionExtractor, SlidingWindowPositionExtractor
 from data.datamodule.unpacker import Unzipper
@@ -93,48 +93,41 @@ def get_ml_20m_preprocessing_config(output_directory: str,
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
     context.set(DELIMITER_KEY, "\t")
-    context.set(INPUT_DIR_KEY, Path(extraction_directory))
+    #context.set(INPUT_DIR_KEY, Path(extraction_directory))
+    context.set(INPUT_DIR_KEY, Path("datasets/dataset/ml-20m/ml-20m.csv"))
+    context.set(SESSION_INDEX_KEY, Path("datasets/dataset/ml-20m/ml-20m.session.idx"))
     context.set(OUTPUT_DIR_KEY, Path(output_directory))
 
-    special_tokens_mapping = {
-        "pad_token": "<PAD>",
-        "mask_token": "<MASK>",
-        "unk_token": "<UNK>",
-    }
-
-    special_tokens = [token for _, token in special_tokens_mapping.items()]
     columns = [MetaInformation("rating", type="int", run_tokenization=False),
-               MetaInformation("gender", type="str"),
-               MetaInformation("age", type="int", run_tokenization=False),
-               MetaInformation("occupation", type="str"),
-               MetaInformation("zip", type="str"),
+               MetaInformation("timestamp", type="str"),
                MetaInformation("title", type="str"),
                MetaInformation("genres", type="str", configs={"delimiter": "|"})]
 
-    preprocessing_actions = [ConvertToCsv(Movielens20MConverter()),
-                             GroupAndFilter("movieId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
+    preprocessing_actions = [#ConvertToCsv(Movielens20MConverter()),
+                              UseExistingCsv(),
+                             #GroupAndFilter("movieId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
+                             ## We can drop the movieId column after filtering
+                             #TransformCsv(lambda df: df.drop("movieId", axis=1)),
                              GroupAndFilter("userId", GroupedFilter("count", lambda v: v >= min_sequence_length)),
-                             CreateSessionIndex(["userId"]),
-                             CreateRatioSplit(0.8, 0.1, 0.1,
-                                              per_split_actions=
-                                              [CreateSessionIndex(["userId"]),
-                                               CreateNextItemIndex(
-                                                   [MetaInformation("item", column_name="title", type="str")],
-                                                   RemainingSessionPositionExtractor(
-                                                       min_sequence_length))],
-                                              complete_split_actions=
-                                              [CreateVocabulary(columns, special_tokens=special_tokens,
-                                                                prefixes=[prefix]),
-                                               CreatePopularity(columns, prefixes=[prefix],
-                                                                special_tokens=special_tokens_mapping)]),
+                             #CreateSessionIndex(["userId"]),
+                             #CreateRatioSplit(0.8, 0.1, 0.1,
+                             #                 per_split_actions=
+                             #                 [CreateSessionIndex(["userId"]),
+                             #                  CreateNextItemIndex(
+                             #                      [MetaInformation("item", column_name="title", type="str")],
+                             #                      RemainingSessionPositionExtractor(
+                             #                          min_sequence_length))],
+                             #                 complete_split_actions=
+                             #                 [CreateVocabulary(columns, prefixes=[prefix]),
+                             #                  CreatePopularity(columns, prefixes=[prefix])]),
                              CreateLeaveOneOutSplit(MetaInformation("item", column_name="title", type="str"),
                                                     inner_actions=
                                                     [CreateNextItemIndex(
                                                         [MetaInformation("item", column_name="title", type="str")],
                                                         RemainingSessionPositionExtractor(
                                                             min_sequence_length)),
-                                                        CreateVocabulary(columns, special_tokens=special_tokens),
-                                                        CreatePopularity(columns, special_tokens=special_tokens_mapping)])
+                                                        CreateVocabulary(columns),
+                                                        CreatePopularity(columns)])
                              ]
     return DatasetPreprocessingConfig(prefix,
                                       "http://files.grouplens.org/datasets/movielens/ml-20m.zip",
@@ -150,6 +143,63 @@ register_preprocessing_config_provider("ml-20m",
                                                                    extraction_directory="./tmp/ml-20m",
                                                                    min_item_feedback=0,
                                                                    min_sequence_length=2))
+
+
+def get_amazon_preprocessing_config(prefix: str,
+                                    output_directory: str,
+                                    extraction_directory: str,
+                                    min_item_feedback=0,
+                                    min_sequence_length=2
+                                    ) -> DatasetPreprocessingConfig:
+
+    if prefix not in ["games", "beauty"]:
+        raise KeyError("The only amazon datasets that are currently supported are 'games' and 'beauty'.")
+
+    AMAZON_DOWNLOAD_URL_MAP = {
+        "games": "http://snap.stanford.edu/data/amazon/productGraph/categoryFiles/reviews_Video_Games.json.gz",
+        "beauty": "http://snap.stanford.edu/data/amazon/productGraph/categoryFiles/reviews_Beauty.json.gz"
+    }
+
+    context = Context()
+    context.set(PREFIXES_KEY, [prefix])
+    context.set(DELIMITER_KEY, "\t")
+    context.set(INPUT_DIR_KEY, Path(extraction_directory))
+    context.set(OUTPUT_DIR_KEY, Path(output_directory))
+
+    columns = [MetaInformation("reviewer_id", type="str"),
+               MetaInformation("product_id", type="str"),
+               MetaInformation("timestamp", type="timestamp")]
+
+    preprocessing_actions = [ConvertToCsv(None),
+                             GroupAndFilter("product_id", GroupedFilter("count", lambda v: v >= min_item_feedback)),
+                             GroupAndFilter("reviewer_id", GroupedFilter("count", lambda v: v >= min_sequence_length)),
+                             CreateSessionIndex(["reviewer_id"]),
+                             CreateRatioSplit(0.8, 0.1, 0.1,
+                                              per_split_actions=
+                                              [CreateSessionIndex(["userId"]),
+                                               CreateNextItemIndex(
+                                                   [MetaInformation("item", column_name="title", type="str")],
+                                                   RemainingSessionPositionExtractor(
+                                                       min_sequence_length))],
+                                              complete_split_actions=
+                                              [CreateVocabulary(columns, prefixes=[prefix]),
+                                               CreatePopularity(columns, prefixes=[prefix])]),
+                             CreateLeaveOneOutSplit(MetaInformation("item", column_name="title", type="str"),
+                                                    inner_actions=
+                                                    [CreateNextItemIndex(
+                                                        [MetaInformation("item", column_name="title", type="str")],
+                                                        RemainingSessionPositionExtractor(
+                                                            min_sequence_length)),
+                                                        CreateVocabulary(columns),
+                                                        CreatePopularity(columns)])
+                             ]
+
+    return DatasetPreprocessingConfig(prefix,
+                                      AMAZON_DOWNLOAD_URL_MAP[prefix],
+                                      Path(output_directory),
+                                      None,
+                                      preprocessing_actions,
+                                      context)
 
 
 def get_dota_shop_preprocessing_config(output_directory: str,
@@ -171,14 +221,12 @@ def get_dota_shop_preprocessing_config(output_directory: str,
     split_directory_path = full_csv_file_path.parent / split_directory
     context.set(SPLIT_BASE_DIRECTORY_PATH, split_directory_path)
 
-    special_tokens = ["<PAD>", "<MASK>", "<UNK>"]
-
     columns = [MetaInformation("hero_id", column_name="hero_id", type="str"),
                MetaInformation("item_id", column_name="item_id", type="str")]
 
     preprocessing_actions = [UseExistingCsv(),
                              CreateSessionIndex(["id", "hero_id"]),
-                             CreateVocabulary(columns, special_tokens=special_tokens, prefixes=[prefix]),
+                             CreateVocabulary(columns, prefixes=[prefix]),
                              UseExistingSplit(
                                  split_names=["train", "validation", "test"],
                                  per_split_actions=
@@ -221,14 +269,6 @@ def get_example_preprocessing_config(output_directory: str,
     context.set(OUTPUT_DIR_KEY, Path(output_directory))
     context.set(INPUT_DIR_KEY, input_file_path)
 
-    special_tokens_mapping = {
-        "pad_token": "<PAD>",
-        "mask_token": "<MASK>",
-        "unk_token": "<UNK>",
-    }
-
-    special_tokens = [token for _, token in special_tokens_mapping.items()]
-
     # FIXME (AD) we're forced to set column_name because vocabulary and popularity code relies on it being set.
     columns = [MetaInformation("item_id", column_name="item_id", type="str"),
                # TODO (AD) find out why setting type to int prevents correct vocabulary creation (vocabulary is not saved with consecutive ids)
@@ -242,19 +282,16 @@ def get_example_preprocessing_config(output_directory: str,
                               CreateNextItemIndex([MetaInformation("item", column_name="item_id", type="str")],
                                                   RemainingSessionPositionExtractor(min_sequence_length))],
                                               complete_split_actions=[
-                                                  CreateVocabulary(columns, special_tokens=special_tokens,
-                                                                   prefixes=[prefix]),
-                                                  CreatePopularity(columns, prefixes=[prefix],
-                                                                   special_tokens=special_tokens_mapping)]),
+                                                  CreateVocabulary(columns, prefixes=[prefix]),
+                                                  CreatePopularity(columns, prefixes=[prefix])]),
                              CreateLeaveOneOutSplit(MetaInformation("item", column_name="item_id", type="str"),
                                                     inner_actions=
                                                     [CreateNextItemIndex(
                                                         [MetaInformation("item", column_name="item_id", type="str")],
                                                         RemainingSessionPositionExtractor(
                                                             min_sequence_length)),
-                                                        CreateVocabulary(columns, special_tokens=special_tokens),
-                                                        CreatePopularity(columns,
-                                                                         special_tokens=special_tokens_mapping)])
+                                                        CreateVocabulary(columns),
+                                                        CreatePopularity(columns)])
                              ]
 
     return DatasetPreprocessingConfig(prefix,

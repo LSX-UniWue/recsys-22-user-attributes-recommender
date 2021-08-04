@@ -10,7 +10,6 @@ import pandas as pd
 from datasets.dataset_pre_processing.utils import read_csv
 
 
-
 class CsvConverter:
     """
     Base class for all dataset converters. Subtypes of this class should be able to convert a specific dataset into a
@@ -61,14 +60,12 @@ class Movielens20MConverter(CsvConverter):
     RATING_MOVIE_COLUMN_NAME = 'movieId'
     RATING_TIMESTAMP_COLUMN_NAME = 'timestamp'
 
-    def __init__(self, delimiter="\t", min_user_feedback: int = 0, min_item_feedback: int = 0):
+    def __init__(self, delimiter="\t"):
         self.delimiter = delimiter
-        self.min_user_feedback = min_user_feedback
-        self.min_item_feedback = min_item_feedback
 
     def apply(self, input_dir: Path, output_file: Path):
         file_type = ".csv"
-        header = None
+        header = 0
         sep = ","
         name = "ml-20m"
         location = input_dir / name
@@ -79,12 +76,12 @@ class Movielens20MConverter(CsvConverter):
         links_df = read_csv(location, "links", file_type, sep, header)
         ratings_df = pd.merge(ratings_df, links_df)
 
-
-        merged_df = pd.merge(ratings_df, movies_df).sort_values(
+        merged_df = pd.merge(ratings_df, movies_df)
+        merged_df.sort_values(
             by=[Movielens20MConverter.RATING_USER_COLUMN_NAME, Movielens20MConverter.RATING_TIMESTAMP_COLUMN_NAME])
 
-        # Remove unnecessary columns
-        merged_df = merged_df.drop('movieId', axis=1).drop('imdbId', axis=1).drop('tmdbId', axis=1)
+        # Remove unnecessary columns, we keep movieId here so that we can filter later.
+        merged_df = merged_df.drop('imdbId', axis=1).drop('tmdbId', axis=1)
 
         os.makedirs(output_file.parent, exist_ok=True)
 
@@ -98,7 +95,6 @@ class Movielens1MConverter(CsvConverter):
 
     def __init__(self, delimiter="\t"):
         self.delimiter = delimiter
-
 
     def apply(self, input_dir: Path, output_file: Path):
         file_type = ".dat"
