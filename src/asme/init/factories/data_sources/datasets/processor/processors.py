@@ -37,7 +37,7 @@ class ProcessorsFactory(ObjectFactory):
                 'position_token': PositionTokenProcessorFactory(),
                 'tokenizer': TokenizerProcessorFactory(),
                 'target_extractor': TargetExtractorProcessorFactory(),
-                'no_target_extractor': NoTargetExtractorProcessorFactory()
+                'no_target_extractor': NoTargetExtractorProcessorFactory(),
                 FIXED_SEQUENCE_LENGTH_PROCESSOR_KEY: CutToFixedSequenceLengthProcessorFactory()
             })
         )
