@@ -1,6 +1,7 @@
 import copy
 import functools
 import math
+import os
 import random
 from abc import abstractmethod
 from collections import defaultdict
@@ -56,19 +57,46 @@ class PreprocessingAction:
         """
         pass
 
-    @abstractmethod
-    def apply(self, context: Context) -> None:
+    def apply(self, context: Context, force_execution: bool = False) -> None:
         """
         Applies the preprocessing action. It can rely on information that has been saved in the context by previous
         actions and store data itself.
 
         :param context: Context that is preserved between actions. Actions can use the information to find new files
                         on-the-fly and hand on new data to down-stream actions.
+        :param force_execution: If set to True, this disables dry-runs and forces each action to generate all files,
+                                regardless of whether they are already available.
+        """
+        if not self.dry_run_available() or force_execution:
+            self._run(context)
+        else:
+            self._dry_run(context)
+
+    @abstractmethod
+    def _dry_run(self, context: Context) -> None:
+        """
+        This should not generate new files, etc. but only populates the context with the information it would usually
+        place there.
         """
         pass
 
-    def __call__(self, context: Context) -> None:
-        self.apply(context)
+    def _run(self, context: Context) -> None:
+        """
+        This method should actually perform the preprocessing action. It should also populate the context with the
+        information need the for stages that consume artifacts of this action.
+        """
+        pass
+
+    @abstractmethod
+    def dry_run_available(self, context: Context) -> bool:
+        """
+        Indicates whether a stage is capable of skipping generation of files if they are already present. It needs to be
+        able to populate the context with the necessary keys for later stages nonetheless.
+        """
+        pass
+
+    def __call__(self, context: Context, force_execution: bool = False) -> None:
+        self.apply(context, force_execution)
 
 
 class UseExistingCsv(PreprocessingAction):
@@ -84,11 +112,17 @@ class UseExistingCsv(PreprocessingAction):
     def name(self) -> str:
         return "Use existing CSV file"
 
-    def apply(self, context: Context) -> None:
+    def _dry_run(self, context: Context) -> None:
         if not context.has_path(INPUT_DIR_KEY):
             raise Exception(f"A pre-processed CSV file must be present in context at: '{INPUT_DIR_KEY}'")
 
         context.set(MAIN_FILE_KEY, context.get(INPUT_DIR_KEY))
+
+    def _run(self, context: Context) -> None:
+        self._dry_run(context)
+
+    def dry_run_available(self, context: Context) -> bool:
+        return True
 
 
 class ConvertToCsv(PreprocessingAction):
@@ -97,7 +131,6 @@ class ConvertToCsv(PreprocessingAction):
 
     Required context parameters:
     - `INPUT_DIR_KEY` - the path to a dataset file
-    - `EXTRACTED_DIRECTORY_KEY` - the path to a directory containing a dataset
     - `OUTPUT_DIRECTORY_KEY` - the directory where the final converted CSV file will be placed
     - `PREFIXES_KEY` - the prefixes used to generate the name of the final CSV file.
 
@@ -113,17 +146,28 @@ class ConvertToCsv(PreprocessingAction):
     def name(self) -> str:
         return "Converting to CSV"
 
-    def apply(self, context: Context) -> None:
+    def _run(self, context: Context) -> None:
         input_dir = context.get(INPUT_DIR_KEY)
         output_directory = context.get(OUTPUT_DIR_KEY)
 
         if not output_directory.exists():
             output_directory.mkdir(parents=True)
 
-        prefix = format_prefix(context.get(PREFIXES_KEY))
-        output_file = output_directory / f"{prefix}.csv"
+        output_file = self._get_output_file(context)
         self.converter(input_dir, output_file)
         context.set(MAIN_FILE_KEY, output_file)
+
+    def _dry_run(self, context: Context) -> None:
+        context.set(MAIN_FILE_KEY, self._get_output_file(context))
+
+    def dry_run_available(self, context: Context) -> bool:
+        return os.path.exists(self._get_output_file(context))
+
+    @staticmethod
+    def _get_output_file(context: Context) -> Path:
+        output_directory = context.get(OUTPUT_DIR_KEY)
+        filename = f"{format_prefix(context.get(PREFIXES_KEY))}.csv"
+        return output_directory / filename
 
 
 class TransformCsv(PreprocessingAction):
@@ -148,12 +192,18 @@ class TransformCsv(PreprocessingAction):
     def name(self) -> str:
         return "Filtering CSV"
 
-    def apply(self, context: Context) -> None:
+    def _run(self, context: Context) -> None:
         current_file = context.get(MAIN_FILE_KEY)
         delimiter = context.get(DELIMITER_KEY)
         df = pd.read_csv(current_file, delimiter=delimiter, index_col=False)
         filtered = self.transform(df)
         filtered.to_csv(current_file, sep=delimiter, index=False)
+
+    def _dry_run(self, context: Context) -> None:
+        pass
+
+    def dry_run_available(self, context: Context) -> bool:
+        return True
 
 
 @dataclass
@@ -214,8 +264,14 @@ class GroupAndFilter(PreprocessingAction):
     def name(self) -> str:
         return "Filtering sessions"
 
-    def apply(self, context: Context) -> None:
-        self.transform.apply(context)
+    def _run(self, context: Context) -> None:
+        self.transform._run(context)
+
+    def _dry_run(self, context: Context) -> None:
+        pass
+
+    def dry_run_available(self, context: Context) -> bool:
+        return True
 
 
 class CreateSessionIndex(PreprocessingAction):
@@ -242,15 +298,25 @@ class CreateSessionIndex(PreprocessingAction):
     def name(self) -> str:
         return "Creating session index"
 
-    def apply(self, context: Context) -> None:
+    def _run(self, context: Context) -> None:
         main_file = context.get(MAIN_FILE_KEY)
-        output_dir = context.get(OUTPUT_DIR_KEY)
-        prefix = format_prefix(context.get(PREFIXES_KEY))
-        session_index_path = output_dir / f"{prefix}.session.idx"
+        session_index_path = self._get_session_index_path(context)
         delimiter = context.get(DELIMITER_KEY)
         csv_index = CsvSessionIndexer(delimiter=delimiter)
         csv_index.create(main_file, session_index_path, self.session_key)
         context.set(SESSION_INDEX_KEY, session_index_path, overwrite=True)
+
+    def _dry_run(self, context: Context) -> None:
+        context.set(SESSION_INDEX_KEY, self._get_session_index_path(context), overwrite=True)
+
+    def dry_run_available(self, context: Context) -> bool:
+        return os.path.exists(self._get_session_index_path(context))
+
+    @staticmethod
+    def _get_session_index_path(context: Context) -> Path:
+        output_dir = context.get(OUTPUT_DIR_KEY)
+        prefix = format_prefix(context.get(PREFIXES_KEY))
+        return output_dir / f"{prefix}.session.idx"
 
 
 class CreateNextItemIndex(PreprocessingAction):
@@ -279,13 +345,12 @@ class CreateNextItemIndex(PreprocessingAction):
     def name(self) -> str:
         return "Creating next item index"
 
-    def apply(self, context: Context) -> None:
-        output_dir = context.get(OUTPUT_DIR_KEY)
+    def _run(self, context: Context) -> None:
+
         main_file = context.get(MAIN_FILE_KEY)
         session_index_path = context.get(SESSION_INDEX_KEY)
         delimiter = context.get(DELIMITER_KEY)
-        prefix = format_prefix(context.get(PREFIXES_KEY))
-        output_file = output_dir / f"{prefix}.nextitem.idx"
+        output_file = self._get_next_item_index_path(context)
 
         session_index = CsvDatasetIndex(session_index_path)
         reader = CsvDatasetReader(main_file, session_index)
@@ -297,6 +362,18 @@ class CreateNextItemIndex(PreprocessingAction):
         dataset = ItemSequenceDataset(PlainSequenceDataset(reader, parser))
         builder = SequencePositionIndexBuilder(target_positions_extractor=self.extractor)
         builder.build(dataset, output_file)
+
+    def _dry_run(self, context: Context) -> None:
+        pass
+
+    def dry_run_available(self, context: Context) -> bool:
+        return os.path.exists(self._get_next_item_index_path(context))
+
+    @staticmethod
+    def _get_next_item_index_path(context: Context) -> Path:
+        output_dir = context.get(OUTPUT_DIR_KEY)
+        prefix = format_prefix(context.get(PREFIXES_KEY))
+        return output_dir / f"{prefix}.nextitem.idx"
 
 
 class CreateSlidingWindowIndex(PreprocessingAction):
@@ -328,16 +405,12 @@ class CreateSlidingWindowIndex(PreprocessingAction):
     def name(self) -> str:
         return f"Creating sliding window index with {self.extractor.window_size}/{self.extractor.session_end_offset}"
 
-    def apply(self, context: Context) -> None:
-        output_dir = context.get(OUTPUT_DIR_KEY)
+    def _run(self, context: Context) -> None:
         main_file = context.get(MAIN_FILE_KEY)
         session_index_path = context.get(SESSION_INDEX_KEY)
         delimiter = context.get(DELIMITER_KEY)
-        prefix = format_prefix(context.get(PREFIXES_KEY))
 
-        ws = self.extractor.window_size + self.extractor.session_end_offset
-
-        output_file = output_dir / f"{prefix}.slidingwindow.{ws}.idx"
+        output_file = self._get_sliding_window_index_path(context)
 
         session_index = CsvDatasetIndex(session_index_path)
         reader = CsvDatasetReader(main_file, session_index)
@@ -349,6 +422,18 @@ class CreateSlidingWindowIndex(PreprocessingAction):
         dataset = ItemSequenceDataset(PlainSequenceDataset(reader, parser))
         builder = SequencePositionIndexBuilder(self.extractor)
         builder.build(dataset, output_file)
+
+    def _dry_run(self, context: Context) -> None:
+        pass
+
+    def _get_sliding_window_index_path(self, context: Context) -> Path:
+        output_dir = context.get(OUTPUT_DIR_KEY)
+        prefix = format_prefix(context.get(PREFIXES_KEY))
+        ws = self.extractor.window_size + self.extractor.session_end_offset
+        return output_dir / f"{prefix}.slidingwindow.{ws}.idx"
+
+    def dry_run_available(self, context: Context) -> bool:
+        return os.path.exists(self._get_sliding_window_index_path(context))
 
 
 class CreateLeaveOneOutSplit(PreprocessingAction):
@@ -390,8 +475,8 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
     def name(self) -> str:
         return "Creating Leave one out split"
 
-    def apply(self, context: Context) -> None:
-        output_dir = context.get(OUTPUT_DIR_KEY) / "loo"
+    def _run(self, context: Context) -> None:
+        output_dir = self._get_output_dir(context)
         main_file = context.get(MAIN_FILE_KEY)
         session_index_path = context.get(SESSION_INDEX_KEY)
         delimiter = context.get(DELIMITER_KEY)
@@ -418,6 +503,16 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
         cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
         for action in self.inner_actions:
             action(cloned)
+
+    def _dry_run(self, context: Context) -> None:
+        context.set(LOO_SPLIT_PATH_CONTEXT_KEY, self._get_output_dir(context))
+
+    def dry_run_available(self, context: Context) -> bool:
+        return all(map(lambda action: action.dry_run_available(), self.inner_actions))
+
+    @staticmethod
+    def _get_output_dir(context: Context) -> Path:
+        return context.get(OUTPUT_DIR_KEY) / "loo "
 
 
 class CreateVocabulary(PreprocessingAction):
