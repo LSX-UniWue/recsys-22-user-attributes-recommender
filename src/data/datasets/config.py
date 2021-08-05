@@ -81,8 +81,8 @@ register_preprocessing_config_provider("ml-1m",
                                        PreprocessingConfigProvider(get_ml_1m_preprocessing_config,
                                                                    output_directory="./ml-1m",
                                                                    extraction_directory="./tmp/ml-1m",
-                                                                   min_item_feedback=0,
-                                                                   min_sequence_length=2))
+                                                                   min_item_feedback=5,
+                                                                   min_sequence_length=5))
 
 
 def get_ml_20m_preprocessing_config(output_directory: str,
@@ -139,15 +139,15 @@ register_preprocessing_config_provider("ml-20m",
                                        PreprocessingConfigProvider(get_ml_20m_preprocessing_config,
                                                                    output_directory="./ml-20m",
                                                                    extraction_directory="./tmp/ml-20m",
-                                                                   min_item_feedback=0,
-                                                                   min_sequence_length=2))
+                                                                   min_item_feedback=5,
+                                                                   min_sequence_length=5))
 
 
 def get_amazon_preprocessing_config(prefix: str,
                                     output_directory: str,
                                     extraction_directory: str,
-                                    min_item_feedback=0,
-                                    min_sequence_length=2
+                                    min_item_feedback=5,
+                                    min_sequence_length=5
                                     ) -> DatasetPreprocessingConfig:
 
     if prefix not in ["games", "beauty"]:
@@ -210,16 +210,16 @@ register_preprocessing_config_provider("beauty",
                                                                    prefix="beauty",
                                                                    output_directory="./beauty",
                                                                    extraction_directory="/tmp/beauty",
-                                                                   min_item_feedback=0,
-                                                                   min_sequence_length=2))
+                                                                   min_item_feedback=5,
+                                                                   min_sequence_length=5))
 
 register_preprocessing_config_provider("games",
                                        PreprocessingConfigProvider(get_amazon_preprocessing_config,
                                                                    prefix="games",
                                                                    output_directory="./games",
                                                                    extraction_directory="/tmp/games",
-                                                                   min_item_feedback=0,
-                                                                   min_sequence_length=2))
+                                                                   min_item_feedback=5,
+                                                                   min_sequence_length=5))
 
 
 def get_dota_shop_preprocessing_config(output_directory: str,
