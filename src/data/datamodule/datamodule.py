@@ -49,7 +49,7 @@ class AsmeDataModule(pl.LightningDataModule):
             logger.info("Preprocessing dataset:")
 
             first_step = 0
-            if (checkpoint := self._load_checkpoint()) is not None:
+            if (checkpoint := self._load_checkpoint()) is not None and not self.config.force_regeneration:
                 logger.info(f"Found a checkpoint for step {checkpoint.step + 1}. Continuing from there.")
                 first_step = checkpoint.step + 1
                 ds_config.context = checkpoint.context
@@ -72,7 +72,9 @@ class AsmeDataModule(pl.LightningDataModule):
             for i, step in enumerate(actions_left):
                 logger.info(
                     f"Applying preprocessing step '{step.name()}' ({i + first_step + 1}/{len(ds_config.preprocessing_actions)})")
-                step.apply(ds_config.context)
+                if step.dry_run_available(ds_config.context) and not self.config.force_regeneration:
+                    logger.info(f"Skipping this step since dry run is available.")
+                step.apply(ds_config.context, self.config.force_regeneration)
                 checkpoint = PreprocessingCheckpoint(i, ds_config.context)
                 checkpoint.save(self.config.dataset_preprocessing_config.location / self.CHECKPOINT_NAME)
 

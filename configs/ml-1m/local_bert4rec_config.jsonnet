@@ -59,11 +59,12 @@ local dataset = 'ml-1m';
                 ]
             }
         },
+        force_regeneration: "False",
         preprocessing: {
             extraction_directory: "/tmp/ml-1m/",
             output_directory: raw_dataset_path,
             min_item_feedback: 0,
-            min_sequence_length: 2
+            min_sequence_length: 2,
         }
     },
     templates: {

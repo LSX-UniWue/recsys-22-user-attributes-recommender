@@ -67,7 +67,7 @@ class PreprocessingAction:
         :param force_execution: If set to True, this disables dry-runs and forces each action to generate all files,
                                 regardless of whether they are already available.
         """
-        if not self.dry_run_available() or force_execution:
+        if not self.dry_run_available(context) or force_execution:
             self._run(context)
         else:
             self._dry_run(context)
@@ -499,8 +499,7 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
             builder = SequencePositionIndexBuilder(target_positions_extractor=FixedOffsetPositionExtractor(offset))
             builder.build(dataset, output_file)
 
-        cloned = copy.deepcopy(context)
-        cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
+        cloned = self._prepare_context_for_complete_split_actions(context)
         for action in self.inner_actions:
             action(cloned)
 
@@ -508,11 +507,22 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
         context.set(LOO_SPLIT_PATH_CONTEXT_KEY, self._get_output_dir(context))
 
     def dry_run_available(self, context: Context) -> bool:
-        return all(map(lambda action: action.dry_run_available(), self.inner_actions))
+        cloned = self._prepare_context_for_complete_split_actions(context)
+        for action in self.inner_actions:
+            if not action.dry_run_available(cloned):
+                return False
+
+        return True
+
+    def _prepare_context_for_complete_split_actions(self, context: Context) -> Context:
+        output_dir = self._get_output_dir(context)
+        cloned = copy.deepcopy(context)
+        cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
+        return cloned
 
     @staticmethod
     def _get_output_dir(context: Context) -> Path:
-        return context.get(OUTPUT_DIR_KEY) / "loo "
+        return context.get(OUTPUT_DIR_KEY) / "loo"
 
 
 class CreateVocabulary(PreprocessingAction):
@@ -549,23 +559,42 @@ class CreateVocabulary(PreprocessingAction):
     def name(self) -> str:
         return f"Creating Vocabulary for columns: {self.columns}."
 
-    def apply(self, context: Context) -> None:
+    def _run(self, context: Context) -> None:
         main_file = context.get(MAIN_FILE_KEY)
         session_index_path = context.get(SESSION_INDEX_KEY)
-        output_dir = context.get(OUTPUT_DIR_KEY)
-        prefix = format_prefix(context.get(PREFIXES_KEY) if self.prefixes is None else self.prefixes)
         delimiter = context.get(DELIMITER_KEY)
         for column in self.columns:
-            filename = column.column_name if column.column_name is not None else column.feature_name
             if not column.run_tokenization:
-                get_root_logger().warning(f"Skipping vocabulary generation for '{filename}' since tokenization was "
+                get_root_logger().warning(f"Skipping vocabulary generation for '{column.column_name if column.column_name is not None else column.feature_name}' since tokenization was "
                                           f"disabled for this feature (via 'run_tokenization = False').")
                 continue
-            if column.get_config("delimiter") is not None:
-                filename += "-splitted"
-            output_file = output_dir / f"{prefix}.vocabulary.{filename}.txt"
+
+            output_file = self._get_vocabulary_path(context, column)
             create_token_vocabulary(column, main_file, session_index_path,
                                     output_file, self.special_tokens, delimiter, None)
+
+    def _dry_run(self, context: Context) -> None:
+        pass
+
+    def dry_run_available(self, context: Context) -> bool:
+        for column in self.columns:
+            if not column.run_tokenization:
+                continue
+            else:
+                path = self._get_vocabulary_path(context, column)
+                if not os.path.exists(path):
+                    return False
+
+        return True
+
+    def _get_vocabulary_path(self, context: Context, column: MetaInformation) -> Path:
+        output_dir = context.get(OUTPUT_DIR_KEY)
+        prefix = format_prefix(context.get(PREFIXES_KEY) if self.prefixes is None else self.prefixes)
+        filename = column.column_name if column.column_name is not None else column.feature_name
+        if column.get_config("delimiter") is not None:
+            filename += "-splitted"
+
+        return output_dir / f"{prefix}.vocabulary.{filename}.txt"
 
 
 class UseExistingSplit(PreprocessingAction):
@@ -592,7 +621,7 @@ class UseExistingSplit(PreprocessingAction):
     def name(self) -> str:
         return f"Use existing split."
 
-    def apply(self, context: Context) -> None:
+    def _run(self, context: Context) -> None:
 
         split_base_directory = context.get(SPLIT_BASE_DIRECTORY_PATH)
 
@@ -605,6 +634,14 @@ class UseExistingSplit(PreprocessingAction):
                        split_name: str):
 
         # Modify context such that the operations occur in the new output directory using the split file
+        cloned = self._prepare_context_for_per_split_actions(context, split_base_directory, split_name)
+
+        # Apply the necessary preprocessing, i.e. session index generation
+        for action in self.per_split_actions:
+            action._run(cloned)
+
+    @staticmethod
+    def _prepare_context_for_per_split_actions(context: Context, split_base_directory: Path, split_name: str) -> Context:
         cloned = copy.deepcopy(context)
         cloned.set(OUTPUT_DIR_KEY, split_base_directory, overwrite=True)
 
@@ -613,9 +650,20 @@ class UseExistingSplit(PreprocessingAction):
         cloned.set(MAIN_FILE_KEY, split_base_directory / f"{split_prefix}.csv", overwrite=True)
         cloned.set(PREFIXES_KEY, split_prefix_list, overwrite=True)
 
-        # Apply the necessary preprocessing, i.e. session index generation
-        for action in self.per_split_actions:
-            action(cloned)
+        return cloned
+
+    def _dry_run(self, context: Context) -> None:
+        pass
+
+    def dry_run_available(self, context: Context) -> bool:
+        split_base_directory = context.get(SPLIT_BASE_DIRECTORY_PATH)
+        for split_name in self.split_names:
+            cloned = self._prepare_context_for_per_split_actions(context, split_base_directory, split_name)
+            for action in self.per_split_actions:
+                if not action.dry_run_available(cloned):
+                    return False
+
+        return True
 
 
 class CreateRatioSplit(PreprocessingAction):
@@ -659,12 +707,11 @@ class CreateRatioSplit(PreprocessingAction):
     def name(self) -> str:
         return f"Creating ratio split ({self.train_percentage}/{self.validation_percentage}/{self.test_percentage})"
 
-    def apply(self, context: Context) -> None:
+    def _run(self, context: Context) -> None:
         main_file = context.get(MAIN_FILE_KEY)
         delimiter = context.get(DELIMITER_KEY)
         header = delimiter.join(read_csv_header(main_file, delimiter))
-        output_dir = context.get(OUTPUT_DIR_KEY) / \
-                     f"ratio_split-{self.train_percentage}_{self.validation_percentage}_{self.test_percentage}"
+        output_dir = self._get_complete_split_output_dir(context)
         session_index_path = context.get(SESSION_INDEX_KEY)
         session_index = CsvDatasetIndex(session_index_path)
         reader = CsvDatasetReader(main_file, session_index)
@@ -684,9 +731,70 @@ class CreateRatioSplit(PreprocessingAction):
 
         # Write individual CSVs and execute inner actions for each split
         for name, indices in split_indices.items():
-            self._process_split(context, output_dir, name.name, header, reader, indices)
+            self._process_split(context, name.name, header, reader, indices)
 
         self._perform_complete_split_actions(context, output_dir)
+
+    def _dry_run(self, context: Context) -> None:
+        output_dir = self._get_complete_split_output_dir(context)
+        context.set(RATIO_SPLIT_PATH_CONTEXT_KEY, output_dir)
+
+    def _get_complete_split_output_dir(self, context: Context) -> Path:
+        return context.get(OUTPUT_DIR_KEY) / \
+                     f"ratio_split-{self.train_percentage}_{self.validation_percentage}_{self.test_percentage}"
+
+    def _get_split_main_file_path(self, context: Context, name: str) -> Path:
+        prefix = format_prefix(context.get(PREFIXES_KEY) + [name])
+        output_dir = self._get_complete_split_output_dir(context)
+        return output_dir / f"{prefix}.csv"
+
+    def dry_run_available(self, context: Context):
+        for split in SplitNames:
+            # Check whether the split main file exists
+            if not os.path.exists(self._get_split_main_file_path(context, split.name)):
+                return False
+
+            # Check whether all per split actions are available for dry run
+            cloned = self._prepare_context_for_per_split_actions(context, split.name)
+            for action in self.per_split_actions:
+                if not action.dry_run_available(cloned):
+                    return False
+
+        # Check whether all complete split action are available for dry run
+        cloned = self._prepare_context_for_complete_split_actions(context)
+        for action in self.complete_split_actions:
+            if not action.dry_run_available(cloned):
+                return False
+
+        # Everything can dry run
+        return True
+
+    def _prepare_context_for_per_split_actions(self, context: Context, name: str) -> Context:
+        output_dir = self._get_complete_split_output_dir(context)
+        output_file = self._get_split_main_file_path(context, name)
+
+        cloned = copy.deepcopy(context)
+        cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
+        cloned.set(MAIN_FILE_KEY, output_file, overwrite=True)
+        current_prefixes = context.get(PREFIXES_KEY)
+        cloned.set(PREFIXES_KEY, current_prefixes + [name], overwrite=True)
+
+        return cloned
+
+    def _prepare_context_for_complete_split_actions(self, context: Context) -> Context:
+        cloned = copy.deepcopy(context)
+        output_dir = self._get_complete_split_output_dir(context)
+        cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
+        # If enabled, change paths to point to the train split, e.g. for creating the vocabulary or popularities
+        if self.update_paths:
+            current_prefixes = context.get(PREFIXES_KEY)
+            train_prefix = current_prefixes + [SplitNames.train.name]
+            cloned.set(PREFIXES_KEY, train_prefix, overwrite=True)
+            cloned.set(MAIN_FILE_KEY, output_dir / f"{format_prefix(train_prefix)}.csv", overwrite=True)
+            cloned.set(SESSION_INDEX_KEY, output_dir / f"{format_prefix(train_prefix)}.session.idx",
+                       overwrite=True)
+
+        return cloned
 
     @staticmethod
     def _generate_split_indices(session_index: CsvDatasetIndex, split_ratios: Dict[SplitNames, float]):
@@ -712,40 +820,26 @@ class CreateRatioSplit(PreprocessingAction):
                                                validation_indices=splits[SplitNames.validation],
                                                test_indices=splits[SplitNames.test])
 
-    def _process_split(self, context: Context, output_dir: Path, name: str, header: str, reader: CsvDatasetReader,
+    def _process_split(self, context: Context, name: str, header: str, reader: CsvDatasetReader,
                        indices: List[int]):
-        prefix = format_prefix(context.get(PREFIXES_KEY) + [name])
-        output_file = output_dir / f"{prefix}.csv"
+        output_file = self._get_split_main_file_path(context, name)
 
         # Write the CSV file for the current split
         self._write_split(output_file, header, reader, indices)
 
         # Modify context such that the operations occur in the new output directory using the split file
-        cloned = copy.deepcopy(context)
-        cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
-        cloned.set(MAIN_FILE_KEY, output_file, overwrite=True)
-        current_prefixes = context.get(PREFIXES_KEY)
-        cloned.set(PREFIXES_KEY, current_prefixes + [name], overwrite=True)
+        cloned = self._prepare_context_for_per_split_actions(context, name)
 
         # Apply the necessary preprocessing, i.e. session index generation
         for action in self.per_split_actions:
-            action(cloned)
+            action._run(cloned)
 
     def _perform_complete_split_actions(self, context: Context, split_output_dir: Path):
         # Modify context such that the operations occur in the new output directory
-        cloned = copy.deepcopy(context)
-        cloned.set(OUTPUT_DIR_KEY, split_output_dir, overwrite=True)
-        # If enabled, change paths to point to the train split, e.g. for creating the vocabulary or popularities
-        if self.update_paths:
-            current_prefixes = context.get(PREFIXES_KEY)
-            train_prefix = current_prefixes + [SplitNames.train.name]
-            cloned.set(PREFIXES_KEY, train_prefix, overwrite=True)
-            cloned.set(MAIN_FILE_KEY, split_output_dir / f"{format_prefix(train_prefix)}.csv", overwrite=True)
-            cloned.set(SESSION_INDEX_KEY, split_output_dir / f"{format_prefix(train_prefix)}.session.idx",
-                       overwrite=True)
+        cloned = self._prepare_context_for_complete_split_actions(context)
 
         for action in self.complete_split_actions:
-            action(cloned)
+            action._run(cloned)
 
     @staticmethod
     def _write_split(output_file: Path, header: str, reader: CsvDatasetReader, indices: List[int]):
@@ -798,11 +892,12 @@ class CreatePopularity(PreprocessingAction):
     def name(self) -> str:
         return f"Creating popularities for: {self.columns}"
 
-    def apply(self, context: Context) -> None:
+    def _run(self, context: Context) -> None:
         main_file = context.get(MAIN_FILE_KEY)
         output_dir = context.get(OUTPUT_DIR_KEY)
         delimiter = context.get(DELIMITER_KEY)
         prefixes = context.get(PREFIXES_KEY) if self.prefixes is None else self.prefixes
+        prefix = format_prefix(prefixes)
         header = create_indexed_header(read_csv_header(main_file, delimiter))
         session_index_path = context.get(SESSION_INDEX_KEY)
         session_index = CsvDatasetIndex(session_index_path)
@@ -817,7 +912,6 @@ class CreatePopularity(PreprocessingAction):
             session_parser = ItemSessionParser(header, [column], delimiter=delimiter)
             plain_dataset = PlainSequenceDataset(reader, session_parser)
             dataset = ItemSequenceDataset(plain_dataset)
-            prefix = format_prefix(prefixes)
             sub_delimiter = column.get_config("delimiter")
 
             if column.get_config("delimiter") is not None:
@@ -836,6 +930,27 @@ class CreatePopularity(PreprocessingAction):
             # Save them to the correct file
             output_file = output_dir / f"{prefix}.popularity.{filename}.txt"
             self._write_popularity(popularities, output_file)
+
+    def _dry_run(self, context: Context) -> None:
+        pass
+
+    def dry_run_available(self, context: Context) -> bool:
+        for column in self.columns:
+            if not column.run_tokenization:
+                continue
+            if not os.path.exists(self._get_popularity_path(context, column)):
+                return False
+
+        return True
+
+    def _get_popularity_path(self, context: Context, column: MetaInformation) -> Path:
+        output_dir = context.get(OUTPUT_DIR_KEY)
+        filename = column.column_name if column.column_name is not None else column.feature_name
+        if column.get_config("delimiter") is not None:
+            filename += "-splitted"
+        prefixes = context.get(PREFIXES_KEY) if self.prefixes is None else self.prefixes
+        prefix = format_prefix(prefixes)
+        return output_dir / f"{prefix}.popularity.{filename}.txt"
 
     def _count_items(self, dataset: ItemSequenceDataset, vocabulary: Vocabulary, column: MetaInformation, sub_delimiter: str = None) -> Dict[int, int]:
 

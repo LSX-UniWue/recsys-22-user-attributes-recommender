@@ -35,6 +35,7 @@ class AsmeDataModuleConfig:
     template: Optional[Config]
     data_sources: Optional[Config]
     dataset_preprocessing_config: Optional[DatasetPreprocessingConfig]
+    force_regeneration: bool = False
 
 
 class PreprocessingConfigProvider:
