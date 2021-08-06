@@ -8,7 +8,7 @@ from data.datasets.processors.no_target_extractor import NoTargetExtractorProces
 
 class NoTargetExtractorProcessorFactory(ObjectFactory):
     """
-    Factory for the PositionTokenProcessor
+    Factory for the NoTargetExtractorProcessor
     """
 
     def can_build(self,
