@@ -23,10 +23,8 @@ local dataset = 'beauty';
         },
 
         preprocessing: {
-            extraction_directory: "/tmp/beauty/",
+            input_directory: raw_dataset_path,
             output_directory: raw_dataset_path,
-            min_item_feedback: 0,
-            min_sequence_length: 2
         }
     },
     templates: {
@@ -42,7 +40,7 @@ local dataset = 'beauty';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: "beauty.popularity.title.txt",
+                sample_probability_file: "beauty.popularity.product_id.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             },
@@ -62,7 +60,7 @@ local dataset = 'beauty';
     },
     features: {
         item: {
-            column_name: "title",
+            column_name: "product_id",
             sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
@@ -71,7 +69,6 @@ local dataset = 'beauty';
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    #file: loo_path + file_prefix + "vocabulary.title.txt"
                 }
             }
         }

@@ -1,7 +1,7 @@
-local raw_dataset_path = "datasets/dataset/amazon-games/";
+local raw_dataset_path = "datasets/dataset/steam/";
 local cached_dataset_path = raw_dataset_path;
 local loo_path = cached_dataset_path + "loo/";
-local output_path = "../dataset/amazon-games/exp/";
+local output_path = "../dataset/steam/exp/";
 local max_seq_length = 200;
 local metrics =  {
     mrr: [1, 5, 10],
@@ -9,7 +9,7 @@ local metrics =  {
     ndcg: [1, 5, 10]
 };
 
-local dataset = 'games';
+local dataset = 'steam';
 
 {
     datamodule: {
@@ -23,8 +23,10 @@ local dataset = 'games';
         },
 
         preprocessing: {
-            input_directory: raw_dataset_path,
+            input_dir: raw_dataset_path,
             output_directory: raw_dataset_path,
+            min_item_feedback: 5,
+            min_sequence_length: 5
         }
     },
     templates: {
@@ -40,7 +42,7 @@ local dataset = 'games';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: "games.popularity.product_id.txt",
+                sample_probability_file: "steam.popularity.product_id.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             },
@@ -69,6 +71,7 @@ local dataset = 'games';
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
+                    #file: loo_path + file_prefix + "vocabulary.title.txt"
                 }
             }
         }

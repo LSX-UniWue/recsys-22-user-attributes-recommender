@@ -35,9 +35,12 @@ class CsvConverter:
 class YooChooseConverter(CsvConverter):
     YOOCHOOSE_SESSION_ID_KEY = "SessionId"
 
+    def __init__(self, delimiter="\t"):
+        self.delimiter = delimiter
+
     def apply(self, input_dir: Path, output_file: Path):
 
-        data = pd.read_csv(input_dir.joinpath('clicks.dat'),
+        data = pd.read_csv(input_dir.joinpath('yoochoose-clicks.dat'),
                            sep=',',
                            header=None,
                            usecols=[0, 1, 2],
@@ -45,11 +48,12 @@ class YooChooseConverter(CsvConverter):
                            names=['SessionId', 'TimeStr', 'ItemId'])
 
         data['Time'] = data.TimeStr.apply(lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S.%fZ').timestamp())
+        data = data.drop("TimeStr", axis=1)
 
         if not os.path.exists(output_file):
             output_file.parent.mkdir(parents=True, exist_ok=True)
         data = data.sort_values(self.YOOCHOOSE_SESSION_ID_KEY)
-        data.to_csv(path_or_buf=output_file)
+        data.to_csv(path_or_buf=output_file, sep=self.delimiter, index=False)
 
 
 class Movielens20MConverter(CsvConverter):
@@ -139,11 +143,10 @@ class AmazonConverter(CsvConverter):
                                              self.AMAZON_ITEM_ID,
                                              self.AMAZON_REVIEW_TIMESTAMP_ID])
             df = df.sort_values(by=[self.AMAZON_SESSION_ID, self.AMAZON_REVIEW_TIMESTAMP_ID])
-            df.to_csv(output_file, sep=self.delimiter)
+            df.to_csv(output_file, sep=self.delimiter, index=False)
 
 
 class SteamConverter(CsvConverter):
-    STEAM_DATASET_FILE_NAME = "steam_reviews.json.gz"
     STEAM_SESSION_ID = "username"
     STEAM_ITEM_ID = "product_id"
     STEAM_TIMESTAMP = "date"
@@ -152,12 +155,11 @@ class SteamConverter(CsvConverter):
         self.delimiter = delimiter
 
     def apply(self, input_dir: Path, output_file: Path):
-        input_file_path = input_dir / self.STEAM_DATASET_FILE_NAME
 
         if not output_file.parent.exists():
             os.makedirs(output_file.parent, exist_ok=True)
 
-        with gzip.open(input_file_path, mode="rt") as input_file:
+        with gzip.open(input_dir, mode="rt") as input_file:
             rows = []
             for record in input_file:
                 parsed_record = eval(record)
@@ -172,7 +174,7 @@ class SteamConverter(CsvConverter):
                                          self.STEAM_ITEM_ID,
                                          self.STEAM_TIMESTAMP])
         df = df.sort_values(by=[self.STEAM_SESSION_ID, self.STEAM_TIMESTAMP])
-        df.to_csv(output_file, sep=self.delimiter)
+        df.to_csv(output_file, sep=self.delimiter, index=False)
 
 
 class DotaShopConverter(CsvConverter):

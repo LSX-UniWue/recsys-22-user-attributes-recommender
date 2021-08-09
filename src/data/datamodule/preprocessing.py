@@ -3,6 +3,7 @@ import functools
 import math
 import os
 import random
+import shutil
 from abc import abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
@@ -80,6 +81,7 @@ class PreprocessingAction:
         """
         pass
 
+    @abstractmethod
     def _run(self, context: Context) -> None:
         """
         This method should actually perform the preprocessing action. It should also populate the context with the
@@ -166,8 +168,33 @@ class ConvertToCsv(PreprocessingAction):
     @staticmethod
     def _get_output_file(context: Context) -> Path:
         output_directory = context.get(OUTPUT_DIR_KEY)
-        filename = f"{format_prefix(context.get(PREFIXES_KEY))}.csv"
+        filename = f"{format_prefix(context.get(PREFIXES_KEY))}-raw.csv"
         return output_directory / filename
+
+
+class CopyMainFile(PreprocessingAction):
+
+    def name(self) -> str:
+        return "Copying current main file to final location."
+
+    def _run(self, context: Context) -> None:
+        current_main_file_path = context.get(MAIN_FILE_KEY)
+        new_main_file_path = self._get_final_location(context)
+        shutil.copy(current_main_file_path, new_main_file_path)
+        context.set(MAIN_FILE_KEY, self._get_final_location(context), overwrite=True)
+
+    def _dry_run(self, context: Context) -> None:
+        context.set(MAIN_FILE_KEY, self._get_final_location(context), overwrite=True)
+
+    def dry_run_available(self, context: Context) -> bool:
+        return os.path.exists(self._get_final_location(context))
+
+    @staticmethod
+    def _get_final_location(context: Context) -> Path:
+        output_dir = context.get(OUTPUT_DIR_KEY)
+        prefixes = context.get(PREFIXES_KEY)
+        prefix = format_prefix(prefixes)
+        return output_dir / f"{prefix}.csv"
 
 
 class TransformCsv(PreprocessingAction):
@@ -211,7 +238,7 @@ class TransformCsv(PreprocessingAction):
         return os.path.exists(self._get_output_file_name(context))
 
     def _get_output_file_name(self, context: Context) -> Path:
-        current_file: Path = context.get(MAIN_FILE_KEY)
+        current_file = context.get(MAIN_FILE_KEY)
         output_dir = current_file.parent
         name, extension = os.path.splitext(current_file.name)
         return output_dir / f"{name}-{self.suffix}{extension}"
