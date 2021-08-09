@@ -32,7 +32,7 @@ class DataModuleFactory(ObjectFactory):
         import data.datasets.config
 
         dataset_name = config.get("dataset")
-        force_regeneration = bool(distutils.util.strtobool(config.get_or_default("force_regeneration", False)))
+        force_regeneration = bool(distutils.util.strtobool(config.get_or_default("force_regeneration", "False")))
         dataset_preprocessing_config_provider = get_preprocessing_config_provider(dataset_name)
         if dataset_preprocessing_config_provider is None:
             print(f"No dataset registered for key '{dataset_name}'. No preprocessing will be applied.")
