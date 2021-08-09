@@ -180,13 +180,15 @@ class TransformCsv(PreprocessingAction):
     - `DELIMITER_KEY` - The delimiter used to separate columns in the main CSV file.
     
     Sets context parameters:
-        None
+    - `MAIN_FILE_KEY` - The path to the new main CSV file.
     """
 
-    def __init__(self, transform: Callable[[pd.DataFrame], pd.DataFrame]):
+    def __init__(self, suffix: str, transform: Callable[[pd.DataFrame], pd.DataFrame]):
         """
         :param transform: A function that accepts a data-frame, processes it in some manner and returns it afterwards.
+        :param suffix: A suffix to append to the transformed file.
         """
+        self.suffix = suffix
         self.transform = transform
 
     def name(self) -> str:
@@ -195,15 +197,24 @@ class TransformCsv(PreprocessingAction):
     def _run(self, context: Context) -> None:
         current_file = context.get(MAIN_FILE_KEY)
         delimiter = context.get(DELIMITER_KEY)
+        output_file = self._get_output_file_name(context)
         df = pd.read_csv(current_file, delimiter=delimiter, index_col=False)
         filtered = self.transform(df)
-        filtered.to_csv(current_file, sep=delimiter, index=False)
+        filtered.to_csv(output_file, sep=delimiter, index=False)
+        context.set(MAIN_FILE_KEY, output_file, overwrite=True)
 
     def _dry_run(self, context: Context) -> None:
-        pass
+        output_file = self._get_output_file_name(context)
+        context.set(MAIN_FILE_KEY, output_file, overwrite=True)
 
     def dry_run_available(self, context: Context) -> bool:
-        return True
+        return os.path.exists(self._get_output_file_name(context))
+
+    def _get_output_file_name(self, context: Context) -> Path:
+        current_file: Path = context.get(MAIN_FILE_KEY)
+        output_dir = current_file.parent
+        name, extension = os.path.splitext(current_file.name)
+        return output_dir / f"{name}-{self.suffix}{extension}"
 
 
 @dataclass
@@ -234,13 +245,15 @@ class GroupAndFilter(PreprocessingAction):
         None
  
     """
-    def __init__(self, group_by: str, filter: GroupedFilter):
+    def __init__(self, suffix: str, group_by: str, filter: GroupedFilter):
         """
+        :param suffix: The suffix to add to the filtered file.
         :param group_by: The column the data-frame should be grouped by.
         :param filter: A grouped filter instance containing the necessary information to perform aggregation and
                        filtering.
         """
 
+        self.suffix = suffix
         self.group_by = group_by
         self.filter = filter
 
@@ -259,7 +272,7 @@ class GroupAndFilter(PreprocessingAction):
             ids = filtered[self.group_by].unique().tolist()
             return df[df[group_by].isin(ids)]
 
-        self.transform = TransformCsv(filter_fn)
+        self.transform = TransformCsv(suffix, filter_fn)
 
     def name(self) -> str:
         return "Filtering sessions"
@@ -268,10 +281,10 @@ class GroupAndFilter(PreprocessingAction):
         self.transform._run(context)
 
     def _dry_run(self, context: Context) -> None:
-        pass
+        self.transform._dry_run(context)
 
     def dry_run_available(self, context: Context) -> bool:
-        return True
+        return self.transform.dry_run_available(context)
 
 
 class CreateSessionIndex(PreprocessingAction):
