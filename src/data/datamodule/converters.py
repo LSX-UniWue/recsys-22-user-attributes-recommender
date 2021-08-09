@@ -34,9 +34,9 @@ class CsvConverter:
 
 
 class YooChooseConverter(CsvConverter):
+    YOOCHOOSE_SESSION_ID_KEY = "SessionId"
+
     def apply(self, input_dir: Path, output_file: Path):
-        YOOCHOOSE_SESSION_ID_KEY = "SessionId"
-        YOOCHOOSE_ITEM_ID_KEY = "ItemId"
 
         data = pd.read_csv(input_dir.joinpath('clicks.dat'),
                            sep=',',
@@ -46,16 +46,10 @@ class YooChooseConverter(CsvConverter):
                            names=['SessionId', 'TimeStr', 'ItemId'])
 
         data['Time'] = data.TimeStr.apply(lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S.%fZ').timestamp())
-        session_lengths = data.groupby(YOOCHOOSE_SESSION_ID_KEY).size()
-        data = data[np.in1d(data.SessionId, session_lengths[session_lengths > 1].index)]
-        item_supports = data.groupby(YOOCHOOSE_ITEM_ID_KEY).size()
-        data = data[np.in1d(data.ItemId, item_supports[item_supports >= 5].index)]
-        session_lengths = data.groupby(YOOCHOOSE_SESSION_ID_KEY).size()
-        data = data[np.in1d(data.SessionId, session_lengths[session_lengths >= 2].index)]
 
         if not os.path.exists(output_file):
             output_file.parent.mkdir(parents=True, exist_ok=True)
-        data = data.sort_values(YOOCHOOSE_SESSION_ID_KEY)
+        data = data.sort_values(self.YOOCHOOSE_SESSION_ID_KEY)
         data.to_csv(path_or_buf=output_file)
 
 
@@ -100,7 +94,6 @@ class Movielens1MConverter(CsvConverter):
 
     def __init__(self, delimiter="\t"):
         self.delimiter = delimiter
-
 
     def apply(self, input_dir: Path, output_file: Path):
         file_type = ".dat"
