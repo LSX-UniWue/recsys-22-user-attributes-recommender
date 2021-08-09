@@ -33,9 +33,9 @@ class CsvConverter:
 
 
 class YooChooseConverter(CsvConverter):
+    YOOCHOOSE_SESSION_ID_KEY = "SessionId"
+
     def apply(self, input_dir: Path, output_file: Path):
-        YOOCHOOSE_SESSION_ID_KEY = "SessionId"
-        YOOCHOOSE_ITEM_ID_KEY = "ItemId"
 
         data = pd.read_csv(input_dir.joinpath('clicks.dat'),
                            sep=',',
@@ -45,16 +45,10 @@ class YooChooseConverter(CsvConverter):
                            names=['SessionId', 'TimeStr', 'ItemId'])
 
         data['Time'] = data.TimeStr.apply(lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S.%fZ').timestamp())
-        session_lengths = data.groupby(YOOCHOOSE_SESSION_ID_KEY).size()
-        data = data[np.in1d(data.SessionId, session_lengths[session_lengths > 1].index)]
-        item_supports = data.groupby(YOOCHOOSE_ITEM_ID_KEY).size()
-        data = data[np.in1d(data.ItemId, item_supports[item_supports >= 5].index)]
-        session_lengths = data.groupby(YOOCHOOSE_SESSION_ID_KEY).size()
-        data = data[np.in1d(data.SessionId, session_lengths[session_lengths >= 2].index)]
 
         if not os.path.exists(output_file):
             output_file.parent.mkdir(parents=True, exist_ok=True)
-        data = data.sort_values(YOOCHOOSE_SESSION_ID_KEY)
+        data = data.sort_values(self.YOOCHOOSE_SESSION_ID_KEY)
         data.to_csv(path_or_buf=output_file)
 
 
@@ -136,11 +130,49 @@ class AmazonConverter(CsvConverter):
     def apply(self, input_dir: Path, output_file: Path):
         os.makedirs(output_file.parent, exist_ok=True)
         with gzip.open(input_dir) as file, output_file.open("w") as output_file:
-            writer = csv.writer(output_file, delimiter=self.delimiter)
-            writer.writerow([AmazonConverter.AMAZON_SESSION_ID, AmazonConverter.AMAZON_ITEM_ID, AmazonConverter.AMAZON_REVIEW_TIMESTAMP_ID])
+            rows = []
             for line in file:
                 parsed = json.loads(line)
-                writer.writerow([parsed["reviewerID"], parsed["asin"], parsed["unixReviewTime"]])
+                rows.append([parsed["reviewerID"], parsed["asin"], parsed["unixReviewTime"]])
+
+            df = pd.DataFrame(rows, columns=[self.AMAZON_SESSION_ID,
+                                             self.AMAZON_ITEM_ID,
+                                             self.AMAZON_REVIEW_TIMESTAMP_ID])
+            df = df.sort_values(by=[self.AMAZON_SESSION_ID, self.AMAZON_REVIEW_TIMESTAMP_ID])
+            df.to_csv(output_file, sep=self.delimiter)
+
+
+class SteamConverter(CsvConverter):
+    STEAM_DATASET_FILE_NAME = "steam_reviews.json.gz"
+    STEAM_SESSION_ID = "username"
+    STEAM_ITEM_ID = "product_id"
+    STEAM_TIMESTAMP = "date"
+
+    def __init__(self, delimiter="\t"):
+        self.delimiter = delimiter
+
+    def apply(self, input_dir: Path, output_file: Path):
+        input_file_path = input_dir / self.STEAM_DATASET_FILE_NAME
+
+        if not output_file.parent.exists():
+            os.makedirs(output_file.parent, exist_ok=True)
+
+        with gzip.open(input_file_path, mode="rt") as input_file:
+            rows = []
+            for record in input_file:
+                parsed_record = eval(record)
+                username = parsed_record[self.STEAM_SESSION_ID]
+                product_id = int(parsed_record[self.STEAM_ITEM_ID])
+                timestamp = parsed_record[self.STEAM_TIMESTAMP]
+
+                row = [username, product_id, timestamp]
+                rows.append(row)
+
+        df = pd.DataFrame(rows, columns=[self.STEAM_SESSION_ID,
+                                         self.STEAM_ITEM_ID,
+                                         self.STEAM_TIMESTAMP])
+        df = df.sort_values(by=[self.STEAM_SESSION_ID, self.STEAM_TIMESTAMP])
+        df.to_csv(output_file, sep=self.delimiter)
 
 
 class DotaShopConverter(CsvConverter):
