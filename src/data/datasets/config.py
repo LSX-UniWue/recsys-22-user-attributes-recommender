@@ -268,7 +268,9 @@ register_preprocessing_config_provider("dota",
                                                                    output_directory="./dota",
                                                                    raw_csv_file_path="./dota",
                                                                    split_directory="split-0.8_0.1_0.1",
-                                                                   min_sequence_length=2))
+                                                                   min_sequence_length=2,
+                                                                   window_size=12,
+                                                                   session_end_offset=0))
 
 
 def get_steam_preprocessing_config(output_directory: str,
