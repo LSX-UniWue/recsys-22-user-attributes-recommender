@@ -1402,7 +1402,7 @@ python-versions = "*"
 
 [[package]]
 name = "websocket-client"
-version = "1.1.1"
+version = "1.2.0"
 description = "WebSocket client for Python with low level API options"
 category = "main"
 optional = false
@@ -1767,7 +1767,6 @@ grpcio = [
     {file = "grpcio-1.39.0.tar.gz", hash = "sha256:57974361a459d6fe04c9ae0af1845974606612249f467bbd2062d963cb90f407"},
 ]
 gunicorn = [
-    {file = "gunicorn-20.1.0-py3-none-any.whl", hash = "sha256:9dcc4547dbb1cb284accfb15ab5667a0e5d1881cc443e0677b4882a4067a807e"},
     {file = "gunicorn-20.1.0.tar.gz", hash = "sha256:e0a968b5ba15f8a328fdfd7ab1fcb5af4470c28aaf7e55df02a99bc13138e6e8"},
 ]
 idna = [
@@ -2403,8 +2402,8 @@ wcwidth = [
     {file = "wcwidth-0.2.5.tar.gz", hash = "sha256:c4d647b99872929fdb7bdcaa4fbe7f01413ed3d98077df798530e5b04f116c83"},
 ]
 websocket-client = [
-    {file = "websocket-client-1.1.1.tar.gz", hash = "sha256:4cf754af7e3b3ba76589d49f9e09fd9a6c0aae9b799a89124d656009c01a261d"},
-    {file = "websocket_client-1.1.1-py2.py3-none-any.whl", hash = "sha256:8d07f155f8ed14ae3ced97bd7582b08f280bb1bfd27945f023ba2aceff05ab52"},
+    {file = "websocket-client-1.2.0.tar.gz", hash = "sha256:7665ba6c645989b28b61670874ab753e6929179e9fc90565ace6ac090f59c559"},
+    {file = "websocket_client-1.2.0-py2.py3-none-any.whl", hash = "sha256:d82a975bdd02216f7884cd18106a0d9896a9a9e8cc90f23fe8c81dc48da2f142"},
 ]
 werkzeug = [
     {file = "Werkzeug-2.0.1-py3-none-any.whl", hash = "sha256:6c1ec500dcdba0baa27600f6a22f6333d8b662d22027ff9f6202e3367413caa8"},
