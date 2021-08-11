@@ -73,8 +73,8 @@ register_preprocessing_config_provider("ml-1m",
                                        PreprocessingConfigProvider(get_ml_1m_preprocessing_config,
                                                                    output_directory="./ml-1m",
                                                                    extraction_directory="./tmp/ml-1m",
-                                                                   min_item_feedback=5,
-                                                                   min_sequence_length=5))
+                                                                   min_item_feedback=4,
+                                                                   min_sequence_length=4))
 
 
 def get_ml_20m_preprocessing_config(output_directory: str,
@@ -132,8 +132,8 @@ register_preprocessing_config_provider("ml-20m",
                                        PreprocessingConfigProvider(get_ml_20m_preprocessing_config,
                                                                    output_directory="./ml-20m",
                                                                    extraction_directory="./tmp/ml-20m",
-                                                                   min_item_feedback=5,
-                                                                   min_sequence_length=5))
+                                                                   min_item_feedback=4,
+                                                                   min_sequence_length=4))
 
 
 def get_amazon_preprocessing_config(prefix: str,
@@ -203,15 +203,15 @@ register_preprocessing_config_provider("beauty",
                                        PreprocessingConfigProvider(get_amazon_preprocessing_config,
                                                                    prefix="beauty",
                                                                    output_directory="./beauty",
-                                                                   min_item_feedback=5,
-                                                                   min_sequence_length=5))
+                                                                   min_item_feedback=4,
+                                                                   min_sequence_length=4))
 
 register_preprocessing_config_provider("games",
                                        PreprocessingConfigProvider(get_amazon_preprocessing_config,
                                                                    prefix="games",
                                                                    output_directory="./games",
-                                                                   min_item_feedback=5,
-                                                                   min_sequence_length=5))
+                                                                   min_item_feedback=4,
+                                                                   min_sequence_length=4))
 
 
 def get_dota_shop_preprocessing_config(output_directory: str,
@@ -326,8 +326,8 @@ def get_steam_preprocessing_config(output_directory: str,
 register_preprocessing_config_provider("steam",
                                        PreprocessingConfigProvider(get_steam_preprocessing_config,
                                                                    output_directory="./steam",
-                                                                   min_item_feedback=5,
-                                                                   min_sequence_length=5))
+                                                                   min_item_feedback=4,
+                                                                   min_sequence_length=4))
 
 
 def get_yoochoose_preprocessing_config(output_directory: str,
@@ -381,8 +381,8 @@ def get_yoochoose_preprocessing_config(output_directory: str,
 register_preprocessing_config_provider("yoochoose",
                                        PreprocessingConfigProvider(get_yoochoose_preprocessing_config,
                                                                    output_directory="./yoochoose",
-                                                                   min_item_feedback=5,
-                                                                   min_sequence_length=5))
+                                                                   min_item_feedback=4,
+                                                                   min_sequence_length=4))
 
 
 def get_example_preprocessing_config(output_directory: str,
