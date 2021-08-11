@@ -3,13 +3,7 @@ ARG TAG=latest
 ENV WHEEL_FILENAME="asme-${TAG}-py3-none-any.whl"
 
 # install some basic utilities
-RUN apt-get update && apt-get -y install zsh byobu tmux curl htop vim git wget mc build-essential && rm -rf /var/lib/apt/lists/*
-
-# install poetry into /opt/poetry
-ENV POETRY_HOME=/opt/poetry
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
-ENV PATH="/opt/poetry/bin:${PATH}"
-RUN chmod o+rx /opt/poetry/bin/poetry
+RUN apt-get update && apt-get -y install zsh byobu tmux curl htop vim git wget mc build-essential xz-utils rsync  && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONUNBUFFERED=1
 ENV LANG C.UTF-8

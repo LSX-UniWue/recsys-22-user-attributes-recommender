@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "asme"
-version = "0.5.0"
+version = "1.0.0"
 description = "A framework for training and evaluating item prediction recommender models."
 authors = ["Alexander Dallmann <dallman@informatik.uni-wuerzburg.de>"]
 license = "LGPLv3"
