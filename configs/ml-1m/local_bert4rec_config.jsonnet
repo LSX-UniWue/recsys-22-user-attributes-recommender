@@ -63,8 +63,8 @@ local dataset = 'ml-1m';
         preprocessing: {
             extraction_directory: "/tmp/ml-1m/",
             output_directory: raw_dataset_path,
-            min_item_feedback: 0,
-            min_sequence_length: 2,
+            min_item_feedback: 4,
+            min_sequence_length: 4,
         }
     },
     templates: {

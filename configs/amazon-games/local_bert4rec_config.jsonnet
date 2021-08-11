@@ -21,7 +21,6 @@ local dataset = 'games';
             file_prefix: dataset,
             num_workers: 4
         },
-
         preprocessing: {
             input_directory: raw_dataset_path,
             output_directory: raw_dataset_path,

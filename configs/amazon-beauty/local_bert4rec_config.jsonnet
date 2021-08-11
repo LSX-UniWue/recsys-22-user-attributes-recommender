@@ -19,7 +19,7 @@ local dataset = 'beauty';
             split: "leave_one_out",
             path: raw_dataset_path,
             file_prefix: dataset,
-            num_workers: 4
+            num_workers: 4,
         },
 
         preprocessing: {

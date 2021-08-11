@@ -71,7 +71,6 @@ local dataset = 'yoochoose';
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-"
                 }
             }
         }
