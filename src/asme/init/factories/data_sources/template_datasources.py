@@ -122,7 +122,7 @@ class MaskTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
         mask_last_item_processor = {
             'type': 'last_item_mask'
         }
-        loader_config = build_default_loader_config(config, Stage.VALIDATION, self.TEST_VALID_DATASET_BUILDERS,
+        loader_config = build_default_loader_config(config, Stage.TEST, self.TEST_VALID_DATASET_BUILDERS,
                                                     [TARGET_EXTRACTOR_PROCESSOR_CONFIG, mask_last_item_processor])
         return self._build_datasource(loader_config, context)
 
@@ -146,7 +146,7 @@ class NextSequenceStepTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory)
         return self._build_datasource(loader_config, context)
 
     def _build_test_datasource(self, config: Config, context: Context) -> DataLoader:
-        loader_config = build_default_loader_config(config, Stage.VALIDATION, self.TEST_VALID_DATASET_BUILDERS,
+        loader_config = build_default_loader_config(config, Stage.TEST, self.TEST_VALID_DATASET_BUILDERS,
                                                     [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
         return self._build_datasource(loader_config, context)
 
