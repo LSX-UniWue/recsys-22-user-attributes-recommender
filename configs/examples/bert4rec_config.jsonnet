@@ -1,6 +1,9 @@
-local base_path = "../tests/example_dataset/";
+local raw_dataset_path = "../tests/example_dataset/";
+local dataset_path = "/tmp/example/";
 local max_seq_length = 7;
 local prefix = 'example';
+local dataset = 'example';
+local output_path = '/tmp/bert4rec-output';
 local metrics =  {
     mrr: [1, 3, 5],
     recall: [1, 3, 5],
@@ -8,20 +11,61 @@ local metrics =  {
     rank: []
 };
 {
+    datamodule: {
+        cache_path: "/tmp/cache",
+        dataset: dataset,
+        /*template: {
+            name: "masked",
+            split: "leave_one_out",
+            path: dataset_path,
+            file_prefix: dataset,
+            num_workers: 0
+        },*/
+        data_sources: {
+            split: "ratio_split",
+            #path: dataset_path,
+            file_prefix: dataset,
+            train: {
+                type: "session",
+                processors: [
+                    {
+                        "type": "cloze",
+                        "mask_probability": 0.2,
+                        "only_last_item_mask_prob": 0.1
+                    }
+                ]
+            },
+            validation: {
+                type: "session",
+                processors: [
+                    {
+                        "type": "target_extractor"
+                    },
+                    {
+                        "type": "last_item_mask"
+                    }
+                ]
+            },
+            test: {
+             type: "session",
+                processors: [
+                    {
+                        "type": "target_extractor"
+                    },
+                    {
+                        "type": "last_item_mask"
+                    }
+                ]
+            }
+        },
+        preprocessing: {
+            output_directory: dataset_path,
+            min_sequence_length: 2
+        }
+    },
     templates: {
         unified_output: {
-            path: "/tmp/experiments/bert4rec"
-        },
-        mask_data_sources: {
-            loader: {
-                batch_size: 9,
-                num_workers: 0
-            },
-            path: base_path,
-            file_prefix: prefix,
-            mask_probability: 0.1,
-            mask_seed: 123456,
-            split_type: 'leave_one_out'
+            path: output_path
         }
     },
     module: {
@@ -31,7 +75,7 @@ local metrics =  {
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + "example.popularity.item_id.txt",
+                sample_probability_file: "example.popularity.item_id.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             },
@@ -39,10 +83,10 @@ local metrics =  {
                 num_negative_samples: 2,
                 metrics: metrics
             },
-            fixed: {
-                item_file: base_path + "example.relevant_items.item_id.txt",
-                metrics: metrics
-            }
+            #fixed: {
+            #    item_file: dataset_path + "loo/example.relevant_items.item_id.txt",
+            #    metrics: metrics
+            #}
         },
         model: {
             max_seq_length: max_seq_length,
@@ -63,7 +107,7 @@ local metrics =  {
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: base_path + "example.vocabulary.item_id.txt"
+                    #file: "example.vocabulary.item_id.txt"
                 }
             }
         }
@@ -74,12 +118,12 @@ local metrics =  {
             csv: {}
         },
         checkpoint: {
-            monitor: "recall@5_fixed",
+            monitor: "recall@5",
             save_top_k: 3,
             mode: 'max'
         },
         early_stopping: {
-          monitor: 'recall@5_fixed',
+          monitor: 'recall@5',
           min_delta: 0.00,
           patience: 10,
           mode: 'max'
