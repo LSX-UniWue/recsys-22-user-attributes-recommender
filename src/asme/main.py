@@ -10,6 +10,8 @@ import json
 from pathlib import Path
 from typing import Optional, Callable, List, Iterator, Tuple
 
+from pytorch_lightning.loggers import LoggerCollection, MLFlowLogger
+
 from asme.init.templating.search.resolver import OptunaParameterResolver
 
 from asme.init.templating.search.processor import SearchTemplateProcessor
@@ -18,7 +20,7 @@ from asme.init.config import Config
 
 from asme.init.config_keys import TRAINER_CONFIG_KEY, CHECKPOINT_CONFIG_KEY, CHECKPOINT_CONFIG_DIR_PATH
 from optuna.study import StudyDirection
-from pytorch_lightning import seed_everything, Callback
+from pytorch_lightning import seed_everything, Callback, Trainer
 from torch.utils.data import Sampler, DataLoader
 from torch.utils.data.dataset import T_co, Dataset
 from tqdm import tqdm
@@ -133,6 +135,8 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 
         patched_config = config.patch(hyperopt_config)
 
+        #FIXME: adhoc fix to make output_path available in the configuration, remove when this is common in a configuration.
+        patched_config.set_if_absent(["output_path"], str(output_path))
         return patched_config
 
     study = optuna.create_study(study_name=study_name,
@@ -179,15 +183,38 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
         log_dir = determine_log_dir(trainer)
         trial.set_user_attr(TRIAL_BASE_PATH, str(log_dir))
 
+        # store mlflow run id
+        def save_mlflow_id(trainer: Trainer, log_dir: Path):
+            if trainer.logger is None:
+                return
+
+            if type(trainer.logger) is MLFlowLogger:
+                id_file_path = log_dir / "mlflow_run_id.txt"
+                with id_file_path.open("w") as id_file:
+                    version = trainer.logger.version
+                    experiment = trainer.logger.name
+
+                    id_file.write(f"experiment:{experiment}\nversion:{version}")
+
+            if type(trainer.logger) is LoggerCollection:
+                for l in trainer.logger._logger_iterable:
+                    if type(l) is MLFlowLogger:
+                        id_file_path = log_dir / "mlflow_run_id.txt"
+                        with id_file_path.open("w") as id_file:
+                            version = trainer.logger.version
+                            experiment = trainer.logger.name
+
+                            id_file.write(f"experiment:{experiment}\nversion:{version}")
+
         # save config of current run to its log dir
         save_config(model_config, log_dir)
+        save_mlflow_id(trainer, log_dir)
 
         trainer.fit(
             module,
             train_dataloader=container.train_dataloader(),
             val_dataloaders=container.validation_dataloader()
         )
-
         save_finished_flag(log_dir)
 
         def _find_best_value(key: str, best: Callable[[List[float]], float] = min) -> float:
