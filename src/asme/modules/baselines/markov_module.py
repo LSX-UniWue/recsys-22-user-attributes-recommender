@@ -32,12 +32,12 @@ def last_item_in_sequence(input_sequence: torch.tensor) -> torch.Tensor:
 class MarkovModule(MetricsTrait, pl.LightningModule):
 
     def __init__(self,
-                 tokenizer: Tokenizer,
+                 item_tokenizer: Tokenizer,
                  metrics: MetricsContainer):
 
         super().__init__()
-        self.tokenizer = tokenizer
-        self.item_vocab_size = len(tokenizer)
+        self.tokenizer = item_tokenizer
+        self.item_vocab_size = len(item_tokenizer)
         self.metrics = metrics
 
         # Transition matrix of dimension item_vocab_size x item_vocab_size. The entry at index (i,j) denotes the
