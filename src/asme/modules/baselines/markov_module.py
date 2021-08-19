@@ -1,8 +1,9 @@
-from typing import Dict
+from typing import Dict, Any
 
 import numpy as np
 import pytorch_lightning.core as pl
 import torch
+import torch.nn.functional as F
 from pytorch_lightning.utilities import rank_zero_warn
 from torch.nn.parameter import Parameter
 
@@ -55,11 +56,9 @@ class MarkovModule(MetricsTrait, pl.LightningModule):
 
         self.transition_matrix.fill_(0)
 
-    def on_train_end(self) -> None:
+    def on_train_epoch_end(self, outputs: Any) -> None:
         # Normalize the sum of each row to 1 so we can interpret it as a probability distribution
-        row_sums = self.transition_matrix.sum(dim=1)
-        row_sums[row_sums == 0] = 1
-        self.transition_matrix /= row_sums.unsqueeze(dim=1)
+        F.normalize(self.transition_matrix, p=1, dim=1, out=self.transition_matrix)
 
     def get_metrics(self) -> MetricsContainer:
         return self.metrics

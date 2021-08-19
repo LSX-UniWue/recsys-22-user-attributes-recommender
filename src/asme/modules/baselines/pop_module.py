@@ -9,7 +9,7 @@ from asme.metrics.container.metrics_container import MetricsContainer
 from asme.modules.metrics_trait import MetricsTrait
 from pytorch_lightning import core as pl
 
-from asme.modules.util.module_util import  build_eval_step_return_dict
+from asme.modules.util.module_util import build_eval_step_return_dict, get_padding_mask
 from asme.modules.util.noop_optimizer import NoopOptimizer
 from asme.tokenization.tokenizer import Tokenizer
 
@@ -54,13 +54,15 @@ class PopModule(MetricsTrait, pl.LightningModule):
     def training_step(self,
                       batch: Dict[str, torch.Tensor],
                       batch_idx: int
-                      ) -> Dict[str, float]:
+                      ):
         input_seq = torch.flatten(batch[ITEM_SEQ_ENTRY_NAME])
-        input_seq = input_seq[input_seq > 0]
-        self.item_frequencies += torch.bincount(input_seq, minlength=self.item_vocab_size)
+        mask = get_padding_mask(input_seq, self.item_tokenizer)
+        masked = input_seq * mask
+        masked = masked[masked > 0]
+        self.item_frequencies += torch.bincount(masked, minlength=self.item_vocab_size)
 
         return {
-            'loss': 0.0
+            "loss": torch.tensor(0., device=self.device)
         }
 
     def eval_step(self,
