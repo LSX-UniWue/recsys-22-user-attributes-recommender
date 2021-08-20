@@ -14,7 +14,7 @@ local file_prefix = 'ml-1m';
         dataset: dataset,
         template: {
             name: "next_sequence_step",
-            next_step_type: "loo"
+            next_step_type: "loo",
             split: "leave_one_out",
             path: base_path,
             file_prefix: dataset,

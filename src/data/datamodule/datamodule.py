@@ -71,7 +71,8 @@ class AsmeDataModule(pl.LightningDataModule):
         self.context.set(DATASET_PREFIX_CONTEXT_KEY, self.config.dataset)
 
     def setup(self, stage: Optional[str] = None):
-        if len(msg := self._validate_config()) > 0:
+        msg = self._validate_config()
+        if len(msg) > 0:
             raise KeyError(f"Invalid config: {msg}.")
 
         if self.config.cache_path is not None:

@@ -1,10 +1,11 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 import numpy as np
 import pytorch_lightning.core as pl
 import torch
 import torch.nn.functional as F
 from pytorch_lightning.utilities import rank_zero_warn
+from pytorch_lightning.utilities.types import EPOCH_OUTPUT
 from torch.nn.parameter import Parameter
 
 from data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
@@ -48,7 +49,7 @@ class MarkovModule(MetricsTrait, pl.LightningModule):
                                                       1 / self.item_vocab_size,
                                                       device=self.device), requires_grad=False)
 
-    def on_train_start(self) -> None:
+    def on_train_epoch_start(self) -> None:
         if self.trainer.max_epochs > 1:
             rank_zero_warn(
                 f"When training the Markov baseline, "
@@ -56,7 +57,8 @@ class MarkovModule(MetricsTrait, pl.LightningModule):
 
         self.transition_matrix.fill_(0)
 
-    def on_train_epoch_end(self, outputs: Any) -> None:
+    # FIXME With PL 1.4.2 the correct hook: on_train_epoch_end was not called for some godforsaken reason
+    def on_validation_epoch_start(self) -> None:
         # Normalize the sum of each row to 1 so we can interpret it as a probability distribution
         F.normalize(self.transition_matrix, p=1, dim=1, out=self.transition_matrix)
 
@@ -74,6 +76,7 @@ class MarkovModule(MetricsTrait, pl.LightningModule):
             # if we did not see the last item during training, we can't predict it and raise an Exception
             if transition_probabilities[i].sum() == 0:
                 raise Exception("Trying to predict an item never seen during training.")
+
             index = np.random.choice(self.item_vocab_size, size=1, p=transition_probabilities[i])
             predictions[i, index] = 1
 
