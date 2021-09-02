@@ -66,19 +66,9 @@ class MarkovModule(MetricsTrait, pl.LightningModule):
         return self.metrics
 
     def forward(self, input_seq: torch.tensor):
-        batch_size = input_seq.shape[0]
         last_items = last_item_in_sequence(input_seq)
-        # Sadly PyTorch does not have a "choice" implementation, so we cant do this in a fast way
-        transition_probabilities = self.transition_matrix[last_items].numpy()
-        # We simply predict 0's for all but the chosen item
-        predictions = torch.zeros((batch_size, self.item_vocab_size), device=self.device)
-        for i in range(batch_size):
-            # if we did not see the last item during training, we can't predict it and raise an Exception
-            if transition_probabilities[i].sum() == 0:
-                raise Exception("Trying to predict an item never seen during training.")
-
-            index = np.random.choice(self.item_vocab_size, size=1, p=transition_probabilities[i])
-            predictions[i, index] = 1
+        # We simply predict the observed transition probabilities for each item
+        predictions = torch.index_select(self.transition_matrix, index=last_items, dim=0)
 
         return predictions
 

@@ -45,10 +45,8 @@ class PopModule(MetricsTrait, pl.LightningModule):
                 input_seq: torch.Tensor
                 ) -> torch.Tensor:
         batch_size = input_seq.shape[0]
-        # We simply predict 0's for all but the most frequently seen item
-        predictions = torch.zeros((batch_size, self.item_vocab_size), device=self.device)
-        pop = torch.argmax(self.item_frequencies)
-        predictions[:, pop] = 1
+        # We rank the items in order of frequency
+        predictions = torch.unsqueeze(self.item_frequencies / self.item_frequencies.sum(), dim=0).repeat(batch_size, 1)
         return predictions
 
     def training_step(self,
