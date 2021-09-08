@@ -7,7 +7,8 @@ from asme.init.factories.common.conditional_based_factory import ConditionalFact
 from asme.init.factories.util import check_config_keys_exist
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from data.datamodule.datamodule import AsmeDataModule
-from data.datamodule.config import get_preprocessing_config_provider, AsmeDataModuleConfig
+from data.datamodule.config import AsmeDataModuleConfig
+from data.datamodule.registry import get_preprocessing_config_provider
 
 
 class DataModuleFactory(ObjectFactory):
@@ -28,9 +29,6 @@ class DataModuleFactory(ObjectFactory):
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
     def build(self, config: Config, context: Context) -> AsmeDataModule:
-        # DO NOT TOUCH THIS
-        import data.datasets.config
-
         dataset_name = config.get("dataset")
         force_regeneration = bool(distutils.util.strtobool(config.get_or_default("force_regeneration", "False")))
         dataset_preprocessing_config_provider = get_preprocessing_config_provider(dataset_name)

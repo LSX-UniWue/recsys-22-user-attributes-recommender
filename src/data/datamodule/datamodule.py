@@ -67,8 +67,14 @@ class AsmeDataModule(pl.LightningDataModule):
         split_path = ds_config.context.get(RATIO_SPLIT_PATH_CONTEXT_KEY) if split == DatasetSplit.RATIO_SPLIT else \
             ds_config.context.get(LOO_SPLIT_PATH_CONTEXT_KEY)
         self.context.set(CURRENT_SPLIT_PATH_CONTEXT_KEY, split_path)
+
         # Also put the prefix into the context
-        self.context.set(DATASET_PREFIX_CONTEXT_KEY, self.config.dataset)
+        if self.config.template is not None and self.config.template.has_path("file_prefix"):
+            self.context.set(DATASET_PREFIX_CONTEXT_KEY, self.config.template.get("file_prefix"))
+        elif self.config.data_sources is not None and self.config.data_sources.has_path("file_prefix"):
+            self.context.set(DATASET_PREFIX_CONTEXT_KEY, self.config.data_sources.get("file_prefix"))
+        else:
+            self.context.set(DATASET_PREFIX_CONTEXT_KEY, self.config.dataset)
 
     def setup(self, stage: Optional[str] = None):
         msg = self._validate_config()

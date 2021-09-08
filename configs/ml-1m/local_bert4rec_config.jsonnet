@@ -19,13 +19,13 @@ local dataset = 'ml-1m';
             name: "masked",
             split: "leave_one_out",
             path: raw_dataset_path,
-            file_prefix: dataset,
+            file_prefix: dataset, // Optional
             num_workers: 4
         },*/
         data_sources: {
             split: "leave_one_out",
             path: raw_dataset_path,
-            file_prefix: dataset,
+            file_prefix: dataset, // Optional
             train: {
                 type: "session",
                 processors: [
