@@ -28,9 +28,6 @@ class DataModuleFactory(ObjectFactory):
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
     def build(self, config: Config, context: Context) -> AsmeDataModule:
-        # DO NOT TOUCH THIS
-        import data.datasets.config
-
         dataset_name = config.get("dataset")
         force_regeneration = bool(distutils.util.strtobool(config.get_or_default("force_regeneration", "False")))
         dataset_preprocessing_config_provider = get_preprocessing_config_provider(dataset_name)

@@ -3,6 +3,7 @@ from typing import List
 from asme.init.config import Config
 from asme.init.container import Container
 from asme.init.context import Context
+from asme.init.factories.include.import_factory import ImportFactory
 from asme.init.factories.common.conditional_based_factory import ConditionalFactory
 from asme.init.factories.common.dependencies_factory import DependenciesFactory
 from asme.init.factories.features.features_factory import FeaturesFactory
@@ -37,6 +38,7 @@ from asme.modules.sequence_next_item_prediction_training_module import SequenceN
 class ContainerFactory(ObjectFactory):
     def __init__(self):
         super().__init__()
+        self.import_factory = ImportFactory()
         self.features_factory = FeaturesFactory()
         self.datamodule_factory = DataModuleFactory()
         self.dependencies = DependenciesFactory(
@@ -82,6 +84,12 @@ class ContainerFactory(ObjectFactory):
                   context: Context
                   ) -> CanBuildResult:
 
+        import_config = config.get_config(self.import_factory.config_path())
+        can_build_result = self.import_factory.can_build(import_config, context)
+
+        if can_build_result.type != CanBuildResultType.CAN_BUILD:
+            return can_build_result
+
         datamodule_config = config.get_config(self.datamodule_factory.config_path())
         can_build_result = self.datamodule_factory.can_build(datamodule_config, context)
 
@@ -100,7 +108,10 @@ class ContainerFactory(ObjectFactory):
               context: Context
               ) -> Container:
 
-        # We have to build the datamodule first such that we can invoke preprocessing
+        # First, we have to load all additional modules
+        self.import_factory.build(config, context)
+
+        # Then we build the datamodule such that we can invoke preprocessing
         datamodule_config = config.get_config(self.datamodule_factory.config_path())
         datamodule = self.datamodule_factory.build(datamodule_config, context)
         context.set(self.datamodule_factory.config_path(), datamodule)
