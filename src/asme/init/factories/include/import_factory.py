@@ -27,7 +27,7 @@ def _import_module(path: str):
 class ImportFactory(ObjectFactory):
 
     CONFIG_KEY = "imports"
-    DEFAULT_MODULES = [".data.datasets.config"]
+    DEFAULT_MODULES = [".data.datasets.config", ".asme.modules.config"]
 
     def __init__(self):
         super().__init__()

@@ -32,9 +32,39 @@ from asme.modules.baselines.session_pop_module import SessionPopModule
 from asme.modules.masked_training_module import MaskedTrainingModule
 from asme.modules.next_item_prediction_training_module import NextItemPredictionTrainingModule, \
     NextItemPredictionWithNegativeSampleTrainingModule
+from asme.modules.registry import REGISTERED_MODULES
 from asme.modules.sequence_next_item_prediction_training_module import SequenceNextItemPredictionTrainingModule
 
-
+"""{'kebert4rec': GenericModuleFactory(MaskedTrainingModule,
+                                                                              model_cls=KeBERT4RecModel,
+                                                                              loss_function=None),
+                                           'bert4rec': GenericModuleFactory(MaskedTrainingModule,
+                                                                            model_cls=BERT4RecModel,
+                                                                            loss_function=None),
+                                           'caser': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
+                                                                         model_cls=CaserModel),
+                                           'narm': GenericModuleFactory(NextItemPredictionTrainingModule,
+                                                                        model_cls=NarmModel),
+                                           'sasrec': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
+                                                                          SASRecBinaryCrossEntropyLoss(),
+                                                                          SASRecModel),
+                                           'rnn': GenericModuleFactory(module_cls=NextItemPredictionTrainingModule,
+                                                                       model_cls=RNNModel),
+                                           'cosrec': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
+                                                                          CosRecLoss(),
+                                                                          CosRecModel),
+                                           'hgn': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
+                                                                       HGNLoss(),
+                                                                       HGNModel),
+                                           'dream': GenericModuleFactory(NextItemPredictionWithNegativeSampleTrainingModule,
+                                                                         DreamContrastiveLoss,
+                                                                         RNNModel),
+                                           'nnrec': GenericModuleFactory(module_cls=NextItemPredictionTrainingModule,
+                                                                         model_cls=NNRecModel),
+                                           'pop': GenericModuleFactory(PopModule, model_cls=None),
+                                           'session_pop': GenericModuleFactory(SessionPopModule, model_cls=None),
+                                           'markov': GenericModuleFactory(MarkovModule, model_cls=None),
+                                           'bpr': GenericModuleFactory(BprModule, model_cls=None)},"""
 class ContainerFactory(ObjectFactory):
     def __init__(self):
         super().__init__()
@@ -43,36 +73,8 @@ class ContainerFactory(ObjectFactory):
         self.datamodule_factory = DataModuleFactory()
         self.dependencies = DependenciesFactory(
             [
-                ConditionalFactory('type', {'kebert4rec': GenericModuleFactory(MaskedTrainingModule,
-                                                                               model_cls=KeBERT4RecModel,
-                                                                               loss_function=None),
-                                            'bert4rec': GenericModuleFactory(MaskedTrainingModule,
-                                                                             model_cls=BERT4RecModel,
-                                                                             loss_function=None),
-                                            'caser': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
-                                                                          model_cls=CaserModel),
-                                            'narm': GenericModuleFactory(NextItemPredictionTrainingModule,
-                                                                         model_cls=NarmModel),
-                                            'sasrec': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
-                                                                           SASRecBinaryCrossEntropyLoss(),
-                                                                           SASRecModel),
-                                            'rnn': GenericModuleFactory(module_cls=NextItemPredictionTrainingModule,
-                                                                        model_cls=RNNModel),
-                                            'cosrec': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
-                                                                           CosRecLoss(),
-                                                                           CosRecModel),
-                                            'hgn': GenericModuleFactory(SequenceNextItemPredictionTrainingModule,
-                                                                        HGNLoss(),
-                                                                        HGNModel),
-                                            'dream': GenericModuleFactory(NextItemPredictionWithNegativeSampleTrainingModule,
-                                                                          DreamContrastiveLoss,
-                                                                          RNNModel),
-                                            'nnrec': GenericModuleFactory(module_cls=NextItemPredictionTrainingModule,
-                                                                          model_cls=NNRecModel),
-                                            'pop': GenericModuleFactory(PopModule, model_cls=None),
-                                            'session_pop': GenericModuleFactory(SessionPopModule, model_cls=None),
-                                            'markov': GenericModuleFactory(MarkovModule, model_cls=None),
-                                            'bpr': GenericModuleFactory(BprModule, model_cls=None)},
+                ConditionalFactory('type',
+                                   REGISTERED_MODULES,
                                    config_key='module',
                                    config_path=['module']),
                 TrainerBuilderFactory()

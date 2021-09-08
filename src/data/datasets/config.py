@@ -2,8 +2,8 @@ from pathlib import Path
 from typing import Optional
 
 from asme.init.context import Context
-from data.datamodule.config import DatasetPreprocessingConfig, register_preprocessing_config_provider, \
-    PreprocessingConfigProvider
+from data.datamodule.config import DatasetPreprocessingConfig, PreprocessingConfigProvider
+from data.datamodule.registry import register_preprocessing_config_provider
 from data.datamodule.preprocessing import ConvertToCsv, TransformCsv, CreateSessionIndex, \
     GroupAndFilter, GroupedFilter, CreateVocabulary, DELIMITER_KEY, \
     OUTPUT_DIR_KEY, CreateRatioSplit, CreateNextItemIndex, CreateLeaveOneOutSplit, CreatePopularity, \

@@ -7,7 +7,8 @@ from asme.init.factories.common.conditional_based_factory import ConditionalFact
 from asme.init.factories.util import check_config_keys_exist
 from asme.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from data.datamodule.datamodule import AsmeDataModule
-from data.datamodule.config import get_preprocessing_config_provider, AsmeDataModuleConfig
+from data.datamodule.config import AsmeDataModuleConfig
+from data.datamodule.registry import get_preprocessing_config_provider
 
 
 class DataModuleFactory(ObjectFactory):
