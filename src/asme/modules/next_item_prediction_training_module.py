@@ -63,7 +63,6 @@ class BaseNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
     def get_metrics(self) -> MetricsContainer:
         return self.metrics
 
-    @auto_move_data
     def forward(self,
                 batch: Dict[str, torch.Tensor],
                 batch_idx: int
