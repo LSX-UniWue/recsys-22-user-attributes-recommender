@@ -80,7 +80,6 @@ def determine_log_dir(trainer: Trainer) -> Path:
     if log_dir is None:
         log_dir = Path(trainer.default_root_dir)
 
-    print(log_dir)
     return log_dir
 
 
