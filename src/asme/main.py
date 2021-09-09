@@ -78,7 +78,7 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
             log_dataloader_example(validation_dataloader, tokenizers, 'validation')
 
         trainer.fit(container.module(),
-                    train_dataloader=train_dataloader,
+                    train_dataloaders=train_dataloader,
                     val_dataloaders=validation_dataloader)
 
         save_finished_flag(log_dir)
