@@ -67,12 +67,7 @@ class AsmeDataModule(pl.LightningDataModule):
         self.context.set(CURRENT_SPLIT_PATH_CONTEXT_KEY, split_path)
 
         # Also put the prefix into the context
-        if self.config.template is not None and self.config.template.has_path("file_prefix"):
-            self.context.set(DATASET_PREFIX_CONTEXT_KEY, self.config.template.get("file_prefix"))
-        elif self.config.data_sources is not None and self.config.data_sources.has_path("file_prefix"):
-            self.context.set(DATASET_PREFIX_CONTEXT_KEY, self.config.data_sources.get("file_prefix"))
-        else:
-            self.context.set(DATASET_PREFIX_CONTEXT_KEY, self.config.dataset)
+        self._populate_config_and_context_with_prefix()
 
     def setup(self, stage: Optional[str] = None):
         msg = self._validate_config()
@@ -131,6 +126,25 @@ class AsmeDataModule(pl.LightningDataModule):
         current_value = self.context.get(key)
         split_dir = os.path.split(current_value)[-1]
         self.context.set(key, os.path.join(self.config.cache_path, split_dir), overwrite=True)
+
+    def _populate_config_and_context_with_prefix(self):
+        """
+        Checks if the config includes a "file_prefix" param and propagates it to the context.
+        If there is no "file_prefix" specified, it uses the dataset name as a prefix for both the config and context.
+        """
+        if self.config.template is not None:
+            if self.config.template.has_path("file_prefix"):
+                self.context.set(DATASET_PREFIX_CONTEXT_KEY, self.config.template.get("file_prefix"))
+            else:
+                self.config.template.set("file_prefix", self.config.dataset)
+        elif self.config.data_sources is not None:
+            if self.config.data_sources.has_path("file_prefix"):
+                self.context.set(DATASET_PREFIX_CONTEXT_KEY, self.config.data_sources.get("file_prefix"))
+            else:
+                self.config.data_sources.set("file_prefix", self.config.dataset)
+
+        if not self.context.has_path(DATASET_PREFIX_CONTEXT_KEY):
+            self.context.set(DATASET_PREFIX_CONTEXT_KEY, self.config.dataset)
 
     def _validate_config(self) -> List[str]:
         errors = []
