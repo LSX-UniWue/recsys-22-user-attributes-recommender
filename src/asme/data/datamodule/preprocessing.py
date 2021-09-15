@@ -411,7 +411,7 @@ class CreateNextItemIndex(PreprocessingAction):
     def _get_next_item_index_path(context: Context) -> Path:
         output_dir = context.get(OUTPUT_DIR_KEY)
         prefix = format_prefix(context.get(PREFIXES_KEY))
-        return output_dir / f"{prefix}.nextitem.idx"
+        return output_dir / f"{prefix}.train.nextitem.idx"
 
 
 class CreateSlidingWindowIndex(PreprocessingAction):
