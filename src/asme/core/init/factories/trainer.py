@@ -106,7 +106,9 @@ class CheckpointFactory(ObjectFactory):
         config.config.pop('output_base_path', None)
         output_filename = config.get_or_default("output_filename", None)
         config.config.pop('output_filename', None)
-        model_checkpoint = ModelCheckpoint(**config.config)
+        symlink_name = config.get_or_default("symlink_name", "best.ckpt")
+        config.config.pop('symlink_name', "best.ckpt")
+
         if not config.has_path("save_on_train_epoch_end"):
             print("""
             !!! Caution !!!
@@ -115,7 +117,7 @@ class CheckpointFactory(ObjectFactory):
             the expected behaviour (that is saving a checkpoint after validation), set `save_on_train_epoch_end == False`.
             !!! Caution !!!
             """)
-        wrapped_checkpoint = BestModelWritingModelCheckpoint(model_checkpoint, output_base_path, output_filename)
+        wrapped_checkpoint = BestModelWritingModelCheckpoint(output_base_path, output_filename, symlink_name, **config.config)
         return wrapped_checkpoint
 
     def is_required(self, context: Context) -> bool:
