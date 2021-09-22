@@ -389,7 +389,9 @@ register_preprocessing_config_provider("yoochoose",
 
 def get_example_preprocessing_config(output_directory: str,
                                      input_file_path: str,
-                                     min_sequence_length: int) -> DatasetPreprocessingConfig:
+                                     min_sequence_length: int,
+                                     window_size: Optional[int] = None,
+                                     session_end_offset: Optional[int] = None) -> DatasetPreprocessingConfig:
     prefix = "example"
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
@@ -408,7 +410,10 @@ def get_example_preprocessing_config(output_directory: str,
                              CreateRatioSplit(0.8, 0.1, 0.1, per_split_actions=
                              [CreateSessionIndex(["session_id"]),
                               CreateNextItemIndex([MetaInformation("item", column_name="item_id", type="str")],
-                                                  RemainingSessionPositionExtractor(min_sequence_length))],
+                                                  RemainingSessionPositionExtractor(min_sequence_length)),
+                              CreateSlidingWindowIndex([MetaInformation("item", column_name="item_id", type="str")],
+                                SlidingWindowPositionExtractor(window_size, session_end_offset))
+                              ],
                                               complete_split_actions=[
                                                   CreateVocabulary(columns, prefixes=[prefix]),
                                                   CreatePopularity(columns, prefixes=[prefix])]),
@@ -423,6 +428,8 @@ def get_example_preprocessing_config(output_directory: str,
                              CopyMainFile()
                              ]
 
+
+
     return DatasetPreprocessingConfig(prefix,
                                       None,
                                       Path(output_directory),
@@ -435,4 +442,7 @@ register_preprocessing_config_provider("example",
                                        PreprocessingConfigProvider(get_example_preprocessing_config,
                                                                    output_directory="./example",
                                                                    input_file_path="../tests/example_dataset/example.csv",
-                                                                   min_sequence_length=2))
+                                                                   min_sequence_length=2,
+                                                                   window_size=2,
+                                                                   session_end_offset=0
+                                                                   ))
