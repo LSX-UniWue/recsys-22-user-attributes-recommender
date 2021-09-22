@@ -10,10 +10,11 @@ from pathlib import Path
 from typing import Callable, List, Any, Optional, Dict
 
 import pandas as pd
+from tqdm import tqdm
 
 from asme.core.init.context import Context
 from asme.core.tokenization.tokenizer import Tokenizer
-from asme.core.tokenization.vocabulary import CSVVocabularyReaderWriter, Vocabulary
+from asme.core.tokenization.vocabulary import CSVVocabularyReaderWriter, Vocabulary, VocabularyBuilder
 from asme.core.utils.logging import get_root_logger
 from asme.data import RATIO_SPLIT_PATH_CONTEXT_KEY, LOO_SPLIT_PATH_CONTEXT_KEY
 from asme.data.base.csv_index_builder import CsvSessionIndexer
@@ -24,9 +25,8 @@ from asme.data.datamodule.extractors import TargetPositionExtractor, FixedOffset
 from asme.data.datasets.index_builder import SequencePositionIndexBuilder
 from asme.data.datasets.sequence import ItemSessionParser, ItemSequenceDataset, PlainSequenceDataset, MetaInformation
 from asme.data.utils.csv import read_csv_header, create_indexed_header
-from asme.datasets.data_structures.split_names import SplitNames
-from asme.datasets.data_structures.train_validation_test_splits_indices import TrainValidationTestSplitIndices
-from asme.datasets.vocabulary.create_vocabulary import create_token_vocabulary
+from asme.data.datamodule.util import SplitNames
+from asme.data.datamodule.util import TrainValidationTestSplitIndices
 
 # TODO (AD): check handling of prefixes, i think that is overengineered
 MAIN_FILE_KEY = "main_file"
@@ -45,10 +45,33 @@ def format_prefix(prefixes: List[str]) -> str:
     return ".".join(prefixes)
 
 
+def create_session_data_set(column: MetaInformation,
+                            data_file_path: Path,
+                            index_file_path: Path,
+                            delimiter: str) -> PlainSequenceDataset:
+    """
+    Helper method which returns a PlainSessionDataset for a given data and index file
+
+    :param item_header_name: Name of the item key in the data set, e.g, "ItemId"
+    :param data_file_path: Path to CSV file containing original data
+    :param index_file_path: Path to index file belonging to the data file
+    :param delimiter: delimiter used in data file
+    :return: PlainSessionDataset
+    """
+    reader_index = CsvDatasetIndex(index_file_path)
+    reader = CsvDatasetReader(data_file_path, reader_index)
+    parser = ItemSessionParser(create_indexed_header(read_csv_header(data_file_path, delimiter=delimiter)),
+                               [column],
+                               delimiter=delimiter)
+
+    return PlainSequenceDataset(reader, parser)
+
+
 class PreprocessingAction:
     """
     Base class for all actions that are performed by the AsmeDatamodule during preprocessing of dataset.
     """
+
     @abstractmethod
     def name(self) -> str:
         """
@@ -109,6 +132,7 @@ class UseExistingCsv(PreprocessingAction):
     Sets context parameters:
     - `MAIN_FILE_KEY` - the path to the pre-processed CSV file.
     """
+
     def name(self) -> str:
         return "Use existing CSV file"
 
@@ -137,6 +161,7 @@ class ConvertToCsv(PreprocessingAction):
     Sets context parameters:
     - `MAIN_FILE_KEY` - the path to the pre-processed CSV file.
     """
+
     def __init__(self, converter: CsvConverter):
         """
         :param converter: The converter that is used to create an authoritative CSV file for the dataset.
@@ -270,6 +295,7 @@ class GroupAndFilter(PreprocessingAction):
         None
  
     """
+
     def __init__(self, suffix: str, group_by: str, filter: GroupedFilter):
         """
         :param suffix: The suffix to add to the filtered file.
@@ -325,7 +351,7 @@ class CreateSessionIndex(PreprocessingAction):
     Sets context parameters:
     - `SESSION_INDEX_KEY` - The path to the session index that was created in this step.
     """
-    
+
     def __init__(self, session_key: List[str]):
         """
         :param session_key: The columns to be used to differentiate between sessions. If multiple keys are passed, they
@@ -371,6 +397,7 @@ class CreateNextItemIndex(PreprocessingAction):
     Sets context parameters:
         None
     """
+
     def __init__(self, columns: List[MetaInformation], extractor: TargetPositionExtractor):
         """
         :param columns: A list of all columns for which a next-item-index should be generated.
@@ -384,7 +411,6 @@ class CreateNextItemIndex(PreprocessingAction):
         return "Creating next item index"
 
     def _run(self, context: Context) -> None:
-
         main_file = context.get(MAIN_FILE_KEY)
         session_index_path = context.get(SESSION_INDEX_KEY)
         delimiter = context.get(DELIMITER_KEY)
@@ -490,7 +516,9 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
     - `LOO_SPLIT_PATH_CONTEXT_KEY` - The base path of the leave-one-out split.
     
     """
-    def __init__(self, column: MetaInformation, training_target_offset=2, validation_target_offset=1, test_target_offset=0,
+
+    def __init__(self, column: MetaInformation, training_target_offset=2, validation_target_offset=1,
+                 test_target_offset=0,
                  inner_actions: List[PreprocessingAction] = None):
         """
         This action allows to create a leave-one-out split for a dataset.
@@ -577,7 +605,7 @@ class CreateVocabulary(PreprocessingAction):
     Sets context parameters:
         None
     """
-    
+
     def __init__(self, columns: List[MetaInformation],
                  special_tokens: List[str] = None,
                  prefixes: List[str] = None):
@@ -603,13 +631,52 @@ class CreateVocabulary(PreprocessingAction):
         delimiter = context.get(DELIMITER_KEY)
         for column in self.columns:
             if not column.run_tokenization:
-                get_root_logger().warning(f"Skipping vocabulary generation for '{column.column_name if column.column_name is not None else column.feature_name}' since tokenization was "
-                                          f"disabled for this feature (via 'run_tokenization = False').")
+                get_root_logger().warning(
+                    f"Skipping vocabulary generation for '{column.column_name if column.column_name is not None else column.feature_name}' since tokenization was "
+                    f"disabled for this feature (via 'run_tokenization = False').")
                 continue
 
             output_file = self._get_vocabulary_path(context, column)
-            create_token_vocabulary(column, main_file, session_index_path,
-                                    output_file, self.special_tokens, delimiter, None)
+            self._create_token_vocabulary(column, main_file, session_index_path,
+                                          output_file, delimiter)
+
+    def _create_token_vocabulary(self, column: MetaInformation,
+                                 data_file_path: Path,
+                                 session_index_path: Path,
+                                 vocabulary_output_file_path: Path,
+                                 delimiter: str):
+
+        vocab_builder = VocabularyBuilder()
+        for token in self.special_tokens:
+            vocab_builder.add_token(token)
+
+        sub_delimiter = column.get_config("delimiter")
+
+        data_set = create_session_data_set(column=column,
+                                           data_file_path=data_file_path,
+                                           index_file_path=session_index_path,
+                                           delimiter=delimiter)
+
+        feature_name = column.feature_name if column.feature_name else column.column_name
+
+        for idx in tqdm(range(len(data_set)), desc=f"Tokenizing feature '{feature_name}' from: {data_file_path}"):
+            session = data_set[idx]
+            session_tokens = session[feature_name]
+
+            for token in session_tokens:
+                if sub_delimiter is not None:
+                    token = token.split(sub_delimiter)
+                    for word in token:
+                        vocab_builder.add_token(word)
+                else:
+                    vocab_builder.add_token(token)
+
+        vocabulary = vocab_builder.build()
+
+        if not os.path.exists(vocabulary_output_file_path.parent):
+            vocabulary_output_file_path.parent.mkdir(parents=True, exist_ok=True)
+        with vocabulary_output_file_path.open("w") as file:
+            CSVVocabularyReaderWriter().write(vocabulary, file)
 
     def _dry_run(self, context: Context) -> None:
         pass
@@ -646,6 +713,7 @@ class UseExistingSplit(PreprocessingAction):
     Sets context parameters:
         None
     """
+
     def __init__(self, split_names: List[str], per_split_actions: List[PreprocessingAction] = None):
         """
         :param split_names: Names of splits to process (e.g. ["train", "validation", "test"].
@@ -679,7 +747,8 @@ class UseExistingSplit(PreprocessingAction):
             action._run(cloned)
 
     @staticmethod
-    def _prepare_context_for_per_split_actions(context: Context, split_base_directory: Path, split_name: str) -> Context:
+    def _prepare_context_for_per_split_actions(context: Context, split_base_directory: Path,
+                                               split_name: str) -> Context:
         cloned = copy.deepcopy(context)
         cloned.set(OUTPUT_DIR_KEY, split_base_directory, overwrite=True)
 
@@ -721,6 +790,7 @@ class CreateRatioSplit(PreprocessingAction):
     - `RATIO_SPLIT_PATH_CONTEXT_KEY` - The base path to the ratio-split directory.
     
     """
+
     def __init__(self, train_percentage: float, validation_percentage: float, test_percentage: float,
                  per_split_actions: List[PreprocessingAction] = None,
                  complete_split_actions: List[PreprocessingAction] = None,
@@ -779,7 +849,7 @@ class CreateRatioSplit(PreprocessingAction):
 
     def _get_complete_split_output_dir(self, context: Context) -> Path:
         return context.get(OUTPUT_DIR_KEY) / \
-                     f"ratio_split-{self.train_percentage}_{self.validation_percentage}_{self.test_percentage}"
+               f"ratio_split-{self.train_percentage}_{self.validation_percentage}_{self.test_percentage}"
 
     def _get_split_main_file_path(self, context: Context, name: str) -> Path:
         prefix = format_prefix(context.get(PREFIXES_KEY) + [name])
@@ -907,7 +977,9 @@ class CreatePopularity(PreprocessingAction):
     Sets context parameters:
         None
     """
-    def __init__(self, columns: List[MetaInformation], prefixes: List[str] = None, special_tokens: Dict[str, str] = None):
+
+    def __init__(self, columns: List[MetaInformation], prefixes: List[str] = None,
+                 special_tokens: Dict[str, str] = None):
         """
         :param columns: A list of all columns for which a popularity should be generated. Note that a column is skipped,
                         if its `run_tokenization` flag is set to false.
@@ -990,7 +1062,8 @@ class CreatePopularity(PreprocessingAction):
         prefix = format_prefix(prefixes)
         return output_dir / f"{prefix}.popularity.{filename}.txt"
 
-    def _count_items(self, dataset: ItemSequenceDataset, vocabulary: Vocabulary, column: MetaInformation, sub_delimiter: str = None) -> Dict[int, int]:
+    def _count_items(self, dataset: ItemSequenceDataset, vocabulary: Vocabulary, column: MetaInformation,
+                     sub_delimiter: str = None) -> Dict[int, int]:
 
         tokenizer = Tokenizer(vocabulary, **self.special_tokens)
         counts = defaultdict(int)
