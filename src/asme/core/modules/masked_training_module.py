@@ -54,7 +54,7 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
 
     def forward(self,
                 batch: Dict[str, torch.Tensor],
-                batch_idx: int
+                batch_idx: Optional[int] = None
                 ) -> torch.Tensor:
         input_data = build_model_input(self.model, self.item_tokenizer, batch)
         # call the model

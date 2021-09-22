@@ -226,7 +226,6 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 
 @app.command()
 def predict(output_file: Path = typer.Argument(..., help='path where output is written'),
-            num_predictions: int = typer.Option(default=20, help='number of predictions to export'),
             gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
             selected_items_file: Optional[Path] = typer.Option(default=None,
                                                                help='only use the item ids for prediction'),
@@ -236,7 +235,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
             study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
             overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
             log_input: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
-            log_per_sample_metrics: Optional[bool] = typer.Option(default=True,
+            log_per_sample_metrics: Optional[bool] = typer.Option(default=False,
                                                                   help='enable logging of per-sample metrics.'),
             seed: Optional[int] = typer.Option(default=None, help='seed used eg for the sampled evaluation')
             ):
@@ -401,7 +400,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
             for i in range(predictions.shape[0]):
                 prediction = filter_predictions(predictions[i])
 
-                scores = _softmax(prediction)
+                scores = _softmax(prediction).numpy()
 
                 item_indices = scores.argsort()[::-1][:num_predictions]
 
