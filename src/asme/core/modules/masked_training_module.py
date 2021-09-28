@@ -152,11 +152,11 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
     def test_step(self, batch, batch_idx):
         return self._eval_step(batch, batch_idx, is_test=True)
 
-    def predict(self,
-                batch: Any,
-                batch_idx: int,
-                dataloader_idx: Optional[int] = None
-                ) -> torch.Tensor:
+    def predict_step(self,
+                     batch: Dict[str, torch.Tensor],
+                     batch_idx: int,
+                     dataloader_idx: Optional[int] = None
+                     ) -> torch.Tensor:
         return self._get_prediction_for_masked_item(batch, batch_idx)
 
     def configure_optimizers(self):

@@ -229,6 +229,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
             gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
             selected_items_file: Optional[Path] = typer.Option(default=None,
                                                                help='only use the item ids for prediction'),
+            num_predictions: int = typer.Option(default=20, help='number of predictions to export'),
             checkpoint_file: Path = typer.Option(default=None, help='path to the checkpoint file'),
             config_file: Path = typer.Option(default=None, help='the path to the config file'),
             study_name: str = typer.Option(default=None, help='the study name of an existing study'),
