@@ -5,20 +5,27 @@ local metrics =  {
     recall: [1, 3, 5],
     ndcg: [1, 3, 5]
 };
-{
+local dataset = 'example';
+{   datamodule: {
+        cache_path: "/tmp/ssd",
+        dataset: dataset,
+        template: {
+            name: "par_pos_neg",
+            split: "ratio_split",
+            file_prefix: dataset,
+            num_workers: 0,
+            batch_size: 9,
+            number_negative_items: 1,
+            number_positive_items: 1
+        },
+        preprocessing: {
+            input_file_path: base_path+"example.csv",
+            output_directory: base_path
+        }
+    },
     templates: {
         unified_output: {
             path: "/tmp/experiments/cosrec"
-        },
-        par_pos_neg_data_sources: {
-            loader: {
-                batch_size: 9,
-                num_workers: 0
-            },
-            path: base_path + "ratio-0.8_0.1_0.1/",
-            file_prefix: "example",
-            seed: 123456,
-            t: 1
         }
     },
     module: {
