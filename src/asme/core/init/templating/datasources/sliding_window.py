@@ -17,13 +17,14 @@ def _build_fixed_sequence_length_processor_config(sequence_length: int) -> Dict[
 class SlidingWindowDataSourceTemplateProcessor(DataSourceTemplateProcessor):
 
     """
+    number_target_interactions: wieviele targets innerhalb eines windows
     TODO: write documentation
     """
 
     TARGET_INTERACTION_CONFIG_KEY = 'number_target_interactions'
     WINDOW_CONFIG_KEY = 'window_size'
 
-    TRAIN_DATASET_BUILDERS = [SequenceDatasetRatioSplitBuilder(), LeaveOneOutSessionDatasetBuilder()]
+    TRAIN_DATASET_BUILDERS = [NextPositionWindowDatasetBuilder(), LeaveOneOutSequenceWindowDatasetBuilder()]
     TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
 
     def _get_template_key(self) -> str:
@@ -32,8 +33,7 @@ class SlidingWindowDataSourceTemplateProcessor(DataSourceTemplateProcessor):
     def _build_train_datasource(self, config: Dict[str, Any]) -> Dict[str, Any]:
         window_size = config[self.WINDOW_CONFIG_KEY]
         number_target_interactions = config.get(self.TARGET_INTERACTION_CONFIG_KEY, 1)
-        sequence_length = window_size + number_target_interactions
-        config[self.WINDOW_CONFIG_KEY] = window_size
+        sequence_length = window_size - number_target_interactions
 
         fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(sequence_length)
 
@@ -42,17 +42,14 @@ class SlidingWindowDataSourceTemplateProcessor(DataSourceTemplateProcessor):
             't': number_target_interactions
         }
 
-        builders = [NextPositionWindowDatasetBuilder(),
-                    LeaveOneOutSequenceWindowDatasetBuilder()]
-
         processors = [fixed_sequence_length_processor, par_pos_neg_sampler_processor]
 
-        return build_datasource(builders, config, Stage.TRAIN, processors)
+        return build_datasource(self.TRAIN_DATASET_BUILDERS, config, Stage.TRAIN, processors)
 
     def _build_validation_datasource(self, config: Dict[str, Any]) -> Dict[str, Any]:
         window_size = config[self.WINDOW_CONFIG_KEY]
         number_target_interactions = config.get(self.TARGET_INTERACTION_CONFIG_KEY, 1)
-        sequence_length = window_size + number_target_interactions
+        sequence_length = window_size - number_target_interactions
 
         fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(sequence_length)
         return build_datasource(self.TEST_VALID_DATASET_BUILDERS, config, Stage.VALIDATION,
@@ -61,8 +58,7 @@ class SlidingWindowDataSourceTemplateProcessor(DataSourceTemplateProcessor):
     def _build_test_datasource(self, config: Dict[str, Any]) -> Dict[str, Any]:
         window_size = config[self.WINDOW_CONFIG_KEY]
         number_target_interactions = config.get(self.TARGET_INTERACTION_CONFIG_KEY, 1)
-        sequence_length = window_size + number_target_interactions
-
+        sequence_length = window_size - number_target_interactions
         fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(sequence_length)
         return build_datasource(self.TEST_VALID_DATASET_BUILDERS, config, Stage.TEST,
                                 [fixed_sequence_length_processor, TARGET_EXTRACTOR_PROCESSOR_CONFIG])

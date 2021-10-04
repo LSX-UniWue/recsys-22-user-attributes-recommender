@@ -386,7 +386,12 @@ register_preprocessing_config_provider("yoochoose",
                                                                    min_item_feedback=4,
                                                                    min_sequence_length=4))
 
-
+"""
+hier müssen wir noch die Parameter ändern:
+window_size setzt sich aus sequence length und target_length zusammen
+min_input_length bei extractor??
+außerdem bei LOO auch Sliding_window index??
+"""
 def get_example_preprocessing_config(output_directory: str,
                                      input_file_path: str,
                                      min_sequence_length: int,

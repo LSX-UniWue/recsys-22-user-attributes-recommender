@@ -193,6 +193,9 @@ class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
 
 
 class LeaveOneOutSequenceWindowDatasetBuilder(DatasetBuilder):
+    """
+    builds window dataset definition for leave one out split
+    """
 
     def __init__(self):
         pass
@@ -202,7 +205,9 @@ class LeaveOneOutSequenceWindowDatasetBuilder(DatasetBuilder):
 
     def build_dataset_definition(self, stage: Stage, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = Path(config['path'])
-        window_size = config["window_size"]
+        sequence_length = config["sequence_length"]
+        target_length = config["target_length"]
+        window_size = sequence_length + target_length
         prefix = _get_prefix(config, stage)
         prefix = f"{prefix}.{stage.value}"
         csv_file = base_path / f'{prefix}.csv'
@@ -217,6 +222,9 @@ class LeaveOneOutSequenceWindowDatasetBuilder(DatasetBuilder):
 
 
 class NextPositionWindowDatasetBuilder(DatasetBuilder):
+    """
+        builds window dataset definition for ratio split
+    """
     def __init__(self):
         pass
 
@@ -225,7 +233,9 @@ class NextPositionWindowDatasetBuilder(DatasetBuilder):
 
     def build_dataset_definition(self, stage: Stage, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = Path(config['path'])
-        window_size = config["window_size"]
+        sequence_length = config["sequence_length"]
+        target_length = config["target_length"]
+        window_size = sequence_length + target_length
         prefix = _get_prefix(config, stage)
         prefix = f"{prefix}.{stage.value}"
         csv_file = base_path / f'{prefix}.csv'

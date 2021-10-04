@@ -467,8 +467,7 @@ class CreateSlidingWindowIndex(PreprocessingAction):
     def _get_sliding_window_index_path(self, context: Context) -> Path:
         output_dir = context.get(OUTPUT_DIR_KEY)
         prefix = format_prefix(context.get(PREFIXES_KEY))
-        ws = self.extractor.window_size + self.extractor.session_end_offset
-        return output_dir / f"{prefix}.slidingwindow.{ws}.idx"
+        return output_dir / f"{prefix}.slidingwindow.{self.extractor.window_size}.idx"
 
     def dry_run_available(self, context: Context) -> bool:
         return os.path.exists(self._get_sliding_window_index_path(context))

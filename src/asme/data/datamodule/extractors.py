@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Dict, Any, Iterable
+from typing import Dict, Any, Iterable, Optional
 
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME
 
@@ -57,12 +57,27 @@ class RemainingSessionPositionExtractor(TargetPositionExtractor):
 
 class SlidingWindowPositionExtractor(TargetPositionExtractor):
     """
-    This TargetPositionExtractor returns all indices between [window_size - 1; len(sequence) - session_end_offset].
+    The SlidingWindowPositionExtractor returns all indices between [min_input_length; len(sequence) - session_end_offset]
+
+    Example:
+    session: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    window_size: 5, which is computed by the sum of the sequence_length and target_length
+    Since there often is more than one target per "slide", we return the position of the last target.
+    The session_offset gibt an, wieviele Elemente von rechts nicht als targets betrachtet werden. (LOO)
+    Also since we only use step_size=1 when sliding over the sequence with the window, we return a range.
+    Die min_input_length als optionaler Parameter wird verwendet, falls
+    Aber wie gehen wir mit den jeweiligen Größen und Padding um?
+    -> Vergleich mit Caser/Cosrec
     """
-    def __init__(self, window_size: int, session_end_offset: int):
+    def __init__(self, window_size: int, session_end_offset: int, min_input_length: Optional[int] = None):
         self.window_size = window_size
         self.session_end_offset = session_end_offset
 
+        if min_input_length is None:
+            self.min_input_length = self.window_size - 1
+        else:
+            self.min_input_length = min_input_length
+
     def apply(self, session: Dict[str, Any]) -> Iterable[int]:
         sequence = session[ITEM_SEQ_ENTRY_NAME]
-        return range(self.window_size - 1, len(sequence)- self.session_end_offset)
+        return range(self.min_input_length, len(sequence) - self.session_end_offset)
