@@ -15,7 +15,7 @@ from asme.core.init.context import Context
 from asme.core.tokenization.tokenizer import Tokenizer
 from asme.core.tokenization.vocabulary import CSVVocabularyReaderWriter, Vocabulary
 from asme.core.utils.logging import get_root_logger
-from asme.data import RATIO_SPLIT_PATH_CONTEXT_KEY, LOO_SPLIT_PATH_CONTEXT_KEY
+from asme.data import RATIO_SPLIT_PATH_CONTEXT_KEY, LOO_SPLIT_PATH_CONTEXT_KEY, CURRENT_SPLIT_PATH_CONTEXT_KEY
 from asme.data.base.csv_index_builder import CsvSessionIndexer
 from asme.data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from asme.data.datamodule.converters import CsvConverter
@@ -36,7 +36,6 @@ PREFIXES_KEY = "prefixes"
 DELIMITER_KEY = "delimiter"
 SEED_KEY = "seed"
 INPUT_DIR_KEY = "input_dir"
-SPLIT_BASE_DIRECTORY_PATH = "split_base_directory"
 SPLIT_FILE_PREFIX = "split_file_prefix"
 SPLIT_FILE_SUFFIX = "split_file_suffix"
 
@@ -662,7 +661,7 @@ class UseExistingSplit(PreprocessingAction):
 
     def _run(self, context: Context) -> None:
 
-        split_base_directory = context.get(SPLIT_BASE_DIRECTORY_PATH)
+        split_base_directory = context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY)
 
         for split_name in self.split_names:
             self._process_split(context, split_base_directory, split_name)
@@ -695,7 +694,7 @@ class UseExistingSplit(PreprocessingAction):
         pass
 
     def dry_run_available(self, context: Context) -> bool:
-        split_base_directory = context.get(SPLIT_BASE_DIRECTORY_PATH)
+        split_base_directory = context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY)
         for split_name in self.split_names:
             cloned = self._prepare_context_for_per_split_actions(context, split_base_directory, split_name)
             for action in self.per_split_actions:
