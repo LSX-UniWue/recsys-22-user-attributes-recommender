@@ -12,6 +12,7 @@ from typing import Callable, List, Any, Optional, Dict
 import pandas as pd
 
 from asme.core.init.context import Context
+from asme.core.init.templating.datasources.datasources import DatasetSplit
 from asme.core.tokenization.tokenizer import Tokenizer
 from asme.core.tokenization.vocabulary import CSVVocabularyReaderWriter, Vocabulary
 from asme.core.utils.logging import get_root_logger
@@ -644,9 +645,9 @@ class UseExistingSplit(PreprocessingAction):
     - `PREFIXES_KEY` - The prefixes to use when naming files in the split.
     
     Sets context parameters:
-        None
+    - `RATIO_SPLIT_PATH_CONTEXT_KEY` or `LOO_SPLIT_PATH_CONTEXT_KEY` depending on which split type was specified.
     """
-    def __init__(self, split_names: List[str], per_split_actions: List[PreprocessingAction] = None):
+    def __init__(self, split_names: List[str], split_type: DatasetSplit, per_split_actions: List[PreprocessingAction] = None):
         """
         :param split_names: Names of splits to process (e.g. ["train", "validation", "test"].
         :param per_split_actions: A list of action that should be applied for each split.
@@ -654,6 +655,7 @@ class UseExistingSplit(PreprocessingAction):
         if split_names is None or len(split_names) == 0:
             raise Exception(f"At least one name for a split must be supplied.")
         self.split_names = split_names
+        self.split_type = split_type
         self.per_split_actions = [] if per_split_actions is None else per_split_actions
 
     def name(self) -> str:
@@ -662,6 +664,11 @@ class UseExistingSplit(PreprocessingAction):
     def _run(self, context: Context) -> None:
 
         split_base_directory = context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY)
+
+        if self.split_type == DatasetSplit.RATIO_SPLIT:
+            context.set(RATIO_SPLIT_PATH_CONTEXT_KEY, split_base_directory)
+        else:
+            context.set(LOO_SPLIT_PATH_CONTEXT_KEY, split_base_directory)
 
         for split_name in self.split_names:
             self._process_split(context, split_base_directory, split_name)
