@@ -698,7 +698,11 @@ class UseExistingSplit(PreprocessingAction):
         return cloned
 
     def _dry_run(self, context: Context) -> None:
-        pass
+        split_base_directory = context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY)
+        if self.split_type == DatasetSplit.RATIO_SPLIT:
+            context.set(RATIO_SPLIT_PATH_CONTEXT_KEY, split_base_directory)
+        else:
+            context.set(LOO_SPLIT_PATH_CONTEXT_KEY, split_base_directory)
 
     def dry_run_available(self, context: Context) -> bool:
         split_base_directory = context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY)
