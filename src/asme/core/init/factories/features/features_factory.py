@@ -54,7 +54,6 @@ class MetaInformationFactory(ObjectFactory):
             prefix = context.get(DATASET_PREFIX_CONTEXT_KEY)
             vocabulary_file = f"{prefix}.vocabulary.{column_name}.txt"
             infer_whole_path(config, ["tokenizer", "vocabulary", "file"], split_path, vocabulary_file)
-            print(split_path)
             tokenizer = self._dependencies.build(config, context)['tokenizer']
         else:
             tokenizer = None
