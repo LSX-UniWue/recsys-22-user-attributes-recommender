@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 from asme.core.init.context import Context
+from asme.core.init.templating.datasources.datasources import DatasetSplit
 from asme.data import CURRENT_SPLIT_PATH_CONTEXT_KEY
 from asme.data.datamodule.config import DatasetPreprocessingConfig, PreprocessingConfigProvider
 from asme.data.datamodule.registry import register_preprocessing_config_provider
@@ -242,6 +243,7 @@ def get_dota_shop_preprocessing_config(output_directory: str,
                              CreateVocabulary(columns, prefixes=[prefix]),
                              UseExistingSplit(
                                  split_names=["train", "validation", "test"],
+                                 split_type=DatasetSplit.RATIO_SPLIT,
                                  per_split_actions=
                                  [
                                      CreateSessionIndex(["id", "hero_id"]),
