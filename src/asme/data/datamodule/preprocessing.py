@@ -651,7 +651,8 @@ class UseExistingSplit(PreprocessingAction):
                  split_names: List[str],
                  split_type: DatasetSplit,
                  complete_split_actions: List[PreprocessingAction] = None,
-                 per_split_actions: List[PreprocessingAction] = None):
+                 per_split_actions: List[PreprocessingAction] = None,
+                 update_paths: bool = True):
         """
         :param split_names: Names of splits to process (e.g. ["train", "validation", "test"].
         :param per_split_actions: A list of action that should be applied for each split.
@@ -662,6 +663,7 @@ class UseExistingSplit(PreprocessingAction):
         self.split_type = split_type
         self.complete_split_actions = [] if complete_split_actions is None else complete_split_actions
         self.per_split_actions = [] if per_split_actions is None else per_split_actions
+        self.update_paths = update_paths
 
     def name(self) -> str:
         return f"Use existing split."
@@ -678,14 +680,13 @@ class UseExistingSplit(PreprocessingAction):
         for split_name in self.split_names:
             self._process_split(context, split_base_directory, split_name)
 
-        self._process_complete_split(context, split_base_directory, split_name)
+        self._process_complete_split(context, split_base_directory)
 
     def _process_complete_split(self,
                                 context: Context,
-                                split_base_path_directory: Path,
-                                split_name: str):
+                                split_base_path_directory: Path):
 
-        cloned = self._prepare_context_for_complete_split_actions(context, split_base_path_directory, split_name)
+        cloned = self._prepare_context_for_complete_split_actions(context, split_base_path_directory)
 
         # Apply the necessary preprocessing, i.e. session index generation
         for action in self.complete_split_actions:
@@ -715,10 +716,17 @@ class UseExistingSplit(PreprocessingAction):
 
         return cloned
 
-    def _prepare_context_for_complete_split_actions(self, context: Context, split_base_directory: Path, split_name: str) -> Context:
+    def _prepare_context_for_complete_split_actions(self, context: Context, split_base_directory: Path) -> Context:
         cloned = copy.deepcopy(context)
         cloned.set(OUTPUT_DIR_KEY, split_base_directory, overwrite=True)
         # If enabled, change paths to point to the train split, e.g. for creating the vocabulary or popularities
+        if self.update_paths:
+            current_prefixes = context.get(PREFIXES_KEY)
+            train_prefix = current_prefixes + [SplitNames.train.name]
+            cloned.set(PREFIXES_KEY, train_prefix, overwrite=True)
+            cloned.set(MAIN_FILE_KEY, split_base_directory / f"{format_prefix(train_prefix)}.csv", overwrite=True)
+            cloned.set(SESSION_INDEX_KEY, split_base_directory / f"{format_prefix(train_prefix)}.session.idx",
+                       overwrite=True)
 
         return cloned
 
@@ -736,6 +744,11 @@ class UseExistingSplit(PreprocessingAction):
             for action in self.per_split_actions:
                 if not action.dry_run_available(cloned):
                     return False
+
+        cloned = self._prepare_context_for_complete_split_actions(context, split_base_directory)
+        for action in self.complete_split_actions:
+            if not action.dry_run_available(cloned):
+                return False
 
         return True
 
