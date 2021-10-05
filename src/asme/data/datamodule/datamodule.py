@@ -62,10 +62,8 @@ class AsmeDataModule(pl.LightningDataModule):
         # Populate context with the dataset path
         self.context.set(BASE_DATASET_PATH_CONTEXT_KEY, self.config.dataset_preprocessing_config.location)
         split = self._determine_split()
-        print(split)
         split_path = ds_config.context.get(RATIO_SPLIT_PATH_CONTEXT_KEY) if split == DatasetSplit.RATIO_SPLIT else \
             ds_config.context.get(LOO_SPLIT_PATH_CONTEXT_KEY)
-        print(split_path)
         self.context.set(CURRENT_SPLIT_PATH_CONTEXT_KEY, split_path)
 
         # Also put the prefix into the context

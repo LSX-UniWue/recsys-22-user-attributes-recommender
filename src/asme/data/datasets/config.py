@@ -240,7 +240,6 @@ def get_dota_shop_preprocessing_config(output_directory: str,
 
     preprocessing_actions = [UseExistingCsv(),
                              CreateSessionIndex(["id", "hero_id"]),
-                             CreateVocabulary(columns, prefixes=[prefix]),
                              UseExistingSplit(
                                  split_names=["train", "validation", "test"],
                                  split_type=DatasetSplit.RATIO_SPLIT,
@@ -255,6 +254,10 @@ def get_dota_shop_preprocessing_config(output_directory: str,
                                          [MetaInformation("item", column_name="item_id", type="str")],
                                          SlidingWindowPositionExtractor(window_size, session_end_offset)
                                      )
+                                 ],
+                                 complete_split_actions=
+                                 [
+                                     CreateVocabulary(columns, prefixes=[prefix]),
                                  ])
                              ]
 
