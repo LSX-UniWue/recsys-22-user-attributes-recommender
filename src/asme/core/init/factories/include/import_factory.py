@@ -1,4 +1,8 @@
 import os
+import sys
+from contextlib import contextmanager
+from pathlib import Path
+from types import ModuleType
 from typing import List, Union, Any, Dict
 
 from asme.core.init.config import Config
@@ -11,17 +15,28 @@ import importlib
 logger = get_logger(__name__)
 
 
-def _import_module(path: str):
-    name, _ = os.path.splitext(path)
-    spec = importlib.util.spec_from_loader(
-        name,
-        importlib.machinery.SourceFileLoader(name, path)
-    )
-    if spec is None:
-        return None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+@contextmanager
+def push_python_path(path: Union[str,os.PathLike]):
+    """
+        Prepends the given path to `sys.path`.
+        This method is intended to use with `with`, so after its usage, its value willbe removed from
+        `sys.path`.
+
+        see https://github.com/allenai/allennlp/blob/a63e28c24d091fb371011f644fec3ebd29bfbb7e/allennlp/common/util.py#L316
+        """
+    # In some environments, such as TC, it fails when sys.path contains a relative path, such as ".".
+    path = Path(path).resolve()
+    path = str(path)
+    sys.path.insert(0, path)
+    try:
+        yield
+    finally:
+        # Better to remove by value, in case `sys.path` was manipulated in between.
+        sys.path.remove(path)
+
+
+def _import_module(module_name: str) -> ModuleType:
+    return importlib.import_module(module_name)
 
 
 class ImportFactory(ObjectFactory):
@@ -35,10 +50,10 @@ class ImportFactory(ObjectFactory):
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         if check_config_keys_exist(config, [self.CONFIG_KEY]):
-            for name, path in config.get(self.CONFIG_KEY).items():
-                if not os.path.isfile(path):
-                    return CanBuildResult(CanBuildResultType.INVALID_CONFIGURATION,
-                                          f"The path specified for import '{name}' does not resolve to a valid file.")
+            for name, plugin_config in config.get(self.CONFIG_KEY).items():
+                if not ("path" in plugin_config and "module" in plugin_config):
+                    return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION,
+                                          f"Plugin '{name}' requires both 'path' and 'module' parameters to be present.")
 
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
@@ -51,15 +66,18 @@ class ImportFactory(ObjectFactory):
         imports = config.get_or_default(self.CONFIG_KEY, {})
         if len(imports) > 0:
             logger.info(f"Loading {len(imports)} extra modules.")
-            for name, path in imports.items():
+            for name, plugin_config in imports.items():
+                path = plugin_config["path"]
+                module = plugin_config["module"]
                 try:
-                    module = _import_module(path)
-                    if module is None:
-                        logger.critical(f"Failed to load module '{name}' at '{path}'. Does the path exists?")
-                        exit(1)
-                    logger.info(f"Successfully loaded module '{name}' at '{path}'.")
+                    with push_python_path(path):
+                        module = _import_module(module)
+                        if module is None:
+                            logger.critical(f"Failed to load plugin '{name}' at '{path}'. Does the path exists?")
+                            exit(1)
+                        logger.info(f"Successfully loaded plugin '{name}' at '{path}'.")
                 except Exception as e:
-                    logger.critical(f"Failed to load module '{name}' at '{path}' due to the following exception:", exc_info=e)
+                    logger.critical(f"Failed to load plugin '{name}' at '{path}' due to the following exception:", exc_info=e)
                     exit(1)
 
         return None
