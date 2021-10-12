@@ -1,14 +1,16 @@
-#local raw_dataset_path = "../tests/example_dataset/";
-local dataset_path = "/mnt/c/Users/seife/work/minor/recommender/tests/example_dataset/";
-local dataset = 'example';
-local number_of_targets = 2;
+local base_path = "../tests/example_dataset/";
+local output_path = '/tmp/experiments/caser';
+local number_of_targets = 1;
+local seq_length = 2;
 local max_seq_length = 4;
+local dataset = 'example';
 local metrics =  {
     mrr: [1, 3, 5],
     recall: [1, 3, 5],
     ndcg: [1, 3, 5]
 };
-{   datamodule: {
+{
+    datamodule: {
         dataset: dataset,
         template: {
             name: "sliding_window",
@@ -17,17 +19,15 @@ local metrics =  {
             num_workers: 0,
             batch_size: 9,
             dynamic_padding: false,
-            window_size: max_seq_length,
+            window_size: seq_length + number_of_targets,
             number_target_interactions: number_of_targets
         },
         preprocessing: {
-            output_directory: dataset_path,
-            input_file_path: "/mnt/c/Users/seife/work/minor/recommender/tests/example_dataset/example.csv"
         }
     },
     templates: {
         unified_output: {
-            path: "/tmp/experiments/caser"
+            path: output_path
         }
     },
     module: {
@@ -37,12 +37,12 @@ local metrics =  {
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: dataset_path + "example.popularity.item_id.txt",
+                sample_probability_file: base_path + dataset + ".popularity.item_id.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             },
             fixed: {
-                item_file: dataset_path + "example.relevant_items.item_id.txt",
+                item_file: base_path + dataset + ".relevant_items.item_id.txt",
                 metrics: metrics
             }
         },
@@ -67,7 +67,6 @@ local metrics =  {
                     unk_token: "<UNK>"
                 },
                 vocabulary: {
-                    file: dataset_path + "example.vocabulary.item_id.txt"
                 }
             }
         }

@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from asme.datasets.dataset_pre_processing.utils import read_csv
+from asme.data.datamodule.util import read_csv
 import json
 import csv
 import gzip
