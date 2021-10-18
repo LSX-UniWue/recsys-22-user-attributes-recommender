@@ -1,4 +1,5 @@
 local base_path = "../tests/example_dataset/";
+local output_path = '/tmp/experiments/pop';
 local max_seq_length = 7;
 local dataset = 'example';
 local metrics =  {
@@ -7,11 +8,6 @@ local metrics =  {
     ndcg: [1, 3, 5]
 };
 {
-    templates: {
-        unified_output: {
-            path: "/tmp/experiments/pop"
-        },
-     },
      datamodule: {
         dataset: dataset,
         data_sources: {
@@ -39,11 +35,14 @@ local metrics =  {
                 ]
             }
         },
-
         preprocessing: {
-
         }
     },
+    templates: {
+        unified_output: {
+            path: output_path
+        },
+     },
     module: {
         type: "pop",
         metrics: {
@@ -51,7 +50,7 @@ local metrics =  {
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: "example.popularity.item_id.txt",
+                sample_probability_file: base_path + dataset + ".popularity.item_id.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             }
