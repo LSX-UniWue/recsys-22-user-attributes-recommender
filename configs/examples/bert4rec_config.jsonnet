@@ -1,9 +1,7 @@
-local raw_dataset_path = "../tests/example_dataset/";
-local dataset_path = "/tmp/example/";
+local base_path = '../tests/example_dataset/';
+local output_path = '/tmp/experiments/sasrec';
 local max_seq_length = 7;
-local prefix = 'example';
 local dataset = 'example';
-local output_path = '/tmp/bert4rec-output';
 local metrics =  {
     mrr: [1, 3, 5],
     recall: [1, 3, 5],
@@ -59,8 +57,7 @@ local metrics =  {
             }
         },
         preprocessing: {
-            output_directory: dataset_path,
-            min_sequence_length: 2
+            min_sequence_length: 2,
         }
     },
     templates: {
@@ -75,7 +72,7 @@ local metrics =  {
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: "example.popularity.item_id.txt",
+                sample_probability_file: base_path + dataset + ".popularity.item_id.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             },
