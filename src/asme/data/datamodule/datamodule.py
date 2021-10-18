@@ -78,7 +78,7 @@ class AsmeDataModule(pl.LightningDataModule):
             # Copy the dataset
             ds_location = self.config.dataset_preprocessing_config.location
             logger.info(f"Caching dataset from '{ds_location}' to '{self.config.cache_path}'.")
-            shutil.copytree(ds_location, self.config.cache_path, dirs_exist_ok=True)
+            shutil.copytree(ds_location, self.config.cache_path, dirs_exist_ok=True, copy_function=shutil.copy)
 
             # adjust the context values such that the factories infer correct paths
             self.context.set(BASE_DATASET_PATH_CONTEXT_KEY, self.config.cache_path, overwrite=True)
