@@ -15,26 +15,13 @@ import importlib
 logger = get_logger(__name__)
 
 
-@contextmanager
 def push_python_path(path: Union[str, os.PathLike]):
     """
         Prepends the given path to `sys.path`.
-        This method is intended to use with `with`, so after its usage, its value willbe removed from
-        `sys.path`.
-
-        see https://github.com/allenai/allennlp/blob/a63e28c24d091fb371011f644fec3ebd29bfbb7e/allennlp/common/util.py#L316
-        """
-    # In some environments, such as TC, it fails when sys.path contains a relative path, such as ".".
+    """
     path = Path(path).resolve()
     path = str(path)
     sys.path.insert(0, path)
-    try:
-        yield
-    finally:
-        # Better to remove by value, in case `sys.path` was manipulated in between.
-        # FIXME !
-        #sys.path.remove(path)
-        0
 
 
 def _import_module(module_name: str) -> ModuleType:
@@ -78,8 +65,8 @@ class ImportFactory(ObjectFactory):
                         module = _import_module(module)
                     # Otherwise, push the path onto the PYTHONPATH and load it afterwards
                     else:
-                        with push_python_path(path):
-                            module = _import_module(module)
+                        push_python_path(path)
+                        module = _import_module(module)
 
                     if module is None:
                         logger.critical(f"Failed to load plugin '{name}' at '{path}'. Does the path exists?")
