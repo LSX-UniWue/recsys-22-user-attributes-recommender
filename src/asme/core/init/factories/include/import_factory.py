@@ -70,12 +70,19 @@ class ImportFactory(ObjectFactory):
                 path = plugin_config["path"]
                 module = plugin_config["module"]
                 try:
-                    with push_python_path(path):
+                    # If the path is empty, load the module from the PYTHONPATH
+                    if len(path) == 0:
+                        logger.info(f"Empty path specified for plugin '{name}'. Assuming it is available on the PYTHONPATH.")
                         module = _import_module(module)
-                        if module is None:
-                            logger.critical(f"Failed to load plugin '{name}' at '{path}'. Does the path exists?")
-                            exit(1)
-                        logger.info(f"Successfully loaded plugin '{name}' at '{path}'.")
+                    # Otherwise, push the path onto the PYTHONPATH and load it afterwards
+                    else:
+                        with push_python_path(path):
+                            module = _import_module(module)
+
+                    if module is None:
+                        logger.critical(f"Failed to load plugin '{name}' at '{path}'. Does the path exists?")
+                        exit(1)
+                    logger.info(f"Successfully loaded plugin '{name}' at '{path}'.")
                 except Exception as e:
                     logger.critical(f"Failed to load plugin '{name}' at '{path}' due to the following exception:", exc_info=e)
                     exit(1)
