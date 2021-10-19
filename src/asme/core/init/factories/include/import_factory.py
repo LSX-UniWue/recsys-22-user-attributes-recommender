@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 
 
 @contextmanager
-def push_python_path(path: Union[str,os.PathLike]):
+def push_python_path(path: Union[str, os.PathLike]):
     """
         Prepends the given path to `sys.path`.
         This method is intended to use with `with`, so after its usage, its value willbe removed from
@@ -32,7 +32,9 @@ def push_python_path(path: Union[str,os.PathLike]):
         yield
     finally:
         # Better to remove by value, in case `sys.path` was manipulated in between.
-        sys.path.remove(path)
+        # FIXME !
+        #sys.path.remove(path)
+        0
 
 
 def _import_module(module_name: str) -> ModuleType:
