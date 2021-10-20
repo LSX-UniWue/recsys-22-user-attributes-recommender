@@ -5,7 +5,7 @@ from asme.core.models.kebert4rec.components import KeBERT4RecSequenceElementsRep
 from asme.core.models.bert4rec.bert4rec_model import normal_initialize_weights
 from asme.core.models.common.components.representation_modifier.ffn_modifier import \
     FFNSequenceRepresentationModifierComponent
-from asme.core.models.bert4rec.components import BidirectionalTransformerSequenceRepresentationComponent
+from asme.core.models.transformer.sequence_representation import BidirectionalTransformerSequenceRepresentationComponent
 from asme.core.models.common.layers.layers import PROJECT_TYPE_LINEAR, build_projection_layer
 from asme.core.models.common.layers.transformer_layers import TransformerEmbedding
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel

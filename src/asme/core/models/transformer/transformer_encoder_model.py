@@ -1,13 +1,16 @@
 import torch.nn as nn
 
-from asme.core.models.common.layers.layers import IdentitySequenceRepresentationModifierLayer
+from asme.core.models.common.layers.layers import IdentitySequenceRepresentationModifierLayer, \
+    SequenceRepresentationLayer
 from asme.core.models.common.layers.transformer_layers import TransformerEmbedding, TransformerLayer
-from asme.core.models.sasrec.components import SASRecTransformerComponent, SASRecProjectionComponent
+from asme.core.models.sasrec.components import SASRecProjectionComponent
+from asme.core.models.transformer.sequence_representation import \
+    UnidirectionalTransformerSequenceRepresentationComponent, TransformerSequenceRepresentationComponent
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.core.utils.hyperparameter_utils import save_hyperparameters
 
-
-class SASRecModel(SequenceRecommenderModel):
+# TODO: This should be a abstract base class for all Transformer Encoder based models which should define the projection layer.
+class TransformerEncoderModel(SequenceRecommenderModel):
     """
     Implementation of the "Self-Attentive Sequential Recommendation" paper.
     see https://doi.org/10.1109%2fICDM.2018.00035 for more details
@@ -23,6 +26,7 @@ class SASRecModel(SequenceRecommenderModel):
                  item_vocab_size: int,
                  max_seq_length: int,
                  transformer_dropout: float,
+                 bidirectional: bool = False,
                  embedding_pooling_type: str = None,
                  transformer_intermediate_size: int = None,
                  transformer_attention_dropout: float = None
@@ -55,13 +59,15 @@ class SASRecModel(SequenceRecommenderModel):
                                              transformer_intermediate_size,
                                              transformer_dropout,
                                              attention_dropout=transformer_attention_dropout)
-        sasrec_transformer_layer = SASRecTransformerComponent(transformer_layer)
+
+        sequence_representation_layer = TransformerSequenceRepresentationComponent(transformer_layer,
+                                                                                   bidirectional=bidirectional)
 
         modified_seq_representation_layer = IdentitySequenceRepresentationModifierLayer()
         sasrec_projection_layer = SASRecProjectionComponent(embedding_layer)
 
         super().__init__(sequence_embedding_layer=embedding_layer,
-                         sequence_representation_layer=sasrec_transformer_layer,
+                         sequence_representation_layer=sequence_representation_layer,
                          sequence_representation_modifier_layer=modified_seq_representation_layer,
                          projection_layer=sasrec_projection_layer)
 

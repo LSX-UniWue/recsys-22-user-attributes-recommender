@@ -1,6 +1,6 @@
 import functools
 
-from asme.core.models.bert4rec.components import BidirectionalTransformerSequenceRepresentationComponent
+from asme.core.models.transformer.sequence_representation import BidirectionalTransformerSequenceRepresentationComponent
 from asme.core.models.common.components.representation_modifier.ffn_modifier import \
     FFNSequenceRepresentationModifierComponent
 from torch import nn
