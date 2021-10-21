@@ -14,7 +14,6 @@ class SASRecModel(TransformerEncoderModel):
                  item_vocab_size: int,
                  max_seq_length: int,
                  transformer_dropout: float,
-                 bidirectional: bool = False,
                  embedding_pooling_type: str = None,
                  transformer_intermediate_size: int = None,
                  transformer_attention_dropout: float = None
@@ -28,7 +27,7 @@ class SASRecModel(TransformerEncoderModel):
             item_vocab_size=item_vocab_size,
             max_seq_length=max_seq_length,
             transformer_dropout=transformer_dropout,
-            bidirectional=bidirectional,
+            bidirectional=False,
             projection_layer=None,
             sequence_representation_modifier_layer=IdentitySequenceRepresentationModifierLayer(),
             embedding_pooling_type=embedding_pooling_type,
