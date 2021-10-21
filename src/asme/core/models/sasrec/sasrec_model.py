@@ -1,3 +1,4 @@
+from asme.core.models.common.layers.layers import IdentitySequenceRepresentationModifierLayer
 from asme.core.models.sasrec.components import SASRecProjectionComponent
 from asme.core.models.transformer.transformer_encoder_model import TransformerEncoderModel
 from asme.core.utils.hyperparameter_utils import save_hyperparameters
@@ -29,6 +30,7 @@ class SASRecModel(TransformerEncoderModel):
             transformer_dropout=transformer_dropout,
             bidirectional=bidirectional,
             projection_layer=None,
+            sequence_representation_modifier_layer=IdentitySequenceRepresentationModifierLayer(),
             embedding_pooling_type=embedding_pooling_type,
             transformer_intermediate_size=transformer_intermediate_size,
             transformer_attention_dropout=transformer_attention_dropout

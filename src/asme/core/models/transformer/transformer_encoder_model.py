@@ -3,7 +3,7 @@ import abc
 import torch.nn as nn
 
 from asme.core.models.common.layers.layers import IdentitySequenceRepresentationModifierLayer, \
-    SequenceRepresentationLayer, ProjectionLayer
+    SequenceRepresentationLayer, ProjectionLayer, SequenceRepresentationModifierLayer
 from asme.core.models.common.layers.transformer_layers import TransformerEmbedding, TransformerLayer
 from asme.core.models.sasrec.components import SASRecProjectionComponent
 from asme.core.models.transformer.sequence_representation import \
@@ -29,6 +29,7 @@ class TransformerEncoderModel(SequenceRecommenderModel):
                  max_seq_length: int,
                  transformer_dropout: float,
                  projection_layer: ProjectionLayer,
+                 sequence_representation_modifier_layer: SequenceRepresentationModifierLayer,
                  bidirectional: bool = False,
                  embedding_pooling_type: str = None,
                  transformer_intermediate_size: int = None,
@@ -66,11 +67,10 @@ class TransformerEncoderModel(SequenceRecommenderModel):
         sequence_representation_layer = TransformerSequenceRepresentationComponent(transformer_layer,
                                                                                    bidirectional=bidirectional)
 
-        modified_seq_representation_layer = IdentitySequenceRepresentationModifierLayer()
 
         super().__init__(sequence_embedding_layer=embedding_layer,
                          sequence_representation_layer=sequence_representation_layer,
-                         sequence_representation_modifier_layer=modified_seq_representation_layer,
+                         sequence_representation_modifier_layer=sequence_representation_modifier_layer,
                          projection_layer=projection_layer)
 
         # FIXME (AD) I think we should move this out of the model and call it through a callback before training starts
