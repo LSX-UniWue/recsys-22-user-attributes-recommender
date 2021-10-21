@@ -38,10 +38,10 @@ class TransformerSequenceRepresentationComponent(SequenceRepresentationLayer):
                 attention_mask = padding_mask.unsqueeze(1).repeat(1, sequence_length, 1).unsqueeze(1)
         else:
             if padding_mask is None:
-                attention_mask = torch.tril(torch.ones([sequence_length, sequence_length],device=sequence.device)).unsqueeze(0).repeat(batch_size,1,1)
+                attention_mask = torch.tril(torch.ones([sequence_length, sequence_length],device=sequence.device)).unsqueeze(0).repeat(batch_size, 1, 1).unsqueeze(1)
             else:
-                attention_mask = torch.tril(torch.ones([sequence_length, sequence_length],device=sequence.device)).unsqueeze(0).repeat(batch_size,1,1)
-                attention_mask *= padding_mask.unsqueeze(1).repeat(1, sequence_length, 1)
+                attention_mask = torch.tril(torch.ones([sequence_length, sequence_length],device=sequence.device)).unsqueeze(0).repeat(batch_size, 1, 1).unsqueeze(1)
+                attention_mask *= padding_mask.unsqueeze(1).repeat(1, sequence_length, 1).unsqueeze(1)
 
         encoded_sequence = self.transformer_layer(sequence, attention_mask=attention_mask)
         return SequenceRepresentation(encoded_sequence)
