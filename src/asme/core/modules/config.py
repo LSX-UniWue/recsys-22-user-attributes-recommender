@@ -11,6 +11,7 @@ from asme.core.models.hgn.hgn_model import HGNModel
 from asme.core.models.kebert4rec.kebert4rec_model import KeBERT4RecModel
 from asme.core.models.narm.narm_model import NarmModel
 from asme.core.models.rnn.rnn_model import RNNModel
+from asme.core.models.sasrec.sasrec_model import SASRecModel
 from asme.core.models.transformer.transformer_encoder_model import TransformerEncoderModel
 from asme.core.modules.baselines.bpr_module import BprModule
 from asme.core.modules.baselines.markov_module import MarkovModule
@@ -35,7 +36,7 @@ register_module("narm", ModuleConfig(GenericModuleFactory, NextItemPredictionTra
     "model_cls": NarmModel}))
 
 register_module("sasrec", ModuleConfig(GenericModuleFactory, SequenceNextItemPredictionTrainingModule, {
-    "model_cls": TransformerEncoderModel,
+    "model_cls": SASRecModel,
     "loss_function": SASRecBinaryCrossEntropyLoss()}))
 
 register_module("rnn", ModuleConfig(GenericModuleFactory, NextItemPredictionTrainingModule, {

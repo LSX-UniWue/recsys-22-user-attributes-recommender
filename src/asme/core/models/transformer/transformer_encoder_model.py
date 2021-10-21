@@ -1,7 +1,9 @@
+import abc
+
 import torch.nn as nn
 
 from asme.core.models.common.layers.layers import IdentitySequenceRepresentationModifierLayer, \
-    SequenceRepresentationLayer
+    SequenceRepresentationLayer, ProjectionLayer
 from asme.core.models.common.layers.transformer_layers import TransformerEmbedding, TransformerLayer
 from asme.core.models.sasrec.components import SASRecProjectionComponent
 from asme.core.models.transformer.sequence_representation import \
@@ -9,7 +11,7 @@ from asme.core.models.transformer.sequence_representation import \
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.core.utils.hyperparameter_utils import save_hyperparameters
 
-# TODO: This should be a abstract base class for all Transformer Encoder based models which should define the projection layer.
+
 class TransformerEncoderModel(SequenceRecommenderModel):
     """
     Implementation of the "Self-Attentive Sequential Recommendation" paper.
@@ -26,6 +28,7 @@ class TransformerEncoderModel(SequenceRecommenderModel):
                  item_vocab_size: int,
                  max_seq_length: int,
                  transformer_dropout: float,
+                 projection_layer: ProjectionLayer,
                  bidirectional: bool = False,
                  embedding_pooling_type: str = None,
                  transformer_intermediate_size: int = None,
@@ -64,15 +67,18 @@ class TransformerEncoderModel(SequenceRecommenderModel):
                                                                                    bidirectional=bidirectional)
 
         modified_seq_representation_layer = IdentitySequenceRepresentationModifierLayer()
-        sasrec_projection_layer = SASRecProjectionComponent(embedding_layer)
 
         super().__init__(sequence_embedding_layer=embedding_layer,
                          sequence_representation_layer=sequence_representation_layer,
                          sequence_representation_modifier_layer=modified_seq_representation_layer,
-                         projection_layer=sasrec_projection_layer)
+                         projection_layer=projection_layer)
 
         # FIXME (AD) I think we should move this out of the model and call it through a callback before training starts
         self.apply(self._init_weights)
+
+    def set_projection_layer(self, projection_layer: ProjectionLayer):
+        self._projection_layer = projection_layer
+
 
     def _init_weights(self, module):
         """ Initializes the weights of the layers """
