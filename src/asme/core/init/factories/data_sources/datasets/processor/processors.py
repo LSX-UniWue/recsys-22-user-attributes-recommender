@@ -11,8 +11,10 @@ from asme.core.init.factories.data_sources.datasets.processor.cloze_mask import 
 from asme.core.init.factories.data_sources.datasets.processor.cut_to_fixed_sequence_length import \
     CutToFixedSequenceLengthProcessorFactory
 from asme.core.init.factories.data_sources.datasets.processor.last_item_mask import LastItemMaskProcessorFactory
-from asme.core.init.factories.data_sources.datasets.processor.par_pos_neg_sampler import \
-    ParameterizedPositiveNegativeSamplerProcessorFactory
+from asme.core.init.factories.data_sources.datasets.processor.positive_item_extractor import \
+    PositiveItemExtractorProcessorFactory
+from asme.core.init.factories.data_sources.datasets.processor.negative_item_sampler import \
+    NegativeItemSamplerProcessorFactory
 from asme.core.init.factories.data_sources.datasets.processor.pos_neg_sampler import PositiveNegativeSamplerProcessorFactory
 from asme.core.init.factories.data_sources.datasets.processor.position_token import PositionTokenProcessorFactory
 from asme.core.init.factories.data_sources.datasets.processor.tokenizer import TokenizerProcessorFactory
@@ -32,12 +34,13 @@ class ProcessorsFactory(ObjectFactory):
             ConditionalFactory('type', {
                 'cloze': ClozeProcessorFactory(),
                 'pos_neg': PositiveNegativeSamplerProcessorFactory(),
-                'par_pos_neg': ParameterizedPositiveNegativeSamplerProcessorFactory(),
                 'last_item_mask': LastItemMaskProcessorFactory(),
                 'position_token': PositionTokenProcessorFactory(),
                 'tokenizer': TokenizerProcessorFactory(),
                 'target_extractor': TargetExtractorProcessorFactory(),
                 'no_target_extractor': NoTargetExtractorProcessorFactory(),
+                'negative_item_sampler': NegativeItemSamplerProcessorFactory(),
+                'positive_item_extractor': PositiveItemExtractorProcessorFactory(),
                 FIXED_SEQUENCE_LENGTH_PROCESSOR_KEY: CutToFixedSequenceLengthProcessorFactory()
             })
         )

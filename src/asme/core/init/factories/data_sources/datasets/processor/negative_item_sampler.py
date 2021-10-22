@@ -1,27 +1,25 @@
 from typing import List
 
-from asme.data.datasets.processors.par_pos_neg_sampler import ParameterizedPositiveNegativeSamplerProcessor
+from asme.core.init.factories.util import check_config_keys_exist
+from asme.data.datasets.processors.negative_item_sampler import NegativeItemSamplerProcessor
 from asme.core.init.config import Config
 from asme.core.init.context import Context
 from asme.core.init.factories.features.tokenizer_factory import get_tokenizer_key_for_voc, ITEM_TOKENIZER_ID
-from asme.core.init.factories.util import check_config_keys_exist
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
 
-class ParameterizedPositiveNegativeSamplerProcessorFactory(ObjectFactory):
-
+class NegativeItemSamplerProcessorFactory(ObjectFactory):
     """
-    factory for the PositiveNegativeSamplerProcessor
+    factory for the NegativeItemSamplerProcessor
     """
 
     def can_build(self,
                   config: Config,
                   context: Context
                   ) -> CanBuildResult:
-        config_keys_exist = check_config_keys_exist(config, ['t'])  # FIXME: rename parameter
+        config_keys_exist = check_config_keys_exist(config, ['number_negative_items'])
         if not config_keys_exist:
-            return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION)
-
+            return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION, 'number_negative_items missing')
         if not context.has_path(get_tokenizer_key_for_voc(ITEM_TOKENIZER_ID)):
             return CanBuildResult(CanBuildResultType.MISSING_DEPENDENCY, 'item tokenizer missing')
 
@@ -30,11 +28,11 @@ class ParameterizedPositiveNegativeSamplerProcessorFactory(ObjectFactory):
     def build(self,
               config: Config,
               context: Context
-              ) -> ParameterizedPositiveNegativeSamplerProcessor:
+              ) -> NegativeItemSamplerProcessor:
         tokenizer = context.get(get_tokenizer_key_for_voc(ITEM_TOKENIZER_ID))
-        t = config.get('t')
+        num_neg_items = config.get_or_default('number_negative_items', None)
 
-        return ParameterizedPositiveNegativeSamplerProcessor(tokenizer, t)
+        return NegativeItemSamplerProcessor(tokenizer, num_neg_items)
 
     def is_required(self, context: Context) -> bool:
         return False
@@ -43,4 +41,4 @@ class ParameterizedPositiveNegativeSamplerProcessorFactory(ObjectFactory):
         return []
 
     def config_key(self) -> str:
-        return 'par_pos_neg_sampler_processor'
+        return 'neg_sampler_processor'
