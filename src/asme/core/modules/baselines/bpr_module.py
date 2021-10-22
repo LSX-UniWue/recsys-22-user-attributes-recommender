@@ -55,7 +55,7 @@ class BprModule(MetricsTrait, pl.LightningModule):
         return self.regularization_factor * (x_ui.abs().mean() + x_uj.abs().mean())
 
     def training_step(self, batch, batch_idx):
-        user = batch["user_id"]
+        user = batch["user"]
         item_i = batch[POSITIVE_SAMPLES_ENTRY_NAME]
         item_j = batch[NEGATIVE_SAMPLES_ENTRY_NAME]
 

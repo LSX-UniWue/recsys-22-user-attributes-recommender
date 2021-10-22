@@ -14,7 +14,7 @@ from asme.core.utils.logging import get_logger
 from asme.data import BASE_DATASET_PATH_CONTEXT_KEY, CURRENT_SPLIT_PATH_CONTEXT_KEY, DATASET_PREFIX_CONTEXT_KEY, \
     RATIO_SPLIT_PATH_CONTEXT_KEY, LOO_SPLIT_PATH_CONTEXT_KEY
 from asme.data.datamodule.config import AsmeDataModuleConfig
-from asme.datasets.dataset_pre_processing.utils import download_dataset
+from asme.data.datamodule.util import download_dataset
 
 logger = get_logger(__name__)
 
@@ -78,7 +78,7 @@ class AsmeDataModule(pl.LightningDataModule):
             # Copy the dataset
             ds_location = self.config.dataset_preprocessing_config.location
             logger.info(f"Caching dataset from '{ds_location}' to '{self.config.cache_path}'.")
-            shutil.copytree(ds_location, self.config.cache_path, dirs_exist_ok=True)
+            shutil.copytree(ds_location, self.config.cache_path, dirs_exist_ok=True, copy_function=shutil.copy)
 
             # adjust the context values such that the factories infer correct paths
             self.context.set(BASE_DATASET_PATH_CONTEXT_KEY, self.config.cache_path, overwrite=True)
