@@ -395,7 +395,8 @@ außerdem bei LOO auch Sliding_window index??
 def get_example_preprocessing_config(output_directory: str,
                                      input_file_path: str,
                                      min_sequence_length: int,
-                                     window_size: Optional[int] = None,
+                                     window_markov_length: Optional[int] = None,
+                                     window_target_length: Optional[int] = None,
                                      session_end_offset: Optional[int] = None) -> DatasetPreprocessingConfig:
     prefix = "example"
     context = Context()
@@ -417,11 +418,12 @@ def get_example_preprocessing_config(output_directory: str,
                               CreateNextItemIndex([MetaInformation("item", column_name="item_id", type="str")],
                                                   RemainingSessionPositionExtractor(min_sequence_length)),
                               CreateSlidingWindowIndex([MetaInformation("item", column_name="item_id", type="str")],
-                                SlidingWindowPositionExtractor(window_size, session_end_offset))
+                                SlidingWindowPositionExtractor(window_markov_length, window_target_length, session_end_offset))
                               ],
                                               complete_split_actions=[
                                                   CreateVocabulary(columns, prefixes=[prefix]),
                                                   CreatePopularity(columns, prefixes=[prefix])]),
+
                              CreateLeaveOneOutSplit(MetaInformation("item", column_name="item_id", type="str"),
                                                     inner_actions=
                                                     [CreateNextItemIndex(
@@ -447,7 +449,8 @@ register_preprocessing_config_provider("example",
                                        PreprocessingConfigProvider(get_example_preprocessing_config,
                                                                    output_directory="./example",
                                                                    input_file_path="../tests/example_dataset/example.csv",
-                                                                   min_sequence_length=2,
-                                                                   window_size=2,
+                                                                   min_sequence_length=3,
+                                                                   window_markov_length=2,
+                                                                   window_target_length=1,
                                                                    session_end_offset=0
                                                                    ))

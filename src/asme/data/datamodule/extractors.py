@@ -59,25 +59,27 @@ class SlidingWindowPositionExtractor(TargetPositionExtractor):
     """
     The SlidingWindowPositionExtractor returns all indices between [min_input_length; len(sequence) - session_end_offset]
 
+    :param window_size: The size of each "window" of the session. Each window consists of a sequence
+                        order and number of targets.
+    :param session_end_offset: Indicates how many items are cut off from the right. Used for leave one out
+
     Example:
     session: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    window_size: 5, which is computed by the sum of the sequence_length and target_length
-    Since there often is more than one target per "slide", we return the position of the last target.
-    The session_offset gibt an, wieviele Elemente von rechts nicht als targets betrachtet werden. (LOO)
-    Also since we only use step_size=1 when sliding over the sequence with the window, we return a range.
-    Die min_input_length als optionaler Parameter wird verwendet, falls
-    Aber wie gehen wir mit den jeweiligen Größen und Padding um?
-    -> Vergleich mit Caser/Cosrec
-    """
-    def __init__(self, window_size: int, session_end_offset: int, min_input_length: Optional[int] = None):
-        self.window_size = window_size
-        self.session_end_offset = session_end_offset
+    window_size: 5, session_offset: 2
 
-        if min_input_length is None:
-            self.min_input_length = self.window_size - 1
-        else:
-            self.min_input_length = min_input_length
+    sequences would be (started from the right): [1, 2, 3, 4, 5], [2, 3, 4, 5, 6], [3, 4, 5, 6, 7], [4, 5, 6, 7, 8]
+
+    -> we need the position of each last target:
+    so the position of 5, 6, 7, 8 which is index 4 - 7 -> windowsize-1 to sequence_length-session_offset
+
+    That means we return the range between 4-7. With that information, the window size and the target size of each window
+    we can reconstruct each window easily.
+
+    """
+    def __init__(self, window_markov_length: int, window_target_length: int, session_end_offset: int, ):
+        self.window_size = window_markov_length + window_target_length
+        self.session_end_offset = session_end_offset
 
     def apply(self, session: Dict[str, Any]) -> Iterable[int]:
         sequence = session[ITEM_SEQ_ENTRY_NAME]
-        return range(self.min_input_length, len(sequence) - self.session_end_offset)
+        return range(self.window_size - 1, len(sequence) - self.session_end_offset)

@@ -1,7 +1,7 @@
-local base_path = "../tests/example_dataset/";
+local base_path = "/mnt/c/Users/seife/work/recommender/tests/example_dataset/";
 local output_path = '/tmp/experiments/caser';
 local number_of_targets = 1;
-local seq_length = 2;
+local markov_length = 2;
 local max_seq_length = 4;
 local dataset = 'example';
 local metrics =  {
@@ -18,11 +18,14 @@ local metrics =  {
             file_prefix: dataset,
             num_workers: 0,
             batch_size: 9,
+            pad_direction: "left",
             dynamic_padding: false,
-            window_size: seq_length + number_of_targets,
-            number_target_interactions: number_of_targets
+            window_markov_length: markov_length,
+            window_target_length: number_of_targets
         },
         preprocessing: {
+            input_file_path: base_path + "example.csv",
+            output_directory: base_path
         }
     },
     templates: {

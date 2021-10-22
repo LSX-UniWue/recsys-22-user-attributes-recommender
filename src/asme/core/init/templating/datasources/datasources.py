@@ -205,9 +205,9 @@ class LeaveOneOutSequenceWindowDatasetBuilder(DatasetBuilder):
 
     def build_dataset_definition(self, stage: Stage, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = Path(config['path'])
-        sequence_length = config["sequence_length"]
-        target_length = config["target_length"]
-        window_size = sequence_length + target_length
+        window_markov_length = config["window_markov_length"]
+        window_target_length = config["window_target_length"]
+        window_size = window_markov_length + window_target_length
         prefix = _get_prefix(config, stage)
         prefix = f"{prefix}.{stage.value}"
         csv_file = base_path / f'{prefix}.csv'
@@ -233,9 +233,9 @@ class NextPositionWindowDatasetBuilder(DatasetBuilder):
 
     def build_dataset_definition(self, stage: Stage, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = Path(config['path'])
-        sequence_length = config["sequence_length"]
-        target_length = config["target_length"]
-        window_size = sequence_length + target_length
+        window_markov_length = config["window_markov_length"]
+        window_target_length = config["window_target_length"]
+        window_size = window_markov_length + window_target_length
         prefix = _get_prefix(config, stage)
         prefix = f"{prefix}.{stage.value}"
         csv_file = base_path / f'{prefix}.csv'
