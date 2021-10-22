@@ -13,10 +13,11 @@ import pandas as pd
 from tqdm import tqdm
 
 from asme.core.init.context import Context
+from asme.core.init.templating.datasources.datasources import DatasetSplit
 from asme.core.tokenization.tokenizer import Tokenizer
 from asme.core.tokenization.vocabulary import CSVVocabularyReaderWriter, Vocabulary, VocabularyBuilder
 from asme.core.utils.logging import get_root_logger
-from asme.data import RATIO_SPLIT_PATH_CONTEXT_KEY, LOO_SPLIT_PATH_CONTEXT_KEY
+from asme.data import RATIO_SPLIT_PATH_CONTEXT_KEY, LOO_SPLIT_PATH_CONTEXT_KEY, CURRENT_SPLIT_PATH_CONTEXT_KEY
 from asme.data.base.csv_index_builder import CsvSessionIndexer
 from asme.data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from asme.data.datamodule.converters import CsvConverter
@@ -36,7 +37,6 @@ PREFIXES_KEY = "prefixes"
 DELIMITER_KEY = "delimiter"
 SEED_KEY = "seed"
 INPUT_DIR_KEY = "input_dir"
-SPLIT_BASE_DIRECTORY_PATH = "split_base_directory"
 SPLIT_FILE_PREFIX = "split_file_prefix"
 SPLIT_FILE_SUFFIX = "split_file_suffix"
 
@@ -711,10 +711,15 @@ class UseExistingSplit(PreprocessingAction):
     - `PREFIXES_KEY` - The prefixes to use when naming files in the split.
     
     Sets context parameters:
-        None
+    - `RATIO_SPLIT_PATH_CONTEXT_KEY` or `LOO_SPLIT_PATH_CONTEXT_KEY` depending on which split type was specified.
     """
 
-    def __init__(self, split_names: List[str], per_split_actions: List[PreprocessingAction] = None):
+    def __init__(self,
+                 split_names: List[str],
+                 split_type: DatasetSplit,
+                 complete_split_actions: List[PreprocessingAction] = None,
+                 per_split_actions: List[PreprocessingAction] = None,
+                 update_paths: bool = True):
         """
         :param split_names: Names of splits to process (e.g. ["train", "validation", "test"].
         :param per_split_actions: A list of action that should be applied for each split.
@@ -722,17 +727,37 @@ class UseExistingSplit(PreprocessingAction):
         if split_names is None or len(split_names) == 0:
             raise Exception(f"At least one name for a split must be supplied.")
         self.split_names = split_names
+        self.split_type = split_type
+        self.complete_split_actions = [] if complete_split_actions is None else complete_split_actions
         self.per_split_actions = [] if per_split_actions is None else per_split_actions
+        self.update_paths = update_paths
 
     def name(self) -> str:
         return f"Use existing split."
 
     def _run(self, context: Context) -> None:
 
-        split_base_directory = context.get(SPLIT_BASE_DIRECTORY_PATH)
+        split_base_directory = context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY)
+
+        if self.split_type == DatasetSplit.RATIO_SPLIT:
+            context.set(RATIO_SPLIT_PATH_CONTEXT_KEY, split_base_directory)
+        else:
+            context.set(LOO_SPLIT_PATH_CONTEXT_KEY, split_base_directory)
 
         for split_name in self.split_names:
             self._process_split(context, split_base_directory, split_name)
+
+        self._process_complete_split(context, split_base_directory)
+
+    def _process_complete_split(self,
+                                context: Context,
+                                split_base_path_directory: Path):
+
+        cloned = self._prepare_context_for_complete_split_actions(context, split_base_path_directory)
+
+        # Apply the necessary preprocessing, i.e. session index generation
+        for action in self.complete_split_actions:
+            action._run(cloned)
 
     def _process_split(self,
                        context: Context,
@@ -759,16 +784,39 @@ class UseExistingSplit(PreprocessingAction):
 
         return cloned
 
+    def _prepare_context_for_complete_split_actions(self, context: Context, split_base_directory: Path) -> Context:
+        cloned = copy.deepcopy(context)
+        cloned.set(OUTPUT_DIR_KEY, split_base_directory, overwrite=True)
+        # If enabled, change paths to point to the train split, e.g. for creating the vocabulary or popularities
+        if self.update_paths:
+            current_prefixes = context.get(PREFIXES_KEY)
+            train_prefix = current_prefixes + [SplitNames.train.name]
+            cloned.set(PREFIXES_KEY, train_prefix, overwrite=True)
+            cloned.set(MAIN_FILE_KEY, split_base_directory / f"{format_prefix(train_prefix)}.csv", overwrite=True)
+            cloned.set(SESSION_INDEX_KEY, split_base_directory / f"{format_prefix(train_prefix)}.session.idx",
+                       overwrite=True)
+
+        return cloned
+
     def _dry_run(self, context: Context) -> None:
-        pass
+        split_base_directory = context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY)
+        if self.split_type == DatasetSplit.RATIO_SPLIT:
+            context.set(RATIO_SPLIT_PATH_CONTEXT_KEY, split_base_directory)
+        else:
+            context.set(LOO_SPLIT_PATH_CONTEXT_KEY, split_base_directory)
 
     def dry_run_available(self, context: Context) -> bool:
-        split_base_directory = context.get(SPLIT_BASE_DIRECTORY_PATH)
+        split_base_directory = context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY)
         for split_name in self.split_names:
             cloned = self._prepare_context_for_per_split_actions(context, split_base_directory, split_name)
             for action in self.per_split_actions:
                 if not action.dry_run_available(cloned):
                     return False
+
+        cloned = self._prepare_context_for_complete_split_actions(context, split_base_directory)
+        for action in self.complete_split_actions:
+            if not action.dry_run_available(cloned):
+                return False
 
         return True
 
