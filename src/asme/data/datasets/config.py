@@ -216,67 +216,6 @@ register_preprocessing_config_provider("games",
                                                                    min_sequence_length=4))
 
 
-def get_dota_shop_preprocessing_config(output_directory: str,
-                                       raw_csv_file_path: str,
-                                       split_directory: str,
-                                       min_sequence_length: int,
-                                       window_size: Optional[int] = None,
-                                       session_end_offset: Optional[int] = None) -> DatasetPreprocessingConfig:
-    prefix = "dota"
-    context = Context()
-    context.set(PREFIXES_KEY, [prefix])
-    context.set(DELIMITER_KEY, "\t")
-    context.set(OUTPUT_DIR_KEY, Path(output_directory))
-
-    full_csv_file_path = Path(raw_csv_file_path)
-    context.set(INPUT_DIR_KEY, full_csv_file_path)
-
-    # assume that the split directory is relative to the full csv file.
-    split_directory_path = full_csv_file_path.parent / split_directory
-    context.set(CURRENT_SPLIT_PATH_CONTEXT_KEY, split_directory_path)
-
-    columns = [MetaInformation("hero_id", column_name="hero_id", type="str"),
-               MetaInformation("item_id", column_name="item_id", type="str")]
-
-    preprocessing_actions = [UseExistingCsv(),
-                             CreateSessionIndex(["id", "hero_id"]),
-                             UseExistingSplit(
-                                 split_names=["train", "validation", "test"],
-                                 split_type=DatasetSplit.RATIO_SPLIT,
-                                 per_split_actions=
-                                 [
-                                     CreateSessionIndex(["id", "hero_id"]),
-                                     CreateNextItemIndex(
-                                         [MetaInformation("item", column_name="item_id", type="str")],
-                                         RemainingSessionPositionExtractor(min_sequence_length)
-                                     ),
-                                     CreateSlidingWindowIndex(
-                                         [MetaInformation("item", column_name="item_id", type="str")],
-                                         SlidingWindowPositionExtractor(window_size, session_end_offset)
-                                     )
-                                 ],
-                                 complete_split_actions=
-                                 [
-                                     CreateVocabulary(columns, prefixes=[prefix]),
-                                 ])
-                             ]
-
-    return DatasetPreprocessingConfig(prefix,
-                                      None,
-                                      Path(output_directory),
-                                      None,
-                                      preprocessing_actions,
-                                      context)
-
-
-register_preprocessing_config_provider("dota",
-                                       PreprocessingConfigProvider(get_dota_shop_preprocessing_config,
-                                                                   output_directory="./dota",
-                                                                   raw_csv_file_path="./dota",
-                                                                   split_directory="split-0.8_0.1_0.1",
-                                                                   min_sequence_length=2,
-                                                                   window_size=12,
-                                                                   session_end_offset=0))
 
 
 def get_steam_preprocessing_config(output_directory: str,

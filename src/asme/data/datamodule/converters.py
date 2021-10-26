@@ -178,16 +178,6 @@ class SteamConverter(CsvConverter):
         df.to_csv(output_file, sep=self.delimiter, index=False)
 
 
-class DotaShopConverter(CsvConverter):
-
-    def __init__(self):
-        pass
-
-    def apply(self, input_dir: Path, output_file: Path):
-        # We assume `input_dir` to be the path to the raw csv file.
-        shutil.copy(input_dir, output_file)
-
-
 class ExampleConverter(CsvConverter):
 
     def __init__(self):
