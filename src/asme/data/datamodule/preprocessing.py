@@ -90,7 +90,7 @@ class PreprocessingAction:
                                 regardless of whether they are already available.
         """
         if not self.dry_run_available(context) or force_execution:
-            self(context)
+            self._run(context)
         else:
             self._dry_run(context)
 
