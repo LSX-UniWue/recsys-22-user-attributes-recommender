@@ -90,7 +90,7 @@ class PreprocessingAction:
                                 regardless of whether they are already available.
         """
         if not self.dry_run_available(context) or force_execution:
-            self._run(context)
+            self(context)
         else:
             self._dry_run(context)
 
@@ -437,7 +437,7 @@ class CreateNextItemIndex(PreprocessingAction):
     def _get_next_item_index_path(context: Context) -> Path:
         output_dir = context.get(OUTPUT_DIR_KEY)
         prefix = format_prefix(context.get(PREFIXES_KEY))
-        return output_dir / f"{prefix}.train.nextitem.idx"
+        return output_dir / f"{prefix}.nextitem.idx"
 
 
 class CreateSlidingWindowIndex(PreprocessingAction):
@@ -758,7 +758,7 @@ class UseExistingSplit(PreprocessingAction):
 
         # Apply the necessary preprocessing, i.e. session index generation
         for action in self.complete_split_actions:
-            action._run(cloned)
+            action(cloned)
 
     def _process_split(self,
                        context: Context,
@@ -770,7 +770,7 @@ class UseExistingSplit(PreprocessingAction):
 
         # Apply the necessary preprocessing, i.e. session index generation
         for action in self.per_split_actions:
-            action._run(cloned)
+            action(cloned)
 
     @staticmethod
     def _prepare_context_for_per_split_actions(context: Context, split_base_directory: Path,
@@ -989,14 +989,14 @@ class CreateRatioSplit(PreprocessingAction):
 
         # Apply the necessary preprocessing, i.e. session index generation
         for action in self.per_split_actions:
-            action._run(cloned)
+            action(cloned)
 
     def _perform_complete_split_actions(self, context: Context, split_output_dir: Path):
         # Modify context such that the operations occur in the new output directory
         cloned = self._prepare_context_for_complete_split_actions(context)
 
         for action in self.complete_split_actions:
-            action._run(cloned)
+            action(cloned)
 
     @staticmethod
     def _write_split(output_file: Path, header: str, reader: CsvDatasetReader, indices: List[int]):
