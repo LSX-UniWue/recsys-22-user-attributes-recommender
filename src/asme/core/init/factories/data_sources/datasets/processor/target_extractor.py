@@ -1,5 +1,7 @@
 from typing import List
 
+from asme.core.init.factories.features.features_factory import FeaturesFactory
+
 from asme.core.init.config import Config
 from asme.core.init.context import Context
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
@@ -22,7 +24,8 @@ class TargetExtractorProcessorFactory(ObjectFactory):
               context: Context
               ) -> TargetExtractorProcessor:
 
-        return TargetExtractorProcessor()
+        features = context.get([FeaturesFactory.KEY])
+        return TargetExtractorProcessor(features)
 
     def is_required(self, context: Context) -> bool:
         return False
