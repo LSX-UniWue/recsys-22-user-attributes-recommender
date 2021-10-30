@@ -1,4 +1,4 @@
-local base_path = "../tests/example_dataset/";
+local base_path = "/mnt/c/Users/seife/work/recommender/tests/example_dataset/";
 local output_path = '/tmp/experiments/pop';
 local max_seq_length = 7;
 local dataset = 'example';
@@ -11,7 +11,7 @@ local metrics =  {
      datamodule: {
         dataset: dataset,
         data_sources: {
-            split: "ratio_split",
+            split: "leave_one_out",
             file_prefix: dataset,
             num_workers: 0,
             train: {
@@ -36,6 +36,8 @@ local metrics =  {
             }
         },
         preprocessing: {
+            input_file_path: base_path + "example.csv",
+            output_directory: base_path
         }
     },
     templates: {
