@@ -211,16 +211,21 @@ class ParameterizedPositiveNegativeTemplateDataSourcesFactory(BaseTemplateDataSo
     TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
 
     def _build_train_datasource(self, config: Config, context: Context) -> DataLoader:
-        par_pos_neg_sampler_processor = {
-            'type': "par_pos_neg",
-            'seed': config.get('seed'),
-            't': config.get('t')
+
+        neg_sampler_processor = {
+            'type': "negative_item_sampler",
+            'number_negative_items': config.get_or_default('number_negative_items', 1)
+        }
+
+        pos_extractor_processor = {
+            'type': 'positive_item_extractor',
+            'number_positive_items': config.get_or_default('number_positive_items', 1)
         }
 
         loader_config = build_default_loader_config(config,
                                                     Stage.TRAIN,
                                                     self.TRAIN_DATASET_BUILDERS,
-                                                    [par_pos_neg_sampler_processor])
+                                                    [neg_sampler_processor, pos_extractor_processor])
 
         return self._build_datasource(loader_config, context)
 

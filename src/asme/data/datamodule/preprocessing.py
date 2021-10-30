@@ -757,7 +757,7 @@ class UseExistingSplit(PreprocessingAction):
 
         # Apply the necessary preprocessing, i.e. session index generation
         for action in self.complete_split_actions:
-            action._run(cloned)
+            action(cloned)
 
     def _process_split(self,
                        context: Context,
@@ -769,7 +769,7 @@ class UseExistingSplit(PreprocessingAction):
 
         # Apply the necessary preprocessing, i.e. session index generation
         for action in self.per_split_actions:
-            action._run(cloned)
+            action(cloned)
 
     @staticmethod
     def _prepare_context_for_per_split_actions(context: Context, split_base_directory: Path,
@@ -988,14 +988,14 @@ class CreateRatioSplit(PreprocessingAction):
 
         # Apply the necessary preprocessing, i.e. session index generation
         for action in self.per_split_actions:
-            action._run(cloned)
+            action(cloned)
 
     def _perform_complete_split_actions(self, context: Context, split_output_dir: Path):
         # Modify context such that the operations occur in the new output directory
         cloned = self._prepare_context_for_complete_split_actions(context)
 
         for action in self.complete_split_actions:
-            action._run(cloned)
+            action(cloned)
 
     @staticmethod
     def _write_split(output_file: Path, header: str, reader: CsvDatasetReader, indices: List[int]):
