@@ -23,6 +23,9 @@ def get_ml_1m_preprocessing_config(output_directory: str,
                                    extraction_directory: str,
                                    min_item_feedback: int,
                                    min_sequence_length: int,
+                                   window_markov_length: Optional[int] = None,
+                                   window_target_length: Optional[int] = None,
+                                   session_end_offset: Optional[int] = None
                                    ) -> DatasetPreprocessingConfig:
     prefix = "ml-1m"
     context = Context()
@@ -49,7 +52,13 @@ def get_ml_1m_preprocessing_config(output_directory: str,
                                                    CreateNextItemIndex(
                                                        [MetaInformation("item", column_name="title", type="str")],
                                                        RemainingSessionPositionExtractor(
-                                                           min_sequence_length))],
+                                                           min_sequence_length)),
+                                                   CreateSlidingWindowIndex(
+                                                       [MetaInformation("item", column_name="title", type="str")],
+                                                       SlidingWindowPositionExtractor(window_markov_length,
+                                                                                      window_target_length,
+                                                                                      session_end_offset))
+                                                   ],
                                               complete_split_actions=
                                                   [CreateVocabulary(columns, prefixes=[prefix]),
                                                    CreatePopularity(columns, prefixes=[prefix])]),
@@ -76,7 +85,11 @@ register_preprocessing_config_provider("ml-1m",
                                                                    output_directory="./ml-1m",
                                                                    extraction_directory="./tmp/ml-1m",
                                                                    min_item_feedback=4,
-                                                                   min_sequence_length=4))
+                                                                   min_sequence_length=4,
+                                                                   window_markov_length=3,
+                                                                   window_target_length=3,
+                                                                   session_end_offset=0
+                                                                   ))
 
 
 def get_ml_20m_preprocessing_config(output_directory: str,
@@ -363,7 +376,7 @@ def get_example_preprocessing_config(output_directory: str,
                               CreateNextItemIndex([MetaInformation("item", column_name="item_id", type="str")],
                                                   RemainingSessionPositionExtractor(min_sequence_length)),
                               CreateSlidingWindowIndex([MetaInformation("item", column_name="item_id", type="str")],
-                                SlidingWindowPositionExtractor(window_markov_length, window_target_length, session_end_offset))
+                              SlidingWindowPositionExtractor(window_markov_length, window_target_length, session_end_offset))
                               ],
                                               complete_split_actions=[
                                                   CreateVocabulary(columns, prefixes=[prefix]),

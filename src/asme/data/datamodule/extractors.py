@@ -57,29 +57,24 @@ class RemainingSessionPositionExtractor(TargetPositionExtractor):
 
 class SlidingWindowPositionExtractor(TargetPositionExtractor):
     """
-    The SlidingWindowPositionExtractor returns all indices between [min_input_length; len(sequence) - session_end_offset]
+    The SlidingWindowPositionExtractor returns all indices between [window_size - 1; len(sequence) - session_end_offset]
 
-    :param window_size: The size of each "window" of the session. Each window consists of a sequence
-                        order and number of targets.
-    :param session_end_offset: Indicates how many items are cut off from the right. Used for leave one out
+    :param window_markov_length: The length of the markov order of each window.
+                                (Each window consists of the markov order and a number of targets)
+    :param window_target_length: Indicates the target size for a window
+    :param session_end_offset: Indicates how many items are cut off from the right
 
-    Example:
-    session: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    window_size: 5, session_offset: 2
 
-    sequences would be (started from the right): [1, 2, 3, 4, 5], [2, 3, 4, 5, 6], [3, 4, 5, 6, 7], [4, 5, 6, 7, 8]
-
-    -> we need the position of each last target:
-    so the position of 5, 6, 7, 8 which is index 4 - 7 -> windowsize-1 to sequence_length-session_offset
-
-    That means we return the range between 4-7. With that information, the window size and the target size of each window
-    we can reconstruct each window easily.
 
     """
-    def __init__(self, window_markov_length: int, window_target_length: int, session_end_offset: int, ):
+    def __init__(self, window_markov_length: int, window_target_length: int, session_end_offset: int):
         self.window_size = window_markov_length + window_target_length
+        self.window_target_length = window_target_length
         self.session_end_offset = session_end_offset
 
     def apply(self, session: Dict[str, Any]) -> Iterable[int]:
         sequence = session[ITEM_SEQ_ENTRY_NAME]
-        return range(self.window_size - 1, len(sequence) - self.session_end_offset)
+        # the sequence will later be left_padded if its length is shorter than the window_size
+        start = self.window_size - 1 if self.window_size <= len(sequence)-self.session_end_offset \
+            else len(sequence)-self.session_end_offset-self.window_target_length
+        return range(start, len(sequence) - self.session_end_offset)

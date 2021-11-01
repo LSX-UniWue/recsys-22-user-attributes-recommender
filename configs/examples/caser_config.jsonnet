@@ -1,8 +1,8 @@
-local base_path = "/mnt/c/Users/seife/work/recommender/tests/example_dataset/";
+local base_path = "../tests/example_dataset/";
 local output_path = '/tmp/experiments/caser';
 local number_of_targets = 1;
 local markov_length = 2;
-local max_seq_length = 4;
+local max_seq_length = markov_length;
 local dataset = 'example';
 local metrics =  {
     mrr: [1, 3, 5],
@@ -24,8 +24,6 @@ local metrics =  {
             window_target_length: number_of_targets
         },
         preprocessing: {
-            input_file_path: base_path + "example.csv",
-            output_directory: base_path
         }
     },
     templates: {

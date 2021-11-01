@@ -225,7 +225,7 @@ class ParameterizedPositiveNegativeTemplateDataSourcesFactory(BaseTemplateDataSo
         loader_config = build_default_loader_config(config,
                                                     Stage.TRAIN,
                                                     self.TRAIN_DATASET_BUILDERS,
-                                                    [neg_sampler_processor, pos_extractor_processor])
+                                                    [pos_extractor_processor, neg_sampler_processor])
 
         return self._build_datasource(loader_config, context)
 
@@ -245,6 +245,9 @@ class ParameterizedPositiveNegativeTemplateDataSourcesFactory(BaseTemplateDataSo
 
 
 class SlidingWindowTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
+    """
+
+    """
     WINDOW_TARGET_LENGTH_CONFIG_KEY = 'window_target_length'
     WINDOW_MARKOV_LENGTH_CONFIG_KEY = 'window_markov_length'
 
@@ -257,15 +260,20 @@ class SlidingWindowTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
         window_size = window_markov_length + window_target_length
         fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(window_size)
 
-        par_pos_neg_sampler_processor = {
-            'type': "par_pos_neg",
-            't': window_target_length
+        pos_extractor_processor = {
+            'type': 'positive_item_extractor',
+            'number_positive_items': config.get_or_default('number_positive_items', 1)
+        }
+
+        neg_sampler_processor = {
+            'type': "negative_item_sampler",
+            'number_negative_items': config.get_or_default('number_negative_items', 1)
         }
 
         builders = [NextPositionWindowDatasetBuilder(),
                     LeaveOneOutSequenceWindowDatasetBuilder()]
 
-        processors = [fixed_sequence_length_processor, par_pos_neg_sampler_processor]
+        processors = [fixed_sequence_length_processor, pos_extractor_processor, neg_sampler_processor]
 
         loader_config = build_default_loader_config(config, Stage.TRAIN, builders, processors)
         return self._build_datasource(loader_config, context)
