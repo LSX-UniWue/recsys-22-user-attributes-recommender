@@ -1,3 +1,5 @@
+import lzma
+import tarfile
 import zipfile
 from abc import abstractmethod
 from pathlib import Path
@@ -35,13 +37,34 @@ class Unzipper(Unpacker):
         """
         :param target_directory: The directory where the extracted files wil be saved.
         """
-        self.target_directory = target_directory
+        self._target_directory = target_directory
 
     def name(self) -> str:
         return "Dataset Unzipper"
 
     def apply(self, location: Path) -> Path:
         with zipfile.ZipFile(location) as zip_file:
-            zip_file.extractall(self.target_directory)
+            zip_file.extractall(self._target_directory)
 
-        return self.target_directory
+        return self._target_directory
+
+
+class TarXzUnpacker(Unpacker):
+    """
+    Unpacker for datasets compressed as *.tar.xz (i.e using LZMA)
+    """
+
+    def __init__(self, target_directory: Path):
+        """
+        :param target_directory: The directory where the extracted files wil be saved.
+        """
+        self._target_directory = target_directory
+
+    def name(self) -> str:
+        return "Dataset XZ Unpacker"
+
+    def apply(self, location: Path) -> Path:
+        with tarfile.open(location) as tar_file:
+            tar_file.extractall(self._target_directory)
+
+        return self._target_directory

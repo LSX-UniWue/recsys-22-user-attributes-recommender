@@ -183,7 +183,9 @@ class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
 
         csv_file_path = base_path / f'{prefix}.csv'
         csv_file_index_path = base_path / f'{prefix}.session.idx'
-        nip_index_file_path = base_path / 'loo' / f'{prefix}.{stage.value}.nextitem.idx'
+        if stage.value is not Stage.TRAIN:
+            raise ValueError(f'The next item dataset builder, when using the leave-one-out-split, is only available for training.')
+        nip_index_file_path = base_path / 'loo' / f'{prefix}.nextitem.idx'
         return {
             'type': 'sequence_position',
             'csv_file': str(csv_file_path),
