@@ -1,5 +1,4 @@
-local base_path = "/mnt/c/Users/seife/work/recommender/tests/example_dataset/";
-local output_path = '/tmp/experiments/pop';
+local base_path = "../tests/example_dataset/";
 local max_seq_length = 7;
 local dataset = 'example';
 local metrics =  {
@@ -8,10 +7,15 @@ local metrics =  {
     ndcg: [1, 3, 5]
 };
 {
+    templates: {
+        unified_output: {
+            path: "/tmp/experiments/pop"
+        },
+     },
      datamodule: {
         dataset: dataset,
         data_sources: {
-            split: "leave_one_out",
+            split: "ratio_split",
             file_prefix: dataset,
             num_workers: 0,
             train: {
@@ -35,16 +39,11 @@ local metrics =  {
                 ]
             }
         },
+
         preprocessing: {
-            input_file_path: base_path + "example.csv",
-            output_directory: base_path
+
         }
     },
-    templates: {
-        unified_output: {
-            path: output_path
-        },
-     },
     module: {
         type: "pop",
         metrics: {
@@ -52,7 +51,7 @@ local metrics =  {
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: base_path + dataset + ".popularity.item_id.txt",
+                sample_probability_file: "example.popularity.item_id.txt",
                 num_negative_samples: 2,
                 metrics: metrics
             }
