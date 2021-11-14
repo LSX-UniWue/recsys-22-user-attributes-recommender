@@ -12,7 +12,7 @@ from asme.data.datamodule.preprocessing import ConvertToCsv, TransformCsv, Creat
     UseExistingCsv, UseExistingSplit, \
     CreateSlidingWindowIndex, INPUT_DIR_KEY, CopyMainFile
 from asme.data.datamodule.converters import YooChooseConverter, Movielens1MConverter, ExampleConverter, \
-    Movielens20MConverter, AmazonConverter, SteamConverter
+    Movielens20MConverter, AmazonConverter, SteamConverter, SpotifyConverter
 from asme.data.datamodule.extractors import RemainingSessionPositionExtractor, SlidingWindowPositionExtractor
 from asme.data.datamodule.unpacker import Unzipper
 from asme.data.datamodule.preprocessing import PREFIXES_KEY
@@ -328,6 +328,63 @@ def get_yoochoose_preprocessing_config(output_directory: str,
 register_preprocessing_config_provider("yoochoose",
                                        PreprocessingConfigProvider(get_yoochoose_preprocessing_config,
                                                                    output_directory="./yoochoose",
+                                                                   min_item_feedback=4,
+                                                                   min_sequence_length=4))
+
+
+
+
+def get_spotify_preprocessing_config(output_directory: str,
+                                       input_directory: str,
+                                       min_item_feedback: int,
+                                       min_sequence_length: int,
+                                       ) -> DatasetPreprocessingConfig:
+    prefix = "spotify"
+    context = Context()
+    context.set(PREFIXES_KEY, [prefix])
+    context.set(DELIMITER_KEY, ",")
+    context.set(INPUT_DIR_KEY, Path(input_directory))
+    context.set(OUTPUT_DIR_KEY, Path(output_directory))
+
+    columns = [MetaInformation("SessionId", type="str"),
+               MetaInformation("ItemId", type="str"),
+               MetaInformation("Time", type="int", run_tokenization=False)]
+
+    preprocessing_actions = [ConvertToCsv(SpotifyConverter()),
+                             GroupAndFilter("items_filtered", "ItemId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
+                             GroupAndFilter("sessions_filtered", "SessionId", GroupedFilter("count", lambda v: v >= min_sequence_length)),
+                             CreateSessionIndex(["SessionId"]),
+                             CreateRatioSplit(0.8, 0.1, 0.1,
+                                              per_split_actions=
+                                              [CreateSessionIndex(["SessionId"]),
+                                               CreateNextItemIndex(
+                                                   [MetaInformation("item", column_name="ItemId", type="str")],
+                                                   RemainingSessionPositionExtractor(
+                                                       min_sequence_length))],
+                                              complete_split_actions=
+                                              [CreateVocabulary(columns, prefixes=[prefix]),
+                                               CreatePopularity(columns, prefixes=[prefix])]),
+                             CreateLeaveOneOutSplit(MetaInformation("item", column_name="ItemId", type="str"),
+                                                    inner_actions=
+                                                    [CreateNextItemIndex(
+                                                        [MetaInformation("item", column_name="ItemId", type="str")],
+                                                        RemainingSessionPositionExtractor(
+                                                            min_sequence_length)),
+                                                        CreateVocabulary(columns),
+                                                        CreatePopularity(columns)]),
+                             CopyMainFile()]
+
+    return DatasetPreprocessingConfig(prefix,
+                                      None,
+                                      Path(output_directory),
+                                      None,
+                                      preprocessing_actions,
+                                      context)
+
+
+register_preprocessing_config_provider("spotify",
+                                       PreprocessingConfigProvider(get_spotify_preprocessing_config,
+                                                                   output_directory="./spotify",
                                                                    min_item_feedback=4,
                                                                    min_sequence_length=4))
 

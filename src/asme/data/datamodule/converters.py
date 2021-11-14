@@ -3,6 +3,8 @@ import shutil
 from abc import abstractmethod
 from datetime import datetime
 from pathlib import Path
+from typing import List, Any, Dict
+from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
@@ -18,6 +20,7 @@ class CsvConverter:
     Base class for all dataset converters. Subtypes of this class should be able to convert a specific dataset into a
     single CSV file.
     """
+
     @abstractmethod
     def apply(self, input_dir: Path, output_file: Path):
         """
@@ -39,7 +42,6 @@ class YooChooseConverter(CsvConverter):
         self.delimiter = delimiter
 
     def apply(self, input_dir: Path, output_file: Path):
-
         data = pd.read_csv(input_dir.joinpath('yoochoose-clicks.dat'),
                            sep=',',
                            header=None,
@@ -176,6 +178,74 @@ class SteamConverter(CsvConverter):
                                          self.STEAM_TIMESTAMP])
         df = df.sort_values(by=[self.STEAM_SESSION_ID, self.STEAM_TIMESTAMP])
         df.to_csv(output_file, sep=self.delimiter, index=False)
+
+
+class Track:
+    def __init__(self, name: str, album: str, artist: str):
+        self.name = name
+        self.album = album
+        self.artist = artist
+
+
+class SpotifyConverter(CsvConverter):
+    RAW_TRACKS_KEY = "tracks"
+    RAW_TIMESTAMP_KEY = "modified_at"
+    RAW_PLAYLIST_ID_KEY = "pid"
+    RAW_TRACK_NAME_KEY = "track_name"
+    SPOTIFY_ALBUM_NAME_KEY = "album_name"
+    SPOTIFY_ARTIST_NAME_KEY = "artist_name"
+    SPOTIFY_SESSION_ID = "playlist_id"
+    _SPOTIFY_TIME_COLUMN = "playlist_timestamp"
+    # SPOTIFY_DELIMITER = ","
+    SPOTIFY_ITEM_ID = RAW_TRACK_NAME_KEY
+
+    # SPOTIFY_DATETIME_PARSER = DateTimeParser(time_column_name=_SPOTIFY_TIME_COLUMN,
+    #                                          date_time_parse_function=lambda x: datetime.fromtimestamp(int(x)))
+
+    def __init__(self, delimiter=","):
+        self.delimiter = delimiter
+
+    def _process_playlist(self, playlist: Dict) -> List[Track]:
+        tracks_list: List[Track] = []
+        for track in playlist[self.RAW_TRACKS_KEY]:
+            track_name: str = track[self.RAW_TRACK_NAME_KEY]
+            album_name: str = track[self.SPOTIFY_ALBUM_NAME_KEY]
+            artist_name: str = track[self.SPOTIFY_ARTIST_NAME_KEY]
+            tracks_list += [Track(name=track_name, album=album_name, artist=artist_name)]
+        return tracks_list
+
+    def apply(self, input_dir: Path, output_file: Path):
+        index: List[int] = []
+        dataset: List[List[Any]] = []
+        filenames = os.listdir(input_dir)
+        for filename in tqdm(sorted(filenames), desc=f"Process playlists in file"):
+            if filename.startswith("mpd.slice.") and filename.endswith(".json"):
+                file_path: Path = input_dir.joinpath(filename)
+                f = open(file_path)
+                js = f.read()
+                f.close()
+                mpd_slice = json.loads(js)
+                for playlist in mpd_slice["playlists"]:
+                    playlist_id = playlist[self.RAW_PLAYLIST_ID_KEY]
+                    playlist_timestamp = playlist[self.RAW_TIMESTAMP_KEY]
+                    # Get songs in playlist
+                    playlist_tracks = self._process_playlist(playlist)
+                    for track in playlist_tracks:
+                        index += [playlist_id]
+                        dataset += [{self._SPOTIFY_TIME_COLUMN: playlist_timestamp,
+                                     self.SPOTIFY_ITEM_ID: track.name,
+                                     self.SPOTIFY_ALBUM_NAME_KEY: track.album,
+                                     self.SPOTIFY_ARTIST_NAME_KEY: track.artist}]
+
+        # Write data to CSV
+        spotify_dataframe = pd.DataFrame(data=dataset,
+                                         index=index)
+        spotify_dataframe.index.name = self.SPOTIFY_SESSION_ID
+        if not os.path.exists(output_file):
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+        spotify_dataframe.to_csv(output_file, sep=self.delimiter, index=False)
+
+        # data = data.sort_values(self.YOOCHOOSE_SESSION_ID_KEY) ?
 
 
 class ExampleConverter(CsvConverter):
