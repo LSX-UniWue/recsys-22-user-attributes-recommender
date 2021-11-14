@@ -375,9 +375,9 @@ def get_spotify_preprocessing_config(output_directory: str,
                              CopyMainFile()]
 
     return DatasetPreprocessingConfig(prefix,
-                                      "https://spotify-million-playlist-dataset.s3.eu-central-1.wasabisys.com/files/spotify_million_playlist_dataset.zip",
+                                      None,  # "https://spotify-million-playlist-dataset.s3.eu-central-1.wasabisys.com/files/spotify_million_playlist_dataset.zip",
                                       Path(output_directory),
-                                      Unzipper(Path(input_directory)),
+                                      None,  # Unzipper(Path(input_directory)),
                                       preprocessing_actions,
                                       context)
 
