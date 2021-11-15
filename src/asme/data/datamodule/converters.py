@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from asme.datasets.dataset_pre_processing.utils import read_csv
+from asme.data.datamodule.util import read_csv
 import json
 import csv
 import gzip
@@ -176,16 +176,6 @@ class SteamConverter(CsvConverter):
                                          self.STEAM_TIMESTAMP])
         df = df.sort_values(by=[self.STEAM_SESSION_ID, self.STEAM_TIMESTAMP])
         df.to_csv(output_file, sep=self.delimiter, index=False)
-
-
-class DotaShopConverter(CsvConverter):
-
-    def __init__(self):
-        pass
-
-    def apply(self, input_dir: Path, output_file: Path):
-        # We assume `input_dir` to be the path to the raw csv file.
-        shutil.copy(input_dir, output_file)
 
 
 class ExampleConverter(CsvConverter):

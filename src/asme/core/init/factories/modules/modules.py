@@ -1,12 +1,11 @@
 import inspect
 from dataclasses import dataclass
-
 from typing import List, Any, Dict, Optional, Union, Callable
 
 from asme.core.init.config import Config
 from asme.core.init.context import Context
-from asme.core.init.factories.metrics.metrics_container import MetricsContainerFactory
 from asme.core.init.factories.features.tokenizer_factory import get_tokenizer_key_for_voc
+from asme.core.init.factories.metrics.metrics_container import MetricsContainerFactory
 from asme.core.init.factories.util import require_config_keys
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.core.tokenization.tokenizer import Tokenizer
@@ -16,6 +15,7 @@ METRICS_PARAM_NAME = 'metrics'
 LOSS_FUNCTION_PARAM_NAME = 'loss_function'
 TOKENIZER_SUFFIX = '_tokenizer'
 VOCAB_SIZE_SUFFIX = '_vocab_size'
+MODEL_SUFFIX = '_' + MODEL_PARAM_NAME
 
 
 @dataclass
@@ -169,6 +169,24 @@ class GenericModelFactory(ObjectFactory):
             named_parameters[parameter] = config.get_or_default(parameter, default_value)
 
         vocab_vars = _filter_parameters(parameters, lambda dict_item: dict_item[0].endswith(VOCAB_SIZE_SUFFIX))
+
+        # Collect parameters that are a model themselves
+        model_params = _filter_parameters(parameters, lambda param: param[0].endswith(MODEL_SUFFIX))
+        if len(model_params) > 0:
+            # Build all parameter models recursively
+            for model_param_name, model_param_info in model_params.items():
+                if not config.has_path([model_param_name]):
+                    if model_param_info.default_value == inspect._empty:
+                        raise KeyError(
+                            f"Model '{self._model_cls.__name__}' specifies a sub-model '{model_param_name}' of type "
+                            f"'{model_param_info.parameter_type}' with no default value but no configuration section "
+                            f"named '{model_param_name}' was found in the config.")
+                else:
+                    factory = GenericModelFactory(model_param_info.parameter_type)
+                    # We assume that the config entry has the same name as the model parameter
+                    model_config = config.get_config([model_param_name])
+                    model = factory.build(model_config, context)
+                    named_parameters[model_param_name] = model
 
         for vocab_var in vocab_vars.keys():
             tokenizer_to_use = vocab_var.replace(VOCAB_SIZE_SUFFIX, '')
