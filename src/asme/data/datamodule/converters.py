@@ -200,7 +200,7 @@ class SpotifyConverter(CsvConverter):
     # SPOTIFY_DATETIME_PARSER = DateTimeParser(time_column_name=_SPOTIFY_TIME_COLUMN,
     #                                          date_time_parse_function=lambda x: datetime.fromtimestamp(int(x)))
 
-    def __init__(self, delimiter=","):
+    def __init__(self, delimiter="\t"):
         self.delimiter = delimiter
 
     def _process_playlist(self, playlist: Dict) -> List[Track]:
