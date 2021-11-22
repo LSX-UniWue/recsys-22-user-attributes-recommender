@@ -25,7 +25,7 @@ local dataset = 'spotify';
             mask_seed: 42
         },
         preprocessing: {
-            extraction_directory: "/scratch/jane-doe-framework/students/spotify/",
+            input_directory: "/scratch/jane-doe-framework/students/spotify/",
             output_directory: base_path,
             min_item_feedback: 4,
             min_sequence_length: 4,
