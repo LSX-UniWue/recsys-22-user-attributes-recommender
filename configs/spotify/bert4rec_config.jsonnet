@@ -19,7 +19,7 @@ local dataset = 'spotify';
             path: base_path,
             file_prefix: dataset,
             num_workers: 4,
-            batch_size: 64
+            batch_size: 64,
             max_seq_length: max_seq_length,
             mask_probability: 0.2,
             mask_seed: 42
