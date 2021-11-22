@@ -231,16 +231,19 @@ class SpotifyConverter(CsvConverter):
                     # Get songs in playlist
                     playlist_tracks = self._process_playlist(playlist)
                     for track in playlist_tracks:
-                        index += [playlist_id]
-                        dataset += [{self._SPOTIFY_TIME_COLUMN: playlist_timestamp,
+                        # index += [playlist_id]
+                        dataset += [{self.SPOTIFY_SESSION_ID: playlist_id,
+                                     self._SPOTIFY_TIME_COLUMN: playlist_timestamp,
                                      self.SPOTIFY_ITEM_ID: track.name,
                                      self.SPOTIFY_ALBUM_NAME_KEY: track.album,
                                      self.SPOTIFY_ARTIST_NAME_KEY: track.artist}]
 
         # Write data to CSV
         spotify_dataframe = pd.DataFrame(data=dataset,
-                                         index=index)
-        spotify_dataframe.index.name = self.SPOTIFY_SESSION_ID
+                                         #index=index,
+                                         columns=[self.SPOTIFY_SESSION_ID, self._SPOTIFY_TIME_COLUMN, self.SPOTIFY_ITEM_ID, self.SPOTIFY_ALBUM_NAME_KEY, self.SPOTIFY_ARTIST_NAME_KEY]
+                                        )
+        #spotify_dataframe.index.name = self.SPOTIFY_SESSION_ID
         if not os.path.exists(output_file):
             output_file.parent.mkdir(parents=True, exist_ok=True)
         spotify_dataframe.to_csv(output_file, sep=self.delimiter, index=False)
