@@ -3,6 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Optional, Dict, Union
 
+import pytorch_lightning as pl
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 
 
@@ -70,16 +71,43 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
     def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
         super().on_validation_epoch_end(trainer, pl_module)
         super().to_yaml(os.path.join(self.output_base_path, self.output_filename))
-        symlink_path = os.path.join(self.output_base_path, self.symlink_name)
+
+        # Save a symlink to the best model checkpoint
+        self._save_best_model_checkpoint_symlink()
+
+        # Also save the raw weights of the current best model
+        self._save_best_checkpoint_weights_only(trainer)
+
+    def _save_best_model_checkpoint_symlink(self):
+        symlink_path = self.output_base_path.joinpath(self.symlink_name)
         # here we only link relative paths, to prevent wrong links when
         # the result path is mounted into a VM, container …
         best_checkpoint_path = Path(self.best_model_path).name
         try:
-            os.symlink(best_checkpoint_path, symlink_path)
+            symlink_path.symlink_to(best_checkpoint_path)
         except OSError as e:
             if e.errno == errno.EEXIST:
-                os.remove(symlink_path)
-                os.symlink(best_checkpoint_path, symlink_path)
+                symlink_path.unlink()
+                symlink_path.symlink_to(best_checkpoint_path)
+
+    def _save_best_checkpoint_weights_only(self, trainer: "pl.Trainer"):
+        # This just figures out whether a file extension was already provided with the symlink name and uses it if so
+        ext = Path(self.symlink_name).suffix
+        if ext is "":
+            best_checkpoint_weights_only_name = f"{self.symlink_name}-weights-only.ckpt"
+        else:
+            name = Path(self.symlink_name).stem
+            # The dot between the file name and extension is already included in "ext"
+            best_checkpoint_weights_only_name = f"{name}-weights-only{ext}"
+
+        best_checkpoint_weights_only_path = self.output_base_path.joinpath(best_checkpoint_weights_only_name)
+
+        # If we have saved a weights-only best checkpoint previously, remove it
+        if best_checkpoint_weights_only_path.exists():
+            best_checkpoint_weights_only_path.unlink()
+
+        # Save the checkpoint using the trainer directly
+        trainer.save_checkpoint(best_checkpoint_weights_only_path, weights_only=True)
 
     @classmethod
     def _format_checkpoint_name(cls,
