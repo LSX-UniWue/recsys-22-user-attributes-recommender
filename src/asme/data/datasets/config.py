@@ -346,28 +346,39 @@ def get_spotify_preprocessing_config(output_directory: str,
     context.set(INPUT_DIR_KEY, Path(input_directory))
     context.set(OUTPUT_DIR_KEY, Path(output_directory))
 
-    columns = [MetaInformation("SessionId", type="str"),
-               MetaInformation("ItemId", type="str"),
-               MetaInformation("Time", type="int", run_tokenization=False)]
+    columns = [MetaInformation("track_name", type="str"),
+               MetaInformation("artist_name", type="str"),
+               MetaInformation("playlist_id", type="str"),
+               MetaInformation("album_name", type="str")]
+
+
+    #     RAW_TRACKS_KEY = "tracks"
+    #     RAW_TIMESTAMP_KEY = "modified_at"
+    #     RAW_PLAYLIST_ID_KEY = "pid"
+    #     RAW_TRACK_NAME_KEY = "track_name"
+    #     SPOTIFY_ALBUM_NAME_KEY = "album_name"
+    #     SPOTIFY_ARTIST_NAME_KEY = "artist_name"
+    #     SPOTIFY_SESSION_ID = "playlist_id"
+    #     _SPOTIFY_TIME_COLUMN = "playlist_timestamp"
 
     preprocessing_actions = [ConvertToCsv(SpotifyConverter()),
-                             GroupAndFilter("items_filtered", "ItemId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
-                             GroupAndFilter("sessions_filtered", "SessionId", GroupedFilter("count", lambda v: v >= min_sequence_length)),
-                             CreateSessionIndex(["SessionId"]),
+                             # GroupAndFilter("items_filtered", "ItemId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
+                             # GroupAndFilter("sessions_filtered", "SessionId", GroupedFilter("count", lambda v: v >= min_sequence_length)),
+                             CreateSessionIndex(["playlist_id"]),
                              CreateRatioSplit(0.8, 0.1, 0.1,
                                               per_split_actions=
-                                              [CreateSessionIndex(["SessionId"]),
+                                              [CreateSessionIndex(["playlist_id"]),
                                                CreateNextItemIndex(
-                                                   [MetaInformation("item", column_name="ItemId", type="str")],
+                                                   [MetaInformation("track", column_name="track_name", type="str")],
                                                    RemainingSessionPositionExtractor(
                                                        min_sequence_length))],
                                               complete_split_actions=
                                               [CreateVocabulary(columns, prefixes=[prefix]),
                                                CreatePopularity(columns, prefixes=[prefix])]),
-                             CreateLeaveOneOutSplit(MetaInformation("item", column_name="ItemId", type="str"),
+                             CreateLeaveOneOutSplit(MetaInformation("track", column_name="track_name", type="str"),
                                                     inner_actions=
                                                     [CreateNextItemIndex(
-                                                        [MetaInformation("item", column_name="ItemId", type="str")],
+                                                        [MetaInformation("track", column_name="track_name", type="str")],
                                                         RemainingSessionPositionExtractor(
                                                             min_sequence_length)),
                                                         CreateVocabulary(columns),
