@@ -1,5 +1,5 @@
-local base_path = "/../ml-1m/";
-local output_path = "../bert4rec_d05/";
+local base_path = "/../spotify/";
+local output_path = "/scratch/jane-doe-framework/students/spotify/";
 local hidden_size = 128;
 local max_seq_length = 200;
 local metrics =  {
@@ -25,7 +25,7 @@ local dataset = 'spotify';
             mask_seed: 42
         },
         preprocessing: {
-            extraction_directory: "/tmp/spotify/",
+            extraction_directory: "/scratch/jane-doe-framework/students/spotify/",
             output_directory: base_path,
             min_item_feedback: 4,
             min_sequence_length: 4,
@@ -43,7 +43,7 @@ local dataset = 'spotify';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: "ml-1m.popularity.title.txt",
+                sample_probability_file: "spotify.popularity.title.txt",
                 num_negative_samples: 100,
                 metrics: metrics
             }
@@ -58,7 +58,7 @@ local dataset = 'spotify';
     },
     features: {
         item: {
-            column_name: "title",
+            column_name: "track_name",
             sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {

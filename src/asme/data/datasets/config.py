@@ -369,16 +369,16 @@ def get_spotify_preprocessing_config(output_directory: str,
                                               per_split_actions=
                                               [CreateSessionIndex(["playlist_id"]),
                                                CreateNextItemIndex(
-                                                   [MetaInformation("track", column_name="track_name", type="str")],
+                                                   [MetaInformation("item", column_name="track_name", type="str")],
                                                    RemainingSessionPositionExtractor(
                                                        min_sequence_length))],
                                               complete_split_actions=
                                               [CreateVocabulary(columns, prefixes=[prefix]),
                                                CreatePopularity(columns, prefixes=[prefix])]),
-                             CreateLeaveOneOutSplit(MetaInformation("track", column_name="track_name", type="str"),
+                             CreateLeaveOneOutSplit(MetaInformation("item", column_name="track_name", type="str"),
                                                     inner_actions=
                                                     [CreateNextItemIndex(
-                                                        [MetaInformation("track", column_name="track_name", type="str")],
+                                                        [MetaInformation("item", column_name="track_name", type="str")],
                                                         RemainingSessionPositionExtractor(
                                                             min_sequence_length)),
                                                         CreateVocabulary(columns),
