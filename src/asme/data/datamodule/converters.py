@@ -191,13 +191,11 @@ class SpotifyConverter(CsvConverter):
     RAW_TRACKS_KEY = "tracks"
     RAW_TIMESTAMP_KEY = "modified_at"
     RAW_PLAYLIST_ID_KEY = "pid"
-    RAW_TRACK_NAME_KEY = "track_name"
+    _SPOTIFY_TIME_COLUMN = "playlist_timestamp"
+    SPOTIFY_SESSION_ID = "playlist_id"
+    SPOTIFY_ITEM_ID = "track_name"
     SPOTIFY_ALBUM_NAME_KEY = "album_name"
     SPOTIFY_ARTIST_NAME_KEY = "artist_name"
-    SPOTIFY_SESSION_ID = "playlist_id"
-    _SPOTIFY_TIME_COLUMN = "playlist_timestamp"
-    # SPOTIFY_DELIMITER = ","
-    SPOTIFY_ITEM_ID = RAW_TRACK_NAME_KEY
 
     # SPOTIFY_DATETIME_PARSER = DateTimeParser(time_column_name=_SPOTIFY_TIME_COLUMN,
     #                                          date_time_parse_function=lambda x: datetime.fromtimestamp(int(x)))
@@ -208,14 +206,13 @@ class SpotifyConverter(CsvConverter):
     def _process_playlist(self, playlist: Dict) -> List[Track]:
         tracks_list: List[Track] = []
         for track in playlist[self.RAW_TRACKS_KEY]:
-            track_name: str = track[self.RAW_TRACK_NAME_KEY]
+            track_name: str = track[self.SPOTIFY_ITEM_ID]
             album_name: str = track[self.SPOTIFY_ALBUM_NAME_KEY]
             artist_name: str = track[self.SPOTIFY_ARTIST_NAME_KEY]
             tracks_list += [Track(name=track_name, album=album_name, artist=artist_name)]
         return tracks_list
 
     def apply(self, input_dir: Path, output_file: Path):
-        index: List[int] = []
         dataset: List[List[Any]] = []
         filenames = os.listdir(input_dir)
         for filename in tqdm(sorted(filenames), desc=f"Process playlists in file"):
@@ -231,7 +228,6 @@ class SpotifyConverter(CsvConverter):
                     # Get songs in playlist
                     playlist_tracks = self._process_playlist(playlist)
                     for track in playlist_tracks:
-                        # index += [playlist_id]
                         dataset += [{self.SPOTIFY_SESSION_ID: playlist_id,
                                      self._SPOTIFY_TIME_COLUMN: playlist_timestamp,
                                      self.SPOTIFY_ITEM_ID: track.name,

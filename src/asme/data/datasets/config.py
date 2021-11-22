@@ -342,24 +342,15 @@ def get_spotify_preprocessing_config(output_directory: str,
     prefix = "spotify"
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
-    context.set(DELIMITER_KEY, ",")
+    context.set(DELIMITER_KEY, "\t")
     context.set(INPUT_DIR_KEY, Path(input_directory))
     context.set(OUTPUT_DIR_KEY, Path(output_directory))
 
-    columns = [MetaInformation("track_name", type="str"),
-               MetaInformation("artist_name", type="str"),
-               MetaInformation("playlist_id", type="str"),
-               MetaInformation("album_name", type="str")]
-
-
-    #     RAW_TRACKS_KEY = "tracks"
-    #     RAW_TIMESTAMP_KEY = "modified_at"
-    #     RAW_PLAYLIST_ID_KEY = "pid"
-    #     RAW_TRACK_NAME_KEY = "track_name"
-    #     SPOTIFY_ALBUM_NAME_KEY = "album_name"
-    #     SPOTIFY_ARTIST_NAME_KEY = "artist_name"
-    #     SPOTIFY_SESSION_ID = "playlist_id"
-    #     _SPOTIFY_TIME_COLUMN = "playlist_timestamp"
+    columns = [MetaInformation("playlist_id", type="str"),
+               MetaInformation("playlist_timestamp", type="str", run_tokenization=False),
+               MetaInformation("track_name", type="str"),
+               MetaInformation("album_name", type="str"),
+               MetaInformation("artist_name", type="str")]
 
     preprocessing_actions = [ConvertToCsv(SpotifyConverter()),
                              # GroupAndFilter("items_filtered", "ItemId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
