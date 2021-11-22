@@ -1,4 +1,4 @@
-local base_path = "/../spotify/";
+local base_path = "../spotify/";
 local output_path = "/scratch/jane-doe-framework/students/spotify/";
 local hidden_size = 128;
 local max_seq_length = 200;
