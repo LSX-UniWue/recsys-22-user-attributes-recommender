@@ -72,6 +72,10 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
         super().on_validation_epoch_end(trainer, pl_module)
         super().to_yaml(os.path.join(self.output_base_path, self.output_filename))
 
+        # (AD) skip while sanity checking
+        if trainer.sanity_checking:
+            return
+
         # Save a symlink to the best model checkpoint
         self._save_best_model_checkpoint_symlink()
 
@@ -83,12 +87,9 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
         # here we only link relative paths, to prevent wrong links when
         # the result path is mounted into a VM, container …
         best_checkpoint_path = Path(self.best_model_path).name
-        try:
-            symlink_path.symlink_to(best_checkpoint_path)
-        except OSError as e:
-            if e.errno == errno.EEXIST:
-                symlink_path.unlink()
-                symlink_path.symlink_to(best_checkpoint_path)
+
+        symlink_path.unlink(missing_ok=True)
+        symlink_path.symlink_to(best_checkpoint_path)
 
     def _save_best_checkpoint_weights_only(self, trainer: "pl.Trainer"):
         # This just figures out whether a file extension was already provided with the symlink name and uses it if so
@@ -103,8 +104,7 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
         best_checkpoint_weights_only_path = self.output_base_path.joinpath(best_checkpoint_weights_only_name)
 
         # If we have saved a weights-only best checkpoint previously, remove it
-        if best_checkpoint_weights_only_path.exists():
-            best_checkpoint_weights_only_path.unlink()
+        best_checkpoint_weights_only_path.unlink(missing_ok=True)
 
         # Save the checkpoint using the trainer directly
         trainer.save_checkpoint(best_checkpoint_weights_only_path, weights_only=True)
