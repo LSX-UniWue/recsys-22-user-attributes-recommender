@@ -10,6 +10,7 @@ from asme.core.init.factories.common.dependencies_factory import DependenciesFac
 from asme.core.init.factories.util import require_config_keys
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.core.init.trainer_builder import TrainerBuilder
+from asme.core.utils.logging import get_logger
 
 
 class KwargsFactory(ObjectFactory):
@@ -90,8 +91,13 @@ class CSVLoggerFactory(KwargsFactory):
     def __init__(self):
         super().__init__(class_type=CSVLogger, key="csv")
 
+logger = get_logger()
+
 
 class CheckpointFactory(ObjectFactory):
+    def __init__(self, weights_only: bool = False):
+        super().__init__()
+        self.weights_only = weights_only
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
@@ -102,27 +108,27 @@ class CheckpointFactory(ObjectFactory):
             config.set("filename", "{epoch}-" + f"{{{monitored_metric}}}")
         if not config.has_path("save_last"):
             config.set("save_last", True)
-        output_base_path = config.get_or_default("output_base_path", None)
-        config.config.pop('output_base_path', None)
-        output_filename = config.get_or_default("output_filename", None)
-        config.config.pop('output_filename', None)
-        symlink_name = config.get_or_default("symlink_name", "best.ckpt")
-        config.config.pop('symlink_name', "best.ckpt")
 
-        wrapped_checkpoint = BestModelWritingModelCheckpoint(output_base_path, output_filename, symlink_name, **config.config)
+        if self.weights_only:
+            config.set("save_weights_only", True)
+
+            dirpath = config.get("dirpath")
+            if dirpath is None or dirpath == "":
+                logger.error(f"You need to set `dirpath` for Checkpoint callbacks!")
+
+        wrapped_checkpoint = BestModelWritingModelCheckpoint(**config.config)
         return wrapped_checkpoint
 
     def is_required(self, context: Context) -> bool:
         return True
 
     def config_path(self) -> List[str]:
-        return ["checkpoint"]
+        return ["checkpoint-weights-only"] if self.weights_only else ["checkpoint"]
 
     def config_key(self) -> str:
-        return "checkpoint"
+        return "checkpoint-weights-only" if self.weights_only else "checkpoint"
 
-    def __init__(self):
-        super().__init__()
+
 
 
 class EarlyStoppingCallbackFactory(KwargsFactory):
@@ -131,7 +137,7 @@ class EarlyStoppingCallbackFactory(KwargsFactory):
         super().__init__(class_type=EarlyStopping, key='early_stopping')
 
 
-class LoggersFactors(ObjectFactory):
+class LoggersFactory(ObjectFactory):
 
     def __init__(self):
         super().__init__()
@@ -166,8 +172,9 @@ class TrainerBuilderFactory(ObjectFactory):
         super().__init__()
 
         self.dependencies = DependenciesFactory([
-            LoggersFactors(),
+            LoggersFactory(),
             CheckpointFactory(),
+            CheckpointFactory(weights_only=True),
             EarlyStoppingCallbackFactory()
         ], optional_based_on_path=True)
 
@@ -185,7 +192,11 @@ class TrainerBuilderFactory(ObjectFactory):
 
         trainer_builder = TrainerBuilder(trainer_parameters=trainer_params)
         trainer_builder.add_logger(dependencies["loggers"])
+
         trainer_builder.add_callback(dependencies["checkpoint"])
+
+        if "checkpoint-weights-only" in dependencies:
+            trainer_builder.add_callback(dependencies["checkpoint-weights-only"])
 
         # add optional early stopping
         early_stopping_callback = dependencies.get('early_stopping', None)
