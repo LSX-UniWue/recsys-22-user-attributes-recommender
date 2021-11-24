@@ -224,6 +224,7 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
         study.tell(trial, _find_best_value(objective_metric, objective_best))
 
 
+#FIXME: log_per_sample_metrics not working
 @app.command()
 def predict(output_file: Path = typer.Argument(..., help='path where output is written'),
             gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
