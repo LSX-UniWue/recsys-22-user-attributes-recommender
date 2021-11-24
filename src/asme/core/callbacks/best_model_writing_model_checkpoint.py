@@ -1,7 +1,7 @@
 import os, errno
 from datetime import timedelta
 from pathlib import Path
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, Any
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
@@ -68,19 +68,36 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
 
         self.symlink_name = symlink_name
 
-    def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
-        super().on_validation_epoch_end(trainer, pl_module)
-        super().to_yaml(os.path.join(self.output_base_path, self.output_filename))
+    def on_train_epoch_end(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused: Optional = None
+    ) -> None:
+        super().on_train_epoch_end(trainer, pl_module, unused)
 
-        # (AD) skip while sanity checking
-        if trainer.sanity_checking:
+        # (AD) this enforces the same criterias for saving checkpoints as in the super class
+        if (
+                not self._should_skip_saving_checkpoint(trainer)
+                and self._save_on_train_epoch_end
+                and self._every_n_epochs > 0
+                and (trainer.current_epoch + 1) % self._every_n_epochs == 0
+        ):
+            # Save a symlink to the best model checkpoint
+            self._save_best_model_checkpoint_symlink()
+
+    def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+        super().on_validation_end(trainer, pl_module)
+
+        # (AD) this enforces the same criterias for saving checkpoints as in the super class
+        if (
+                self._should_skip_saving_checkpoint(trainer)
+                or self._save_on_train_epoch_end
+                or self._every_n_epochs < 1
+                or (trainer.current_epoch + 1) % self._every_n_epochs != 0
+        ):
             return
+        super().to_yaml(os.path.join(self.output_base_path, self.output_filename))
 
         # Save a symlink to the best model checkpoint
         self._save_best_model_checkpoint_symlink()
-
-        # Also save the raw weights of the current best model
-        self._save_best_checkpoint_weights_only(trainer)
 
     def _save_best_model_checkpoint_symlink(self):
         symlink_path = self.output_base_path.joinpath(self.symlink_name)
@@ -90,24 +107,6 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
 
         symlink_path.unlink(missing_ok=True)
         symlink_path.symlink_to(best_checkpoint_path)
-
-    def _save_best_checkpoint_weights_only(self, trainer: "pl.Trainer"):
-        # This just figures out whether a file extension was already provided with the symlink name and uses it if so
-        ext = Path(self.symlink_name).suffix
-        if ext is "":
-            best_checkpoint_weights_only_name = f"{self.symlink_name}-weights-only.ckpt"
-        else:
-            name = Path(self.symlink_name).stem
-            # The dot between the file name and extension is already included in "ext"
-            best_checkpoint_weights_only_name = f"{name}-weights-only{ext}"
-
-        best_checkpoint_weights_only_path = self.output_base_path.joinpath(best_checkpoint_weights_only_name)
-
-        # If we have saved a weights-only best checkpoint previously, remove it
-        best_checkpoint_weights_only_path.unlink(missing_ok=True)
-
-        # Save the checkpoint using the trainer directly
-        trainer.save_checkpoint(best_checkpoint_weights_only_path, weights_only=True)
 
     @classmethod
     def _format_checkpoint_name(cls,
