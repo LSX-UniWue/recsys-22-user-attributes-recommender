@@ -77,7 +77,9 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
             log_dataloader_example(train_dataloader, tokenizers, 'training')
             log_dataloader_example(validation_dataloader, tokenizers, 'validation')
 
-        trainer.fit(container.module(),
+        module = container.module()
+        module.save_hyperparameters(config.config)
+        trainer.fit(module,
                     train_dataloaders=train_dataloader,
                     val_dataloaders=validation_dataloader)
 
