@@ -36,11 +36,13 @@ def build_default_loader_config(config: Config, stage: Stage, dataset_builders: 
     base_batch_size = config.get_or_default('batch_size', 8)
     batch_size = config.get_or_default(f'{stage.value}_batch_size', base_batch_size)
     shuffle = config.get_or_default('shuffle', stage == Stage.TRAIN)
+    pad_direction = config.get_or_default('pad_direction', 'right')
 
     loader_config = {
         "batch_size": batch_size,
         "shuffle": shuffle,
-        "dataset": dataset_config
+        "dataset": dataset_config,
+        "pad_direction": pad_direction
     }
 
     loader_config = _transfer_properties(config.config, loader_config,

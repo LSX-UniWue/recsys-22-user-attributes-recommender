@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Dict, Any, Iterable
+from typing import Dict, Any, Iterable, Optional
 
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME
 
@@ -57,12 +57,24 @@ class RemainingSessionPositionExtractor(TargetPositionExtractor):
 
 class SlidingWindowPositionExtractor(TargetPositionExtractor):
     """
-    This TargetPositionExtractor returns all indices between [window_size - 1; len(sequence) - session_end_offset].
+    The SlidingWindowPositionExtractor returns all indices between [window_size - 1; len(sequence) - session_end_offset]
+
+    :param window_markov_length: The length of the markov order of each window.
+                                (Each window consists of the markov order and a number of targets)
+    :param window_target_length: Indicates the target size for a window
+    :param session_end_offset: Indicates how many items are cut off from the right
+
+
+
     """
-    def __init__(self, window_size: int, session_end_offset: int):
-        self.window_size = window_size
+    def __init__(self, window_markov_length: int, window_target_length: int, session_end_offset: int):
+        self.window_size = window_markov_length + window_target_length
+        self.window_target_length = window_target_length
         self.session_end_offset = session_end_offset
 
     def apply(self, session: Dict[str, Any]) -> Iterable[int]:
         sequence = session[ITEM_SEQ_ENTRY_NAME]
-        return range(self.window_size - 1, len(sequence)- self.session_end_offset)
+        # the sequence will later be left_padded if its length is shorter than the window_size
+        start = self.window_size - 1 if self.window_size <= len(sequence)-self.session_end_offset \
+            else len(sequence)-self.session_end_offset-self.window_target_length
+        return range(start, len(sequence) - self.session_end_offset)

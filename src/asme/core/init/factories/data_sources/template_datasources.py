@@ -225,7 +225,7 @@ class ParameterizedPositiveNegativeTemplateDataSourcesFactory(BaseTemplateDataSo
         loader_config = build_default_loader_config(config,
                                                     Stage.TRAIN,
                                                     self.TRAIN_DATASET_BUILDERS,
-                                                    [neg_sampler_processor, pos_extractor_processor])
+                                                    [pos_extractor_processor, neg_sampler_processor])
 
         return self._build_datasource(loader_config, context)
 
@@ -245,39 +245,44 @@ class ParameterizedPositiveNegativeTemplateDataSourcesFactory(BaseTemplateDataSo
 
 
 class SlidingWindowTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
-    TARGET_INTERACTION_CONFIG_KEY = 'number_target_interactions'
-    WINDOW_CONFIG_KEY = 'window_size'
+    """
+
+    """
+    WINDOW_TARGET_LENGTH_CONFIG_KEY = 'window_target_length'
+    WINDOW_MARKOV_LENGTH_CONFIG_KEY = 'window_markov_length'
 
     TRAIN_DATASET_BUILDERS = [SequenceDatasetRatioSplitBuilder(), LeaveOneOutSessionDatasetBuilder()]
     TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
 
     def _build_train_datasource(self, config: Config, context: Context) -> DataLoader:
-        window_size = config.get(self.WINDOW_CONFIG_KEY)
-        number_target_interactions = config.get_or_default(self.TARGET_INTERACTION_CONFIG_KEY, 1)
-        sequence_length = window_size + number_target_interactions
-        config.set(self.WINDOW_CONFIG_KEY, sequence_length)
+        window_markov_length = config.get_or_default(self.WINDOW_MARKOV_LENGTH_CONFIG_KEY, 2)
+        window_target_length = config.get_or_default(self.WINDOW_TARGET_LENGTH_CONFIG_KEY, 1)
+        window_size = window_markov_length + window_target_length
+        fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(window_size)
 
-        fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(sequence_length)
+        pos_extractor_processor = {
+            'type': 'positive_item_extractor',
+            'number_positive_items': config.get_or_default('number_positive_items', 1)
+        }
 
-        par_pos_neg_sampler_processor = {
-            'type': "par_pos_neg",
-            't': number_target_interactions
+        neg_sampler_processor = {
+            'type': "negative_item_sampler",
+            'number_negative_items': config.get_or_default('number_negative_items', 1)
         }
 
         builders = [NextPositionWindowDatasetBuilder(),
                     LeaveOneOutSequenceWindowDatasetBuilder()]
 
-        processors = [fixed_sequence_length_processor, par_pos_neg_sampler_processor]
+        processors = [fixed_sequence_length_processor, pos_extractor_processor, neg_sampler_processor]
 
         loader_config = build_default_loader_config(config, Stage.TRAIN, builders, processors)
         return self._build_datasource(loader_config, context)
 
     def _build_validation_datasource(self, config: Config, context: Context) -> DataLoader:
-        window_size = config.get(self.WINDOW_CONFIG_KEY)
-        number_target_interactions = config.get_or_default(self.TARGET_INTERACTION_CONFIG_KEY, 1)
-        sequence_length = window_size + number_target_interactions
-
-        fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(sequence_length)
+        window_markov_length = config.get_or_default(self.WINDOW_MARKOV_LENGTH_CONFIG_KEY, 2)
+        window_target_length = config.get_or_default(self.WINDOW_TARGET_LENGTH_CONFIG_KEY, 1)
+        window_size = window_markov_length + window_target_length
+        fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(window_size)
         loader_config = build_default_loader_config(config,
                                                     Stage.VALIDATION,
                                                     self.TEST_VALID_DATASET_BUILDERS,
@@ -285,11 +290,10 @@ class SlidingWindowTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
         return self._build_datasource(loader_config, context)
 
     def _build_test_datasource(self, config: Config, context: Context) -> DataLoader:
-        window_size = config.get(self.WINDOW_CONFIG_KEY)
-        number_target_interactions = config.get_or_default(self.TARGET_INTERACTION_CONFIG_KEY, 1)
-        sequence_length = window_size + number_target_interactions
-
-        fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(sequence_length)
+        window_markov_length = config.get_or_default(self.WINDOW_MARKOV_LENGTH_CONFIG_KEY, 2)
+        window_target_length = config.get_or_default(self.WINDOW_TARGET_LENGTH_CONFIG_KEY, 1)
+        window_size = window_markov_length + window_target_length
+        fixed_sequence_length_processor = _build_fixed_sequence_length_processor_config(window_size)
         loader_config = build_default_loader_config(config,
                                                     Stage.TEST,
                                                     self.TEST_VALID_DATASET_BUILDERS,

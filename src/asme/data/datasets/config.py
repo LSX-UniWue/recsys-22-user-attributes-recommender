@@ -23,6 +23,9 @@ def get_ml_1m_preprocessing_config(output_directory: str,
                                    extraction_directory: str,
                                    min_item_feedback: int,
                                    min_sequence_length: int,
+                                   window_markov_length: Optional[int] = None,
+                                   window_target_length: Optional[int] = None,
+                                   session_end_offset: Optional[int] = None
                                    ) -> DatasetPreprocessingConfig:
     prefix = "ml-1m"
     context = Context()
@@ -49,7 +52,13 @@ def get_ml_1m_preprocessing_config(output_directory: str,
                                                    CreateNextItemIndex(
                                                        [MetaInformation("item", column_name="title", type="str")],
                                                        RemainingSessionPositionExtractor(
-                                                           min_sequence_length))],
+                                                           min_sequence_length)),
+                                                   CreateSlidingWindowIndex(
+                                                       [MetaInformation("item", column_name="title", type="str")],
+                                                       SlidingWindowPositionExtractor(window_markov_length,
+                                                                                      window_target_length,
+                                                                                      session_end_offset))
+                                                   ],
                                               complete_split_actions=
                                                   [CreateVocabulary(columns, prefixes=[prefix]),
                                                    CreatePopularity(columns, prefixes=[prefix])]),
@@ -76,7 +85,11 @@ register_preprocessing_config_provider("ml-1m",
                                                                    output_directory="./ml-1m",
                                                                    extraction_directory="./tmp/ml-1m",
                                                                    min_item_feedback=4,
-                                                                   min_sequence_length=4))
+                                                                   min_sequence_length=4,
+                                                                   window_markov_length=3,
+                                                                   window_target_length=3,
+                                                                   session_end_offset=0
+                                                                   ))
 
 
 def get_ml_20m_preprocessing_config(output_directory: str,
@@ -331,10 +344,18 @@ register_preprocessing_config_provider("yoochoose",
                                                                    min_item_feedback=4,
                                                                    min_sequence_length=4))
 
-
+"""
+hier müssen wir noch die Parameter ändern:
+window_size setzt sich aus sequence length und target_length zusammen
+min_input_length bei extractor??
+außerdem bei LOO auch Sliding_window index??
+"""
 def get_example_preprocessing_config(output_directory: str,
                                      input_file_path: str,
-                                     min_sequence_length: int) -> DatasetPreprocessingConfig:
+                                     min_sequence_length: int,
+                                     window_markov_length: Optional[int] = None,
+                                     window_target_length: Optional[int] = None,
+                                     session_end_offset: Optional[int] = None) -> DatasetPreprocessingConfig:
     prefix = "example"
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
@@ -353,10 +374,14 @@ def get_example_preprocessing_config(output_directory: str,
                              CreateRatioSplit(0.8, 0.1, 0.1, per_split_actions=
                              [CreateSessionIndex(["session_id"]),
                               CreateNextItemIndex([MetaInformation("item", column_name="item_id", type="str")],
-                                                  RemainingSessionPositionExtractor(min_sequence_length))],
+                                                  RemainingSessionPositionExtractor(min_sequence_length)),
+                              CreateSlidingWindowIndex([MetaInformation("item", column_name="item_id", type="str")],
+                              SlidingWindowPositionExtractor(window_markov_length, window_target_length, session_end_offset))
+                              ],
                                               complete_split_actions=[
                                                   CreateVocabulary(columns, prefixes=[prefix]),
                                                   CreatePopularity(columns, prefixes=[prefix])]),
+
                              CreateLeaveOneOutSplit(MetaInformation("item", column_name="item_id", type="str"),
                                                     inner_actions=
                                                     [CreateNextItemIndex(
@@ -367,6 +392,8 @@ def get_example_preprocessing_config(output_directory: str,
                                                         CreatePopularity(columns)]),
                              CopyMainFile()
                              ]
+
+
 
     return DatasetPreprocessingConfig(prefix,
                                       None,
@@ -380,4 +407,8 @@ register_preprocessing_config_provider("example",
                                        PreprocessingConfigProvider(get_example_preprocessing_config,
                                                                    output_directory="./example",
                                                                    input_file_path="../tests/example_dataset/example.csv",
-                                                                   min_sequence_length=2))
+                                                                   min_sequence_length=3,
+                                                                   window_markov_length=2,
+                                                                   window_target_length=1,
+                                                                   session_end_offset=0
+                                                                   ))
