@@ -49,7 +49,7 @@ class AsmeDataModule(pl.LightningDataModule):
         # If necessary, unpack the dataset
         if ds_config.unpacker is not None:
             logger.info(f"Unpacking dataset.")
-            ds_config.unpacker(dataset_file)
+            ds_config.unpacker(dataset_file, force_unpack=self.config.force_regeneration)
 
         # Apply preprocessing steps
         for i, step in enumerate(ds_config.preprocessing_actions):
