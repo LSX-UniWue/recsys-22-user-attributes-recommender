@@ -10,7 +10,7 @@ from asme.core.init.templating.datasources.datasources import DatasetSplit
 from asme.data import LOO_SPLIT_PATH_CONTEXT_KEY, CURRENT_SPLIT_PATH_CONTEXT_KEY, RATIO_SPLIT_PATH_CONTEXT_KEY, \
     LPO_SPLIT_PATH_CONTEXT_KEY
 from asme.data.base.reader import CsvDatasetIndex, CsvDatasetReader
-from asme.data.datamodule.extractors import FixedOffsetPositionExtractor
+from asme.data.datamodule.extractors import FixedOffsetPositionExtractor, PercentageBasedPositionExtractor
 from asme.data.datamodule.preprocessing.action import PreprocessingAction, MAIN_FILE_KEY, SESSION_INDEX_KEY, \
     DELIMITER_KEY, PREFIXES_KEY, OUTPUT_DIR_KEY
 from asme.data.datamodule.preprocessing.util import format_prefix
@@ -22,7 +22,7 @@ from asme.data.utils.csv import create_indexed_header, read_csv_header
 
 class CreateLeavePrecentageOutSplit(PreprocessingAction):
     def __init__(self, column: MetaInformation, train_percentage=0.8, validation_percentage=0.1,
-                 test_percentage=0.1,
+                 test_percentage=0.1, min_train_length=2, min_validation_lenght=1, min_test_length=1,
                  inner_actions: List[PreprocessingAction] = None):
 
         self._column = column
@@ -31,6 +31,10 @@ class CreateLeavePrecentageOutSplit(PreprocessingAction):
         self._train_percentage = train_percentage
         self._validation_percentage = validation_percentage
         self._test_percentage = test_percentage
+
+        self._min_test_length = min_test_length
+        self._min_validation_length = min_validation_lenght
+        self._min_train_length = min_train_length
 
         if train_percentage + test_percentage + validation_percentage != 1:
             raise ValueError(f"Fractions for training, validation and test do not sum to 1 (got {train_percentage}/{validation_percentage}/{test_percentage}).")
@@ -60,7 +64,11 @@ class CreateLeavePrecentageOutSplit(PreprocessingAction):
                                 [self._train_percentage, self._validation_percentage, self._test_percentage]):
             prefix = format_prefix(context.get(PREFIXES_KEY) + [name.name])
             output_file = output_dir / f"{prefix}.loo.idx"
-            builder = SequencePositionIndexBuilder(target_positions_extractor=FixedOffsetPositionExtractor(offset))
+            builder = SequencePositionIndexBuilder(target_positions_extractor=PercentageBasedPositionExtractor(
+                self._train_percentage, self._validation_percentage, self._test_percentage,
+                name,
+                self._min_train_length, self._min_validation_length, self._min_test_length
+            ))
             builder.build(dataset, output_file)
 
         cloned = self._prepare_context_for_complete_split_actions(context)
@@ -85,7 +93,9 @@ class CreateLeavePrecentageOutSplit(PreprocessingAction):
         return cloned
 
     def _get_output_dir(self, context: Context) -> Path:
-        return context.get(OUTPUT_DIR_KEY) / f"lpo_split-{self._train_percentage}_{self._validation_percentage}_{self._test_percentage}"
+        return context.get(OUTPUT_DIR_KEY) / \
+               f"lpo_split-{self._train_percentage}_{self._validation_percentage}_{self._test_percentage}"
+
 
 class CreateLeaveOneOutSplit(PreprocessingAction):
     """
