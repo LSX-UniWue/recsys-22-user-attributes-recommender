@@ -97,11 +97,14 @@ class PercentageBasedPositionExtractor(TargetPositionExtractor):
     :param target_split: The split for which the indices should be extracted.
     """
 
-    def __init__(self, train_percentage: float, validation_percentage: float, test_percentage: float,
-                 target_split: SplitNames):
+    def __init__(self, train_percentage: float, validation_percentage: float, test_percentage: float, target_split: SplitNames,
+                 min_train_length: int = 2, min_validation_length: int = 1, min_test_length: int = 1):
         self._train_percentage = train_percentage
         self._validation_percentage = validation_percentage
         self._test_percentage = test_percentage
+        self._min_test_length = min_test_length
+        self._min_validation_length = min_validation_length
+        self._min_train_length = min_train_length
         self._target_split = target_split
 
     def apply(self, session: Dict[str, Any]) -> Iterable[int]:
@@ -134,7 +137,8 @@ class PercentageBasedPositionExtractor(TargetPositionExtractor):
             return num_items[0] >= 2 and num_items[1] >= 1 and num_items[2] >= 1
 
         def _hard_constraint_differences(num_items: List[float]) -> List[float]:
-            return [x - c for x, c in zip(num_items, [2., 1., 1.])]
+            return [x - c for x, c in zip(num_items,
+                                          [self._min_train_length, self._min_validation_length, self._min_test_length])]
 
         def _correct_for_floating_point_precision(num_items: List[float]) -> List[float]:
             corrected = []
@@ -153,11 +157,11 @@ class PercentageBasedPositionExtractor(TargetPositionExtractor):
             """
             This method "rounds" items counts to ints by moving the fractional parts towards the training set.
             """
-            train_fractional_path = _fractional_part(num_items[0])
+            train_fractional_part = _fractional_part(num_items[0])
             validation_fractional_part = _fractional_part(num_items[1])
             test_fractional_part = _fractional_part(num_items[2])
 
-            cumulative_fractional_part = _fractional_part(train_fractional_path + validation_fractional_part + test_fractional_part)
+            cumulative_fractional_part = _fractional_part(train_fractional_part + validation_fractional_part + test_fractional_part)
             assert cumulative_fractional_part < EPS or cumulative_fractional_part > (1 - EPS)
             precision_corrected_counts = _correct_for_floating_point_precision(
                 [num_items[0] + validation_fractional_part + test_fractional_part,
@@ -168,9 +172,10 @@ class PercentageBasedPositionExtractor(TargetPositionExtractor):
 
         length = len(sequence)
 
-        # Ensure all sessions have length >= 4
-        if length < 4:
-            raise ValueError(f"Encountered a session of length {length} < 4. "
+        # Ensure all sessions have enough items to satisfy the constraints on train, validation and test set size.
+        required_min_session_length = self._min_train_length + self._min_validation_length + self._min_test_length
+        if length < required_min_session_length:
+            raise ValueError(f"Encountered a session of length {length} < {required_min_session_length}. "
                              f"These sessions can not be split correctly and should be removed during preprocessing.")
 
         optimal_item_counts = [length * self._train_percentage,
