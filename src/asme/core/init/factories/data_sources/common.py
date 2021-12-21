@@ -21,7 +21,7 @@ def build_dataset_config(dataset_builders: List[DatasetBuilder], config: Config,
         for datasource_builder in dataset_builders:
             if datasource_builder.can_build_dataset_definition(split):
                 return datasource_builder.build_dataset_definition(stage, config.config)
-        raise ValueError('no datasource builder found')
+        raise ValueError(f'No datasource builder found for split {split}')
 
     datasource_config = _build_dataset_config()
     datasource_config["processors"] = processors

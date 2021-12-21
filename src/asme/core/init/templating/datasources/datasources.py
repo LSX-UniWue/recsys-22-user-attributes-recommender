@@ -25,7 +25,8 @@ class DatasetSplit(Enum):
     """
 
     RATIO_SPLIT = 1
-    LEAVE_ONE_OUT = 2
+    LEAVE_ONE_OUT = 2,
+    LEAVE_PERCENTAGE_OUT = 3,
 
 
 class Stage(Enum):

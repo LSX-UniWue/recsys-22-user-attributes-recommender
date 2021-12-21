@@ -7,7 +7,8 @@ from typing import List, Dict
 
 from asme.core.init.context import Context
 from asme.core.init.templating.datasources.datasources import DatasetSplit
-from asme.data import LOO_SPLIT_PATH_CONTEXT_KEY, CURRENT_SPLIT_PATH_CONTEXT_KEY, RATIO_SPLIT_PATH_CONTEXT_KEY
+from asme.data import LOO_SPLIT_PATH_CONTEXT_KEY, CURRENT_SPLIT_PATH_CONTEXT_KEY, RATIO_SPLIT_PATH_CONTEXT_KEY, \
+    LPO_SPLIT_PATH_CONTEXT_KEY
 from asme.data.base.reader import CsvDatasetIndex, CsvDatasetReader
 from asme.data.datamodule.extractors import FixedOffsetPositionExtractor
 from asme.data.datamodule.preprocessing.action import PreprocessingAction, MAIN_FILE_KEY, SESSION_INDEX_KEY, \
@@ -18,6 +19,73 @@ from asme.data.datasets.index_builder import SequencePositionIndexBuilder
 from asme.data.datasets.sequence import MetaInformation, ItemSessionParser, ItemSequenceDataset, PlainSequenceDataset
 from asme.data.utils.csv import create_indexed_header, read_csv_header
 
+
+class CreateLeavePrecentageOutSplit(PreprocessingAction):
+    def __init__(self, column: MetaInformation, train_percentage=0.8, validation_percentage=0.1,
+                 test_percentage=0.1,
+                 inner_actions: List[PreprocessingAction] = None):
+
+        self._column = column
+        self._inner_actions = [] if inner_actions is None else inner_actions
+
+        self._train_percentage = train_percentage
+        self._validation_percentage = validation_percentage
+        self._test_percentage = test_percentage
+
+        if train_percentage + test_percentage + validation_percentage != 1:
+            raise ValueError(f"Fractions for training, validation and test do not sum to 1 (got {train_percentage}/{validation_percentage}/{test_percentage}).")
+
+    def name(self) -> str:
+        return "Creating leave-percentage-out split"
+
+    def _run(self, context: Context) -> None:
+        output_dir = self._get_output_dir(context)
+        main_file = context.get(MAIN_FILE_KEY)
+        session_index_path = context.get(SESSION_INDEX_KEY)
+        delimiter = context.get(DELIMITER_KEY)
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        # Save the path to the split in the context for the datamodule to use later
+        context.set(LPO_SPLIT_PATH_CONTEXT_KEY, output_dir)
+
+        session_index = CsvDatasetIndex(session_index_path)
+        reader = CsvDatasetReader(main_file, session_index)
+        parser = ItemSessionParser(
+            create_indexed_header(read_csv_header(main_file, delimiter)),
+            [self._column],
+            delimiter=delimiter
+        )
+        dataset = ItemSequenceDataset(PlainSequenceDataset(reader, parser))
+        for name, offset in zip([SplitNames.train, SplitNames.validation, SplitNames.test],
+                                [self._train_percentage, self._validation_percentage, self._test_percentage]):
+            prefix = format_prefix(context.get(PREFIXES_KEY) + [name.name])
+            output_file = output_dir / f"{prefix}.loo.idx"
+            builder = SequencePositionIndexBuilder(target_positions_extractor=FixedOffsetPositionExtractor(offset))
+            builder.build(dataset, output_file)
+
+        cloned = self._prepare_context_for_complete_split_actions(context)
+        for action in self._inner_actions:
+            action(cloned)
+
+    def _dry_run(self, context: Context) -> None:
+        context.set(LPO_SPLIT_PATH_CONTEXT_KEY, self._get_output_dir(context))
+
+    def dry_run_available(self, context: Context) -> bool:
+        cloned = self._prepare_context_for_complete_split_actions(context)
+        for action in self._inner_actions:
+            if not action.dry_run_available(cloned):
+                return False
+
+        return True
+
+    def _prepare_context_for_complete_split_actions(self, context: Context) -> Context:
+        output_dir = self._get_output_dir(context)
+        cloned = copy.deepcopy(context)
+        cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
+        return cloned
+
+    def _get_output_dir(self, context: Context) -> Path:
+        return context.get(OUTPUT_DIR_KEY) / f"lpo_split-{self._train_percentage}_{self._validation_percentage}_{self._test_percentage}"
 
 class CreateLeaveOneOutSplit(PreprocessingAction):
     """
@@ -58,7 +126,7 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
         self.offsets = [training_target_offset, validation_target_offset, test_target_offset]
 
     def name(self) -> str:
-        return "Creating Leave one out split"
+        return "Creating leave-one-out split"
 
     def _run(self, context: Context) -> None:
         output_dir = self._get_output_dir(context)

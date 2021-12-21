@@ -6,7 +6,7 @@ from typing import Optional, List, Callable, Any, Dict
 
 from asme.core.init.config import Config
 from asme.core.init.context import Context
-from asme.data.datamodule.preprocessing import PreprocessingAction
+from asme.data.datamodule.preprocessing.action import PreprocessingAction
 from asme.data.datamodule.unpacker import Unpacker
 
 

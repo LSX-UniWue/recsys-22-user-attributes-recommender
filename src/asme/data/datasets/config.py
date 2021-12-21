@@ -2,20 +2,20 @@ from pathlib import Path
 from typing import Optional
 
 from asme.core.init.context import Context
-from asme.core.init.templating.datasources.datasources import DatasetSplit
-from asme.data import CURRENT_SPLIT_PATH_CONTEXT_KEY
 from asme.data.datamodule.config import DatasetPreprocessingConfig, PreprocessingConfigProvider
+from asme.data.datamodule.preprocessing.action import PREFIXES_KEY, DELIMITER_KEY, INPUT_DIR_KEY, OUTPUT_DIR_KEY
+from asme.data.datamodule.preprocessing.csv import ConvertToCsv, GroupAndFilter, GroupedFilter, CopyMainFile, \
+    TransformCsv
+from asme.data.datamodule.preprocessing.indexing import CreateSessionIndex, CreateNextItemIndex, \
+    CreateSlidingWindowIndex
+from asme.data.datamodule.preprocessing.popularity import CreatePopularity
+from asme.data.datamodule.preprocessing.split import CreateRatioSplit, CreateLeaveOneOutSplit
+from asme.data.datamodule.preprocessing.vocabulary import CreateVocabulary
 from asme.data.datamodule.registry import register_preprocessing_config_provider
-from asme.data.datamodule.preprocessing import ConvertToCsv, TransformCsv, CreateSessionIndex, \
-    GroupAndFilter, GroupedFilter, CreateVocabulary, DELIMITER_KEY, \
-    OUTPUT_DIR_KEY, CreateRatioSplit, CreateNextItemIndex, CreateLeaveOneOutSplit, CreatePopularity, \
-    UseExistingCsv, UseExistingSplit, \
-    CreateSlidingWindowIndex, INPUT_DIR_KEY, CopyMainFile
 from asme.data.datamodule.converters import YooChooseConverter, Movielens1MConverter, ExampleConverter, \
     Movielens20MConverter, AmazonConverter, SteamConverter
 from asme.data.datamodule.extractors import RemainingSessionPositionExtractor, SlidingWindowPositionExtractor
 from asme.data.datamodule.unpacker import Unzipper
-from asme.data.datamodule.preprocessing import PREFIXES_KEY
 from asme.data.datasets.sequence import MetaInformation
 
 
@@ -43,33 +43,35 @@ def get_ml_1m_preprocessing_config(output_directory: str,
                MetaInformation("genres", type="str", configs={"delimiter": "|"})]
 
     preprocessing_actions = [ConvertToCsv(Movielens1MConverter()),
-                             GroupAndFilter("items_filtered", "movieId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
-                             GroupAndFilter("sessions_filtered", "userId", GroupedFilter("count", lambda v: v >= min_sequence_length)),
+                             GroupAndFilter("items_filtered", "movieId",
+                                            GroupedFilter("count", lambda v: v >= min_item_feedback)),
+                             GroupAndFilter("sessions_filtered", "userId",
+                                            GroupedFilter("count", lambda v: v >= min_sequence_length)),
                              CreateSessionIndex(["userId"]),
                              CreateRatioSplit(0.8, 0.1, 0.1,
                                               per_split_actions=
-                                                  [CreateSessionIndex(["userId"]),
-                                                   CreateNextItemIndex(
-                                                       [MetaInformation("item", column_name="title", type="str")],
-                                                       RemainingSessionPositionExtractor(
-                                                           min_sequence_length)),
-                                                   CreateSlidingWindowIndex(
-                                                       [MetaInformation("item", column_name="title", type="str")],
-                                                       SlidingWindowPositionExtractor(window_markov_length,
-                                                                                      window_target_length,
-                                                                                      session_end_offset))
-                                                   ],
+                                              [CreateSessionIndex(["userId"]),
+                                               CreateNextItemIndex(
+                                                   [MetaInformation("item", column_name="title", type="str")],
+                                                   RemainingSessionPositionExtractor(
+                                                       min_sequence_length)),
+                                               CreateSlidingWindowIndex(
+                                                   [MetaInformation("item", column_name="title", type="str")],
+                                                   SlidingWindowPositionExtractor(window_markov_length,
+                                                                                  window_target_length,
+                                                                                  session_end_offset))
+                                               ],
                                               complete_split_actions=
-                                                  [CreateVocabulary(columns, prefixes=[prefix]),
-                                                   CreatePopularity(columns, prefixes=[prefix])]),
+                                              [CreateVocabulary(columns, prefixes=[prefix]),
+                                               CreatePopularity(columns, prefixes=[prefix])]),
                              CreateLeaveOneOutSplit(MetaInformation("item", column_name="title", type="str"),
                                                     inner_actions=
-                                                     [CreateNextItemIndex(
+                                                    [CreateNextItemIndex(
                                                         [MetaInformation("item", column_name="title", type="str")],
                                                         RemainingSessionPositionExtractor(
                                                             min_sequence_length)),
-                                                      CreateVocabulary(columns),
-                                                      CreatePopularity(columns)]),
+                                                        CreateVocabulary(columns),
+                                                        CreatePopularity(columns)]),
                              CopyMainFile()
                              ]
     return DatasetPreprocessingConfig(prefix,
@@ -110,10 +112,12 @@ def get_ml_20m_preprocessing_config(output_directory: str,
                MetaInformation("genres", type="str", configs={"delimiter": "|"})]
 
     preprocessing_actions = [ConvertToCsv(Movielens20MConverter()),
-                             GroupAndFilter("items_filtered", "movieId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
+                             GroupAndFilter("items_filtered", "movieId",
+                                            GroupedFilter("count", lambda v: v >= min_item_feedback)),
                              # We can drop the movieId column after filtering
-                             TransformCsv("movieId_dropped",lambda df: df.drop("movieId", axis=1)),
-                             GroupAndFilter("sessions_filtered","userId", GroupedFilter("count", lambda v: v >= min_sequence_length)),
+                             TransformCsv("movieId_dropped", lambda df: df.drop("movieId", axis=1)),
+                             GroupAndFilter("sessions_filtered", "userId",
+                                            GroupedFilter("count", lambda v: v >= min_sequence_length)),
                              CreateSessionIndex(["userId"]),
                              CreateRatioSplit(0.8, 0.1, 0.1,
                                               per_split_actions=
@@ -157,7 +161,6 @@ def get_amazon_preprocessing_config(prefix: str,
                                     min_item_feedback=5,
                                     min_sequence_length=5
                                     ) -> DatasetPreprocessingConfig:
-
     if prefix not in ["games", "beauty"]:
         raise KeyError("The only amazon datasets that are currently supported are 'games' and 'beauty'.")
 
@@ -182,8 +185,10 @@ def get_amazon_preprocessing_config(prefix: str,
                MetaInformation("timestamp", type="int", run_tokenization=False)]
 
     preprocessing_actions = [ConvertToCsv(AmazonConverter()),
-                             GroupAndFilter("items_filtered", "product_id", GroupedFilter("count", lambda v: v >= min_item_feedback)),
-                             GroupAndFilter("sessions_filtered", "reviewer_id", GroupedFilter("count", lambda v: v >= min_sequence_length)),
+                             GroupAndFilter("items_filtered", "product_id",
+                                            GroupedFilter("count", lambda v: v >= min_item_feedback)),
+                             GroupAndFilter("sessions_filtered", "reviewer_id",
+                                            GroupedFilter("count", lambda v: v >= min_sequence_length)),
                              CreateSessionIndex(["reviewer_id"]),
                              CreateRatioSplit(0.8, 0.1, 0.1,
                                               per_split_actions=
@@ -229,17 +234,14 @@ register_preprocessing_config_provider("games",
                                                                    min_sequence_length=4))
 
 
-
-
 def get_steam_preprocessing_config(output_directory: str,
                                    input_dir: str,
                                    min_item_feedback=5,
                                    min_sequence_length=5
                                    ) -> DatasetPreprocessingConfig:
-
     prefix = "steam"
     filename = "steam_reviews.json.gz"
- 
+
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
     context.set(DELIMITER_KEY, "\t")
@@ -248,11 +250,13 @@ def get_steam_preprocessing_config(output_directory: str,
 
     columns = [MetaInformation("username", type="str"),
                MetaInformation("product_id", type="str"),
-               MetaInformation("date", type="timestamp",configs={"format": "%Y-%m-%d"}, run_tokenization=False)]
+               MetaInformation("date", type="timestamp", configs={"format": "%Y-%m-%d"}, run_tokenization=False)]
 
     preprocessing_actions = [ConvertToCsv(SteamConverter()),
-                             GroupAndFilter("items_filtered","product_id", GroupedFilter("count", lambda v: v >= min_item_feedback)),
-                             GroupAndFilter("sessions_filtered","username", GroupedFilter("count", lambda v: v >= min_sequence_length)),
+                             GroupAndFilter("items_filtered", "product_id",
+                                            GroupedFilter("count", lambda v: v >= min_item_feedback)),
+                             GroupAndFilter("sessions_filtered", "username",
+                                            GroupedFilter("count", lambda v: v >= min_sequence_length)),
                              CreateSessionIndex(["username"]),
                              CreateRatioSplit(0.8, 0.1, 0.1,
                                               per_split_actions=
@@ -294,7 +298,7 @@ def get_yoochoose_preprocessing_config(output_directory: str,
                                        input_directory: str,
                                        min_item_feedback: int,
                                        min_sequence_length: int,
-                                      ) -> DatasetPreprocessingConfig:
+                                       ) -> DatasetPreprocessingConfig:
     prefix = "yoochoose"
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
@@ -307,8 +311,10 @@ def get_yoochoose_preprocessing_config(output_directory: str,
                MetaInformation("Time", type="int", run_tokenization=False)]
 
     preprocessing_actions = [ConvertToCsv(YooChooseConverter()),
-                             GroupAndFilter("items_filtered", "ItemId", GroupedFilter("count", lambda v: v >= min_item_feedback)),
-                             GroupAndFilter("sessions_filtered", "SessionId", GroupedFilter("count", lambda v: v >= min_sequence_length)),
+                             GroupAndFilter("items_filtered", "ItemId",
+                                            GroupedFilter("count", lambda v: v >= min_item_feedback)),
+                             GroupAndFilter("sessions_filtered", "SessionId",
+                                            GroupedFilter("count", lambda v: v >= min_sequence_length)),
                              CreateSessionIndex(["SessionId"]),
                              CreateRatioSplit(0.8, 0.1, 0.1,
                                               per_split_actions=
@@ -350,6 +356,8 @@ window_size setzt sich aus sequence length und target_length zusammen
 min_input_length bei extractor??
 außerdem bei LOO auch Sliding_window index??
 """
+
+
 def get_example_preprocessing_config(output_directory: str,
                                      input_file_path: str,
                                      min_sequence_length: int,
@@ -376,7 +384,9 @@ def get_example_preprocessing_config(output_directory: str,
                               CreateNextItemIndex([MetaInformation("item", column_name="item_id", type="str")],
                                                   RemainingSessionPositionExtractor(min_sequence_length)),
                               CreateSlidingWindowIndex([MetaInformation("item", column_name="item_id", type="str")],
-                              SlidingWindowPositionExtractor(window_markov_length, window_target_length, session_end_offset))
+                                                       SlidingWindowPositionExtractor(window_markov_length,
+                                                                                      window_target_length,
+                                                                                      session_end_offset))
                               ],
                                               complete_split_actions=[
                                                   CreateVocabulary(columns, prefixes=[prefix]),
@@ -392,8 +402,6 @@ def get_example_preprocessing_config(output_directory: str,
                                                         CreatePopularity(columns)]),
                              CopyMainFile()
                              ]
-
-
 
     return DatasetPreprocessingConfig(prefix,
                                       None,
