@@ -12,7 +12,7 @@ from asme.core.init.factories.data_sources.user_defined_datasources import UserD
 from asme.core.init.templating.datasources.datasources import DatasetSplit
 from asme.core.utils.logging import get_logger
 from asme.data import BASE_DATASET_PATH_CONTEXT_KEY, CURRENT_SPLIT_PATH_CONTEXT_KEY, DATASET_PREFIX_CONTEXT_KEY, \
-    RATIO_SPLIT_PATH_CONTEXT_KEY, LOO_SPLIT_PATH_CONTEXT_KEY
+    RATIO_SPLIT_PATH_CONTEXT_KEY, LOO_SPLIT_PATH_CONTEXT_KEY, LPO_SPLIT_PATH_CONTEXT_KEY
 from asme.data.datamodule.config import AsmeDataModuleConfig
 from asme.data.datamodule.util import download_dataset
 
@@ -61,11 +61,7 @@ class AsmeDataModule(pl.LightningDataModule):
 
         # Populate context with the dataset path
         self.context.set(BASE_DATASET_PATH_CONTEXT_KEY, self.config.dataset_preprocessing_config.location)
-        split = self._determine_split()
-        split_path = ds_config.context.get(RATIO_SPLIT_PATH_CONTEXT_KEY) if split == DatasetSplit.RATIO_SPLIT else \
-            ds_config.context.get(LOO_SPLIT_PATH_CONTEXT_KEY)
-        self.context.set(CURRENT_SPLIT_PATH_CONTEXT_KEY, split_path)
-
+        self._set_split_path_in_context()
         # Also put the prefix into the context
         self._populate_config_and_context_with_prefix()
 
@@ -118,6 +114,19 @@ class AsmeDataModule(pl.LightningDataModule):
             return None
         else:
             return DatasetSplit[split.upper()]
+
+    def _set_split_path_in_context(self):
+        split = self._determine_split()
+        if split == DatasetSplit.RATIO_SPLIT:
+            split_path = self.config.dataset_preprocessing_config.context.get(RATIO_SPLIT_PATH_CONTEXT_KEY)
+        elif split == DatasetSplit.LEAVE_ONE_OUT:
+            split_path = self.config.dataset_preprocessing_config.context.get(LOO_SPLIT_PATH_CONTEXT_KEY)
+        elif split == DatasetSplit.LEAVE_PERCENTAGE_OUT:
+            split_path = self.config.dataset_preprocessing_config.context.get(LPO_SPLIT_PATH_CONTEXT_KEY)
+        else:
+            raise ValueError(f"Unkown split type: {split}.")
+
+        self.context.set(CURRENT_SPLIT_PATH_CONTEXT_KEY, split_path)
 
     def _adjust_split_path_for_caching(self, key: Union[str, List[str]]):
         """

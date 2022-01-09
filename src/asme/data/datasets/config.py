@@ -3,19 +3,21 @@ from typing import Optional
 
 from asme.core.init.context import Context
 from asme.data.datamodule.config import DatasetPreprocessingConfig, PreprocessingConfigProvider
+from asme.data.datamodule.converters import YooChooseConverter, Movielens1MConverter, ExampleConverter, \
+    Movielens20MConverter, AmazonConverter, SteamConverter
+from asme.data.datamodule.extractors import RemainingSessionPositionExtractor, SlidingWindowPositionExtractor
 from asme.data.datamodule.preprocessing.action import PREFIXES_KEY, DELIMITER_KEY, INPUT_DIR_KEY, OUTPUT_DIR_KEY
 from asme.data.datamodule.preprocessing.csv import ConvertToCsv, GroupAndFilter, GroupedFilter, CopyMainFile, \
     TransformCsv
 from asme.data.datamodule.preprocessing.indexing import CreateSessionIndex, CreateNextItemIndex, \
     CreateSlidingWindowIndex
 from asme.data.datamodule.preprocessing.popularity import CreatePopularity
-from asme.data.datamodule.preprocessing.split import CreateRatioSplit, CreateLeaveOneOutSplit
+from asme.data.datamodule.preprocessing.split import CreateRatioSplit, CreateLeaveOneOutSplit, \
+    CreateLeavePercentageOutSplit
 from asme.data.datamodule.preprocessing.vocabulary import CreateVocabulary
 from asme.data.datamodule.registry import register_preprocessing_config_provider
-from asme.data.datamodule.converters import YooChooseConverter, Movielens1MConverter, ExampleConverter, \
-    Movielens20MConverter, AmazonConverter, SteamConverter
-from asme.data.datamodule.extractors import RemainingSessionPositionExtractor, SlidingWindowPositionExtractor
 from asme.data.datamodule.unpacker import Unzipper
+from asme.data.datamodule.util import approx_equal
 from asme.data.datasets.sequence import MetaInformation
 
 
@@ -91,6 +93,81 @@ register_preprocessing_config_provider("ml-1m",
                                                                    window_markov_length=3,
                                                                    window_target_length=3,
                                                                    session_end_offset=0
+                                                                   ))
+
+
+def get_ml_1m_leave_percentage_out_preprocessing_config(output_directory: str,
+                                                        extraction_directory: str,
+                                                        min_item_feedback: int,
+                                                        min_sequence_length: int,
+                                                        train_percentage: float,
+                                                        validation_percentage: float,
+                                                        test_percentage: float,
+                                                        min_train_length: int,
+                                                        min_validation_length: int,
+                                                        min_test_length: int
+                                                        ) -> DatasetPreprocessingConfig:
+    prefix = "ml-1m-lpo"
+    context = Context()
+    context.set(PREFIXES_KEY, [prefix])
+    context.set(DELIMITER_KEY, "\t")
+    context.set(INPUT_DIR_KEY, Path(extraction_directory))
+    context.set(OUTPUT_DIR_KEY, Path(output_directory))
+
+    if not approx_equal(train_percentage + validation_percentage + test_percentage, 1.0):
+        raise ValueError(f"Split percentages do not sum up to 100%. "
+                         f"({train_percentage} + {validation_percentage} + {test_percentage} != 1.0)")
+
+    if min_sequence_length < min_train_length + min_validation_length + min_test_length:
+        raise ValueError(f"Minimum sequence length given was {min_sequence_length}. "
+                         f"This is insufficient to guarantee "
+                         f"{min_train_length}/{min_validation_length}/{min_test_length} can be generated per session.")
+
+    columns = [MetaInformation("rating", type="int", run_tokenization=False),
+               MetaInformation("gender", type="str"),
+               MetaInformation("age", type="int", run_tokenization=False),
+               MetaInformation("occupation", type="str"),
+               MetaInformation("zip", type="str"),
+               MetaInformation("title", type="str"),
+               MetaInformation("genres", type="str", configs={"delimiter": "|"})]
+
+    preprocessing_actions = [ConvertToCsv(Movielens1MConverter()),
+                             GroupAndFilter("items_filtered", "movieId",
+                                            GroupedFilter("count", lambda v: v >= min_item_feedback)),
+                             GroupAndFilter("sessions_filtered", "userId",
+                                            GroupedFilter("count", lambda v: v >= min_sequence_length)),
+                             CreateSessionIndex(["userId"]),
+                             CreateLeavePercentageOutSplit(MetaInformation("item", column_name="title", type="str"),
+                                                           inner_actions=
+                                                           [CreateNextItemIndex(
+                                                               [MetaInformation("item", column_name="title",
+                                                                                type="str")],
+                                                               RemainingSessionPositionExtractor(
+                                                                   min_sequence_length)),
+                                                               CreateVocabulary(columns),
+                                                               CreatePopularity(columns)]),
+                             CopyMainFile()
+                             ]
+    return DatasetPreprocessingConfig(prefix,
+                                      "http://files.grouplens.org/datasets/movielens/ml-1m.zip",
+                                      Path(output_directory),
+                                      Unzipper(Path(extraction_directory)),
+                                      preprocessing_actions,
+                                      context)
+
+
+register_preprocessing_config_provider("ml-1m-lpo",
+                                       PreprocessingConfigProvider(get_ml_1m_leave_percentage_out_preprocessing_config,
+                                                                   output_directory="./ml-1m",
+                                                                   extraction_directory="./tmp/ml-1m",
+                                                                   min_item_feedback=4,
+                                                                   min_sequence_length=4,
+                                                                   train_percentage=0.8,
+                                                                   validation_percentage=0.1,
+                                                                   test_percentage=0.1,
+                                                                   min_train_length=2,
+                                                                   min_validation_length=1,
+                                                                   min_test_length=1
                                                                    ))
 
 

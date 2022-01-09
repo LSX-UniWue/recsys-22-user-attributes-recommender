@@ -20,7 +20,7 @@ from asme.data.datasets.sequence import MetaInformation, ItemSessionParser, Item
 from asme.data.utils.csv import create_indexed_header, read_csv_header
 
 
-class CreateLeavePrecentageOutSplit(PreprocessingAction):
+class CreateLeavePercentageOutSplit(PreprocessingAction):
     def __init__(self, column: MetaInformation, train_percentage=0.8, validation_percentage=0.1,
                  test_percentage=0.1, min_train_length=2, min_validation_lenght=1, min_test_length=1,
                  inner_actions: List[PreprocessingAction] = None):

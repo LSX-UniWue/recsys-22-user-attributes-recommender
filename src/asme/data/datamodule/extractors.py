@@ -1,9 +1,8 @@
 import math
 from abc import abstractmethod
-from abc import abstractmethod
 from typing import Dict, Any, Iterable, TypeVar, Callable, List, Tuple
 
-from asme.data.datamodule.util import SplitNames
+from asme.data.datamodule.util import SplitNames, approx_equal
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME
 
 T = TypeVar("T")
@@ -162,7 +161,7 @@ class PercentageBasedPositionExtractor(TargetPositionExtractor):
             test_fractional_part = _fractional_part(num_items[2])
 
             cumulative_fractional_part = _fractional_part(train_fractional_part + validation_fractional_part + test_fractional_part)
-            assert cumulative_fractional_part < EPS or cumulative_fractional_part > (1 - EPS)
+            assert approx_equal(cumulative_fractional_part, 0.0, EPS) or approx_equal(cumulative_fractional_part, 1.0, EPS)
             precision_corrected_counts = _correct_for_floating_point_precision(
                 [num_items[0] + validation_fractional_part + test_fractional_part,
                  num_items[1] - validation_fractional_part,
