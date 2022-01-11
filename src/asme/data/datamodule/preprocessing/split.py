@@ -37,13 +37,14 @@ class CreateLeavePercentageOutSplit(PreprocessingAction):
         self._min_train_length = min_train_length
 
         if train_percentage + test_percentage + validation_percentage != 1:
-            raise ValueError(f"Fractions for training, validation and test do not sum to 1 (got {train_percentage}/{validation_percentage}/{test_percentage}).")
+            raise ValueError(f"Fractions for training, validation and test do not sum to 1"
+                             f" (got {train_percentage}/{validation_percentage}/{test_percentage}).")
 
     def name(self) -> str:
         return "Creating leave-percentage-out split"
 
     def _run(self, context: Context) -> None:
-        output_dir = self._get_output_dir(context)
+        output_dir = context.get(OUTPUT_DIR_KEY)
         main_file = context.get(MAIN_FILE_KEY)
         session_index_path = context.get(SESSION_INDEX_KEY)
         delimiter = context.get(DELIMITER_KEY)
@@ -76,7 +77,7 @@ class CreateLeavePercentageOutSplit(PreprocessingAction):
             action(cloned)
 
     def _dry_run(self, context: Context) -> None:
-        context.set(LPO_SPLIT_PATH_CONTEXT_KEY, self._get_output_dir(context))
+        context.set(LPO_SPLIT_PATH_CONTEXT_KEY, context.get(OUTPUT_DIR_KEY))
 
     def dry_run_available(self, context: Context) -> bool:
         cloned = self._prepare_context_for_complete_split_actions(context)
@@ -87,14 +88,7 @@ class CreateLeavePercentageOutSplit(PreprocessingAction):
         return True
 
     def _prepare_context_for_complete_split_actions(self, context: Context) -> Context:
-        output_dir = self._get_output_dir(context)
-        cloned = copy.deepcopy(context)
-        cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
-        return cloned
-
-    def _get_output_dir(self, context: Context) -> Path:
-        return context.get(OUTPUT_DIR_KEY) / \
-               f"lpo_split-{self._train_percentage}_{self._validation_percentage}_{self._test_percentage}"
+        return copy.deepcopy(context)
 
 
 class CreateLeaveOneOutSplit(PreprocessingAction):
@@ -139,7 +133,7 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
         return "Creating leave-one-out split"
 
     def _run(self, context: Context) -> None:
-        output_dir = self._get_output_dir(context)
+        output_dir = context.get(OUTPUT_DIR_KEY)
         main_file = context.get(MAIN_FILE_KEY)
         session_index_path = context.get(SESSION_INDEX_KEY)
         delimiter = context.get(DELIMITER_KEY)
@@ -167,25 +161,17 @@ class CreateLeaveOneOutSplit(PreprocessingAction):
             action(cloned)
 
     def _dry_run(self, context: Context) -> None:
-        context.set(LOO_SPLIT_PATH_CONTEXT_KEY, self._get_output_dir(context))
+        context.set(LOO_SPLIT_PATH_CONTEXT_KEY, context.get(OUTPUT_DIR_KEY))
 
     def dry_run_available(self, context: Context) -> bool:
-        cloned = self._prepare_context_for_complete_split_actions(context)
         for action in self.inner_actions:
-            if not action.dry_run_available(cloned):
+            if not action.dry_run_available(context):
                 return False
 
         return True
 
-    def _prepare_context_for_complete_split_actions(self, context: Context) -> Context:
-        output_dir = self._get_output_dir(context)
-        cloned = copy.deepcopy(context)
-        cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
-        return cloned
-
-    @staticmethod
-    def _get_output_dir(context: Context) -> Path:
-        return context.get(OUTPUT_DIR_KEY) / "loo"
+    def _prepare_context_for_complete_split_actions(self, context: Context):
+        return copy.deepcopy(context)
 
 
 class UseExistingSplit(PreprocessingAction):
@@ -350,10 +336,10 @@ class CreateRatioSplit(PreprocessingAction):
         return f"Creating ratio split ({self.train_percentage}/{self.validation_percentage}/{self.test_percentage})"
 
     def _run(self, context: Context) -> None:
+        output_dir = context.get(OUTPUT_DIR_KEY)
         main_file = context.get(MAIN_FILE_KEY)
         delimiter = context.get(DELIMITER_KEY)
         header = delimiter.join(read_csv_header(main_file, delimiter))
-        output_dir = self._get_complete_split_output_dir(context)
         session_index_path = context.get(SESSION_INDEX_KEY)
         session_index = CsvDatasetIndex(session_index_path)
         reader = CsvDatasetReader(main_file, session_index)
@@ -378,16 +364,12 @@ class CreateRatioSplit(PreprocessingAction):
         self._perform_complete_split_actions(context, output_dir)
 
     def _dry_run(self, context: Context) -> None:
-        output_dir = self._get_complete_split_output_dir(context)
+        output_dir = context.get(OUTPUT_DIR_KEY)
         context.set(RATIO_SPLIT_PATH_CONTEXT_KEY, output_dir)
-
-    def _get_complete_split_output_dir(self, context: Context) -> Path:
-        return context.get(OUTPUT_DIR_KEY) / \
-               f"ratio_split-{self.train_percentage}_{self.validation_percentage}_{self.test_percentage}"
 
     def _get_split_main_file_path(self, context: Context, name: str) -> Path:
         prefix = format_prefix(context.get(PREFIXES_KEY) + [name])
-        output_dir = self._get_complete_split_output_dir(context)
+        output_dir = context.get(OUTPUT_DIR_KEY)
         return output_dir / f"{prefix}.csv"
 
     def dry_run_available(self, context: Context):
@@ -412,11 +394,9 @@ class CreateRatioSplit(PreprocessingAction):
         return True
 
     def _prepare_context_for_per_split_actions(self, context: Context, name: str) -> Context:
-        output_dir = self._get_complete_split_output_dir(context)
         output_file = self._get_split_main_file_path(context, name)
 
         cloned = copy.deepcopy(context)
-        cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
         cloned.set(MAIN_FILE_KEY, output_file, overwrite=True)
         current_prefixes = context.get(PREFIXES_KEY)
         cloned.set(PREFIXES_KEY, current_prefixes + [name], overwrite=True)
@@ -425,8 +405,7 @@ class CreateRatioSplit(PreprocessingAction):
 
     def _prepare_context_for_complete_split_actions(self, context: Context) -> Context:
         cloned = copy.deepcopy(context)
-        output_dir = self._get_complete_split_output_dir(context)
-        cloned.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
+        output_dir = context.get(OUTPUT_DIR_KEY)
         # If enabled, change paths to point to the train split, e.g. for creating the vocabulary or popularities
         if self.update_paths:
             current_prefixes = context.get(PREFIXES_KEY)

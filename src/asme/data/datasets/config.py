@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Optional
 
 from asme.core.init.context import Context
 from asme.data.datamodule.config import DatasetPreprocessingConfig, PreprocessingConfigProvider
@@ -7,28 +6,45 @@ from asme.data.datamodule.converters import YooChooseConverter, Movielens1MConve
     Movielens20MConverter, AmazonConverter, SteamConverter
 from asme.data.datamodule.extractors import RemainingSessionPositionExtractor, SlidingWindowPositionExtractor
 from asme.data.datamodule.preprocessing.action import PREFIXES_KEY, DELIMITER_KEY, INPUT_DIR_KEY, OUTPUT_DIR_KEY
-from asme.data.datamodule.preprocessing.csv import ConvertToCsv, GroupAndFilter, GroupedFilter, CopyMainFile, \
-    TransformCsv
+from asme.data.datamodule.preprocessing.csv import ConvertToCsv, CopyMainFile
 from asme.data.datamodule.preprocessing.indexing import CreateSessionIndex, CreateNextItemIndex, \
     CreateSlidingWindowIndex
 from asme.data.datamodule.preprocessing.popularity import CreatePopularity
-from asme.data.datamodule.preprocessing.split import CreateRatioSplit, CreateLeaveOneOutSplit, \
-    CreateLeavePercentageOutSplit
+from asme.data.datamodule.preprocessing.split import CreateRatioSplit, CreateLeaveOneOutSplit
+from asme.data.datamodule.preprocessing.template import build_ratio_split, build_leave_one_out_split, \
+    build_leave_percentage_out_split
 from asme.data.datamodule.preprocessing.vocabulary import CreateVocabulary
 from asme.data.datamodule.registry import register_preprocessing_config_provider
 from asme.data.datamodule.unpacker import Unzipper
-from asme.data.datamodule.util import approx_equal
 from asme.data.datasets.sequence import MetaInformation
 
 
-def get_ml_1m_preprocessing_config(output_directory: str,
-                                   extraction_directory: str,
-                                   min_item_feedback: int,
-                                   min_sequence_length: int,
-                                   window_markov_length: Optional[int] = None,
-                                   window_target_length: Optional[int] = None,
-                                   session_end_offset: Optional[int] = None
-                                   ) -> DatasetPreprocessingConfig:
+def get_ml_1m_preprocessing_config(
+        # General parameters
+        output_directory: str,
+        extraction_directory: str,
+        # Ratio split parameters
+        ratio_split_min_item_feedback: int,
+        ratio_split_min_sequence_length: int,
+        ratio_split_train_percentage: float,
+        ratio_split_validation_percentage: float,
+        ratio_split_test_percentage: float,
+        ratio_split_window_markov_length: int,
+        ratio_split_window_target_length: int,
+        ratio_split_session_end_offset: int,
+        # Leave one out split parameters
+        loo_split_min_item_feedback: int,
+        loo_split_min_sequence_length: int,
+        # Leave percentage out split parameters
+        lpo_split_min_item_feedback: int,
+        lpo_split_min_sequence_length: int,
+        lpo_split_train_percentage: float,
+        lpo_split_validation_percentage: float,
+        lpo_split_test_percentage: float,
+        lpo_split_min_train_length: int,
+        lpo_split_min_validation_length: int,
+        lpo_split_min_test_length: int,
+) -> DatasetPreprocessingConfig:
     prefix = "ml-1m"
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
@@ -44,38 +60,39 @@ def get_ml_1m_preprocessing_config(output_directory: str,
                MetaInformation("title", type="str"),
                MetaInformation("genres", type="str", configs={"delimiter": "|"})]
 
+    item_column = MetaInformation("item", column_name="title", type="str")
+    min_item_feedback_column = "movieId"
+    min_sequence_length_column = "userId"
+    session_key = ["userId"]
+
+    ratio_split_action = build_ratio_split(columns, prefix, ratio_split_min_item_feedback, min_item_feedback_column,
+                                           ratio_split_min_sequence_length, min_sequence_length_column,
+                                           session_key, [item_column], ratio_split_train_percentage,
+                                           ratio_split_validation_percentage, ratio_split_test_percentage,
+                                           ratio_split_window_markov_length, ratio_split_window_target_length,
+                                           ratio_split_session_end_offset)
+
+    leave_one_out_split_action = build_leave_one_out_split(columns, prefix, loo_split_min_item_feedback,
+                                                           min_item_feedback_column,
+                                                           loo_split_min_sequence_length, min_sequence_length_column,
+                                                           session_key, item_column, [item_column])
+
+    leave_percentage_out_split_action = build_leave_percentage_out_split(columns, prefix, lpo_split_min_item_feedback,
+                                                                         min_item_feedback_column,
+                                                                         lpo_split_min_sequence_length,
+                                                                         min_sequence_length_column,
+                                                                         session_key, item_column, [item_column],
+                                                                         lpo_split_train_percentage,
+                                                                         lpo_split_validation_percentage,
+                                                                         lpo_split_test_percentage,
+                                                                         lpo_split_min_train_length,
+                                                                         lpo_split_min_validation_length,
+                                                                         lpo_split_min_test_length)
+
     preprocessing_actions = [ConvertToCsv(Movielens1MConverter()),
-                             GroupAndFilter("items_filtered", "movieId",
-                                            GroupedFilter("count", lambda v: v >= min_item_feedback)),
-                             GroupAndFilter("sessions_filtered", "userId",
-                                            GroupedFilter("count", lambda v: v >= min_sequence_length)),
-                             CreateSessionIndex(["userId"]),
-                             CreateRatioSplit(0.8, 0.1, 0.1,
-                                              per_split_actions=
-                                              [CreateSessionIndex(["userId"]),
-                                               CreateNextItemIndex(
-                                                   [MetaInformation("item", column_name="title", type="str")],
-                                                   RemainingSessionPositionExtractor(
-                                                       min_sequence_length)),
-                                               CreateSlidingWindowIndex(
-                                                   [MetaInformation("item", column_name="title", type="str")],
-                                                   SlidingWindowPositionExtractor(window_markov_length,
-                                                                                  window_target_length,
-                                                                                  session_end_offset))
-                                               ],
-                                              complete_split_actions=
-                                              [CreateVocabulary(columns, prefixes=[prefix]),
-                                               CreatePopularity(columns, prefixes=[prefix])]),
-                             CreateLeaveOneOutSplit(MetaInformation("item", column_name="title", type="str"),
-                                                    inner_actions=
-                                                    [CreateNextItemIndex(
-                                                        [MetaInformation("item", column_name="title", type="str")],
-                                                        RemainingSessionPositionExtractor(
-                                                            min_sequence_length)),
-                                                        CreateVocabulary(columns),
-                                                        CreatePopularity(columns)]),
-                             CopyMainFile()
-                             ]
+                             ratio_split_action, leave_one_out_split_action,
+                             leave_percentage_out_split_action]
+
     return DatasetPreprocessingConfig(prefix,
                                       "http://files.grouplens.org/datasets/movielens/ml-1m.zip",
                                       Path(output_directory),
@@ -96,86 +113,32 @@ register_preprocessing_config_provider("ml-1m",
                                                                    ))
 
 
-def get_ml_1m_leave_percentage_out_preprocessing_config(output_directory: str,
-                                                        extraction_directory: str,
-                                                        min_item_feedback: int,
-                                                        min_sequence_length: int,
-                                                        train_percentage: float,
-                                                        validation_percentage: float,
-                                                        test_percentage: float,
-                                                        min_train_length: int,
-                                                        min_validation_length: int,
-                                                        min_test_length: int
-                                                        ) -> DatasetPreprocessingConfig:
-    prefix = "ml-1m-lpo"
-    context = Context()
-    context.set(PREFIXES_KEY, [prefix])
-    context.set(DELIMITER_KEY, "\t")
-    context.set(INPUT_DIR_KEY, Path(extraction_directory))
-    context.set(OUTPUT_DIR_KEY, Path(output_directory))
-
-    if not approx_equal(train_percentage + validation_percentage + test_percentage, 1.0):
-        raise ValueError(f"Split percentages do not sum up to 100%. "
-                         f"({train_percentage} + {validation_percentage} + {test_percentage} != 1.0)")
-
-    if min_sequence_length < min_train_length + min_validation_length + min_test_length:
-        raise ValueError(f"Minimum sequence length given was {min_sequence_length}. "
-                         f"This is insufficient to guarantee "
-                         f"{min_train_length}/{min_validation_length}/{min_test_length} can be generated per session.")
-
-    columns = [MetaInformation("rating", type="int", run_tokenization=False),
-               MetaInformation("gender", type="str"),
-               MetaInformation("age", type="int", run_tokenization=False),
-               MetaInformation("occupation", type="str"),
-               MetaInformation("zip", type="str"),
-               MetaInformation("title", type="str"),
-               MetaInformation("genres", type="str", configs={"delimiter": "|"})]
-
-    preprocessing_actions = [ConvertToCsv(Movielens1MConverter()),
-                             GroupAndFilter("items_filtered", "movieId",
-                                            GroupedFilter("count", lambda v: v >= min_item_feedback)),
-                             GroupAndFilter("sessions_filtered", "userId",
-                                            GroupedFilter("count", lambda v: v >= min_sequence_length)),
-                             CreateSessionIndex(["userId"]),
-                             CreateLeavePercentageOutSplit(MetaInformation("item", column_name="title", type="str"),
-                                                           inner_actions=
-                                                           [CreateNextItemIndex(
-                                                               [MetaInformation("item", column_name="title",
-                                                                                type="str")],
-                                                               RemainingSessionPositionExtractor(
-                                                                   min_sequence_length)),
-                                                               CreateVocabulary(columns),
-                                                               CreatePopularity(columns)]),
-                             CopyMainFile()
-                             ]
-    return DatasetPreprocessingConfig(prefix,
-                                      "http://files.grouplens.org/datasets/movielens/ml-1m.zip",
-                                      Path(output_directory),
-                                      Unzipper(Path(extraction_directory)),
-                                      preprocessing_actions,
-                                      context)
-
-
-register_preprocessing_config_provider("ml-1m-lpo",
-                                       PreprocessingConfigProvider(get_ml_1m_leave_percentage_out_preprocessing_config,
-                                                                   output_directory="./ml-1m",
-                                                                   extraction_directory="./tmp/ml-1m",
-                                                                   min_item_feedback=4,
-                                                                   min_sequence_length=4,
-                                                                   train_percentage=0.8,
-                                                                   validation_percentage=0.1,
-                                                                   test_percentage=0.1,
-                                                                   min_train_length=2,
-                                                                   min_validation_length=1,
-                                                                   min_test_length=1
-                                                                   ))
-
-
-def get_ml_20m_preprocessing_config(output_directory: str,
-                                    extraction_directory: str,
-                                    min_item_feedback: int,
-                                    min_sequence_length: int
-                                    ) -> DatasetPreprocessingConfig:
+def get_ml_20m_preprocessing_config(
+        # General parameters
+        output_directory: str,
+        extraction_directory: str,
+        # Ratio split parameters
+        ratio_split_min_item_feedback: int,
+        ratio_split_min_sequence_length: int,
+        ratio_split_train_percentage: float,
+        ratio_split_validation_percentage: float,
+        ratio_split_test_percentage: float,
+        ratio_split_window_markov_length: int,
+        ratio_split_window_target_length: int,
+        ratio_split_session_end_offset: int,
+        # Leave one out split parameters
+        loo_split_min_item_feedback: int,
+        loo_split_min_sequence_length: int,
+        # Leave percentage out split parameters
+        lpo_split_min_item_feedback: int,
+        lpo_split_min_sequence_length: int,
+        lpo_split_train_percentage: float,
+        lpo_split_validation_percentage: float,
+        lpo_split_test_percentage: float,
+        lpo_split_min_train_length: int,
+        lpo_split_min_validation_length: int,
+        lpo_split_min_test_length: int,
+) -> DatasetPreprocessingConfig:
     prefix = "ml-20m"
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
@@ -188,34 +151,38 @@ def get_ml_20m_preprocessing_config(output_directory: str,
                MetaInformation("title", type="str"),
                MetaInformation("genres", type="str", configs={"delimiter": "|"})]
 
+    item_column = MetaInformation("item", column_name="title", type="str")
+    min_item_feedback_column = "movieId"
+    min_sequence_length_column = "userId"
+    session_key = ["userId"]
+
+    ratio_split_action = build_ratio_split(columns, prefix, ratio_split_min_item_feedback, min_item_feedback_column,
+                                           ratio_split_min_sequence_length, min_sequence_length_column,
+                                           session_key, [item_column], ratio_split_train_percentage,
+                                           ratio_split_validation_percentage, ratio_split_test_percentage,
+                                           ratio_split_window_markov_length, ratio_split_window_target_length,
+                                           ratio_split_session_end_offset)
+
+    leave_one_out_split_action = build_leave_one_out_split(columns, prefix, loo_split_min_item_feedback,
+                                                           min_item_feedback_column,
+                                                           loo_split_min_sequence_length, min_sequence_length_column,
+                                                           session_key, item_column, [item_column])
+
+    leave_percentage_out_split_action = build_leave_percentage_out_split(columns, prefix, lpo_split_min_item_feedback,
+                                                                         min_item_feedback_column,
+                                                                         lpo_split_min_sequence_length,
+                                                                         min_sequence_length_column,
+                                                                         session_key, item_column, [item_column],
+                                                                         lpo_split_train_percentage,
+                                                                         lpo_split_validation_percentage,
+                                                                         lpo_split_test_percentage,
+                                                                         lpo_split_min_train_length,
+                                                                         lpo_split_min_validation_length,
+                                                                         lpo_split_min_test_length)
+
     preprocessing_actions = [ConvertToCsv(Movielens20MConverter()),
-                             GroupAndFilter("items_filtered", "movieId",
-                                            GroupedFilter("count", lambda v: v >= min_item_feedback)),
-                             # We can drop the movieId column after filtering
-                             TransformCsv("movieId_dropped", lambda df: df.drop("movieId", axis=1)),
-                             GroupAndFilter("sessions_filtered", "userId",
-                                            GroupedFilter("count", lambda v: v >= min_sequence_length)),
-                             CreateSessionIndex(["userId"]),
-                             CreateRatioSplit(0.8, 0.1, 0.1,
-                                              per_split_actions=
-                                              [CreateSessionIndex(["userId"]),
-                                               CreateNextItemIndex(
-                                                   [MetaInformation("item", column_name="title", type="str")],
-                                                   RemainingSessionPositionExtractor(
-                                                       min_sequence_length))],
-                                              complete_split_actions=
-                                              [CreateVocabulary(columns, prefixes=[prefix]),
-                                               CreatePopularity(columns, prefixes=[prefix])]),
-                             CreateLeaveOneOutSplit(MetaInformation("item", column_name="title", type="str"),
-                                                    inner_actions=
-                                                    [CreateNextItemIndex(
-                                                        [MetaInformation("item", column_name="title", type="str")],
-                                                        RemainingSessionPositionExtractor(
-                                                            min_sequence_length)),
-                                                        CreateVocabulary(columns),
-                                                        CreatePopularity(columns)]),
-                             CopyMainFile()
-                             ]
+                             ratio_split_action, leave_one_out_split_action,
+                             leave_percentage_out_split_action]
     return DatasetPreprocessingConfig(prefix,
                                       "http://files.grouplens.org/datasets/movielens/ml-20m.zip",
                                       Path(output_directory),
@@ -232,12 +199,33 @@ register_preprocessing_config_provider("ml-20m",
                                                                    min_sequence_length=4))
 
 
-def get_amazon_preprocessing_config(prefix: str,
-                                    output_directory: str,
-                                    input_directory: str,
-                                    min_item_feedback=5,
-                                    min_sequence_length=5
-                                    ) -> DatasetPreprocessingConfig:
+def get_amazon_preprocessing_config(
+        # General parameters
+        prefix: str,
+        output_directory: str,
+        input_directory: str,
+        # Ratio split parameters
+        ratio_split_min_item_feedback: int,
+        ratio_split_min_sequence_length: int,
+        ratio_split_train_percentage: float,
+        ratio_split_validation_percentage: float,
+        ratio_split_test_percentage: float,
+        ratio_split_window_markov_length: int,
+        ratio_split_window_target_length: int,
+        ratio_split_session_end_offset: int,
+        # Leave one out split parameters
+        loo_split_min_item_feedback: int,
+        loo_split_min_sequence_length: int,
+        # Leave percentage out split parameters
+        lpo_split_min_item_feedback: int,
+        lpo_split_min_sequence_length: int,
+        lpo_split_train_percentage: float,
+        lpo_split_validation_percentage: float,
+        lpo_split_test_percentage: float,
+        lpo_split_min_train_length: int,
+        lpo_split_min_validation_length: int,
+        lpo_split_min_test_length: int,
+) -> DatasetPreprocessingConfig:
     if prefix not in ["games", "beauty"]:
         raise KeyError("The only amazon datasets that are currently supported are 'games' and 'beauty'.")
 
@@ -261,32 +249,38 @@ def get_amazon_preprocessing_config(prefix: str,
                MetaInformation("product_id", type="str"),
                MetaInformation("timestamp", type="int", run_tokenization=False)]
 
+    min_item_feedback_column = "product_id"
+    min_sequence_length_column = "reviewer_id"
+    session_key = ["reviewer_id"]
+    item_column = MetaInformation("item", column_name="product_id", type="str")
+
+    ratio_split_action = build_ratio_split(columns, prefix, ratio_split_min_item_feedback, min_item_feedback_column,
+                                           ratio_split_min_sequence_length, min_sequence_length_column,
+                                           session_key, [item_column], ratio_split_train_percentage,
+                                           ratio_split_validation_percentage, ratio_split_test_percentage,
+                                           ratio_split_window_markov_length, ratio_split_window_target_length,
+                                           ratio_split_session_end_offset)
+
+    leave_one_out_split_action = build_leave_one_out_split(columns, prefix, loo_split_min_item_feedback,
+                                                           min_item_feedback_column,
+                                                           loo_split_min_sequence_length, min_sequence_length_column,
+                                                           session_key, item_column, [item_column])
+
+    leave_percentage_out_split_action = build_leave_percentage_out_split(columns, prefix, lpo_split_min_item_feedback,
+                                                                         min_item_feedback_column,
+                                                                         lpo_split_min_sequence_length,
+                                                                         min_sequence_length_column,
+                                                                         session_key, item_column, [item_column],
+                                                                         lpo_split_train_percentage,
+                                                                         lpo_split_validation_percentage,
+                                                                         lpo_split_test_percentage,
+                                                                         lpo_split_min_train_length,
+                                                                         lpo_split_min_validation_length,
+                                                                         lpo_split_min_test_length)
+
     preprocessing_actions = [ConvertToCsv(AmazonConverter()),
-                             GroupAndFilter("items_filtered", "product_id",
-                                            GroupedFilter("count", lambda v: v >= min_item_feedback)),
-                             GroupAndFilter("sessions_filtered", "reviewer_id",
-                                            GroupedFilter("count", lambda v: v >= min_sequence_length)),
-                             CreateSessionIndex(["reviewer_id"]),
-                             CreateRatioSplit(0.8, 0.1, 0.1,
-                                              per_split_actions=
-                                              [CreateSessionIndex(["reviewer_id"]),
-                                               CreateNextItemIndex(
-                                                   [MetaInformation("item", column_name="product_id", type="str")],
-                                                   RemainingSessionPositionExtractor(
-                                                       min_sequence_length))],
-                                              complete_split_actions=
-                                              [CreateVocabulary(columns, prefixes=[prefix]),
-                                               CreatePopularity(columns, prefixes=[prefix])]),
-                             CreateLeaveOneOutSplit(MetaInformation("item", column_name="product_id", type="str"),
-                                                    inner_actions=
-                                                    [CreateNextItemIndex(
-                                                        [MetaInformation("item", column_name="product_id", type="str")],
-                                                        RemainingSessionPositionExtractor(
-                                                            min_sequence_length)),
-                                                        CreateVocabulary(columns),
-                                                        CreatePopularity(columns)]),
-                             CopyMainFile()
-                             ]
+                             ratio_split_action, leave_one_out_split_action,
+                             leave_percentage_out_split_action]
 
     return DatasetPreprocessingConfig(prefix,
                                       AMAZON_DOWNLOAD_URL_MAP[prefix],
@@ -311,11 +305,32 @@ register_preprocessing_config_provider("games",
                                                                    min_sequence_length=4))
 
 
-def get_steam_preprocessing_config(output_directory: str,
-                                   input_dir: str,
-                                   min_item_feedback=5,
-                                   min_sequence_length=5
-                                   ) -> DatasetPreprocessingConfig:
+def get_steam_preprocessing_config(
+        # General parameters
+        output_directory: str,
+        input_dir: str,
+        # Ratio split parameters
+        ratio_split_min_item_feedback: int,
+        ratio_split_min_sequence_length: int,
+        ratio_split_train_percentage: float,
+        ratio_split_validation_percentage: float,
+        ratio_split_test_percentage: float,
+        ratio_split_window_markov_length: int,
+        ratio_split_window_target_length: int,
+        ratio_split_session_end_offset: int,
+        # Leave one out split parameters
+        loo_split_min_item_feedback: int,
+        loo_split_min_sequence_length: int,
+        # Leave percentage out split parameters
+        lpo_split_min_item_feedback: int,
+        lpo_split_min_sequence_length: int,
+        lpo_split_train_percentage: float,
+        lpo_split_validation_percentage: float,
+        lpo_split_test_percentage: float,
+        lpo_split_min_train_length: int,
+        lpo_split_min_validation_length: int,
+        lpo_split_min_test_length: int
+) -> DatasetPreprocessingConfig:
     prefix = "steam"
     filename = "steam_reviews.json.gz"
 
@@ -329,32 +344,38 @@ def get_steam_preprocessing_config(output_directory: str,
                MetaInformation("product_id", type="str"),
                MetaInformation("date", type="timestamp", configs={"format": "%Y-%m-%d"}, run_tokenization=False)]
 
+    min_item_feedback_column = "product_id"
+    min_sequence_length_column = "usermname"
+    session_key = ["username"]
+    item_column = MetaInformation("item", column_name="product_id", type="str")
+
+    ratio_split_action = build_ratio_split(columns, prefix, ratio_split_min_item_feedback, min_item_feedback_column,
+                                           ratio_split_min_sequence_length, min_sequence_length_column,
+                                           session_key, [item_column], ratio_split_train_percentage,
+                                           ratio_split_validation_percentage, ratio_split_test_percentage,
+                                           ratio_split_window_markov_length, ratio_split_window_target_length,
+                                           ratio_split_session_end_offset)
+
+    leave_one_out_split_action = build_leave_one_out_split(columns, prefix, loo_split_min_item_feedback,
+                                                           min_item_feedback_column,
+                                                           loo_split_min_sequence_length, min_sequence_length_column,
+                                                           session_key, item_column, [item_column])
+
+    leave_percentage_out_split_action = build_leave_percentage_out_split(columns, prefix, lpo_split_min_item_feedback,
+                                                                         min_item_feedback_column,
+                                                                         lpo_split_min_sequence_length,
+                                                                         min_sequence_length_column,
+                                                                         session_key, item_column, [item_column],
+                                                                         lpo_split_train_percentage,
+                                                                         lpo_split_validation_percentage,
+                                                                         lpo_split_test_percentage,
+                                                                         lpo_split_min_train_length,
+                                                                         lpo_split_min_validation_length,
+                                                                         lpo_split_min_test_length)
+
     preprocessing_actions = [ConvertToCsv(SteamConverter()),
-                             GroupAndFilter("items_filtered", "product_id",
-                                            GroupedFilter("count", lambda v: v >= min_item_feedback)),
-                             GroupAndFilter("sessions_filtered", "username",
-                                            GroupedFilter("count", lambda v: v >= min_sequence_length)),
-                             CreateSessionIndex(["username"]),
-                             CreateRatioSplit(0.8, 0.1, 0.1,
-                                              per_split_actions=
-                                              [CreateSessionIndex(["username"]),
-                                               CreateNextItemIndex(
-                                                   [MetaInformation("item", column_name="product_id", type="str")],
-                                                   RemainingSessionPositionExtractor(
-                                                       min_sequence_length))],
-                                              complete_split_actions=
-                                              [CreateVocabulary(columns, prefixes=[prefix]),
-                                               CreatePopularity(columns, prefixes=[prefix])]),
-                             CreateLeaveOneOutSplit(MetaInformation("item", column_name="product_id", type="str"),
-                                                    inner_actions=
-                                                    [CreateNextItemIndex(
-                                                        [MetaInformation("item", column_name="product_id", type="str")],
-                                                        RemainingSessionPositionExtractor(
-                                                            min_sequence_length)),
-                                                        CreateVocabulary(columns),
-                                                        CreatePopularity(columns)]),
-                             CopyMainFile()
-                             ]
+                             ratio_split_action, leave_one_out_split_action,
+                             leave_percentage_out_split_action]
 
     return DatasetPreprocessingConfig(prefix,
                                       "http://cseweb.ucsd.edu/~wckang/steam_reviews.json.gz",
@@ -371,11 +392,33 @@ register_preprocessing_config_provider("steam",
                                                                    min_sequence_length=4))
 
 
-def get_yoochoose_preprocessing_config(output_directory: str,
-                                       input_directory: str,
-                                       min_item_feedback: int,
-                                       min_sequence_length: int,
-                                       ) -> DatasetPreprocessingConfig:
+def get_yoochoose_preprocessing_config(
+        # General parameters
+        output_directory: str,
+        input_directory: str,
+        # Ratio split parameters
+        ratio_split_min_item_feedback: int,
+        ratio_split_min_sequence_length: int,
+        ratio_split_train_percentage: float,
+        ratio_split_validation_percentage: float,
+        ratio_split_test_percentage: float,
+        ratio_split_window_markov_length: int,
+        ratio_split_window_target_length: int,
+        ratio_split_session_end_offset: int,
+        # Leave one out split parameters
+        loo_split_min_item_feedback: int,
+        loo_split_min_sequence_length: int,
+        # Leave percentage out split parameters
+        lpo_split_min_item_feedback: int,
+        lpo_split_min_sequence_length: int,
+        lpo_split_train_percentage: float,
+        lpo_split_validation_percentage: float,
+        lpo_split_test_percentage: float,
+        lpo_split_min_train_length: int,
+        lpo_split_min_validation_length: int,
+        lpo_split_min_test_length: int
+) -> DatasetPreprocessingConfig:
+
     prefix = "yoochoose"
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
@@ -387,31 +430,38 @@ def get_yoochoose_preprocessing_config(output_directory: str,
                MetaInformation("ItemId", type="str"),
                MetaInformation("Time", type="int", run_tokenization=False)]
 
+    min_item_feedback_column = "ItemId"
+    min_sequence_length_column = "SessionId"
+    session_key = ["SessionId"]
+    item_column = MetaInformation("item", column_name="ItemId", type="str")
+
+    ratio_split_action = build_ratio_split(columns, prefix, ratio_split_min_item_feedback, min_item_feedback_column,
+                                           ratio_split_min_sequence_length, min_sequence_length_column,
+                                           session_key, [item_column], ratio_split_train_percentage,
+                                           ratio_split_validation_percentage, ratio_split_test_percentage,
+                                           ratio_split_window_markov_length, ratio_split_window_target_length,
+                                           ratio_split_session_end_offset)
+
+    leave_one_out_split_action = build_leave_one_out_split(columns, prefix, loo_split_min_item_feedback,
+                                                           min_item_feedback_column,
+                                                           loo_split_min_sequence_length, min_sequence_length_column,
+                                                           session_key, item_column, [item_column])
+
+    leave_percentage_out_split_action = build_leave_percentage_out_split(columns, prefix, lpo_split_min_item_feedback,
+                                                                         min_item_feedback_column,
+                                                                         lpo_split_min_sequence_length,
+                                                                         min_sequence_length_column,
+                                                                         session_key, item_column, [item_column],
+                                                                         lpo_split_train_percentage,
+                                                                         lpo_split_validation_percentage,
+                                                                         lpo_split_test_percentage,
+                                                                         lpo_split_min_train_length,
+                                                                         lpo_split_min_validation_length,
+                                                                         lpo_split_min_test_length)
+
     preprocessing_actions = [ConvertToCsv(YooChooseConverter()),
-                             GroupAndFilter("items_filtered", "ItemId",
-                                            GroupedFilter("count", lambda v: v >= min_item_feedback)),
-                             GroupAndFilter("sessions_filtered", "SessionId",
-                                            GroupedFilter("count", lambda v: v >= min_sequence_length)),
-                             CreateSessionIndex(["SessionId"]),
-                             CreateRatioSplit(0.8, 0.1, 0.1,
-                                              per_split_actions=
-                                              [CreateSessionIndex(["SessionId"]),
-                                               CreateNextItemIndex(
-                                                   [MetaInformation("item", column_name="ItemId", type="str")],
-                                                   RemainingSessionPositionExtractor(
-                                                       min_sequence_length))],
-                                              complete_split_actions=
-                                              [CreateVocabulary(columns, prefixes=[prefix]),
-                                               CreatePopularity(columns, prefixes=[prefix])]),
-                             CreateLeaveOneOutSplit(MetaInformation("item", column_name="ItemId", type="str"),
-                                                    inner_actions=
-                                                    [CreateNextItemIndex(
-                                                        [MetaInformation("item", column_name="ItemId", type="str")],
-                                                        RemainingSessionPositionExtractor(
-                                                            min_sequence_length)),
-                                                        CreateVocabulary(columns),
-                                                        CreatePopularity(columns)]),
-                             CopyMainFile()]
+                             ratio_split_action, leave_one_out_split_action,
+                             leave_percentage_out_split_action]
 
     return DatasetPreprocessingConfig(prefix,
                                       None,
@@ -435,12 +485,32 @@ außerdem bei LOO auch Sliding_window index??
 """
 
 
-def get_example_preprocessing_config(output_directory: str,
-                                     input_file_path: str,
-                                     min_sequence_length: int,
-                                     window_markov_length: Optional[int] = None,
-                                     window_target_length: Optional[int] = None,
-                                     session_end_offset: Optional[int] = None) -> DatasetPreprocessingConfig:
+def get_example_preprocessing_config(
+        # General parameters
+        output_directory: str,
+        input_file_path: str,
+        # Ratio split parameters
+        ratio_split_min_item_feedback: int,
+        ratio_split_min_sequence_length: int,
+        ratio_split_train_percentage: float,
+        ratio_split_validation_percentage: float,
+        ratio_split_test_percentage: float,
+        ratio_split_window_markov_length: int,
+        ratio_split_window_target_length: int,
+        ratio_split_session_end_offset: int,
+        # Leave one out split parameters
+        loo_split_min_item_feedback: int,
+        loo_split_min_sequence_length: int,
+        # Leave percentage out split parameters
+        lpo_split_min_item_feedback: int,
+        lpo_split_min_sequence_length: int,
+        lpo_split_train_percentage: float,
+        lpo_split_validation_percentage: float,
+        lpo_split_test_percentage: float,
+        lpo_split_min_train_length: int,
+        lpo_split_min_validation_length: int,
+        lpo_split_min_test_length: int
+) -> DatasetPreprocessingConfig:
     prefix = "example"
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
@@ -454,31 +524,38 @@ def get_example_preprocessing_config(output_directory: str,
                MetaInformation("user_id", column_name="user_id", type="str"),
                MetaInformation("attr_one", column_name="attr_one", type="str")]
 
-    preprocessing_actions = [ConvertToCsv(ExampleConverter()),
-                             CreateSessionIndex(["session_id"]),
-                             CreateRatioSplit(0.8, 0.1, 0.1, per_split_actions=
-                             [CreateSessionIndex(["session_id"]),
-                              CreateNextItemIndex([MetaInformation("item", column_name="item_id", type="str")],
-                                                  RemainingSessionPositionExtractor(min_sequence_length)),
-                              CreateSlidingWindowIndex([MetaInformation("item", column_name="item_id", type="str")],
-                                                       SlidingWindowPositionExtractor(window_markov_length,
-                                                                                      window_target_length,
-                                                                                      session_end_offset))
-                              ],
-                                              complete_split_actions=[
-                                                  CreateVocabulary(columns, prefixes=[prefix]),
-                                                  CreatePopularity(columns, prefixes=[prefix])]),
+    min_item_feedback_column = "item_id"
+    min_sequence_length_column = "session_id"
+    session_key = ["session_id"]
+    item_column = MetaInformation("item", column_name="item_id", type="str")
 
-                             CreateLeaveOneOutSplit(MetaInformation("item", column_name="item_id", type="str"),
-                                                    inner_actions=
-                                                    [CreateNextItemIndex(
-                                                        [MetaInformation("item", column_name="item_id", type="str")],
-                                                        RemainingSessionPositionExtractor(
-                                                            min_sequence_length)),
-                                                        CreateVocabulary(columns),
-                                                        CreatePopularity(columns)]),
-                             CopyMainFile()
-                             ]
+    ratio_split_action = build_ratio_split(columns, prefix, ratio_split_min_item_feedback, min_item_feedback_column,
+                                           ratio_split_min_sequence_length, min_sequence_length_column,
+                                           session_key, [item_column], ratio_split_train_percentage,
+                                           ratio_split_validation_percentage, ratio_split_test_percentage,
+                                           ratio_split_window_markov_length, ratio_split_window_target_length,
+                                           ratio_split_session_end_offset)
+
+    leave_one_out_split_action = build_leave_one_out_split(columns, prefix, loo_split_min_item_feedback,
+                                                           min_item_feedback_column,
+                                                           loo_split_min_sequence_length, min_sequence_length_column,
+                                                           session_key, item_column, [item_column])
+
+    leave_percentage_out_split_action = build_leave_percentage_out_split(columns, prefix, lpo_split_min_item_feedback,
+                                                                         min_item_feedback_column,
+                                                                         lpo_split_min_sequence_length,
+                                                                         min_sequence_length_column,
+                                                                         session_key, item_column, [item_column],
+                                                                         lpo_split_train_percentage,
+                                                                         lpo_split_validation_percentage,
+                                                                         lpo_split_test_percentage,
+                                                                         lpo_split_min_train_length,
+                                                                         lpo_split_min_validation_length,
+                                                                         lpo_split_min_test_length)
+
+    preprocessing_actions = [ConvertToCsv(ExampleConverter()),
+                             ratio_split_action, leave_one_out_split_action,
+                             leave_percentage_out_split_action]
 
     return DatasetPreprocessingConfig(prefix,
                                       None,

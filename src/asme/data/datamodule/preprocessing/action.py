@@ -1,4 +1,8 @@
+import contextlib
+import copy
 from abc import abstractmethod
+from pathlib import Path
+from typing import List
 
 from asme.core.init.context import Context
 
@@ -68,4 +72,40 @@ class PreprocessingAction:
     def __call__(self, context: Context, force_execution: bool = False) -> None:
         self.apply(context, force_execution)
 
+
+class PreprocessingActionGroup(PreprocessingAction):
+    def __init__(self, inner_actions: List[PreprocessingAction], name: str = "Preprocessing Group",
+                 relative_output_dir: Path = Path(".")):
+        self._inner_actions = inner_actions
+        self._name = name
+        self._relative_output_path = relative_output_dir
+
+    def name(self) -> str:
+        return self._name
+
+    def _dry_run(self, context: Context) -> None:
+        with self.add_relative_path(context) as prepared_context:
+            for action in self._inner_actions:
+                action._dry_run(prepared_context)
+
+    def _run(self, context: Context) -> None:
+        with self.add_relative_path(context) as prepared_context:
+            for action in self._inner_actions:
+                if action.dry_run_available(prepared_context):
+                    action._dry_run(prepared_context)
+                else:
+                    action._run(prepared_context)
+
+    def dry_run_available(self, context: Context) -> bool:
+        # We handle dry-run logic individually in the _run method
+        return False
+
+    @contextlib.contextmanager
+    def add_relative_path(self, context: Context):
+        output_dir = context.get(OUTPUT_DIR_KEY)
+        try:
+            context.set(OUTPUT_DIR_KEY, output_dir / self._relative_output_path, overwrite=True)
+            yield context
+        finally:
+            context.set(OUTPUT_DIR_KEY, output_dir, overwrite=True)
 

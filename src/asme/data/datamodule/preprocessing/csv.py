@@ -94,6 +94,9 @@ class CopyMainFile(PreprocessingAction):
     def _run(self, context: Context) -> None:
         current_main_file_path = context.get(MAIN_FILE_KEY)
         new_main_file_path = self._get_final_location(context)
+
+        # Ensure the directories for the new main file path exist
+        new_main_file_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(current_main_file_path, new_main_file_path)
         context.set(MAIN_FILE_KEY, self._get_final_location(context), overwrite=True)
 
