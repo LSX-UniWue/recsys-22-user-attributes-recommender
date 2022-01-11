@@ -4,16 +4,10 @@ from asme.core.init.context import Context
 from asme.data.datamodule.config import DatasetPreprocessingConfig, PreprocessingConfigProvider
 from asme.data.datamodule.converters import YooChooseConverter, Movielens1MConverter, ExampleConverter, \
     Movielens20MConverter, AmazonConverter, SteamConverter
-from asme.data.datamodule.extractors import RemainingSessionPositionExtractor, SlidingWindowPositionExtractor
 from asme.data.datamodule.preprocessing.action import PREFIXES_KEY, DELIMITER_KEY, INPUT_DIR_KEY, OUTPUT_DIR_KEY
-from asme.data.datamodule.preprocessing.csv import ConvertToCsv, CopyMainFile
-from asme.data.datamodule.preprocessing.indexing import CreateSessionIndex, CreateNextItemIndex, \
-    CreateSlidingWindowIndex
-from asme.data.datamodule.preprocessing.popularity import CreatePopularity
-from asme.data.datamodule.preprocessing.split import CreateRatioSplit, CreateLeaveOneOutSplit
+from asme.data.datamodule.preprocessing.csv import ConvertToCsv
 from asme.data.datamodule.preprocessing.template import build_ratio_split, build_leave_one_out_split, \
     build_leave_percentage_out_split
-from asme.data.datamodule.preprocessing.vocabulary import CreateVocabulary
 from asme.data.datamodule.registry import register_preprocessing_config_provider
 from asme.data.datamodule.unpacker import Unzipper
 from asme.data.datasets.sequence import MetaInformation
@@ -105,11 +99,26 @@ register_preprocessing_config_provider("ml-1m",
                                        PreprocessingConfigProvider(get_ml_1m_preprocessing_config,
                                                                    output_directory="./ml-1m",
                                                                    extraction_directory="./tmp/ml-1m",
-                                                                   min_item_feedback=4,
-                                                                   min_sequence_length=4,
-                                                                   window_markov_length=3,
-                                                                   window_target_length=3,
-                                                                   session_end_offset=0
+                                                                   ratio_split_min_item_feedback=4,
+                                                                   ratio_split_min_sequence_length=4,
+                                                                   ratio_split_train_percentage=0.8,
+                                                                   ratio_split_validation_percentage=0.1,
+                                                                   ratio_split_test_percentage=0.1,
+                                                                   ratio_split_window_markov_length=3,
+                                                                   ratio_split_window_target_length=3,
+                                                                   ratio_split_session_end_offset=0,
+                                                                   # Leave one out split parameters
+                                                                   loo_split_min_item_feedback=4,
+                                                                   loo_split_min_sequence_length=4,
+                                                                   # Leave percentage out split parameters
+                                                                   lpo_split_min_item_feedback=4,
+                                                                   lpo_split_min_sequence_length=4,
+                                                                   lpo_split_train_percentage=0.8,
+                                                                   lpo_split_validation_percentage=0.1,
+                                                                   lpo_split_test_percentage=0.1,
+                                                                   lpo_split_min_train_length=2,
+                                                                   lpo_split_min_validation_length=1,
+                                                                   lpo_split_min_test_length=1
                                                                    ))
 
 
@@ -195,8 +204,27 @@ register_preprocessing_config_provider("ml-20m",
                                        PreprocessingConfigProvider(get_ml_20m_preprocessing_config,
                                                                    output_directory="./ml-20m",
                                                                    extraction_directory="./tmp/ml-20m",
-                                                                   min_item_feedback=4,
-                                                                   min_sequence_length=4))
+                                                                   ratio_split_min_item_feedback=4,
+                                                                   ratio_split_min_sequence_length=4,
+                                                                   ratio_split_train_percentage=0.8,
+                                                                   ratio_split_validation_percentage=0.1,
+                                                                   ratio_split_test_percentage=0.1,
+                                                                   ratio_split_window_markov_length=3,
+                                                                   ratio_split_window_target_length=3,
+                                                                   ratio_split_session_end_offset=0,
+                                                                   # Leave one out split parameters
+                                                                   loo_split_min_item_feedback=4,
+                                                                   loo_split_min_sequence_length=4,
+                                                                   # Leave percentage out split parameters
+                                                                   lpo_split_min_item_feedback=4,
+                                                                   lpo_split_min_sequence_length=4,
+                                                                   lpo_split_train_percentage=0.8,
+                                                                   lpo_split_validation_percentage=0.1,
+                                                                   lpo_split_test_percentage=0.1,
+                                                                   lpo_split_min_train_length=2,
+                                                                   lpo_split_min_validation_length=1,
+                                                                   lpo_split_min_test_length=1
+                                                                   ))
 
 
 def get_amazon_preprocessing_config(
@@ -294,15 +322,52 @@ register_preprocessing_config_provider("beauty",
                                        PreprocessingConfigProvider(get_amazon_preprocessing_config,
                                                                    prefix="beauty",
                                                                    output_directory="./beauty",
-                                                                   min_item_feedback=4,
-                                                                   min_sequence_length=4))
+                                                                   ratio_split_min_item_feedback=4,
+                                                                   ratio_split_min_sequence_length=4,
+                                                                   ratio_split_train_percentage=0.8,
+                                                                   ratio_split_validation_percentage=0.1,
+                                                                   ratio_split_test_percentage=0.1,
+                                                                   ratio_split_window_markov_length=3,
+                                                                   ratio_split_window_target_length=3,
+                                                                   ratio_split_session_end_offset=0,
+                                                                   # Leave one out split parameters
+                                                                   loo_split_min_item_feedback=4,
+                                                                   loo_split_min_sequence_length=4,
+                                                                   # Leave percentage out split parameters
+                                                                   lpo_split_min_item_feedback=4,
+                                                                   lpo_split_min_sequence_length=4,
+                                                                   lpo_split_train_percentage=0.8,
+                                                                   lpo_split_validation_percentage=0.1,
+                                                                   lpo_split_test_percentage=0.1,
+                                                                   lpo_split_min_train_length=2,
+                                                                   lpo_split_min_validation_length=1,
+                                                                   lpo_split_min_test_length=1
+                                                                   ))
 
 register_preprocessing_config_provider("games",
                                        PreprocessingConfigProvider(get_amazon_preprocessing_config,
                                                                    prefix="games",
                                                                    output_directory="./games",
-                                                                   min_item_feedback=4,
-                                                                   min_sequence_length=4))
+                                                                   ratio_split_min_item_feedback=4,
+                                                                   ratio_split_min_sequence_length=4,
+                                                                   ratio_split_train_percentage=0.8,
+                                                                   ratio_split_validation_percentage=0.1,
+                                                                   ratio_split_test_percentage=0.1,
+                                                                   ratio_split_window_markov_length=3,
+                                                                   ratio_split_window_target_length=3,
+                                                                   ratio_split_session_end_offset=0,
+                                                                   # Leave one out split parameters
+                                                                   loo_split_min_item_feedback=4,
+                                                                   loo_split_min_sequence_length=4,
+                                                                   # Leave percentage out split parameters
+                                                                   lpo_split_min_item_feedback=4,
+                                                                   lpo_split_min_sequence_length=4,
+                                                                   lpo_split_train_percentage=0.8,
+                                                                   lpo_split_validation_percentage=0.1,
+                                                                   lpo_split_test_percentage=0.1,
+                                                                   lpo_split_min_train_length=2,
+                                                                   lpo_split_min_validation_length=1,
+                                                                   lpo_split_min_test_length=1))
 
 
 def get_steam_preprocessing_config(
@@ -388,8 +453,27 @@ def get_steam_preprocessing_config(
 register_preprocessing_config_provider("steam",
                                        PreprocessingConfigProvider(get_steam_preprocessing_config,
                                                                    output_directory="./steam",
-                                                                   min_item_feedback=4,
-                                                                   min_sequence_length=4))
+                                                                   ratio_split_min_item_feedback=4,
+                                                                   ratio_split_min_sequence_length=4,
+                                                                   ratio_split_train_percentage=0.8,
+                                                                   ratio_split_validation_percentage=0.1,
+                                                                   ratio_split_test_percentage=0.1,
+                                                                   ratio_split_window_markov_length=3,
+                                                                   ratio_split_window_target_length=3,
+                                                                   ratio_split_session_end_offset=0,
+                                                                   # Leave one out split parameters
+                                                                   loo_split_min_item_feedback=4,
+                                                                   loo_split_min_sequence_length=4,
+                                                                   # Leave percentage out split parameters
+                                                                   lpo_split_min_item_feedback=4,
+                                                                   lpo_split_min_sequence_length=4,
+                                                                   lpo_split_train_percentage=0.8,
+                                                                   lpo_split_validation_percentage=0.1,
+                                                                   lpo_split_test_percentage=0.1,
+                                                                   lpo_split_min_train_length=2,
+                                                                   lpo_split_min_validation_length=1,
+                                                                   lpo_split_min_test_length=1
+                                                                   ))
 
 
 def get_yoochoose_preprocessing_config(
@@ -418,7 +502,6 @@ def get_yoochoose_preprocessing_config(
         lpo_split_min_validation_length: int,
         lpo_split_min_test_length: int
 ) -> DatasetPreprocessingConfig:
-
     prefix = "yoochoose"
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
@@ -474,8 +557,26 @@ def get_yoochoose_preprocessing_config(
 register_preprocessing_config_provider("yoochoose",
                                        PreprocessingConfigProvider(get_yoochoose_preprocessing_config,
                                                                    output_directory="./yoochoose",
-                                                                   min_item_feedback=4,
-                                                                   min_sequence_length=4))
+                                                                   ratio_split_min_item_feedback=4,
+                                                                   ratio_split_min_sequence_length=4,
+                                                                   ratio_split_train_percentage=0.8,
+                                                                   ratio_split_validation_percentage=0.1,
+                                                                   ratio_split_test_percentage=0.1,
+                                                                   ratio_split_window_markov_length=3,
+                                                                   ratio_split_window_target_length=3,
+                                                                   ratio_split_session_end_offset=0,
+                                                                   # Leave one out split parameters
+                                                                   loo_split_min_item_feedback=4,
+                                                                   loo_split_min_sequence_length=4,
+                                                                   # Leave percentage out split parameters
+                                                                   lpo_split_min_item_feedback=4,
+                                                                   lpo_split_min_sequence_length=4,
+                                                                   lpo_split_train_percentage=0.8,
+                                                                   lpo_split_validation_percentage=0.1,
+                                                                   lpo_split_test_percentage=0.1,
+                                                                   lpo_split_min_train_length=2,
+                                                                   lpo_split_min_validation_length=1,
+                                                                   lpo_split_min_test_length=1))
 
 """
 hier müssen wir noch die Parameter ändern:
@@ -572,5 +673,25 @@ register_preprocessing_config_provider("example",
                                                                    min_sequence_length=3,
                                                                    window_markov_length=2,
                                                                    window_target_length=1,
-                                                                   session_end_offset=0
+                                                                   session_end_offset=0,
+                                                                   ratio_split_min_item_feedback=0,
+                                                                   ratio_split_min_sequence_length=3,
+                                                                   ratio_split_train_percentage=0.8,
+                                                                   ratio_split_validation_percentage=0.1,
+                                                                   ratio_split_test_percentage=0.1,
+                                                                   ratio_split_window_markov_length=2,
+                                                                   ratio_split_window_target_length=1,
+                                                                   ratio_split_session_end_offset=0,
+                                                                   # Leave one out split parameters
+                                                                   loo_split_min_item_feedback=0,
+                                                                   loo_split_min_sequence_length=3,
+                                                                   # Leave percentage out split parameters
+                                                                   lpo_split_min_item_feedback=4,
+                                                                   lpo_split_min_sequence_length=4,
+                                                                   lpo_split_train_percentage=0.8,
+                                                                   lpo_split_validation_percentage=0.1,
+                                                                   lpo_split_test_percentage=0.1,
+                                                                   lpo_split_min_train_length=2,
+                                                                   lpo_split_min_validation_length=1,
+                                                                   lpo_split_min_test_length=1
                                                                    ))
