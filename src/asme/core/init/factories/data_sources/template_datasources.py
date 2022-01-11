@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from asme.core.init.config import Config
 from asme.core.init.context import Context
 from asme.core.init.factories.common.conditional_based_factory import ConditionalFactory
-from asme.core.init.factories.data_sources.common import build_default_loader_config, set_path_based_on_split
+from asme.core.init.factories.data_sources.common import build_default_loader_config
 from asme.core.init.factories.data_sources.datasets.processor.processors import FIXED_SEQUENCE_LENGTH_PROCESSOR_KEY
 from asme.core.init.factories.data_sources.loader import LoaderFactory
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
@@ -37,8 +37,8 @@ class TemplateDataSourcesFactory(ObjectFactory):
 
     def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
         # If no dataset path was specified, try to the use the one provided by the datamodule
-        split = DatasetSplit[config.get("split").upper()]
-        set_path_based_on_split(config, context, split)
+        config.set_if_absent("path", context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY))
+
         return self._factory.build(config, context)
 
     def is_required(self, context: Context) -> bool:

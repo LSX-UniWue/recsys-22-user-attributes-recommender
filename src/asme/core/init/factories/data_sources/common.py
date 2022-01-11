@@ -49,10 +49,3 @@ def build_default_loader_config(config: Config, stage: Stage, dataset_builders: 
                                               ['max_seq_step_length', 'num_workers', 'dynamic_padding'])
 
     return Config(loader_config)
-
-
-def set_path_based_on_split(config: Config, context: Context, split: DatasetSplit):
-    if split == DatasetSplit.RATIO_SPLIT:
-        config.set_if_absent("path", context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY))
-    else:
-        config.set_if_absent("path", context.get(BASE_DATASET_PATH_CONTEXT_KEY))

@@ -97,7 +97,6 @@ PARSER_ITEM_COLUMN_NAME = 'item_column_name'
 PARSER_ITEM_SEPARATOR = 'item_separator'
 
 
-
 def _get_prefix(config: Dict[str, Any],
                 stage: Stage
                 ) -> str:
@@ -186,7 +185,7 @@ class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
         csv_file_index_path = base_path / f'{prefix}.session.idx'
         if stage is not Stage.TRAIN:
             raise ValueError(f"The next-item-datasource is only available for training when using a leave-one-out split.")
-        nip_index_file_path = base_path / 'loo' / f'{prefix}.nextitem.idx'
+        nip_index_file_path = base_path  / f'{prefix}.nextitem.idx'
         return {
             'type': 'sequence_position',
             'csv_file': str(csv_file_path),
@@ -215,7 +214,7 @@ class LeaveOneOutSequenceWindowDatasetBuilder(DatasetBuilder):
         prefix = f"{prefix}.{stage.value}"
         csv_file = base_path / f'{prefix}.csv'
         csv_file_index = base_path / f'{prefix}.session.idx'
-        nip_index_file = base_path / 'loo' / f'{prefix}.slidingwindow.{window_size}.idx'
+        nip_index_file = base_path / f'{prefix}.slidingwindow.{window_size}.idx'
         return {
             'type': 'sequence_position',
             'csv_file': str(csv_file),
@@ -263,7 +262,7 @@ class LeaveOneOutSessionDatasetBuilder(DatasetBuilder):
         index_file_path = f"{prefix}.{stage.value}"
         csv_file = base_path / f'{prefix}.csv'
         csv_file_index = base_path / f'{prefix}.session.idx'
-        nip_index_file = base_path / 'loo' / f'{index_file_path}.loo.idx'
+        nip_index_file = base_path / f'{index_file_path}.loo.idx'
         return {
             'type': 'sequence_position',
             'csv_file': str(csv_file),
