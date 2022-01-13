@@ -185,7 +185,7 @@ class LeaveOneOutNextPositionDatasetBuilder(DatasetBuilder):
         csv_file_index_path = base_path / f'{prefix}.session.idx'
         if stage is not Stage.TRAIN:
             raise ValueError(f"The next-item-datasource is only available for training when using a leave-one-out split.")
-        nip_index_file_path = base_path  / f'{prefix}.nextitem.idx'
+        nip_index_file_path = base_path / f'{prefix}.nextitem.idx'
         return {
             'type': 'sequence_position',
             'csv_file': str(csv_file_path),
@@ -255,6 +255,49 @@ class LeaveOneOutSessionDatasetBuilder(DatasetBuilder):
 
     def can_build_dataset_definition(self, dataset_split_type: DatasetSplit):
         return dataset_split_type == DatasetSplit.LEAVE_ONE_OUT
+
+    def build_dataset_definition(self, stage: Stage, config: Dict[str, Any]) -> Dict[str, Any]:
+        base_path = Path(config['path'])
+        prefix = _get_prefix(config, stage)
+        index_file_path = f"{prefix}.{stage.value}"
+        csv_file = base_path / f'{prefix}.csv'
+        csv_file_index = base_path / f'{prefix}.session.idx'
+        nip_index_file = base_path / f'{index_file_path}.loo.idx'
+        return {
+            'type': 'sequence_position',
+            'csv_file': str(csv_file),
+            'csv_file_index': str(csv_file_index),
+            'nip_index_file': str(nip_index_file)
+        }
+
+
+class LeavePercentageOutNextPositionDatasetBuilder(DatasetBuilder):
+
+    def can_build_dataset_definition(self, dataset_split_type: DatasetSplit) -> bool:
+        return dataset_split_type == DatasetSplit.LEAVE_PERCENTAGE_OUT
+
+    def build_dataset_definition(self, stage: Stage, config: Dict[str, Any]) -> Dict[str, Any]:
+        base_path = Path(config['path'])
+        prefix = _get_prefix(config, stage)
+
+        csv_file_path = base_path / f'{prefix}.csv'
+        csv_file_index_path = base_path / f'{prefix}.session.idx'
+        if stage is not Stage.TRAIN:
+            raise ValueError(f"The next-item-datasource is only available for training when using a "
+                             f"leave-percentage-out split.")
+        nip_index_file_path = base_path / f'{prefix}.nextitem.idx'
+        return {
+            'type': 'sequence_position',
+            'csv_file': str(csv_file_path),
+            'csv_file_index': str(csv_file_index_path),
+            'nip_index_file': str(nip_index_file_path)
+        }
+
+
+class LeavePercentageOutSessionDatasetBuilder(DatasetBuilder):
+
+    def can_build_dataset_definition(self, dataset_split_type: DatasetSplit):
+        return dataset_split_type == DatasetSplit.LEAVE_PERCENTAGE_OUT
 
     def build_dataset_definition(self, stage: Stage, config: Dict[str, Any]) -> Dict[str, Any]:
         base_path = Path(config['path'])
