@@ -211,16 +211,13 @@ class NextItemPredictionTrainingModule(BaseNextItemPredictionTrainingModule):
         :return: the logits for the last input item of the sequence. [BS x I]
         """
         # calculate the padding mask where each non-padding token has the value `1`
-        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)  # BS x S
-        # calculate positions of last item in every sequence from padding mask and correct for 0-based indexing
-        target_indices = padding_mask.sum(dim=-1) - 1  # BS
-        target_indices = target_indices.unsqueeze(-1)  # BS x 1
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)  # [BS x S]
+        seq_length = padding_mask.sum(dim=-1) - 1  # [BS]
 
-        # gather only the `I` logits for the last item in each sequence
-        target_indices = target_indices.repeat(1, logits.size()[-1])  # BS x I
-        target_indices = target_indices.unsqueeze(1)  # BS x 1 x I
-        #FIXME (AD) replace gather with tensor indexing syntax, see RNNPooler
-        target_logits = torch.gather(logits, 1, target_indices).squeeze(1)  # BS x I
+        batch_index = torch.arange(input_seq.size()[0])  # [BS]
+
+        # select only the outputs at the last step of each sequence
+        target_logits = logits[batch_index, seq_length]  # [BS, I]
 
         return target_logits
 
