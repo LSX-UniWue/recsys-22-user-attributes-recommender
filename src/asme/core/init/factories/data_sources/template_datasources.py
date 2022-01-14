@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from asme.core.init.config import Config
 from asme.core.init.context import Context
 from asme.core.init.factories.common.conditional_based_factory import ConditionalFactory
-from asme.core.init.factories.data_sources.common import build_default_loader_config, set_path_based_on_split
+from asme.core.init.factories.data_sources.common import build_default_loader_config
 from asme.core.init.factories.data_sources.datasets.processor.processors import FIXED_SEQUENCE_LENGTH_PROCESSOR_KEY
 from asme.core.init.factories.data_sources.loader import LoaderFactory
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
@@ -14,7 +14,8 @@ from asme.core.init.templating.datasources.datasources import Stage, SequenceDat
     LeaveOneOutSessionDatasetBuilder, \
     NextPositionDatasetBuilder, TARGET_EXTRACTOR_PROCESSOR_CONFIG, LeaveOneOutNextPositionDatasetBuilder, \
     ConditionalSequenceOrSequencePositionDatasetBuilder, POS_NEG_PROCESSOR_CONFIG, NextPositionWindowDatasetBuilder, \
-    LeaveOneOutSequenceWindowDatasetBuilder, DatasetSplit
+    LeaveOneOutSequenceWindowDatasetBuilder, LeavePercentageOutSessionDatasetBuilder, \
+    LeavePercentageOutNextPositionDatasetBuilder
 from asme.data import CURRENT_SPLIT_PATH_CONTEXT_KEY
 
 
@@ -37,8 +38,8 @@ class TemplateDataSourcesFactory(ObjectFactory):
 
     def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
         # If no dataset path was specified, try to the use the one provided by the datamodule
-        split = DatasetSplit[config.get("split").upper()]
-        set_path_based_on_split(config, context, split)
+        config.set_if_absent("path", context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY))
+
         return self._factory.build(config, context)
 
     def is_required(self, context: Context) -> bool:
@@ -93,9 +94,10 @@ class BaseTemplateDataSourcesFactory(ObjectFactory):
 
 
 class MaskTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
-
-    TRAIN_DATASET_BUILDERS = [SequenceDatasetRatioSplitBuilder(), LeaveOneOutSessionDatasetBuilder()]
-    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
+    TRAIN_DATASET_BUILDERS = [SequenceDatasetRatioSplitBuilder(), LeaveOneOutSessionDatasetBuilder(),
+                              LeavePercentageOutSessionDatasetBuilder()]
+    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder(),
+                                   LeavePercentageOutSessionDatasetBuilder()]
 
     def __init__(self):
         super().__init__()
@@ -129,9 +131,10 @@ class MaskTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
 
 
 class NextSequenceStepTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
-
-    TRAIN_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutNextPositionDatasetBuilder()]
-    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
+    TRAIN_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutNextPositionDatasetBuilder(),
+                              LeavePercentageOutNextPositionDatasetBuilder()]
+    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder(),
+                                   LeavePercentageOutSessionDatasetBuilder()]
 
     def __init__(self):
         super().__init__()
@@ -153,9 +156,10 @@ class NextSequenceStepTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory)
 
 
 class PositiveNegativeTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
-
-    TRAIN_DATASET_BUILDERS = [ConditionalSequenceOrSequencePositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
-    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
+    TRAIN_DATASET_BUILDERS = [ConditionalSequenceOrSequencePositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder(),
+                              LeavePercentageOutSessionDatasetBuilder()]
+    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder(),
+                                   LeavePercentageOutSessionDatasetBuilder()]
 
     def __init__(self):
         super().__init__()
@@ -183,7 +187,6 @@ class PositiveNegativeTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory)
 
 
 class PlainTrainingTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
-
     DATASET_BUILDER_TRAINING = [SequenceDatasetRatioSplitBuilder()]
     DATASET_BUILDERS_VALIDATION_AND_TEST = [NextPositionDatasetBuilder()]
 
@@ -207,11 +210,12 @@ class PlainTrainingTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
 
 
 class ParameterizedPositiveNegativeTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
-    TRAIN_DATASET_BUILDERS = [ConditionalSequenceOrSequencePositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
-    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
+    TRAIN_DATASET_BUILDERS = [ConditionalSequenceOrSequencePositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder(),
+                              LeavePercentageOutSessionDatasetBuilder()]
+    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder(),
+                                   LeavePercentageOutSessionDatasetBuilder()]
 
     def _build_train_datasource(self, config: Config, context: Context) -> DataLoader:
-
         neg_sampler_processor = {
             'type': "negative_item_sampler",
             'number_negative_items': config.get_or_default('number_negative_items', 1)
@@ -251,8 +255,10 @@ class SlidingWindowTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
     WINDOW_TARGET_LENGTH_CONFIG_KEY = 'window_target_length'
     WINDOW_MARKOV_LENGTH_CONFIG_KEY = 'window_markov_length'
 
-    TRAIN_DATASET_BUILDERS = [SequenceDatasetRatioSplitBuilder(), LeaveOneOutSessionDatasetBuilder()]
-    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder()]
+    TRAIN_DATASET_BUILDERS = [SequenceDatasetRatioSplitBuilder(), LeaveOneOutSessionDatasetBuilder(),
+                              LeavePercentageOutSessionDatasetBuilder()]
+    TEST_VALID_DATASET_BUILDERS = [NextPositionDatasetBuilder(), LeaveOneOutSessionDatasetBuilder(),
+                                   LeavePercentageOutSessionDatasetBuilder()]
 
     def _build_train_datasource(self, config: Config, context: Context) -> DataLoader:
         window_markov_length = config.get_or_default(self.WINDOW_MARKOV_LENGTH_CONFIG_KEY, 2)
@@ -286,7 +292,8 @@ class SlidingWindowTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
         loader_config = build_default_loader_config(config,
                                                     Stage.VALIDATION,
                                                     self.TEST_VALID_DATASET_BUILDERS,
-                                                    [fixed_sequence_length_processor, TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+                                                    [fixed_sequence_length_processor,
+                                                     TARGET_EXTRACTOR_PROCESSOR_CONFIG])
         return self._build_datasource(loader_config, context)
 
     def _build_test_datasource(self, config: Config, context: Context) -> DataLoader:
@@ -297,7 +304,8 @@ class SlidingWindowTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
         loader_config = build_default_loader_config(config,
                                                     Stage.TEST,
                                                     self.TEST_VALID_DATASET_BUILDERS,
-                                                    [fixed_sequence_length_processor, TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+                                                    [fixed_sequence_length_processor,
+                                                     TARGET_EXTRACTOR_PROCESSOR_CONFIG])
         return self._build_datasource(loader_config, context)
 
 
