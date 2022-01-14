@@ -40,7 +40,7 @@ register_module("sasrec", ModuleConfig(GenericModuleFactory, SequenceNextItemPre
     "model_cls": SASRecModel,
     "loss_function": SASRecBinaryCrossEntropyLoss()}))
 
-register_module("sasrec-full", ModuleConfig(GenericModuleFactory, NextItemPredictionTrainingModule, { # TODO (AD) write new module that supports different outputs during trianing and validation
+register_module("sasrec-full", ModuleConfig(GenericModuleFactory, NextItemPredictionTrainingModule, {
     "model_cls": SASRecModel,
     "loss_function": SASRecFullSequenceCrossEntropyLoss}))
 
