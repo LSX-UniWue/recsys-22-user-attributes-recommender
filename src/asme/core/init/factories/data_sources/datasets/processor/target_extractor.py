@@ -1,5 +1,5 @@
+import distutils
 from typing import List
-
 from asme.core.init.factories.features.features_factory import FeaturesFactory
 
 from asme.core.init.config import Config
@@ -25,7 +25,14 @@ class TargetExtractorProcessorFactory(ObjectFactory):
               ) -> TargetExtractorProcessor:
 
         features = context.get([FeaturesFactory.KEY])
-        return TargetExtractorProcessor(features)
+
+        if config.has_path(["parallel"]):
+            parallel_flag = config.get(["parallel"])
+            parallel =  parallel_flag if isinstance(parallel_flag, bool) else distutils.util.strtobool(config.get(["parallel"]))
+        else:
+            parallel = False
+
+        return TargetExtractorProcessor(features, parallel)
 
     def is_required(self, context: Context) -> bool:
         return False

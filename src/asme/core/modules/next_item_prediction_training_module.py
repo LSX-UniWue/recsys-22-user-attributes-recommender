@@ -1,10 +1,11 @@
 from abc import abstractmethod
 from typing import Union, Dict, Optional
+import inspect
 
 import torch
 
 import pytorch_lightning as pl
-from asme.core.losses.losses import CrossEntropyLoss
+from asme.core.losses.losses import CrossEntropyLoss, SequenceRecommenderLoss, SingleTargetCrossEntropyLoss
 
 from asme.core.models.common.layers.data.sequence import InputSequence
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel
@@ -36,7 +37,7 @@ class BaseNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
                  beta_1: float = 0.99,
                  beta_2: float = 0.998,
                  weight_decay: float = 0,
-                 loss_function: Optional = None
+                 loss_function: Optional[SequenceRecommenderLoss] = None
                  ):
         """
         Initializes the training module.
@@ -53,9 +54,19 @@ class BaseNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
 
         self.metrics = metrics
 
+        # FIXME (AD): right now we do not support multiple targets, we need to refactor the losses to achieve this again.
+        # TODO (AD): refactor loss init to config or use advanced introspection to match module instance variable to loss constructor arguments!
         if loss_function is None:
-            loss_function = CrossEntropyLoss
-        self.loss_function = loss_function(item_tokenizer)
+            self.loss_function = SingleTargetCrossEntropyLoss(item_tokenizer)
+        else:
+            if inspect.isclass(loss_function):
+                constructor_signature = inspect.signature(loss_function)
+                if "item_tokenizer" in constructor_signature.parameters.keys():
+                    loss_function = loss_function(item_tokenizer=item_tokenizer)
+                else:
+                    loss_function = loss_function()
+
+            self.loss_function = loss_function
 
         self.save_hyperparameters(self.hyperparameters)
 
@@ -177,16 +188,41 @@ class NextItemPredictionTrainingModule(BaseNextItemPredictionTrainingModule):
         where N is the batch size and S the max sequence length.
         """
 
-        input_seq = batch[ITEM_SEQ_ENTRY_NAME]
-        target = batch[TARGET_ENTRY_NAME]
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]     # BS x S
+        target = batch[TARGET_ENTRY_NAME]  # BS
 
-        logits = self(batch, batch_idx)
+        logits = self(batch, batch_idx)  # BS x S x I
 
-        loss = self._calc_loss(logits, target)
+        target_logits = self._extract_target_logits(input_seq, logits)
+
+        loss = self._calc_loss(target_logits, target)
         self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
         mask = None if len(target.size()) == 1 else ~ target.eq(self.item_tokenizer.pad_token_id)
-        return build_eval_step_return_dict(input_seq, logits, target, mask=mask)
+        return build_eval_step_return_dict(input_seq, target_logits, target, mask=mask)
+
+    def _extract_target_logits(self, input_seq: torch.Tensor, logits: torch.Tensor) -> torch.Tensor:
+        """
+        Finds the model output for the last input item in each sequence.
+
+        :param input_seq: the input sequence. [BS x S]
+        :param logits: the logits [BS x S x I]
+
+        :return: the logits for the last input item of the sequence. [BS x I]
+        """
+        # calculate the padding mask where each non-padding token has the value `1`
+        padding_mask = get_padding_mask(input_seq, self.item_tokenizer)  # BS x S
+        # calculate positions of last item in every sequence from padding mask and correct for 0-based indexing
+        target_indices = padding_mask.sum(dim=-1) - 1  # BS
+        target_indices = target_indices.unsqueeze(-1)  # BS x 1
+
+        # gather only the `I` logits for the last item in each sequence
+        target_indices = target_indices.repeat(1, logits.size()[-1])  # BS x I
+        target_indices = target_indices.unsqueeze(1)  # BS x 1 x I
+        #FIXME (AD) replace gather with tensor indexing syntax, see RNNPooler
+        target_logits = torch.gather(logits, 1, target_indices).squeeze(1)  # BS x I
+
+        return target_logits
 
 
 class NextItemPredictionWithNegativeSampleTrainingModule(BaseNextItemPredictionTrainingModule):
