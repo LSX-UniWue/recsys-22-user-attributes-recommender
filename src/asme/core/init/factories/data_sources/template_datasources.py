@@ -8,6 +8,7 @@ from asme.core.init.context import Context
 from asme.core.init.factories.common.conditional_based_factory import ConditionalFactory
 from asme.core.init.factories.data_sources.common import build_default_loader_config
 from asme.core.init.factories.data_sources.datasets.processor.processors import FIXED_SEQUENCE_LENGTH_PROCESSOR_KEY
+from asme.core.init.factories.data_sources.datasets.processor.target_extractor import TargetExtractorProcessorFactory
 from asme.core.init.factories.data_sources.loader import LoaderFactory
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.core.init.templating.datasources.datasources import Stage, SequenceDatasetRatioSplitBuilder, \
@@ -30,6 +31,7 @@ class TemplateDataSourcesFactory(ObjectFactory):
             "next_sequence_step": NextSequenceStepTemplateDataSourcesFactory(),
             "par_pos_neg": ParameterizedPositiveNegativeTemplateDataSourcesFactory(),
             "plain": PlainTrainingTemplateDataSourcesFactory(),
+            "par_seq": ParallelSeqTrainingTemplateDataSourcesFactory(),
             "sliding_window": SlidingWindowTemplateDataSourcesFactory()
         })
 
@@ -182,6 +184,34 @@ class PositiveNegativeTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory)
         loader_config = build_default_loader_config(config,
                                                     Stage.TEST,
                                                     self.TEST_VALID_DATASET_BUILDERS,
+                                                    [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+        return self._build_datasource(loader_config, context)
+
+
+class ParallelSeqTrainingTemplateDataSourcesFactory(BaseTemplateDataSourcesFactory):
+    # (AD) TODO configure different dataset builders
+    DATASET_BUILDER_TRAINING = [SequenceDatasetRatioSplitBuilder()]
+    DATASET_BUILDERS_VALIDATION_AND_TEST = [NextPositionDatasetBuilder()]
+
+    def _build_train_datasource(self, config: Config, context: Context) -> DataLoader:
+        target_extractor_processor = {
+            "type": "target_extractor",
+            "parallel": True
+        }
+        loader_config = build_default_loader_config(config, Stage.TRAIN, self.DATASET_BUILDER_TRAINING, [target_extractor_processor])
+        return self._build_datasource(loader_config, context)
+
+    def _build_validation_datasource(self, config: Config, context: Context) -> DataLoader:
+        loader_config = build_default_loader_config(config,
+                                                    Stage.VALIDATION,
+                                                    self.DATASET_BUILDERS_VALIDATION_AND_TEST,
+                                                    [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
+        return self._build_datasource(loader_config, context)
+
+    def _build_test_datasource(self, config: Config, context: Context) -> DataLoader:
+        loader_config = build_default_loader_config(config,
+                                                    Stage.TEST,
+                                                    self.DATASET_BUILDERS_VALIDATION_AND_TEST,
                                                     [TARGET_EXTRACTOR_PROCESSOR_CONFIG])
         return self._build_datasource(loader_config, context)
 
