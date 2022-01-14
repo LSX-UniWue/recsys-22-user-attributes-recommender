@@ -21,7 +21,7 @@ def build_dataset_config(dataset_builders: List[DatasetBuilder], config: Config,
         for datasource_builder in dataset_builders:
             if datasource_builder.can_build_dataset_definition(split):
                 return datasource_builder.build_dataset_definition(stage, config.config)
-        raise ValueError('no datasource builder found')
+        raise ValueError(f'No datasource builder found for split {split}')
 
     datasource_config = _build_dataset_config()
     datasource_config["processors"] = processors
@@ -49,10 +49,3 @@ def build_default_loader_config(config: Config, stage: Stage, dataset_builders: 
                                               ['max_seq_step_length', 'num_workers', 'dynamic_padding'])
 
     return Config(loader_config)
-
-
-def set_path_based_on_split(config: Config, context: Context, split: DatasetSplit):
-    if split == DatasetSplit.RATIO_SPLIT:
-        config.set_if_absent("path", context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY))
-    else:
-        config.set_if_absent("path", context.get(BASE_DATASET_PATH_CONTEXT_KEY))

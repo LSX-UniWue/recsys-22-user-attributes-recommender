@@ -3,7 +3,7 @@ from typing import List, Any, Dict
 
 from asme.core.init.config import Config
 from asme.core.init.context import Context
-from asme.core.init.factories.data_sources.common import build_default_loader_config, set_path_based_on_split
+from asme.core.init.factories.data_sources.common import build_default_loader_config
 from asme.core.init.factories.data_sources.loader import LoaderFactory
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.core.init.templating.datasources.datasources import Stage, DatasetSplit, NextPositionDatasetBuilder, \
@@ -42,7 +42,7 @@ class UserDefinedDataSourcesFactory(ObjectFactory):
 
         # If no dataset path was specified, try to the use the one provided by the datamodule
         split = DatasetSplit[config.get("split").upper()]
-        set_path_based_on_split(config, context, split)
+        config.set_if_absent("path", context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY))
 
         objects = {}
         for stage in Stage:
