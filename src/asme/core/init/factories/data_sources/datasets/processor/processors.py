@@ -19,6 +19,7 @@ from asme.core.init.factories.data_sources.datasets.processor.pos_neg_sampler im
 from asme.core.init.factories.data_sources.datasets.processor.position_token import PositionTokenProcessorFactory
 from asme.core.init.factories.data_sources.datasets.processor.tokenizer import TokenizerProcessorFactory
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult
+from asme.data.datasets.processors.registry import REGISTERED_PREPROCESSORS
 
 FIXED_SEQUENCE_LENGTH_PROCESSOR_KEY = 'fixed_sequence_length_processor'
 
@@ -31,18 +32,10 @@ class ProcessorsFactory(ObjectFactory):
 
         # FIXME: register other processors
         self.processors_factories = ListFactory(
-            ConditionalFactory('type', {
-                'cloze': ClozeProcessorFactory(),
-                'pos_neg': PositiveNegativeSamplerProcessorFactory(),
-                'last_item_mask': LastItemMaskProcessorFactory(),
-                'position_token': PositionTokenProcessorFactory(),
-                'tokenizer': TokenizerProcessorFactory(),
-                'target_extractor': TargetExtractorProcessorFactory(),
-                'no_target_extractor': NoTargetExtractorProcessorFactory(),
-                'negative_item_sampler': NegativeItemSamplerProcessorFactory(),
-                'positive_item_extractor': PositiveItemExtractorProcessorFactory(),
-                FIXED_SEQUENCE_LENGTH_PROCESSOR_KEY: CutToFixedSequenceLengthProcessorFactory()
-            })
+            ConditionalFactory(
+                'type',
+                REGISTERED_PREPROCESSORS
+            )
         )
 
     def can_build(self,

@@ -100,6 +100,41 @@ RUN chmod ugo+rx /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
 
+FROM official as asme-distrobox
+RUN dnf makecache && dnf install -y \
+        zsh \
+        byobu \
+        tmux \
+        curl \
+        htop \
+        vim \
+        git \
+        wget \
+        rsync \
+        mc \
+        make \
+        automake \
+        gcc \
+        gcc-c++ \
+        xz \
+        java-latest-openjdk && \
+    dnf clean all
+# install poetry into /opt/poetry
+ENV POETRY_HOME=/opt/poetry
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+ENV PATH="/opt/poetry/bin:${PATH}"
+RUN chmod o+rx /opt/poetry/bin/poetry
+
+COPY --from=asme-build /asme/dist/asme-1.0.0-py3-none-any.whl /
+RUN /opt/conda/bin/pip install --no-cache-dir /asme-1.0.0-py3-none-any.whl
+RUN rm /asme-1.0.0-py3-none-any.whl
+
+RUN  wget -q https://download.jetbrains.com/idea/ideaIU-2021.3.1.tar.gz && tar xf ideaIU-2021.3.1.tar.gz -C /opt && rm ideaIU-2021.3.1.tar.gz
+
+ENV PYTHONUNBUFFERED=1
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+
 
 FROM official as asme-dev
 RUN dnf makecache && dnf install -y \

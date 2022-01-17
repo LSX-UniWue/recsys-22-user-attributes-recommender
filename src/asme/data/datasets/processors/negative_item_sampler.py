@@ -57,8 +57,8 @@ class NegativeItemSamplerProcessor(Processor):
     def process(self, parsed_session: Dict[str, Any]) -> Dict[str, Any]:
         session = parsed_session[ITEM_SEQ_ENTRY_NAME]
 
-        if POSITIVE_SAMPLES_ENTRY_NAME in parsed_session:
-            raise ValueError("positive items already extracted")
+        if POSITIVE_SAMPLES_ENTRY_NAME not in parsed_session:
+            raise ValueError("positive items missing")
 
         neg = self._sample_negative_items(session)
 

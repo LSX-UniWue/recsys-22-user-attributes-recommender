@@ -26,6 +26,7 @@ from torch.utils.data.dataset import T_co, Dataset
 from tqdm import tqdm
 
 from asme.core.modules.metrics_trait import MetricsTrait
+from asme.data.datamodule.registry import DATASET_CONFIG_PROVIDERS
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME
 from asme.core.metrics.container.metrics_container import MetricsContainer
 from asme.core.metrics.metric import MetricStorageMode
@@ -77,7 +78,14 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
             log_dataloader_example(train_dataloader, tokenizers, 'training')
             log_dataloader_example(validation_dataloader, tokenizers, 'validation')
 
-        trainer.fit(container.module(),
+        module = container.module()
+
+        # Save the hyperparameters of the dataset preprocessing
+        preprocessing_parameters = container.datamodule().config.preprocessing_config_values
+        if preprocessing_parameters is not None:
+            preprocessing_parameters = {f"datamodule/{param}": value for param, value in preprocessing_parameters.items()}
+            module.save_hyperparameters(preprocessing_parameters)
+        trainer.fit(module,
                     train_dataloaders=train_dataloader,
                     val_dataloaders=validation_dataloader)
 
