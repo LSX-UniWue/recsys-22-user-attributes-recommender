@@ -27,7 +27,7 @@ from tqdm import tqdm
 
 from asme.core.modules.metrics_trait import MetricsTrait
 from asme.data.datamodule.registry import DATASET_CONFIG_PROVIDERS
-from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME
+from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME, SESSION_IDENTIFIER
 from asme.core.metrics.container.metrics_container import MetricsContainer
 from asme.core.metrics.metric import MetricStorageMode
 from asme.core.init.context import Context
@@ -247,6 +247,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
             log_input: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
             log_per_sample_metrics: Optional[bool] = typer.Option(default=False,
                                                                   help='enable logging of per-sample metrics.'),
+            log_session_key: Optional[bool] = typer.Option(default=False, help = 'use session key as sample id'),
             seed: Optional[int] = typer.Option(default=None, help='seed used eg for the sampled evaluation')
             ):
     """
@@ -266,6 +267,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
     :param overwrite: override the output file
     :param log_input: write the input sequence also to the file
     :param log_per_sample_metrics: if true also writes per sample metrics for the samples
+    :param log_session_key: use session key as sample id, session_identifier is needed
     :param seed: the seed to use for this model (should not effect the predictions but the metrics if sampled)
     """
 
@@ -441,6 +443,8 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
                     # remove padding tokens
                     sequence = remove_special_tokens(sequence, item_tokenizer)
                     sequence = item_tokenizer.convert_ids_to_tokens(sequence)
+                if log_session_key:
+                    sample_id = batch[SESSION_IDENTIFIER][i]
 
                 output_writer.write_values(f'{sample_id}', tokens, scores, true_target, metric_name_and_values,
                                            sequence)

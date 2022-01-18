@@ -623,6 +623,7 @@ def get_example_preprocessing_config(
     columns = [MetaInformation("item_id", column_name="item_id", type="str"),
                # TODO (AD) find out why setting type to int prevents correct vocabulary creation (vocabulary is not saved with consecutive ids)
                MetaInformation("user_id", column_name="user_id", type="str"),
+               MetaInformation("session_id", column_name="session_id", type="str"),
                MetaInformation("attr_one", column_name="attr_one", type="str")]
 
     min_item_feedback_column = "item_id"
@@ -670,15 +671,11 @@ register_preprocessing_config_provider("example",
                                        PreprocessingConfigProvider(get_example_preprocessing_config,
                                                                    output_directory="./example",
                                                                    input_file_path="../tests/example_dataset/example.csv",
-                                                                   min_sequence_length=3,
-                                                                   window_markov_length=2,
-                                                                   window_target_length=1,
-                                                                   session_end_offset=0,
                                                                    ratio_split_min_item_feedback=0,
                                                                    ratio_split_min_sequence_length=3,
-                                                                   ratio_split_train_percentage=0.8,
+                                                                   ratio_split_train_percentage=0.7,
                                                                    ratio_split_validation_percentage=0.1,
-                                                                   ratio_split_test_percentage=0.1,
+                                                                   ratio_split_test_percentage=0.2,
                                                                    ratio_split_window_markov_length=2,
                                                                    ratio_split_window_target_length=1,
                                                                    ratio_split_session_end_offset=0,
