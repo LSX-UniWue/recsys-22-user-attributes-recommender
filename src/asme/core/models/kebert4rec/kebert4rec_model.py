@@ -9,6 +9,7 @@ from asme.core.models.common.layers.transformer_layers import TransformerEmbeddi
 from asme.core.models.kebert4rec.components import KeBERT4RecSequenceElementsRepresentationComponent
 from asme.core.models.transformer.transformer_encoder_model import TransformerEncoderModel
 from asme.core.utils.hyperparameter_utils import save_hyperparameters
+from asme.core.utils.inject import InjectVocabularySize
 
 
 class KeBERT4RecModel(TransformerEncoderModel):
@@ -18,7 +19,7 @@ class KeBERT4RecModel(TransformerEncoderModel):
                  transformer_hidden_size: int,
                  num_transformer_heads: int,
                  num_transformer_layers: int,
-                 item_vocab_size: int,
+                 item_vocab_size: InjectVocabularySize("item"),
                  max_seq_length: int,
                  transformer_dropout: float,
                  additional_attributes: Dict[str, Dict[str, Any]],

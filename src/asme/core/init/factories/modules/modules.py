@@ -9,6 +9,7 @@ from asme.core.init.factories.metrics.metrics_container import MetricsContainerF
 from asme.core.init.factories.util import require_config_keys
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.core.tokenization.tokenizer import Tokenizer
+from asme.core.utils.inject import InjectTokenizer, InjectTokenizers, InjectVocabularySize, InjectModel
 
 MODEL_PARAM_NAME = 'model'
 METRICS_PARAM_NAME = 'metrics'
@@ -41,6 +42,14 @@ def _filter_parameters(parameters: Dict[str, ParameterInfo],
                        filter_func: Callable[[], bool]
                        ) -> Dict[str, Optional[Any]]:
     return dict(filter(filter_func, parameters.items()))
+
+def _get_tokenizers_from_context(context: Context) -> Dict[str, Tokenizer]:
+    tokenizers = {}
+    for key, item in context.as_dict().items():
+        if isinstance(item, Tokenizer):
+            tokenizers[key.replace(TOKENIZER_SUFFIX, '')] = item
+
+    return tokenizers
 
 
 class GenericModuleFactory(ObjectFactory):
@@ -86,7 +95,7 @@ class GenericModuleFactory(ObjectFactory):
         # collect the parameters from the config
         parameters = _get_parameters(self._module_csl)
         tokenizer_parameters = _filter_parameters(parameters,
-                                                  lambda param_name: param_name[1].parameter_type == Tokenizer)
+                                                  lambda item: isinstance(item[1].parameter_type, InjectTokenizer))
         config_parameters = dict([x for x in parameters.items() if x[0] not in tokenizer_parameters])
 
         # Model is only present for modules that contain a model.
@@ -102,7 +111,8 @@ class GenericModuleFactory(ObjectFactory):
 
         # bind the tokenizers
         for tokenizer_parameter_name, tokenizer_parameter_info in tokenizer_parameters.items():
-            tokenizer_to_use = tokenizer_parameter_name.replace(TOKENIZER_SUFFIX, '')
+            inject_instance = tokenizer_parameter_info.parameter_type
+            tokenizer_to_use = inject_instance.feature_name
             tokenizer = context.get(get_tokenizer_key_for_voc(tokenizer_to_use))
 
             if tokenizer is None:
@@ -111,6 +121,14 @@ class GenericModuleFactory(ObjectFactory):
                 else:
                     tokenizer = tokenizer_parameter_info.default_value
             named_parameters[tokenizer_parameter_name] = tokenizer
+
+        # if requested, bind all tokenizers to a single variable as a dict indexed by the feature keys
+        tokenizers_parameters = _filter_parameters(parameters,
+                                                   lambda item: isinstance(item[1].parameter_type, InjectTokenizers))
+        if len(tokenizers_parameters) > 0:
+            tokenizers = _get_tokenizers_from_context(context)
+            for name, info in tokenizers_parameters.items():
+                named_parameters[name] = tokenizers
 
         # build the metrics container
         metrics = self.metrics_container_factory.build(config.get_config(self.metrics_container_factory.config_path()),
@@ -168,35 +186,40 @@ class GenericModelFactory(ObjectFactory):
             default_value = None if default_value == inspect._empty else default_value
             named_parameters[parameter] = config.get_or_default(parameter, default_value)
 
-        vocab_vars = _filter_parameters(parameters, lambda dict_item: dict_item[0].endswith(VOCAB_SIZE_SUFFIX))
+        vocab_vars = _filter_parameters(parameters,
+                                        lambda dict_item: isinstance(dict_item[1].parameter_type, InjectVocabularySize))
 
         # Collect parameters that are a model themselves
-        model_params = _filter_parameters(parameters, lambda param: param[0].endswith(MODEL_SUFFIX))
+        model_params = _filter_parameters(parameters, lambda param: isinstance(param[1].parameter_type, InjectModel))
         if len(model_params) > 0:
             # Build all parameter models recursively
             for model_param_name, model_param_info in model_params.items():
-                if not config.has_path([model_param_name]):
+                inject_instance = model_param_info.parameter_type
+                config_section_name = inject_instance.config_section_name \
+                    if inject_instance.config_section_name is not None else model_param_name
+                if not config.has_path([config_section_name]):
                     if model_param_info.default_value == inspect._empty:
                         raise KeyError(
                             f"Model '{self._model_cls.__name__}' specifies a sub-model '{model_param_name}' of type "
-                            f"'{model_param_info.parameter_type}' with no default value but no configuration section "
-                            f"named '{model_param_name}' was found in the config.")
+                            f"'{inject_instance.model_cls}' with no default value but no configuration section "
+                            f"named '{config_section_name}' was found in the config.")
                 else:
                     factory = GenericModelFactory(model_param_info.parameter_type)
                     # We assume that the config entry has the same name as the model parameter
-                    model_config = config.get_config([model_param_name])
+                    model_config = config.get_config([config_section_name])
                     model = factory.build(model_config, context)
                     named_parameters[model_param_name] = model
 
-        for vocab_var in vocab_vars.keys():
-            tokenizer_to_use = vocab_var.replace(VOCAB_SIZE_SUFFIX, '')
+        for name, info in vocab_vars.items():
+            inject_instance = info.parameter_type
+            tokenizer_to_use = inject_instance.feature_name
             tokenizer = context.get(get_tokenizer_key_for_voc(tokenizer_to_use))
 
             vocab_size = 0
             if tokenizer is not None:
                 vocab_size = len(tokenizer)
 
-            named_parameters[vocab_var] = vocab_size
+            named_parameters[name] = vocab_size
 
         return self._model_cls(**named_parameters)
 
