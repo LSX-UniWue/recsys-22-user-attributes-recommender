@@ -52,6 +52,7 @@ def get_ml_1m_preprocessing_config(
                MetaInformation("occupation", type="str"),
                MetaInformation("zip", type="str"),
                MetaInformation("title", type="str"),
+               MetaInformation("year", type="str", run_tokenization=False),
                MetaInformation("genres", type="str", configs={"delimiter": "|"})]
 
     item_column = MetaInformation("item", column_name="title", type="str")
