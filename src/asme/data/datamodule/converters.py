@@ -112,6 +112,7 @@ class Movielens1MConverter(CsvConverter):
         movies_df = read_csv(location, "movies", file_type, sep, header, encoding=encoding)
 
         movies_df.columns = ['movieId', 'title', 'genres']
+        movies_df["year"] = movies_df["title"].str.rsplit(r"(", 1).apply(lambda x: x[1].rsplit(r")")[0]).astype(int)
         users_df = read_csv(location, "users", file_type, sep, header, encoding=encoding)
         users_df.columns = [Movielens1MConverter.RATING_USER_COLUMN_NAME, 'gender', 'age', 'occupation', 'zip']
         ratings_df = pd.merge(ratings_df, users_df)
@@ -176,16 +177,6 @@ class SteamConverter(CsvConverter):
                                          self.STEAM_TIMESTAMP])
         df = df.sort_values(by=[self.STEAM_SESSION_ID, self.STEAM_TIMESTAMP])
         df.to_csv(output_file, sep=self.delimiter, index=False)
-
-
-class DotaShopConverter(CsvConverter):
-
-    def __init__(self):
-        pass
-
-    def apply(self, input_dir: Path, output_file: Path):
-        # We assume `input_dir` to be the path to the raw csv file.
-        shutil.copy(input_dir, output_file)
 
 
 class ExampleConverter(CsvConverter):

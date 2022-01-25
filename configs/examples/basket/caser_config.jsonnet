@@ -1,8 +1,8 @@
 local base_path = "../tests/example_dataset/";
 local output_path = "/tmp/experiments/caser_basket";
-local max_seq_length = 7;
-local seq_length = 3;
-local number_of_targets = 2;
+local number_of_targets = 1;
+local markov_length = 2;
+local max_seq_length = markov_length;
 local dataset = 'example';
 local metrics =  {
     recall: [1, 3, 5],
@@ -18,9 +18,10 @@ local metrics =  {
             file_prefix: dataset,
             num_workers: 0,
             batch_size: 9,
+            pad_direction: "left",
             dynamic_padding: false,
-            window_size: seq_length + number_of_targets,
-            number_target_interactions: number_of_targets
+            window_markov_length: markov_length,
+            window_target_length: number_of_targets
         },
         preprocessing: {
         }

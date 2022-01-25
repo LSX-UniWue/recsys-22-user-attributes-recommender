@@ -1,6 +1,8 @@
 ARG BASE_IMAGE=docker.io/fedora:33
 ARG PYTHON_VERSION=3.9
-ARG PYTORCH_VERSION=v1.9.0
+ARG PYTORCH_VERSION=1.9.1
+ARG PYTORCH_VISION_VERSION=0.10.1
+ARG PYTORCH_TEXT_VERSION=0.10.1
 
 
 FROM docker.io/fedora:33 as asme-build
@@ -38,12 +40,15 @@ RUN curl -fsSL -v -o ~/miniconda.sh -O  https://repo.anaconda.com/miniconda/Mini
 
 
 FROM conda as conda-installs
-ARG PYTHON_VERSION=3.9
 ARG CUDA_VERSION=11.1
+ARG PYTHON_VERSION=3.9
+ARG PYTORCH_VERSION=1.9.1
+ARG PYTORCH_VISION_VERSION=0.10.1
+ARG PYTORCH_TEXT_VERSION=0.10.1
 ARG CUDA_CHANNEL=nvidia
 ARG INSTALL_CHANNEL=pytorch
 ENV CONDA_OVERRIDE_CUDA=${CUDA_VERSION}
-RUN /opt/conda/bin/conda install -c "${INSTALL_CHANNEL}" -c "${CUDA_CHANNEL}" -y python=${PYTHON_VERSION} pytorch torchvision torchtext "cudatoolkit=${CUDA_VERSION}" && \
+RUN /opt/conda/bin/conda install -c "${INSTALL_CHANNEL}" -c "${CUDA_CHANNEL}" -y "python=${PYTHON_VERSION}" "pytorch=${PYTORCH_VERSION}" "torchvision=${PYTORCH_VISION_VERSION}" "torchtext=${PYTORCH_TEXT_VERSION}" "cudatoolkit=${CUDA_VERSION}" && \
     /opt/conda/bin/conda clean -ya
 RUN /opt/conda/bin/pip install torchelastic
 
@@ -94,6 +99,41 @@ COPY /k8s/release/entrypoint.sh /entrypoint.sh
 RUN chmod ugo+rx /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
+
+FROM official as asme-distrobox
+RUN dnf makecache && dnf install -y \
+        zsh \
+        byobu \
+        tmux \
+        curl \
+        htop \
+        vim \
+        git \
+        wget \
+        rsync \
+        mc \
+        make \
+        automake \
+        gcc \
+        gcc-c++ \
+        xz \
+        java-latest-openjdk && \
+    dnf clean all
+# install poetry into /opt/poetry
+ENV POETRY_HOME=/opt/poetry
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+ENV PATH="/opt/poetry/bin:${PATH}"
+RUN chmod o+rx /opt/poetry/bin/poetry
+
+COPY --from=asme-build /asme/dist/asme-1.0.0-py3-none-any.whl /
+RUN /opt/conda/bin/pip install --no-cache-dir /asme-1.0.0-py3-none-any.whl
+RUN rm /asme-1.0.0-py3-none-any.whl
+
+RUN  wget -q https://download.jetbrains.com/idea/ideaIU-2021.3.1.tar.gz && tar xf ideaIU-2021.3.1.tar.gz -C /opt && rm ideaIU-2021.3.1.tar.gz
+
+ENV PYTHONUNBUFFERED=1
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
 
 
 FROM official as asme-dev

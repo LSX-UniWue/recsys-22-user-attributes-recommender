@@ -17,7 +17,8 @@ local metrics =  {
             file_prefix: dataset,
             num_workers: 0,
             batch_size: 9,
-            t: 1
+            number_negative_items: 1,
+            number_positive_items: 1
         },
         preprocessing: {
         }
