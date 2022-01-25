@@ -75,10 +75,11 @@ class RNNProjectionComponent(ProjectionLayer):
 class RNNPoolingComponent(SequenceRepresentationModifierLayer):
 
     def __init__(self,
-                 bidirectional: bool = False):
+                 bidirectional: bool = False,
+                 parallel: bool = False):
 
         super().__init__()
-        self.pooling = RNNPooler(bidirectional=bidirectional)
+        self.pooling = RNNPooler(bidirectional=bidirectional, parallel=parallel)
 
     def forward(self, sequence_representation: SequenceRepresentation) -> ModifiedSequenceRepresentation:
         modified_sequence = self.pooling(sequence_representation.encoded_sequence)

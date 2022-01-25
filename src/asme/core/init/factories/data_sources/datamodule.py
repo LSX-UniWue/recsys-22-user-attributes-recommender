@@ -33,6 +33,7 @@ class DataModuleFactory(ObjectFactory):
         dataset_preprocessing_config_provider = get_preprocessing_config_provider(dataset_name)
         if dataset_preprocessing_config_provider is None:
             print(f"No dataset registered for key '{dataset_name}'. No preprocessing will be applied.")
+            preprocessing_config_values = None
             dataset_preprocessing_config = None
         else:
             preprocessing_config_values = {**config.get_config(["preprocessing"]).config} if config.has_path(["preprocessing"]) else {}
@@ -46,8 +47,10 @@ class DataModuleFactory(ObjectFactory):
         template_config = config.get_config(["template"]) if config.has_path("template") else None
 
         datamodule_config = AsmeDataModuleConfig(dataset_name, cache_path, template_config, data_sources_config,
-                                                 dataset_preprocessing_config, force_regeneration)
-        return AsmeDataModule(datamodule_config, context)
+                                                 preprocessing_config_values, dataset_preprocessing_config,
+                                                 force_regeneration)
+        datamodule = AsmeDataModule(datamodule_config, context)
+        return datamodule
 
     def is_required(self, context: Context) -> bool:
         return True

@@ -1,8 +1,9 @@
+from asme.core.init.factories.data_sources.template_datasources import ParallelSeqTrainingTemplateDataSourcesFactory
 from asme.core.init.factories.modules.modules import GenericModuleFactory
 from asme.core.losses.basket.dream.dream_loss import DreamContrastiveLoss
 from asme.core.losses.cosrec.cosrec_loss import CosRecLoss
 from asme.core.losses.hgn.hgn_loss import HGNLoss
-from asme.core.losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
+from asme.core.losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss, SASRecFullSequenceCrossEntropyLoss
 from asme.core.models.basket.nnrec.nnrec_model import NNRecModel
 from asme.core.models.bert4rec.bert4rec_model import BERT4RecModel
 from asme.core.models.caser.caser_model import CaserModel
@@ -38,6 +39,10 @@ register_module("narm", ModuleConfig(GenericModuleFactory, NextItemPredictionTra
 register_module("sasrec", ModuleConfig(GenericModuleFactory, SequenceNextItemPredictionTrainingModule, {
     "model_cls": SASRecModel,
     "loss_function": SASRecBinaryCrossEntropyLoss()}))
+
+register_module("sasrec-full", ModuleConfig(GenericModuleFactory, NextItemPredictionTrainingModule, {
+    "model_cls": SASRecModel,
+    "loss_function": SASRecFullSequenceCrossEntropyLoss}))
 
 register_module("rnn", ModuleConfig(GenericModuleFactory, NextItemPredictionTrainingModule, {
     "model_cls": RNNModel}))
