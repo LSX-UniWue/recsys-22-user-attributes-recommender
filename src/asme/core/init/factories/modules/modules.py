@@ -60,7 +60,7 @@ def _get_tokenizers_from_context(context: Context) -> Dict[str, Tokenizer]:
     return tokenizers
 
 
-def _handel_injects(injectable_parameters: List[ParameterInfo], context: Context, config: Config,
+def _handle_injects(injectable_parameters: List[ParameterInfo], context: Context, config: Config,
                     parameter_dict: Dict[str, Any]):
     """
     This function tries to inject a value into the parameter_dict for every parameter given by iunjectable parameters.
@@ -180,7 +180,7 @@ class GenericModuleFactory(ObjectFactory):
 
         # handle Inject directives
         injectable_parameters = _filter_parameters(parameters, lambda p: p.is_injectable())
-        _handel_injects(injectable_parameters, context, config, named_parameters)
+        _handle_injects(injectable_parameters, context, config, named_parameters)
 
         # build the model container if a model class was supplied
         if self.should_build_model:
@@ -237,7 +237,7 @@ class GenericModelFactory(ObjectFactory):
 
         # handle Inject directives
         injectable_parameters = _filter_parameters(parameters, lambda p: p.is_injectable())
-        _handel_injects(injectable_parameters, context, config, named_parameters)
+        _handle_injects(injectable_parameters, context, config, named_parameters)
 
         return self._model_cls(**named_parameters)
 
