@@ -9,7 +9,7 @@ from asme.core.models.common.layers.transformer_layers import TransformerEmbeddi
 from asme.core.models.kebert4rec.components import KeBERT4RecSequenceElementsRepresentationComponent
 from asme.core.models.transformer.transformer_encoder_model import TransformerEncoderModel
 from asme.core.utils.hyperparameter_utils import save_hyperparameters
-from asme.core.utils.inject import InjectVocabularySize
+from asme.core.utils.inject import InjectVocabularySize, InjectTokenizers
 
 
 class KeBERT4RecModel(TransformerEncoderModel):
@@ -23,6 +23,7 @@ class KeBERT4RecModel(TransformerEncoderModel):
                  max_seq_length: int,
                  transformer_dropout: float,
                  additional_attributes: Dict[str, Dict[str, Any]],
+                 additional_attributes_tokenizer: InjectTokenizers(),
                  embedding_pooling_type: str = None,
                  initializer_range: float = 0.02,
                  transformer_intermediate_size: Optional[int] = None,
@@ -38,6 +39,7 @@ class KeBERT4RecModel(TransformerEncoderModel):
         element_representation = KeBERT4RecSequenceElementsRepresentationComponent(sequence_embedding,
                                                                                    transformer_hidden_size,
                                                                                    additional_attributes,
+                                                                                   additional_attributes_tokenizer,
                                                                                    dropout=transformer_dropout)
 
         modifier_layer = FFNSequenceRepresentationModifierComponent(transformer_hidden_size)

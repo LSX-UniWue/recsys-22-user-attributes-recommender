@@ -5,6 +5,7 @@ from asme.core.models.common.layers.layers import SequenceElementsRepresentation
 from asme.core.models.common.layers.transformer_layers import TransformerEmbedding
 from asme.core.models.kebert4rec.layers import LinearUpscaler
 from torch import nn
+from asme.data.datasets.processors.tokenizer import Tokenizer
 
 
 def _build_embedding_type(embedding_type: str,
@@ -25,6 +26,7 @@ class KeBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresen
                  item_embedding_layer: TransformerEmbedding,
                  embedding_size: int,
                  additional_attributes: Dict[str, Dict[str, Any]],
+                 additional_attributes_tokenizer: Dict[str, Tokenizer],
                  dropout: float = 0.0
                  ):
         super().__init__()
@@ -34,7 +36,7 @@ class KeBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresen
         additional_attribute_embeddings = {}
         for attribute_name, attribute_infos in additional_attributes.items():
             embedding_type = attribute_infos['embedding_type']
-            vocab_size = attribute_infos['vocab_size']
+            vocab_size = len(additional_attributes_tokenizer["tokenizers." + attribute_name])
             additional_attribute_embeddings[attribute_name] = _build_embedding_type(embedding_type=embedding_type,
                                                                                     vocab_size=vocab_size,
                                                                                     hidden_size=embedding_size)
