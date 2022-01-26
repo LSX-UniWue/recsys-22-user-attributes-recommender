@@ -14,6 +14,7 @@ from asme.core.models.ubert4rec.ubert4rec_model import UBERT4RecModel
 from asme.core.models.narm.narm_model import NarmModel
 from asme.core.models.rnn.rnn_model import RNNModel
 from asme.core.models.sasrec.sasrec_model import SASRecModel
+from asme.core.models.user_sasrec.user_sasrec_model import UserSASRecModel
 from asme.core.models.transformer.transformer_encoder_model import TransformerEncoderModel
 from asme.core.modules.baselines.bpr_module import BprModule
 from asme.core.modules.baselines.markov_module import MarkovModule
@@ -48,6 +49,10 @@ register_module("sasrec", ModuleConfig(GenericModuleFactory, SequenceNextItemPre
 register_module("sasrec-full", ModuleConfig(GenericModuleFactory, NextItemPredictionTrainingModule, {
     "model_cls": SASRecModel,
     "loss_function": SASRecFullSequenceCrossEntropyLoss}))
+
+register_module("user-sasrec", ModuleConfig(GenericModuleFactory, SequenceNextItemPredictionTrainingModule, {
+    "model_cls": UserSASRecModel,
+    "loss_function": SASRecBinaryCrossEntropyLoss()}))
 
 register_module("rnn", ModuleConfig(GenericModuleFactory, NextItemPredictionTrainingModule, {
     "model_cls": RNNModel}))

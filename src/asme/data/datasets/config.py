@@ -623,9 +623,8 @@ def get_example_preprocessing_config(
     # FIXME (AD) we're forced to set column_name because vocabulary and popularity code relies on it being set.
     columns = [MetaInformation("item_id", column_name="item_id", type="str"),
                # TODO (AD) find out why setting type to int prevents correct vocabulary creation (vocabulary is not saved with consecutive ids)
-               MetaInformation("user_id", column_name="user_id", type="str"),
-               MetaInformation("attr_one", column_name="attr_one", type="str"),
-               MetaInformation("user_one", column_name="user_one", type="str")]
+               MetaInformation("user_attr", column_name="user_attr", type="str", configs={"delimiter": "|"}),
+               MetaInformation("attr_one", column_name="attr_one", type="str")]
 
     min_item_feedback_column = "item_id"
     min_sequence_length_column = "session_id"
@@ -672,10 +671,6 @@ register_preprocessing_config_provider("example",
                                        PreprocessingConfigProvider(get_example_preprocessing_config,
                                                                    output_directory="./example",
                                                                    input_file_path="../tests/example_dataset/example.csv",
-                                                                   min_sequence_length=3,
-                                                                   window_markov_length=2,
-                                                                   window_target_length=1,
-                                                                   session_end_offset=0,
                                                                    ratio_split_min_item_feedback=0,
                                                                    ratio_split_min_sequence_length=3,
                                                                    ratio_split_train_percentage=0.8,
