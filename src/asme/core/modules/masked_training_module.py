@@ -6,6 +6,7 @@ from typing import Union, Dict, Optional, Any
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
+from asme.core.utils.inject import InjectTokenizer, InjectTokenizers
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME
 from asme.core.metrics.container.metrics_container import MetricsContainer
@@ -27,13 +28,13 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
     @save_hyperparameters
     def __init__(self,
                  model: SequenceRecommenderModel,
-                 item_tokenizer: Tokenizer,
+                 item_tokenizer: InjectTokenizer("item"),
                  metrics: MetricsContainer,
                  learning_rate: float = 0.001,
                  beta_1: float = 0.99,
                  beta_2: float = 0.998,
                  weight_decay: float = 0.001,
-                 num_warmup_steps: int = 10000
+                 num_warmup_steps: int = 10000,
                  ):
         super().__init__()
 
