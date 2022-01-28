@@ -10,6 +10,7 @@ from asme.core.models.common.layers.layers import PROJECT_TYPE_LINEAR, build_pro
 from asme.core.models.common.layers.transformer_layers import TransformerEmbedding
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.core.utils.hyperparameter_utils import save_hyperparameters
+from asme.core.utils.inject import InjectVocabularySize, InjectTokenizers
 
 
 class UBERT4RecModel(SequenceRecommenderModel):
@@ -19,10 +20,11 @@ class UBERT4RecModel(SequenceRecommenderModel):
                  transformer_hidden_size: int,
                  num_transformer_heads: int,
                  num_transformer_layers: int,
-                 item_vocab_size: int,
+                 item_vocab_size: InjectVocabularySize("item"),
                  max_seq_length: int,
                  transformer_dropout: float,
                  additional_attributes: Dict[str, Dict[str, Any]],
+                 additional_tokenizers: InjectTokenizers(),
                  user_attributes: Dict[str, Dict[str, Any]],
                  segment_embedding: False,
                  embedding_pooling_type: str = None,
@@ -46,6 +48,7 @@ class UBERT4RecModel(SequenceRecommenderModel):
                                                                                    transformer_hidden_size,
                                                                                    additional_attributes,
                                                                                    user_attributes,
+                                                                                   additional_tokenizers,
                                                                                    segment_embedding,
                                                                                    dropout=transformer_dropout)
         sequence_representation = UserBidirectionalTransformerSequenceRepresentationComponent(transformer_hidden_size,

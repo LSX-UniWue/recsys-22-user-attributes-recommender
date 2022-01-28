@@ -6,6 +6,7 @@ from asme.core.models.common.layers.layers import SequenceElementsRepresentation
 from asme.core.models.common.layers.transformer_layers import TransformerEmbedding,TransformerLayer
 from asme.core.models.kebert4rec.layers import LinearUpscaler
 from torch import nn
+from asme.data.datasets.processors.tokenizer import Tokenizer
 
 
 def _build_embedding_type(embedding_type: str,
@@ -29,7 +30,8 @@ class UBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresent
                  embedding_size: int,
                  additional_attributes: Dict[str, Dict[str, Any]],
                  user_attributes: Dict[str, Dict[str, Any]],
-                 segment_embedding: int =1,
+                 additional_tokenizers: Dict[str, Tokenizer],
+                 segment_embedding: int = True,
                  dropout: float = 0.0
                  ):
         super().__init__()
@@ -39,22 +41,23 @@ class UBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresent
 
         additional_attribute_embeddings = {}
         user_attribute_embeddings = {}
-        for attribute_name, attribute_infos in additional_attributes.items():
-            embedding_type = attribute_infos['embedding_type']
-            vocab_size = attribute_infos['vocab_size']
-            additional_attribute_embeddings[attribute_name] = _build_embedding_type(embedding_type=embedding_type,
+        if additional_attributes is not None:
+            for attribute_name, attribute_infos in additional_attributes.items():
+                embedding_type = attribute_infos['embedding_type']
+                vocab_size = len(additional_tokenizers["tokenizers." + attribute_name])
+                additional_attribute_embeddings[attribute_name] = _build_embedding_type(embedding_type=embedding_type,
                                                                                     vocab_size=vocab_size,
                                                                                     hidden_size=embedding_size)
             self.attribute_types += 1
         self.additional_attribute_embeddings = nn.ModuleDict(additional_attribute_embeddings)
-
-        for attribute_name, attribute_infos in user_attributes.items():
-            embedding_type = attribute_infos['embedding_type']
-            vocab_size = attribute_infos['vocab_size']
-            user_attribute_embeddings[attribute_name] = _build_embedding_type(embedding_type=embedding_type,
-                                                                                    vocab_size=vocab_size,
-                                                                                    hidden_size=embedding_size)
-            self.attribute_types += 1
+        if user_attributes is not None:
+            for attribute_name, attribute_infos in user_attributes.items():
+                embedding_type = attribute_infos['embedding_type']
+                vocab_size = len(additional_tokenizers["tokenizers." + attribute_name])
+                user_attribute_embeddings[attribute_name] = _build_embedding_type(embedding_type=embedding_type,
+                                                                                        vocab_size=vocab_size,
+                                                                                        hidden_size=embedding_size)
+                self.attribute_types += 1
         self.user_attribute_embeddings = nn.ModuleDict(user_attribute_embeddings)
 
         if segment_embedding == 1:

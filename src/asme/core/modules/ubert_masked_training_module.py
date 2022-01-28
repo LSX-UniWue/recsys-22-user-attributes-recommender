@@ -15,6 +15,7 @@ from asme.core.modules.metrics_trait import MetricsTrait
 from asme.core.modules.util.module_util import convert_target_to_multi_hot, build_eval_step_return_dict, build_model_input
 from asme.core.tokenization.tokenizer import Tokenizer
 from asme.core.utils.hyperparameter_utils import save_hyperparameters
+from asme.core.utils.inject import InjectTokenizer, InjectTokenizers
 
 
 class UBERTMaskedTrainingModule(MetricsTrait, pl.LightningModule):
@@ -28,7 +29,7 @@ class UBERTMaskedTrainingModule(MetricsTrait, pl.LightningModule):
     @save_hyperparameters
     def __init__(self,
                  model: SequenceRecommenderModel,
-                 item_tokenizer: Tokenizer,
+                 item_tokenizer: InjectTokenizer("item"),
                  metrics: MetricsContainer,
                  learning_rate: float = 0.001,
                  beta_1: float = 0.99,
