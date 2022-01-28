@@ -9,6 +9,7 @@ from asme.core.models.common.components.representations.sequence_embedding impor
 from asme.core.models.common.layers.layers import IdentitySequenceRepresentationModifierLayer
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.core.utils.hyperparameter_utils import save_hyperparameters
+from asme.core.utils.inject import InjectVocabularySize
 from asme.data.datasets import USER_ENTRY_NAME
 
 
@@ -24,8 +25,8 @@ class CaserModel(SequenceRecommenderModel):
     @save_hyperparameters
     def __init__(self,
                  embedding_size: int,
-                 item_vocab_size: int,
-                 user_vocab_size: int,
+                 item_vocab_size: InjectVocabularySize("item"),
+                 user_vocab_size: InjectVocabularySize("user"),
                  max_seq_length: int,
                  num_vertical_filters: int,
                  num_horizontal_filters: int,
