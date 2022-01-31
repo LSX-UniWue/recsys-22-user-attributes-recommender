@@ -15,7 +15,7 @@ from asme.data.datasets.sequence import MetaInformation
 """
 This file includes the definitions of all preprocessing steps that ASME should execute for any of the datasets included.
 
-Generally, ASME will generated three types of splits for each dataset: 
+Generally, ASME will generate three types of splits for each dataset: 
 - Ratio split:                      The data is split by session into three sets for training, validation and testing.
 - Leave-One-Out (LOO) split:        The data is split intra-session, i.e. a session of n items is decomposed into a 
                                     n - 2 item training session, a 1 item validation and a 1 item test session. 
