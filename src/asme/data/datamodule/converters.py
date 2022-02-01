@@ -276,7 +276,7 @@ class MelonConverter(CsvConverter):
         for song in tracks:
             track_name: str = song["song_name"]
             album_name: str = song[self.MELON_ALBUM_NAME_KEY]
-            artist_name: str = "|".join(song[artist_name])
+            artist_name: str = "|".join(song[self.MELON_ARTIST_NAME_KEY])
             genre: str = "|".join(song["song_gn_gnr_basket"])
             trackdict[song["id"]] = Track(name=track_name, album=album_name, artist=artist_name, genre=genre)
         for filename in tqdm(sorted(filenames), desc=f"Process playlists in file"):
