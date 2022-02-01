@@ -683,7 +683,8 @@ register_preprocessing_config_provider("spotify",
                                                                    lpo_split_min_test_length=1))
 
 
-def get_melon_preprocessing_config(# General parameters
+def get_melon_preprocessing_config(
+        # General parameters
         output_directory: str,
         input_directory: str,
         # Ratio split parameters
@@ -715,14 +716,12 @@ def get_melon_preprocessing_config(# General parameters
     context.set(INPUT_DIR_KEY, Path(input_directory))
     context.set(OUTPUT_DIR_KEY, Path(output_directory))
 
-    # TODO
     columns = [MetaInformation("playlist_id", type="str"),
-               MetaInformation("playlist_timestamp", type="str", run_tokenization=False),
                MetaInformation("track_name", type="str"),
                MetaInformation("album_name", type="str"),
-               MetaInformation("artist_name", type="str")]
+               MetaInformation("artist_name", type="str", configs={"delimiter": "|"}),
+               MetaInformation("genre", type="str", configs={"delimiter": "|"})]
 
-    # TODO
     min_item_feedback_column = "track_name"
     min_sequence_length_column = "playlist_id"
     session_key = ["playlist_id"]
