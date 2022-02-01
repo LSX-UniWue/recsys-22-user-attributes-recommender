@@ -9,7 +9,7 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 
-from asme.data.datamodule.util import read_csv
+from asme.data.datamodule.util import read_csv, read_json
 import json
 import csv
 import gzip
@@ -181,11 +181,14 @@ class SteamConverter(CsvConverter):
 
 
 class Track:
-    def __init__(self, name: str, album: str, artist: str):
+    def __init__(self, name: str, album: str, artist: str, genre: str = None):
         self.name = name
         self.album = album
         self.artist = artist
+        self.genre = genre
 
+    def __getitem__(self, key):
+        return getattr(self, key)
 
 class SpotifyConverter(CsvConverter):
     RAW_TRACKS_KEY = "tracks"
@@ -244,7 +247,94 @@ class SpotifyConverter(CsvConverter):
             output_file.parent.mkdir(parents=True, exist_ok=True)
         spotify_dataframe.to_csv(output_file, sep=self.delimiter, index=False)
 
-        # data = data.sort_values(self.YOOCHOOSE_SESSION_ID_KEY) ?
+class MelonConverter(CsvConverter):
+    RAW_TRACKS_KEY = "songs"
+    RAW_TIMESTAMP_KEY = "updt_date"
+    RAW_PLAYLIST_ID_KEY = "id"
+    # auch moeglich: tags, plylst_title (opt.), like_cnt
+
+    _MELON_TIME_COLUMN = "playlist_timestamp"
+    MELON_SESSION_ID = "playlist_id"
+
+    MELON_ITEM_ID = "track_name"
+    MELON_ALBUM_NAME_KEY = "album_name"
+    MELON_ARTIST_NAME_KEY = "artist_name"
+    MELON_GENRE_KEY = "genre"
+    # auch moeglich: song_gn_dtl_basket (subgenres), issue_date
+
+    # SPOTIFY_DATETIME_PARSER = DateTimeParser(time_column_name=_SPOTIFY_TIME_COLUMN,
+    #                                          date_time_parse_function=lambda x: datetime.fromtimestamp(int(x)))
+
+    def __init__(self, delimiter="\t"):
+        self.delimiter = delimiter
+
+    def apply(self, input_dir: Path, output_file: Path):
+        dataset: List[List[Any]] = []
+
+        '''
+        file_type = ".json"
+        name = "data"
+        location = input_dir / name
+        encoding = "utf-8"
+
+        songs_df = read_json(location, "song_meta", file_type, encoding=encoding)
+        songs_df.columns = ['song_id', 'album_id', 'artist_id_basket', 'artist_name_basket', 'song_name', 'song_gn_gnr_basket', 'song_gn_tl_gnr_basket', 'issue_date']
+        songs_df.drop([''])
+
+        data1 = read_json(location, "train", file_type, encoding=encoding)
+        data2 = read_json(location, "val", file_type, encoding=encoding)
+        data3 = read_json(location, "test", file_type, encoding=encoding)
+        playlists_df = pd.concat([data1, data2, data3])
+        playlists_df.columns = ['playlist_id', 'plylst_title', 'tags', 'songs', 'like_cnt', 'updt_date']
+        playlists_df.drop([''])
+        '''
+
+        trackdict: Dict[Track] = {}
+        filenames = os.listdir(input_dir)
+        f = open(input_dir.joinpath("song_meta.json"))
+        js = f.read()
+        f.close()
+        tracks = json.loads(js)
+        for song in tracks:
+            track_name: str = song["song_name"]
+            album_name: str = song[self.MELON_ALBUM_NAME_KEY]
+            artist_name: str = song["artist_name_basket"] # todo: is a list
+            genre: str = song["song_gn_gnr_basket"] # todo: is a list?
+            trackdict[song["id"]] = Track(name=track_name, album=album_name, artist=artist_name, genre=genre)
+        for filename in tqdm(sorted(filenames), desc=f"Process playlists in file"):
+            if filename in ("train.json", "val.json", "test.json"):
+                file_path: Path = input_dir.joinpath(filename)
+                f = open(file_path)
+                js = f.read()
+                f.close()
+                mpd_slice = json.loads(js)
+                for playlist in mpd_slice:
+                    playlist_id = playlist[self.RAW_PLAYLIST_ID_KEY]
+                    playlist_timestamp = playlist[self.RAW_TIMESTAMP_KEY]
+                    playlist_songs = playlist[self.RAW_TRACKS_KEY]
+                    # Get songs in playlist
+                    # playlist_tracks = self._process_playlist(playlist, trackdict)
+                    for track in playlist_songs:
+                        song_name = trackdict[track]['name']
+                        album_name = trackdict[track]['album']
+                        artist_name = trackdict[track]['artist']
+                        genre_name = trackdict[track]['genre']
+                        dataset += [{self.MELON_SESSION_ID: playlist_id,
+                                     #self._MELON_TIME_COLUMN: playlist_timestamp,
+                                     self.MELON_ITEM_ID: song_name,
+                                     self.MELON_ALBUM_NAME_KEY: album_name,
+                                     self.MELON_ARTIST_NAME_KEY: artist_name,
+                                     self.MELON_GENRE_KEY: genre_name}]
+
+        # Write data to CSV
+        spotify_dataframe = pd.DataFrame(data=dataset,
+                                         #index=index,
+                                         columns=[self.MELON_SESSION_ID, self.MELON_ITEM_ID, self.MELON_ALBUM_NAME_KEY, self.MELON_ARTIST_NAME_KEY, self.MELON_GENRE_KEY]
+                                         )
+        #spotify_dataframe.index.name = self.SPOTIFY_SESSION_ID
+        if not os.path.exists(output_file):
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+        spotify_dataframe.to_csv(output_file, sep=self.delimiter, index=False)
 
 
 class ExampleConverter(CsvConverter):

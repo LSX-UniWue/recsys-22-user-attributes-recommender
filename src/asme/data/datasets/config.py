@@ -3,7 +3,7 @@ from pathlib import Path
 from asme.core.init.context import Context
 from asme.data.datamodule.config import DatasetPreprocessingConfig, PreprocessingConfigProvider
 from asme.data.datamodule.converters import YooChooseConverter, Movielens1MConverter, ExampleConverter, \
-    Movielens20MConverter, AmazonConverter, SteamConverter, SpotifyConverter
+    Movielens20MConverter, AmazonConverter, SteamConverter, SpotifyConverter, MelonConverter
 from asme.data.datamodule.preprocessing.action import PREFIXES_KEY, DELIMITER_KEY, INPUT_DIR_KEY, OUTPUT_DIR_KEY
 from asme.data.datamodule.preprocessing.csv import ConvertToCsv
 from asme.data.datamodule.preprocessing.template import build_ratio_split, build_leave_one_out_split, \
@@ -681,6 +681,113 @@ register_preprocessing_config_provider("spotify",
                                                                    lpo_split_min_train_length=2,
                                                                    lpo_split_min_validation_length=1,
                                                                    lpo_split_min_test_length=1))
+
+
+def get_melon_preprocessing_config(# General parameters
+        output_directory: str,
+        input_directory: str,
+        # Ratio split parameters
+        ratio_split_min_item_feedback: int,
+        ratio_split_min_sequence_length: int,
+        ratio_split_train_percentage: float,
+        ratio_split_validation_percentage: float,
+        ratio_split_test_percentage: float,
+        ratio_split_window_markov_length: int,
+        ratio_split_window_target_length: int,
+        ratio_split_session_end_offset: int,
+        # Leave one out split parameters
+        loo_split_min_item_feedback: int,
+        loo_split_min_sequence_length: int,
+        # Leave percentage out split parameters
+        lpo_split_min_item_feedback: int,
+        lpo_split_min_sequence_length: int,
+        lpo_split_train_percentage: float,
+        lpo_split_validation_percentage: float,
+        lpo_split_test_percentage: float,
+        lpo_split_min_train_length: int,
+        lpo_split_min_validation_length: int,
+        lpo_split_min_test_length: int
+) -> DatasetPreprocessingConfig:
+    prefix = "melon"
+    context = Context()
+    context.set(PREFIXES_KEY, [prefix])
+    context.set(DELIMITER_KEY, "\t")
+    context.set(INPUT_DIR_KEY, Path(input_directory))
+    context.set(OUTPUT_DIR_KEY, Path(output_directory))
+
+    # TODO
+    columns = [MetaInformation("playlist_id", type="str"),
+               MetaInformation("playlist_timestamp", type="str", run_tokenization=False),
+               MetaInformation("track_name", type="str"),
+               MetaInformation("album_name", type="str"),
+               MetaInformation("artist_name", type="str")]
+
+    # TODO
+    min_item_feedback_column = "track_name"
+    min_sequence_length_column = "playlist_id"
+    session_key = ["playlist_id"]
+    item_column = MetaInformation("item", column_name="track_name", type="str")
+
+    ratio_split_action = build_ratio_split(columns, prefix, ratio_split_min_item_feedback, min_item_feedback_column,
+                                           ratio_split_min_sequence_length, min_sequence_length_column,
+                                           session_key, [item_column], ratio_split_train_percentage,
+                                           ratio_split_validation_percentage, ratio_split_test_percentage,
+                                           ratio_split_window_markov_length, ratio_split_window_target_length,
+                                           ratio_split_session_end_offset)
+
+    leave_one_out_split_action = build_leave_one_out_split(columns, prefix, loo_split_min_item_feedback,
+                                                           min_item_feedback_column,
+                                                           loo_split_min_sequence_length, min_sequence_length_column,
+                                                           session_key, item_column, [item_column])
+
+    leave_percentage_out_split_action = build_leave_percentage_out_split(columns, prefix, lpo_split_min_item_feedback,
+                                                                         min_item_feedback_column,
+                                                                         lpo_split_min_sequence_length,
+                                                                         min_sequence_length_column,
+                                                                         session_key, item_column, [item_column],
+                                                                         lpo_split_train_percentage,
+                                                                         lpo_split_validation_percentage,
+                                                                         lpo_split_test_percentage,
+                                                                         lpo_split_min_train_length,
+                                                                         lpo_split_min_validation_length,
+                                                                         lpo_split_min_test_length)
+
+    preprocessing_actions = [ConvertToCsv(MelonConverter()),
+                             ratio_split_action, leave_one_out_split_action,
+                             leave_percentage_out_split_action]
+
+    return DatasetPreprocessingConfig(prefix,
+                                      None,
+                                      Path(output_directory),
+                                      None,
+                                      preprocessing_actions,
+                                      context)
+
+
+register_preprocessing_config_provider("melon",
+                                       PreprocessingConfigProvider(get_melon_preprocessing_config,
+                                                                   output_directory="./melon",
+                                                                   ratio_split_min_item_feedback=4,
+                                                                   ratio_split_min_sequence_length=4,
+                                                                   ratio_split_train_percentage=0.8,
+                                                                   ratio_split_validation_percentage=0.1,
+                                                                   ratio_split_test_percentage=0.1,
+                                                                   ratio_split_window_markov_length=3,
+                                                                   ratio_split_window_target_length=3,
+                                                                   ratio_split_session_end_offset=0,
+                                                                   # Leave one out split parameters
+                                                                   loo_split_min_item_feedback=4,
+                                                                   loo_split_min_sequence_length=4,
+                                                                   # Leave percentage out split parameters
+                                                                   lpo_split_min_item_feedback=4,
+                                                                   lpo_split_min_sequence_length=4,
+                                                                   lpo_split_train_percentage=0.8,
+                                                                   lpo_split_validation_percentage=0.1,
+                                                                   lpo_split_test_percentage=0.1,
+                                                                   lpo_split_min_train_length=2,
+                                                                   lpo_split_min_validation_length=1,
+                                                                   lpo_split_min_test_length=1))
+
 
 
 """

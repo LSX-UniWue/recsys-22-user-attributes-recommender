@@ -82,6 +82,14 @@ def read_csv(dataset_dir: Path,
     file_path = dataset_dir / f"{file}{file_type}"
     return pd.read_csv(file_path, sep=sep, header=header, engine="python", encoding=encoding)
 
+def read_json(dataset_dir: Path,
+             file: str,
+             file_type: str,
+             encoding: str = "utf-8"
+             ) -> pd.DataFrame:
+    file_path = dataset_dir / f"{file}{file_type}"
+    return pd.read_json(file_path, engine="python", encoding=encoding)
+
 
 def approx_equal(x: float, y: float, eps = 1e-9) -> bool:
     return math.fabs(x - y) < eps

@@ -1,5 +1,5 @@
-local base_path = "../spotify/";
-local output_path = "/scratch/jane-doe-framework/students/spotify/";
+local base_path = "/scratch/jane-doe-framework/students/spotify/";
+local output_path = "/scratch/jane-doe-framework/students/spotify/outputs/";
 local hidden_size = 128;
 local max_seq_length = 200;
 local metrics =  {
@@ -24,11 +24,10 @@ local dataset = 'spotify';
             mask_probability: 0.2,
             mask_seed: 42
         },
+        force_regeneration: "True",
         preprocessing: {
-            input_directory: "/scratch/jane-doe-framework/students/spotify/",
-            output_directory: base_path,
-            min_item_feedback: 4,
-            min_sequence_length: 4,
+            input_directory: "/scratch/jane-doe-framework/students/spotify/data/",
+            output_directory: base_path
         }
     },
     templates: {
@@ -82,7 +81,7 @@ local dataset = 'spotify';
             mode: 'max'
         },
         gpus: 1,
-        max_epochs: 800,
+        max_epochs: 20,
         check_val_every_n_epoch: 10
     }
 }
