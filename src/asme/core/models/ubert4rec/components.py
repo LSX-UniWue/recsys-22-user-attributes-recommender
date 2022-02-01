@@ -74,11 +74,13 @@ class UBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresent
 
         for input_key, module in self.additional_attribute_embeddings.items():
             additional_metadata = sequence.get_attribute(input_key)
-            embedding += module(additional_metadata)
+            t = module(additional_metadata)
+            embedding += t
 
         for input_key, module in self.user_attribute_embeddings.items():
             user_metadata = sequence.get_attribute(input_key)
-          #  user_metadata = user_metadata[:,0:1]
+            user_metadata = user_metadata[:, 0:1]
+
             if user_embedding:
                 user_embedding += module(user_metadata)
             else:
@@ -98,12 +100,9 @@ class UBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresent
         embedding = self.norm_embedding(embedding)
         embedding = self.dropout_embedding(embedding)
 
-        padding_mask = sequence.padding_mask
-        sequence.padding_mask = padding_mask
         return EmbeddedElementsSequence(embedding, input_sequence=sequence)
 
-
-class UserBidirectionalTransformerSequenceRepresentationComponent(SequenceRepresentationLayer):
+class UserTransformerSequenceRepresentationComponent(SequenceRepresentationLayer):
     """
     A representation layer that uses a bidirectional transformer layer(s) to encode the given sequence
     """
@@ -114,10 +113,12 @@ class UserBidirectionalTransformerSequenceRepresentationComponent(SequenceRepres
                  num_transformer_layers: int,
                  transformer_dropout: float,
                  user_attributes: Dict[str, Dict[str, Any]],
+                 bidirectional: bool,
                  transformer_attention_dropout: Optional[float] = None,
                  transformer_intermediate_size: Optional[int] = None,):
         super().__init__()
         self.user_attributes = user_attributes
+        self.bidirectional = bidirectional
         if transformer_intermediate_size is None:
             transformer_intermediate_size = 4 * transformer_hidden_size
 
@@ -130,16 +131,49 @@ class UserBidirectionalTransformerSequenceRepresentationComponent(SequenceRepres
         sequence = embedded_sequence.embedded_sequence
         padding_mask = embedded_sequence.input_sequence.padding_mask
 
-        attention_mask = None
-
-        sequence_size = sequence.size()[1]
+        input_size = sequence.size()
+        batch_size = input_size[0]
+        sequence_length = sequence.size()[1]
 
         if padding_mask is not None:
             if len(self.user_attributes):
                 pad_user = torch.ones((padding_mask.shape[0], 1), device=sequence.device)
                 padding_mask = torch.cat([pad_user, padding_mask], dim=1)
 
-            attention_mask = padding_mask.unsqueeze(1).repeat(1, sequence_size, 1).unsqueeze(1)
+        """ 
+        We have to distinguish 4 cases here:
+            - Bidirectional and no padding mask: Transformer can attend to all tokens with no restrictions
+            - Bidirectional and padding mask: Transformer can attend to all tokens but those marked with the padding 
+              mask
+            - Unidirectional and no padding mask: Transformer can attend to all tokens up to the current sequence index
+            - Unidirectional and padding mask: Transformer can attend to all tokens up to the current sequence index
+              except those marked by the padding mask
+        """
+
+        if self.bidirectional:
+            if padding_mask is None:
+                attention_mask = None
+            else:
+                attention_mask = padding_mask.unsqueeze(1).repeat(1, sequence_length, 1).unsqueeze(1)
+        else:
+            if padding_mask is None:
+                attention_mask = torch.tril(
+                    torch.ones([sequence_length, sequence_length], device=sequence.device)).unsqueeze(0).repeat(
+                    batch_size, 1, 1).unsqueeze(1)
+
+                ##???
+            else:
+                attention_mask = torch.tril(
+                    torch.ones([sequence_length, sequence_length], device=sequence.device)).unsqueeze(0).repeat(
+                    batch_size, 1, 1).unsqueeze(1)
+                attention_mask *= padding_mask.unsqueeze(1).repeat(1, sequence_length, 1).unsqueeze(1)
+
+
+        #if padding_mask is not None:
+         #   if len(self.user_attributes):
+          #      pad_user = torch.ones((padding_mask.shape[0], 1), device=sequence.device)
+           #     padding_mask = torch.cat([pad_user, padding_mask], dim=1)
+           # attention_mask = padding_mask.unsqueeze(1).repeat(1, sequence_size, 1).unsqueeze(1)
 
         encoded_sequence = self.transformer_encoder(sequence, attention_mask=attention_mask)
         return SequenceRepresentation(encoded_sequence)

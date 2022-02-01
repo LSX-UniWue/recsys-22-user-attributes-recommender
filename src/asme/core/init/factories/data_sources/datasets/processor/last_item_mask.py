@@ -1,6 +1,6 @@
-from typing import List, Dict
+from typing import List
 
-from asme.core.tokenization.tokenizer import Tokenizer
+from asme.core.init.factories.util import get_all_tokenizers_from_context
 from asme.data.datasets.processors.last_item_mask import LastItemMaskProcessor
 from asme.core.init.config import Config
 from asme.core.init.context import Context
@@ -11,17 +11,6 @@ from asme.data.datasets.sequence import MetaInformation
 
 # TODO (DZO): move constants and methods
 CONTEXT_META_INFO_KEY = "metadata_info"
-
-
-def get_all_tokenizers_from_context(context: Context) -> Dict[str, Tokenizer]:
-    """
-    returns a dict with all tokenizers loaded in the context
-    :param context: the context to extract the tokenizers from
-    :return: the dict containing only tokenizers in the context
-    """
-    return {
-        key: value for key, value in context.as_dict().items() if isinstance(value, Tokenizer)
-    }
 
 
 def get_meta_infos(config: Config,

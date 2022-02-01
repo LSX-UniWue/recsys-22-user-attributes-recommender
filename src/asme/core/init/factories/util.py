@@ -1,9 +1,10 @@
 import os
-from typing import List, Union, Any
+from typing import List, Union, Any, Dict
 
 from asme.core.init.config import Config
 from asme.core.init.context import Context
 from asme.core.init.object_factory import CanBuildResult, CanBuildResultType
+from asme.core.tokenization.tokenizer import Tokenizer
 from asme.core.utils.logging import get_root_logger
 
 
@@ -108,3 +109,14 @@ def infer_base_path(config: Config, key: Union[str, List[str]], base_path: str, 
                       f"Current value: '{value}' -> new value: '{complete_path}'. "
                 get_root_logger().warning(msg)
             config.set(key, complete_path)
+
+
+def get_all_tokenizers_from_context(context: Context) -> Dict[str, Tokenizer]:
+    """
+    returns a dict with all tokenizers loaded in the context
+    :param context: the context to extract the tokenizers from
+    :return: the dict containing only tokenizers in the context
+    """
+    return {
+        key: value for key, value in context.as_dict().items() if isinstance(value, Tokenizer)
+    }
