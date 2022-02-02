@@ -412,7 +412,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
             for i in range(predictions.shape[0]):
                 prediction = filter_predictions(predictions[i])
 
-                scores = _softmax(prediction).numpy()
+                scores = torch.softmax(prediction, dim=-1).cpu().numpy()
 
                 item_indices = scores.argsort()[::-1][:num_predictions]
 
