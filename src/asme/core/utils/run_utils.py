@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 
 import _jsonnet
 import optuna
@@ -30,6 +30,19 @@ OBJECTIVE_METRIC_KEY = 'objective_metric'
 TRIAL_BASE_PATH = 'base_output_path'
 """ the checkpoint file extension """
 CHECKPOINT_FILE_EXTENSION = '.ckpt'
+
+
+def load_config_from_json(json_content: str,
+                          additional_head_processors: List[TemplateProcessor] = [],
+                          additional_tail_processors: List[TemplateProcessor] = []) -> Config:
+
+    loaded_config = json.loads(json_content)
+
+    template_engine = TemplateEngine(head_processors=additional_head_processors,
+                                     tail_processors=additional_tail_processors)
+
+    resolved_config = template_engine.modify(loaded_config)
+    return Config(resolved_config)
 
 
 def load_config(config_file: Path,
