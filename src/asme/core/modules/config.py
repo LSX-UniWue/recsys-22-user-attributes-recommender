@@ -61,10 +61,6 @@ register_module("sasrec-full", ModuleConfig(GenericModuleFactory, NextItemPredic
     "model_cls": SASRecModel,
     "loss_function": SASRecFullSequenceCrossEntropyLoss}))
 
-register_module("user-sasrec", ModuleConfig(GenericModuleFactory, SequenceNextItemPredictionTrainingModule, {
-    "model_cls": UserSASRecModel,
-    "loss_function": SASRecBinaryCrossEntropyLoss()}))
-
 register_module("rnn", ModuleConfig(GenericModuleFactory, NextItemPredictionTrainingModule, {
     "model_cls": RNNModel}))
 

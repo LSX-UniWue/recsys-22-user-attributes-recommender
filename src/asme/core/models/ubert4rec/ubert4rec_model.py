@@ -26,6 +26,7 @@ class UBERT4RecModel(SequenceRecommenderModel):
                  additional_attributes: Dict[str, Dict[str, Any]],
                  additional_tokenizers: InjectTokenizers(),
                  user_attributes: Dict[str, Dict[str, Any]],
+                 positional_embedding: True,
                  segment_embedding: False,
                  embedding_pooling_type: str = None,
                  initializer_range: float = 0.02,
@@ -42,7 +43,7 @@ class UBERT4RecModel(SequenceRecommenderModel):
         # embedding will be normed and dropout after all embeddings are added to the representation
         sequence_embedding = TransformerEmbedding(item_vocab_size, max_seq_length, transformer_hidden_size, 0.0,
                                                   embedding_pooling_type=embedding_pooling_type,
-                                                  norm_embedding=False)
+                                                  norm_embedding=False, positional_embedding=positional_embedding)
 
         element_representation = UBERT4RecSequenceElementsRepresentationComponent(sequence_embedding,
                                                                                    transformer_hidden_size,
