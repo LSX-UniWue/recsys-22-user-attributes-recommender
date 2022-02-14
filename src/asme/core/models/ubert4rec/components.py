@@ -31,12 +31,13 @@ class UBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresent
                  additional_attributes: Dict[str, Dict[str, Any]],
                  user_attributes: Dict[str, Dict[str, Any]],
                  additional_tokenizers: Dict[str, Tokenizer],
-                 segment_embedding: int = True,
+                 segment_embedding: bool = True,
                  dropout: float = 0.0
                  ):
         super().__init__()
 
         self.item_embedding_layer = item_embedding_layer
+        self.segment_embedding_active = segment_embedding
         self.attribute_types = 0
 
         additional_attribute_embeddings = {}
@@ -60,7 +61,7 @@ class UBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresent
                 self.attribute_types += 1
         self.user_attribute_embeddings = nn.ModuleDict(user_attribute_embeddings)
 
-        if segment_embedding == 1:
+        if self.segment_embedding_active == True:
             self.segment_embedding = nn.Embedding(self.attribute_types, embedding_size)
 
         self.dropout_embedding = nn.Dropout(dropout)
@@ -90,7 +91,7 @@ class UBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresent
             user_embedding = torch.unsqueeze(user_embedding, 1)
             embedding = torch.cat([user_embedding,embedding], dim=1)
 
-        if self.segment_embedding:
+        if self.segment_embedding_active:
             segments = torch.ones(sequence.sequence.shape, dtype=torch.int64, device=sequence.sequence.device)
             if user_embedding is not None:
                 user_segment = torch.zeros(sequence.sequence.shape[0], 1, dtype=torch.int64, device=sequence.sequence.device)
