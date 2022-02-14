@@ -110,7 +110,7 @@ def get_ml_1m_preprocessing_config(
 
     columns = [MetaInformation("rating", type="int", run_tokenization=False),
                MetaInformation("gender", type="str"),
-               MetaInformation("age", type="int", run_tokenization=False),
+               MetaInformation("age", type="str"),
                MetaInformation("occupation", type="str"),
                MetaInformation("zip", type="str"),
                MetaInformation("title", type="str"),
