@@ -106,7 +106,7 @@ class UBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresent
             user_metadata = sequence.get_attribute(input_key)
             user_metadata = user_metadata[:, 0:1]
 
-            if user_embedding:
+            if user_embedding != None:
                 user_embedding += module(user_metadata)
             else:
                 user_embedding = module(user_metadata)
