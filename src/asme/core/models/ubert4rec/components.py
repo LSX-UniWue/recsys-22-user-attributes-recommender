@@ -9,6 +9,27 @@ from torch import nn
 from asme.data.datasets.processors.tokenizer import Tokenizer
 
 
+class UserLinearUpscaler(nn.Module):
+
+    def __init__(self, vocab_size: int, embed_size: int):
+        super().__init__()
+        self.linear = nn.Linear(vocab_size, embed_size)
+        self.vocab_size = vocab_size
+
+    def forward(self,
+                content_input: torch.Tensor
+                ) -> torch.Tensor:
+        """
+        :param content_input: a tensor containing the ids of each
+        :return:
+        """
+        # the input is a sequence of content ids without any order
+        # so we convert them into a multi-hot encoding
+        multi_hot = torch.nn.functional.one_hot(content_input, self.vocab_size).sum(2).float()
+        # 0 is the padding category, so zero it out, but not for the user
+        #multi_hot[:, :, 0] = 0
+        return self.linear(multi_hot)
+
 def _build_embedding_type(embedding_type: str,
                           vocab_size: int,
                           hidden_size: int
@@ -19,6 +40,8 @@ def _build_embedding_type(embedding_type: str,
         'content_embedding': nn.Embedding(num_embeddings=vocab_size,
                                           embedding_dim=hidden_size),
         'linear_upscale': LinearUpscaler(vocab_size=vocab_size,
+                                         embed_size=hidden_size),
+        'user_linear_upscale': UserLinearUpscaler(vocab_size=vocab_size,
                                          embed_size=hidden_size)
     }[embedding_type]
 
@@ -36,6 +59,7 @@ class UBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresent
                  ):
         super().__init__()
 
+        self.segment_embedding = None
         self.item_embedding_layer = item_embedding_layer
         self.segment_embedding_active = segment_embedding
         self.attribute_types = 0
@@ -88,7 +112,6 @@ class UBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresent
                 user_embedding = module(user_metadata)
 
         if user_embedding is not None:
-            user_embedding = torch.unsqueeze(user_embedding, 1)
             embedding = torch.cat([user_embedding,embedding], dim=1)
 
         if self.segment_embedding_active:

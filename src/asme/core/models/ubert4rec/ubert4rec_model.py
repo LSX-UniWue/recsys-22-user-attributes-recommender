@@ -34,11 +34,24 @@ class UBERT4RecModel(SequenceRecommenderModel):
                  transformer_attention_dropout: Optional[float] = None):
 
         # save for later call by the training module
-        self.additional_metadata_keys = list(additional_attributes.keys()) + list(user_attributes.keys())
-        self.additional_userdata_keys = list(user_attributes.keys())
-
-        if len(user_attributes):
+        
+        self.additional_userdata_keys = []
+        self.additional_metadata_keys = []
+        if user_attributes is not None:
+            self.additional_metadata_keys = list(user_attributes.keys())
+            self.additional_userdata_keys = list(user_attributes.keys())
             max_seq_length += 1
+            
+        if additional_attributes is not None:
+            if user_attributes is not None:
+                self.additional_metadata_keys = self.additional_metadata_keys + list(additional_attributes.keys())
+            else:
+                self.additional_metadata_keys = list(additional_attributes.keys())
+                
+        print("METADATA",self.additional_metadata_keys)
+        print("USERDATA",self.additional_metadata_keys)
+
+
 
         # embedding will be normed and dropout after all embeddings are added to the representation
         sequence_embedding = TransformerEmbedding(item_vocab_size, max_seq_length, transformer_hidden_size, 0.0,
