@@ -11,7 +11,7 @@ from asme.core.callbacks.best_model_writing_model_checkpoint import BestModelWri
 from asme.core.init.config import Config
 
 
-PROCESSED_CONFIG_NAME = "config.jsonnet"
+PROCESSED_CONFIG_NAME = "config.json"
 FINISHED_FLAG_NAME = ".FINISHED"
 
 
@@ -23,7 +23,7 @@ def save_config(config: Config,
     Saves the provided configuration at the specified path, optionally creating parent directories.
     """
     if make_parents:
-        os.makedirs(path,exist_ok=True)
+        os.makedirs(path, exist_ok=True)
     full_path = path / PROCESSED_CONFIG_NAME
     with open(full_path, "w") as f:
         json.dump(config.config, f, indent=4)
