@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional, Callable, List, Iterator, Tuple
 
 from pytorch_lightning.loggers import LoggerCollection, MLFlowLogger
-
+from loguru import logger
 from asme.core.init.templating.search.resolver import OptunaParameterResolver
 
 from asme.core.init.templating.search.processor import SearchTemplateProcessor
@@ -46,14 +46,13 @@ _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at leas
                                                     " the study name and study storage to infer the config and " \
                                                     "checkpoint path"
 
-logger = logging.get_logger(__name__)
 app = typer.Typer()
 
 
 @app.command()
 def train(config_file: Path = typer.Argument(..., help='the path to the config file', exists=True),
           do_resume: bool = typer.Option(False, help='flag iff the model should resume training from a checkpoint'),
-          print_train_val_examples: bool = typer.Option(True, help='print examples of the training '
+          print_train_val_examples: bool = typer.Option(False, help='print examples of the training '
                                                                    'and evaluation dataset before starting training')
           ) -> None:
     config_file_path = Path(config_file)

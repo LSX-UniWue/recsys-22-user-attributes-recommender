@@ -1,3 +1,4 @@
+import copy
 import inspect
 from dataclasses import dataclass
 from typing import List, Any, Dict, Optional, Union, Callable
@@ -172,7 +173,7 @@ class GenericModuleFactory(ObjectFactory):
             name = parameter_info.parameter_name
             default_value = parameter_info.default_value
             default_value = None if default_value == inspect._empty else default_value
-            named_parameters[name] = config.get_or_default(name, default_value)
+            named_parameters[name] = copy.deepcopy(config.get_or_default(name, default_value))
 
         # build the metrics container
         metrics = self.metrics_container_factory.build(config.get_config(self.metrics_container_factory.config_path()),
@@ -192,6 +193,7 @@ class GenericModuleFactory(ObjectFactory):
         if self.loss_function is not None:
             named_parameters[LOSS_FUNCTION_PARAM_NAME] = self.loss_function
 
+        # create a deep copy to avoid potential config modifications made by the module to leak into asme
         return self._module_csl(**named_parameters)
 
     def is_required(self, context: Context) -> bool:
@@ -233,7 +235,7 @@ class GenericModelFactory(ObjectFactory):
             default_value = parameter_info.default_value
             parameter_name = parameter_info.parameter_name
             default_value = None if default_value == inspect._empty else default_value
-            named_parameters[parameter_name] = config.get_or_default(parameter_name, default_value)
+            named_parameters[parameter_name] = copy.deepcopy(config.get_or_default(parameter_name, default_value))
 
         # handle Inject directives
         injectable_parameters = _filter_parameters(parameters, lambda p: p.is_injectable())
