@@ -1,4 +1,5 @@
 import copy
+import importlib
 import inspect
 from dataclasses import dataclass
 from typing import List, Any, Dict, Optional, Union, Callable
@@ -10,7 +11,8 @@ from asme.core.init.factories.metrics.metrics_container import MetricsContainerF
 from asme.core.init.factories.util import require_config_keys
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.core.tokenization.tokenizer import Tokenizer
-from asme.core.utils.inject import InjectTokenizer, InjectTokenizers, InjectVocabularySize, InjectModel, Inject
+from asme.core.utils.inject import InjectTokenizer, InjectTokenizers, InjectVocabularySize, InjectModel, Inject, \
+    InjectClass, InjectObjectConfig, InjectList, InjectDict
 
 MODEL_PARAM_NAME = 'model'
 METRICS_PARAM_NAME = 'metrics'
@@ -60,6 +62,43 @@ def _get_tokenizers_from_context(context: Context) -> Dict[str, Tokenizer]:
 
     return tokenizers
 
+def _check_config_paths_exists_or_throw(config: Config, config_section_path: List[str], param: ParameterInfo):
+     if not config.has_path(config_section_path):
+         if param.default_value == inspect._empty:
+             raise KeyError(f"Parameter {param.parameter_name} should be injected from the "
+                            f"configuration path '{'.'.join(config_section_path)}', but this path was not "
+                            f"found in the config and no default value was provided.")
+
+
+def _parse_inject_object_config(config: Config, config_section_path: List[str]) -> InjectObjectConfig:
+    try:
+        return InjectObjectConfig.from_dict(config.get_config(config_section_path).config)
+    except Exception as e:
+        raise ValueError(f"Failed to parse inject config from {'.'.join(config_section_path)}.", e)
+
+
+def _build(config: Config, path: List[str], current_obj_name: str = ""):
+    if not config.has_path(path):
+        raise KeyError(f"Failed to build {current_obj_name if len(current_obj_name) > 0 else 'object'}"
+                       f"with configuration path '{'.'.join(path)}' since this path does not"
+                       f"exist in the config.")
+
+    obj_config = _parse_inject_object_config(config, path)
+    parameter_dict = {}
+    for k, v in obj_config.parameters:
+        # Recursively instantiate parameters
+        if isinstance(v, dict) and "cls_name" in v:
+            sub_path = path + [k]
+            name = current_obj_name + f".{k}" if len(current_obj_name) > 0 else k
+            parameter_dict[k] = _build(config, sub_path, current_obj_name=name)
+        else:
+            parameter_dict[k] = v
+
+    # Import module and build object
+    obj_module = importlib.import_module(obj_config.module_name)
+    obj_class = obj_module.__getattribute__(obj_config.cls_name)
+    return obj_class(**parameter_dict)
+
 
 def _handle_injects(injectable_parameters: List[ParameterInfo], context: Context, config: Config,
                     parameter_dict: Dict[str, Any]):
@@ -100,18 +139,46 @@ def _handle_injects(injectable_parameters: List[ParameterInfo], context: Context
         elif isinstance(inject, InjectModel):
             config_section_name = inject.config_section_name \
                 if inject.config_section_name is not None else injectable_parameter.parameter_name
-            if not config.has_path([config_section_name]):
-                if injectable_parameter.default_value == inspect._empty:
-                    raise KeyError(
-                        f"A sub-model '{injectable_parameter.parameter_name}' of type "
-                        f"'{inject.model_cls}' with no default value was specified but no configuration section "
-                        f"named '{config_section_name}' was found in the config.")
-            else:
-                factory = GenericModelFactory(inject.model_cls)
-                # We assume that the config entry has the same name as the model parameter
-                model_config = config.get_config([config_section_name])
-                model = factory.build(model_config, context)
-                parameter_dict[injectable_parameter.parameter_name] = model
+            config_section_path = config_section_name.split(".")
+
+            _check_config_paths_exists_or_throw(config, config_section_path, injectable_parameter)
+            factory = GenericModelFactory(inject.model_cls)
+            model_config = config.get_config(config_section_path)
+            model = factory.build(model_config, context)
+            parameter_dict[injectable_parameter.parameter_name] = model
+        elif isinstance(inject, InjectClass):
+            config_section_path = inject.config_section_path.split(".")
+            _check_config_paths_exists_or_throw(config, config_section_path, injectable_parameter)
+            parameter_dict[injectable_parameter.parameter_name] = _build(config,
+                                                                         config_section_path,
+                                                                         injectable_parameter.parameter_name)
+        elif isinstance(inject, InjectList):
+            config_section_path = inject.config_section_path.split(".")
+            _check_config_paths_exists_or_throw(config, config_section_path, injectable_parameter)
+            obj_config = config.get(config_section_path)
+            if not isinstance(obj_config, list):
+                raise ValueError(f"Parameter '{injectable_parameter.parameter_name}' was annotated with 'InjectList' but"
+                                 f" the provided config section '{inject.config_section_path}' is not a list.")
+
+            instances = []
+            for i, param_config in enumerate(obj_config):
+                config_obj = Config(param_config)
+                instances += [_build(config_obj, [], f"{injectable_parameter.parameter_name}.[{i}]")]
+
+            parameter_dict[injectable_parameter.parameter_name] = instances
+        elif isinstance(inject, InjectDict):
+            config_section_path = inject.config_section_path.split(".")
+            _check_config_paths_exists_or_throw(config, config_section_path, injectable_parameter)
+            obj_config = config.get(config_section_path)
+            if not isinstance(obj_config, dict):
+                raise ValueError(f"Parameter '{injectable_parameter.parameter_name}' was annotated with 'InjectDict' but"
+                                 f" the provided config section '{inject.config_section_path}' is not a dictionary.")
+            instances = {}
+            for key, param_config in obj_config.items():
+                config_obj = Config(param_config)
+                instances[key] = _build(config_obj, [], f"{injectable_parameter.parameter_name}.{key}")
+
+            parameter_dict[injectable_parameter.parameter_name] = instances
         else:
             # We failed ot handle an inject case!
             raise NotImplementedError(f"Inject instances of type {type(inject)} are not handled yet!")
