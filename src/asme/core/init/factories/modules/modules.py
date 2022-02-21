@@ -62,19 +62,20 @@ def _get_tokenizers_from_context(context: Context) -> Dict[str, Tokenizer]:
 
     return tokenizers
 
+
 def _check_config_paths_exists_or_throw(config: Config, config_section_path: List[str], param: ParameterInfo):
-     if not config.has_path(config_section_path):
-         if param.default_value == inspect._empty:
-             raise KeyError(f"Parameter {param.parameter_name} should be injected from the "
-                            f"configuration path '{'.'.join(config_section_path)}', but this path was not "
-                            f"found in the config and no default value was provided.")
+    if not config.has_path(config_section_path):
+        if param.default_value == inspect._empty:
+            raise KeyError(f"Parameter {param.parameter_name} should be injected from the "
+                           f"configuration path '{'.'.join(config_section_path)}', but this path was not "
+                           f"found in the config and no default value was provided.")
 
 
 def _parse_inject_object_config(config: Config, config_section_path: List[str]) -> InjectObjectConfig:
     try:
         return InjectObjectConfig.from_dict(config.get_config(config_section_path).config)
     except Exception as e:
-        raise ValueError(f"Failed to parse inject config from {'.'.join(config_section_path)}.", e)
+        raise ValueError(f"Failed to parse inject config from path '{'.'.join(config_section_path)}'.", e)
 
 
 def _build(config: Config, path: List[str], current_obj_name: str = ""):
@@ -85,10 +86,10 @@ def _build(config: Config, path: List[str], current_obj_name: str = ""):
 
     obj_config = _parse_inject_object_config(config, path)
     parameter_dict = {}
-    for k, v in obj_config.parameters:
+    for k, v in obj_config.parameters.items():
         # Recursively instantiate parameters
         if isinstance(v, dict) and "cls_name" in v:
-            sub_path = path + [k]
+            sub_path = path + ["parameters", k]
             name = current_obj_name + f".{k}" if len(current_obj_name) > 0 else k
             parameter_dict[k] = _build(config, sub_path, current_obj_name=name)
         else:
@@ -112,6 +113,16 @@ def _handle_injects(injectable_parameters: List[ParameterInfo], context: Context
     :param parameter_dict: A dictionary of parameter names and values that should be populated by values gathered from
     the context or the config.
     """
+
+    def _determine_config_path(config_path: Optional[str], parameter: ParameterInfo) -> List[str]:
+        if config_path is None:
+            return [parameter.parameter_name]
+        else:
+            return config_path.split(".")
+
+    def _format_config_section_path(config_path: List[str], config: Config) -> str:
+        return ".".join(config.base_path + config_path)
+
     for injectable_parameter in injectable_parameters:
         inject = injectable_parameter.get_inject_instance()
 
@@ -137,9 +148,7 @@ def _handle_injects(injectable_parameters: List[ParameterInfo], context: Context
             else:
                 parameter_dict[injectable_parameter.parameter_name] = len(tokenizer)
         elif isinstance(inject, InjectModel):
-            config_section_name = inject.config_section_name \
-                if inject.config_section_name is not None else injectable_parameter.parameter_name
-            config_section_path = config_section_name.split(".")
+            config_section_path = _determine_config_path(inject.config_section_path, injectable_parameter)
 
             _check_config_paths_exists_or_throw(config, config_section_path, injectable_parameter)
             factory = GenericModelFactory(inject.model_cls)
@@ -147,18 +156,19 @@ def _handle_injects(injectable_parameters: List[ParameterInfo], context: Context
             model = factory.build(model_config, context)
             parameter_dict[injectable_parameter.parameter_name] = model
         elif isinstance(inject, InjectClass):
-            config_section_path = inject.config_section_path.split(".")
+            config_section_path = _determine_config_path(inject.config_section_path, injectable_parameter)
             _check_config_paths_exists_or_throw(config, config_section_path, injectable_parameter)
             parameter_dict[injectable_parameter.parameter_name] = _build(config,
                                                                          config_section_path,
                                                                          injectable_parameter.parameter_name)
         elif isinstance(inject, InjectList):
-            config_section_path = inject.config_section_path.split(".")
+            config_section_path = _determine_config_path(inject.config_section_path, injectable_parameter)
             _check_config_paths_exists_or_throw(config, config_section_path, injectable_parameter)
             obj_config = config.get(config_section_path)
             if not isinstance(obj_config, list):
-                raise ValueError(f"Parameter '{injectable_parameter.parameter_name}' was annotated with 'InjectList' but"
-                                 f" the provided config section '{inject.config_section_path}' is not a list.")
+                raise ValueError(f"Parameter '{injectable_parameter.parameter_name}' was annotated with 'InjectList'"
+                                 f" but the provided config section "
+                                 f"'{_format_config_section_path(config_section_path, config)}' is not a list.")
 
             instances = []
             for i, param_config in enumerate(obj_config):
@@ -167,12 +177,14 @@ def _handle_injects(injectable_parameters: List[ParameterInfo], context: Context
 
             parameter_dict[injectable_parameter.parameter_name] = instances
         elif isinstance(inject, InjectDict):
-            config_section_path = inject.config_section_path.split(".")
+            config_section_path = _determine_config_path(inject.config_section_path, injectable_parameter)
             _check_config_paths_exists_or_throw(config, config_section_path, injectable_parameter)
             obj_config = config.get(config_section_path)
             if not isinstance(obj_config, dict):
-                raise ValueError(f"Parameter '{injectable_parameter.parameter_name}' was annotated with 'InjectDict' but"
-                                 f" the provided config section '{inject.config_section_path}' is not a dictionary.")
+                raise ValueError(
+                    f"Parameter '{injectable_parameter.parameter_name}' was annotated with 'InjectDict' but"
+                    f" the provided config section "
+                    f"'{_format_config_section_path(config_section_path, config)}' is not a dictionary.")
             instances = {}
             for key, param_config in obj_config.items():
                 config_obj = Config(param_config)

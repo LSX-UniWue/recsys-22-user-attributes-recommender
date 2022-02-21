@@ -1,5 +1,5 @@
 # We all injection anntotations should inherit from this base class to ensure extendability for future use cases
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Any, Dict
 
 from dataclasses_json import dataclass_json
@@ -24,13 +24,13 @@ class InjectVocabularySize(Inject):
 
 
 class InjectModel(Inject):
-    def __init__(self, model_cls, config_section_path: str = None):
+    def __init__(self, model_cls, config_section_path: Optional[str] = None):
         self.model_cls = model_cls
-        self.config_section_name = config_section_path
+        self.config_section_path = config_section_path
 
 
 class InjectClass(Inject):
-    def __init__(self, config_section_path: str):
+    def __init__(self, config_section_path: Optional[str] = None):
         """
         :param config_section_path: The path to the section which contains the data necessary to build the desired
             object.Nested obects in the config can be accessed by using ".".
@@ -39,7 +39,7 @@ class InjectClass(Inject):
 
 
 class InjectList(Inject):
-    def __init__(self, config_section_path: str):
+    def __init__(self, config_section_path: Optional[str] = None):
         """
                :param config_section_path: The path to the section which contains the data necessary to build the desired
                    object.Nested obects in the config can be accessed by using ".".
@@ -48,7 +48,7 @@ class InjectList(Inject):
 
 
 class InjectDict(Inject):
-    def __init__(self, config_section_path: str):
+    def __init__(self, config_section_path: Optional[str] = None):
         """
                :param config_section_path: The path to the section which contains the data necessary to build the desired
                    object.Nested obects in the config can be accessed by using ".".
@@ -57,7 +57,8 @@ class InjectDict(Inject):
 
 
 @dataclass_json
+@dataclass
 class InjectObjectConfig:
     cls_name: str
     module_name: Optional[str]
-    parameters: Dict[str, Any] = {}
+    parameters: Dict[str, Any] = field(default_factory=lambda: {})
