@@ -34,7 +34,8 @@ class UserSASRecModel(SequenceRecommenderModel):
                  embedding_pooling_type: str = None,
                  transformer_intermediate_size: int = None,
                  transformer_attention_dropout: float = None,
-                 mode: str = "neg_sampling"  # alternative: "full"
+                 mode: str = "neg_sampling", # alternative: "full"
+                 positional_embedding: bool = True
                  ):
 
 
@@ -61,7 +62,8 @@ class UserSASRecModel(SequenceRecommenderModel):
             max_seq_len=max_seq_length,
             embedding_size=transformer_hidden_size,
             dropout=transformer_dropout,
-            embedding_pooling_type=embedding_pooling_type
+            embedding_pooling_type=embedding_pooling_type,
+            positional_embedding=positional_embedding
         )
 
         self.mode = mode

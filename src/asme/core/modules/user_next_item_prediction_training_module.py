@@ -25,11 +25,13 @@ class UserNextItemPredictionTrainingModule(BaseNextItemPredictionTrainingModule)
                  beta_1: float = 0.99,
                  beta_2: float = 0.998,
                  weight_decay: float = 0,
-                 loss_function: Optional[SequenceRecommenderLoss] = None
+                 loss_function: Optional[SequenceRecommenderLoss] = None,
+                 first_item: bool = False
                  ):
 
         super().__init__(model,item_tokenizer,metrics,learning_rate,beta_1,beta_2,weight_decay,loss_function)
         self.user_key_len = len(model.optional_metadata_keys())
+        self.first_item = first_item
 
 
     def training_step(self,
@@ -53,7 +55,10 @@ class UserNextItemPredictionTrainingModule(BaseNextItemPredictionTrainingModule)
         logits = self(batch, batch_idx)
         target = batch[TARGET_ENTRY_NAME]
 
-        target_logits = self._extract_new_target_logits(logits)
+        if self.first_item:
+            target_logits = logits
+        else:
+            target_logits = self._extract_target_item_logits(logits)
 
         loss = self._calc_loss(target_logits, target)
         self.log(LOG_KEY_TRAINING_LOSS, loss)
@@ -119,7 +124,7 @@ class UserNextItemPredictionTrainingModule(BaseNextItemPredictionTrainingModule)
 
         return target_logits
 
-    def _extract_new_target_logits(self, logits: torch.Tensor) -> torch.Tensor:
+    def _extract_target_item_logits(self, logits: torch.Tensor) -> torch.Tensor:
         if self.user_key_len > 0:
             return logits[:,1:,:]
         else:
