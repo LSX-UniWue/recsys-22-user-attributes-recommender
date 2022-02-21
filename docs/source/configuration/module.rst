@@ -119,3 +119,25 @@ The ``fixed`` metrics config, requires the following parameters:
 -  ``metrics`` you can define all metrics you can also define using all
    items of the dataset.
 
+Module/Model Configuration
+----
+
+You can configure your module/model by changing the parameters passed to its ``__init__``
+function via the corresponding configuration sections. If your model requires configuration aside from integral types such as ``int``, ``str``, etc. you can specify
+annotate the model parameter in the ``__init__`` function with one of the following annotations:
+
+- ``InjectTokenizer(feature_name)``: ASME will inject a Tokenizer instance for the given ``feature_name`` into this parameter.
+- ``InjectVocabularySize(feature_name)``: ASME will inject the size of the vocabulary for the given ``feature_name`` into this parameter.
+- ``InjectModel(model_cls, config_section_path)``: ASME will instantiate an instance of ``model_cls`` via the ``GenericModuleFactory`` using the configuration
+  section specified by ``config_section_path`` to fill its parameters. If ``config_section_path`` is not provided, ASME assumes that the corresponding
+  configuration section has the same name as the parameter. Note that ``config_section_path`` is interpreted relative to the module/model configuration.
+- ``InjectClass(config_section_path)``: ASME will instantiate an arbitrary class to fill this parameter. The configuration section ``config_section_path`` has to
+  contain the following fields:
+    - ``cls_name``: The name of the class that should be instantiated.
+    - ``module_name``: The fully qualified name of the module that contains the class referenced by ``cls_name``.
+    - ``parameters``: This is an optional list of parameters to be passed to the class upon instantiation. If any parameter is a dictionary that contains the key
+      ``cls_name``, the corresponding object is recursively instantiated.
+- ``InjectList(config_section_path)``: ASME expects the configuration section ``config_section_path`` to be a list. Each element of this list is recursively built
+  if necessary and the resulting list is injected into the parameter.
+- ``InjectDict(config_section_path)``: ASME expects the configuration section ``config_section_path`` to be a dictionary. Each element of this dictionary is recursively built
+  if necessary and the resulting dictionary is injected into the parameter.

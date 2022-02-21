@@ -1,10 +1,10 @@
-# We all injection anntotations should inherit from this base class to ensure extendability for future use cases
 from dataclasses import dataclass, field
 from typing import Optional, Any, Dict
 
 from dataclasses_json import dataclass_json
 
 
+# All injection anntotations should inherit from this base class to ensure extendability for future use cases.
 class Inject:
     pass
 
@@ -41,18 +41,18 @@ class InjectClass(Inject):
 class InjectList(Inject):
     def __init__(self, config_section_path: Optional[str] = None):
         """
-               :param config_section_path: The path to the section which contains the data necessary to build the desired
-                   object.Nested obects in the config can be accessed by using ".".
-               """
+        :param config_section_path: The path to the section which contains the data necessary to build the desired
+            object.Nested obects in the config can be accessed by using ".".
+        """
         self.config_section_path = config_section_path
 
 
 class InjectDict(Inject):
     def __init__(self, config_section_path: Optional[str] = None):
         """
-               :param config_section_path: The path to the section which contains the data necessary to build the desired
-                   object.Nested obects in the config can be accessed by using ".".
-               """
+        :param config_section_path: The path to the section which contains the data necessary to build the desired
+            object.Nested obects in the config can be accessed by using ".".
+        """
         self.config_section_path = config_section_path
 
 

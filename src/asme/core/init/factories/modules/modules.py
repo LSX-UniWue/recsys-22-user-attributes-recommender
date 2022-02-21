@@ -148,6 +148,7 @@ def _handle_injects(injectable_parameters: List[ParameterInfo], context: Context
             else:
                 parameter_dict[injectable_parameter.parameter_name] = len(tokenizer)
         elif isinstance(inject, InjectModel):
+            # We have to handle InjectModel separately from InjectClass since it requires the use of a ModelFactory.
             config_section_path = _determine_config_path(inject.config_section_path, injectable_parameter)
 
             _check_config_paths_exists_or_throw(config, config_section_path, injectable_parameter)
@@ -171,9 +172,13 @@ def _handle_injects(injectable_parameters: List[ParameterInfo], context: Context
                                  f"'{_format_config_section_path(config_section_path, config)}' is not a list.")
 
             instances = []
-            for i, param_config in enumerate(obj_config):
-                config_obj = Config(param_config)
-                instances += [_build(config_obj, [], f"{injectable_parameter.parameter_name}.[{i}]")]
+            for i, param in enumerate(obj_config):
+                if isinstance(param, dict) and "cls_name" in param:
+                    # Recursively build sub objects
+                    config_obj = Config(param)
+                    instances += [_build(config_obj, [], f"{injectable_parameter.parameter_name}.[{i}]")]
+                else:
+                    instances += [param]
 
             parameter_dict[injectable_parameter.parameter_name] = instances
         elif isinstance(inject, InjectDict):
@@ -186,9 +191,13 @@ def _handle_injects(injectable_parameters: List[ParameterInfo], context: Context
                     f" the provided config section "
                     f"'{_format_config_section_path(config_section_path, config)}' is not a dictionary.")
             instances = {}
-            for key, param_config in obj_config.items():
-                config_obj = Config(param_config)
-                instances[key] = _build(config_obj, [], f"{injectable_parameter.parameter_name}.{key}")
+            for key, param in obj_config.items():
+                if isinstance(param, dict) and "cls_name" in param:
+                    # Recursively build sub objects
+                    config_obj = Config(param)
+                    instances[key] = _build(config_obj, [], f"{injectable_parameter.parameter_name}.{key}")
+                else:
+                    instances[key] = param
 
             parameter_dict[injectable_parameter.parameter_name] = instances
         else:
