@@ -5,6 +5,7 @@ from asme.core.models.common.layers.transformer_layers import TransformerEmbeddi
 from asme.core.models.sasrec.components import SASRecProjectionComponent
 from asme.core.models.transformer.transformer_encoder_model import TransformerEncoderModel
 from asme.core.utils.hyperparameter_utils import save_hyperparameters
+from asme.core.utils.inject import InjectVocabularySize
 
 
 class SASRecModel(TransformerEncoderModel):
@@ -20,7 +21,7 @@ class SASRecModel(TransformerEncoderModel):
                  transformer_hidden_size: int,
                  num_transformer_heads: int,
                  num_transformer_layers: int,
-                 item_vocab_size: int,
+                 item_vocab_size: InjectVocabularySize("item"),
                  max_seq_length: int,
                  transformer_dropout: float,
                  embedding_pooling_type: str = None,

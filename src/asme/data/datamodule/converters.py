@@ -114,6 +114,7 @@ class Movielens1MConverter(CsvConverter):
         movies_df = read_csv(location, "movies", file_type, sep, header, encoding=encoding)
 
         movies_df.columns = ['movieId', 'title', 'genres']
+        movies_df["year"] = movies_df["title"].str.rsplit(r"(", 1).apply(lambda x: x[1].rsplit(r")")[0]).astype(int)
         users_df = read_csv(location, "users", file_type, sep, header, encoding=encoding)
         users_df.columns = [Movielens1MConverter.RATING_USER_COLUMN_NAME, 'gender', 'age', 'occupation', 'zip']
         ratings_df = pd.merge(ratings_df, users_df)

@@ -2,6 +2,7 @@ import functools
 
 from torch import nn
 
+from asme.core.utils.inject import InjectVocabularySize
 from asme.core.models.common.components.representation_modifier.ffn_modifier import \
     FFNSequenceRepresentationModifierComponent
 from asme.core.models.common.layers.layers import build_projection_layer
@@ -23,7 +24,7 @@ class BERT4RecModel(TransformerEncoderModel):
                  transformer_hidden_size: int,
                  num_transformer_heads: int,
                  num_transformer_layers: int,
-                 item_vocab_size: int,
+                 item_vocab_size: InjectVocabularySize("item"),
                  max_seq_length: int,
                  transformer_dropout: float,
                  project_layer_type: str = 'transpose_embedding',

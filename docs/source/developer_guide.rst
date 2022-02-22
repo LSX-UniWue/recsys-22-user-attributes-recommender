@@ -37,16 +37,38 @@ implement a new metrics class.
 Adding a new Data set
 ---------------------
 
-All Necessary Files for the integration of data sets can be found under
-the `dataset folder <../datasets>`__.
+In order to implement a new dataset, you have to teach ASME how to download, preprocess and index your data. You can do this by defining a preprocessing configuration provider:
 
-In order to add a new dataset and make it usable you have to implement
-the following steps:
+.. code-block::
 
-1. Download the data set or document where it is available
-2. Index the data set and create train, validation, test split
-3. Create a vocabulary for the data set
-4. Integrate those steps into the dataset `Typer <https://typer.tiangolo.com/>`__ CLI as a new command under `dataset/app/data\_set\_commands.py <../datasets/app/data_set_commands.py>`__
+    def get_my_dataset_preprocessing_config(output_dir: Path, ...) -> DatasetPreprocessingConfig:
+        ...
+
+This function should return a `DatasetPreprocessingConfig` instance that contains the following data:
+
+- name: The name that will be used to identify files of your dataset.
+- url (Optional): Specifies where your dataset should be downloaded from. If this is not set you have to specify the input directory via the context object below by setting the `INPUT_DIR_KEY`.
+- location: Path Specifies where the final dataset will reside.
+- unpacker (Optinal): An Unpacker instance (e.g. Unzipper) that is used to unpack your dataset.
+- preprocessing_actions (Optional): A list of `PreprocessingActions` that should be applied to your dataset.
+- context (Optional): The `Context` instance that will be passed between preprocessing actions. You can pre-specify keys such as `DELIMITER_KEY` or `INPUT_DIR_KEY` here.
+
+For an example of how to implement a preprocessing configuration provider, refer to `data/datasets/config.py <../asme/data/dataset/config.py>`__ .
+
+Since you usually want to have default values for many of the parameters to your preprocessing configuration provider, we wrap the function into a `PreprocessingConfigProvider` which can hold default values for any of the parameters of your function.
+Additionally, you have to register your provider with ASME such that you can refer to your dataset in configuration files run by ASME. To do so, you have to call `register_preprocessing_config_provider` as follows:
+
+.. code-block::
+
+    register_preprocessing_config_provider(PreprocessingConfigProvider("my_dataset", get_my_dataset_preprocessing_config,
+        my_param_1=default_value_1,
+        my_param_5=default_value_5,
+        ...,
+        )
+    )
+
+You will then be able to refer to your dataset via the name passed to the function call above (e.g. "my_dataset" in this case).
+
 
 Adding a new Model
 ------------------

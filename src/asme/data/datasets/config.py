@@ -12,6 +12,68 @@ from asme.data.datamodule.registry import register_preprocessing_config_provider
 from asme.data.datamodule.unpacker import Unzipper
 from asme.data.datasets.sequence import MetaInformation
 
+"""
+This file includes the definitions of all preprocessing steps that ASME should execute for any of the datasets included.
+
+Generally, ASME will generate three types of splits for each dataset: 
+- Ratio split:                      The data is split by session into three sets for training, validation and testing.
+- Leave-One-Out (LOO) split:        The data is split intra-session, i.e. a session of n items is decomposed into a 
+                                    n - 2 item training session, a 1 item validation and a 1 item test session. 
+- Leave-Percentage-Out (LPO) split: Similar to the LOO split, the data is partioned intra-session. Specifically, the 
+                                    first t% of each session is used for training, the next v% for validation and the 
+                                    final (1 - t - v)% for testing. 
+
+For each split, ASME will generate the necessary indices, vocabularies and popularities separately. The indices 
+ususally include: 
+- A session index which indicates the start byte and length of each session. In the case of a Ratio 
+    split, three separate indices are generated for each split. 
+- A next-item index which contains the start and end indices of every sub-session of each session as well as the
+    corresponding target item index.
+- A leave-one-out index which contains the start and end indices of every sub-session that is used for training as
+    well as the corresponding target item index.
+- A sliding-window index which can be used to train models using sliding windows of varying size. 
+
+Each dataset preprocessing config can be customized by passing appropriate arguments to the functions via the config. 
+These config parameters should have the same name as the function parameter and have to be placed into the 
+`preprocessing` entry of the `datamodule` configuration entry.
+
+Usually each preprocessing config has some dataset specific properties such as the extraction directory or output 
+directory.
+These are required and will result in a crash if not set via the config.
+Additionally, each split can be configured independently via the following parameters (these are optional and have 
+defaults given in the `register_preprocessing_config_provider` call after each preprocessing definition):
+
+- Ratio split:
+    - ratio_split_min_item_feedback:        The minimum number of interactions necessary for an item to be kept in the dataset.
+    - ratio_split_min_sequence_length:      The minimum number of interactions in a session for it to be kept in the dataset.
+    - ratio_split_train_percentage:         The fraction of session to (approximately) include into the training set.
+    - ratio_split_validation_percentage:    The fraction of session to (approximately) include into the validation set.
+    - ratio_split_test_percentage:          The fraction of session to (approximately) include into the test set.
+    - ratio_split_window_markov_length:     The size of the sliding window that is used to extract samples from each session.
+    - ratio_split_window_target_length:     The size of the sliding window that is used to extract targets from each session.
+    - ratio_split_session_end_offset:       The distance between the session end and the last position for the sliding window.
+    
+- Leave-One-Out split:
+    - loo_split_min_item_feedback:      The minimum number of interactions necessary for an item to be kept in the dataset.
+    - loo_split_min_sequence_length:    The minimum number of interactions in a session for it to be kept in the dataset.
+    
+- Leave-Percentage-Out split:
+    - lpo_split_min_item_feedback:      The minimum number of interactions necessary for an item to be kept in the dataset.
+    - lpo_split_min_sequence_length:    The minimum number of interactions in a session for it to be kept in the dataset. 
+    - lpo_split_train_percentage:       The fraction of session to (approximately) include into the training set. 
+    - lpo_split_validation_percentage:  The fraction of session to (approximately) include into the validation set. 
+    - lpo_split_test_percentage:        The fraction of session to (approximately) include into the test set. 
+    - lpo_split_min_train_length:       The minimum size of each session in the training set. 
+    - lpo_split_min_validation_length:  The minimum size of each session in the validation set. 
+    - lpo_split_min_test_length:        The minimum size of each session in the test set. 
+
+In order to register a preprocessing configuration provider yourself, you can use the 
+`register_preprocessing_config_provider` function. When called, ASME will register your provider using the name and 
+default values you provided. 
+You can then use your provider by simply specifying its name as in the `dataset` parameter of the `datamodule` entry
+in the configuration file.
+"""
+
 
 def get_ml_1m_preprocessing_config(
         # General parameters
@@ -52,6 +114,7 @@ def get_ml_1m_preprocessing_config(
                MetaInformation("occupation", type="str"),
                MetaInformation("zip", type="str"),
                MetaInformation("title", type="str"),
+               MetaInformation("year", type="str", run_tokenization=False),
                MetaInformation("genres", type="str", configs={"delimiter": "|"})]
 
     item_column = MetaInformation("item", column_name="title", type="str")
@@ -881,10 +944,6 @@ register_preprocessing_config_provider("example",
                                        PreprocessingConfigProvider(get_example_preprocessing_config,
                                                                    output_directory="./example",
                                                                    input_file_path="../tests/example_dataset/example.csv",
-                                                                   min_sequence_length=3,
-                                                                   window_markov_length=2,
-                                                                   window_target_length=1,
-                                                                   session_end_offset=0,
                                                                    ratio_split_min_item_feedback=0,
                                                                    ratio_split_min_sequence_length=3,
                                                                    ratio_split_train_percentage=0.8,
