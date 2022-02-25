@@ -12,6 +12,8 @@ from typing import Optional, Callable, List, Iterator, Tuple
 
 from pytorch_lightning.loggers import LoggerCollection, MLFlowLogger
 from loguru import logger
+
+from asme.core.callbacks.metrics_history import MetricsHistoryCallback
 from asme.core.init.templating.search.resolver import OptunaParameterResolver
 
 from asme.core.init.templating.search.processor import SearchTemplateProcessor
@@ -173,19 +175,6 @@ def optimize(template_file: Path = typer.Argument(..., help='the path to the tem
         # load config template, apply processors and write to `tmp_config_file`
         model_config = config_from_template(template_file, optimization_config_file, trial)
 
-        class MetricsHistoryCallback(Callback):
-            """
-            Captures the reported metrics after every validation epoch.
-            """
-
-            def __init__(self):
-                super().__init__()
-
-                self.metric_history = []
-
-            def on_validation_end(self, pl_trainer, pl_module):
-                self.metric_history.append(pl_trainer.callback_metrics)
-
         metrics_tracker = MetricsHistoryCallback()
 
         container = create_container(model_config)
@@ -312,19 +301,6 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 
         # load config template, apply processors and write to `tmp_config_file`
         model_config = config_from_template(template_file, optimization_config_file, trial)
-
-        class MetricsHistoryCallback(Callback):
-            """
-            Captures the reported metrics after every validation epoch.
-            """
-
-            def __init__(self):
-                super().__init__()
-
-                self.metric_history = []
-
-            def on_validation_end(self, pl_trainer, pl_module):
-                self.metric_history.append(pl_trainer.callback_metrics)
 
         metrics_tracker = MetricsHistoryCallback()
 
