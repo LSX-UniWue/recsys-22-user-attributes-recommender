@@ -642,31 +642,31 @@ register_preprocessing_config_provider("yoochoose",
                                                                    lpo_split_min_test_length=1))
 
 
-def get_spotify_preprocessing_config(# General parameters
-                                     output_directory: str,
-                                     input_directory: str,
-                                     # Ratio split parameters
-                                     ratio_split_min_item_feedback: int,
-                                     ratio_split_min_sequence_length: int,
-                                     ratio_split_train_percentage: float,
-                                     ratio_split_validation_percentage: float,
-                                     ratio_split_test_percentage: float,
-                                     ratio_split_window_markov_length: int,
-                                     ratio_split_window_target_length: int,
-                                     ratio_split_session_end_offset: int,
-                                     # Leave one out split parameters
-                                     loo_split_min_item_feedback: int,
-                                     loo_split_min_sequence_length: int,
-                                     # Leave percentage out split parameters
-                                     lpo_split_min_item_feedback: int,
-                                     lpo_split_min_sequence_length: int,
-                                     lpo_split_train_percentage: float,
-                                     lpo_split_validation_percentage: float,
-                                     lpo_split_test_percentage: float,
-                                     lpo_split_min_train_length: int,
-                                     lpo_split_min_validation_length: int,
-                                     lpo_split_min_test_length: int
-                                     ) -> DatasetPreprocessingConfig:
+def get_spotify_preprocessing_config(  # General parameters
+        output_directory: str,
+        input_directory: str,
+        # Ratio split parameters
+        ratio_split_min_item_feedback: int,
+        ratio_split_min_sequence_length: int,
+        ratio_split_train_percentage: float,
+        ratio_split_validation_percentage: float,
+        ratio_split_test_percentage: float,
+        ratio_split_window_markov_length: int,
+        ratio_split_window_target_length: int,
+        ratio_split_session_end_offset: int,
+        # Leave one out split parameters
+        loo_split_min_item_feedback: int,
+        loo_split_min_sequence_length: int,
+        # Leave percentage out split parameters
+        lpo_split_min_item_feedback: int,
+        lpo_split_min_sequence_length: int,
+        lpo_split_train_percentage: float,
+        lpo_split_validation_percentage: float,
+        lpo_split_test_percentage: float,
+        lpo_split_min_train_length: int,
+        lpo_split_min_validation_length: int,
+        lpo_split_min_test_length: int
+) -> DatasetPreprocessingConfig:
     prefix = "spotify"
     context = Context()
     context.set(PREFIXES_KEY, [prefix])
@@ -782,8 +782,14 @@ def get_melon_preprocessing_config(
     columns = [MetaInformation("playlist_id", type="str"),
                MetaInformation("track_name", type="str"),
                MetaInformation("album_name", type="str"),
-               MetaInformation("artist_name", type="str", configs={"delimiter": "|"}),
-               MetaInformation("genre", type="str", configs={"delimiter": "|"})]
+               MetaInformation("artist_name", type="str", configs={
+                   "element_type": "str",
+                   "delimiter": "|"
+               }),
+               MetaInformation("genre", type="list", configs={
+                   "element_type": "str",
+                   "delimiter": "|"})
+               ]
 
     min_item_feedback_column = "track_name"
     min_sequence_length_column = "playlist_id"
@@ -815,8 +821,10 @@ def get_melon_preprocessing_config(
                                                                          lpo_split_min_test_length)
 
     preprocessing_actions = [ConvertToCsv(MelonConverter()),
-                             ratio_split_action, leave_one_out_split_action,
-                             leave_percentage_out_split_action]
+                             ratio_split_action,
+                             leave_one_out_split_action,
+                             leave_percentage_out_split_action
+                             ]
 
     return DatasetPreprocessingConfig(prefix,
                                       None,
@@ -849,8 +857,6 @@ register_preprocessing_config_provider("melon",
                                                                    lpo_split_min_train_length=2,
                                                                    lpo_split_min_validation_length=1,
                                                                    lpo_split_min_test_length=1))
-
-
 
 """
 hier müssen wir noch die Parameter ändern:
