@@ -35,7 +35,8 @@ class SASRecModel(TransformerEncoderModel):
             max_seq_len=max_seq_length,
             embedding_size=transformer_hidden_size,
             dropout=transformer_dropout,
-            embedding_pooling_type=embedding_pooling_type
+            embedding_pooling_type=embedding_pooling_type,
+            positional_embedding=True
         )
 
         self.mode = mode
