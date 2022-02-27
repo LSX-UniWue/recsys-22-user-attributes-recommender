@@ -297,12 +297,13 @@ class MelonConverter(CsvConverter):
                         album_name = trackdict[track]['album']
                         artist_name = trackdict[track]['artist']
                         genre_name = trackdict[track]['genre']
-                        dataset += [{self.MELON_SESSION_ID: playlist_id,
-                                     #self._MELON_TIME_COLUMN: playlist_timestamp,
-                                     self.MELON_ITEM_ID: song_name,
-                                     self.MELON_ALBUM_NAME_KEY: album_name,
-                                     self.MELON_ARTIST_NAME_KEY: artist_name,
-                                     self.MELON_GENRE_KEY: genre_name}]
+                        if song_name and album_name and artist_name and genre_name:
+                            dataset += [{self.MELON_SESSION_ID: playlist_id,
+                                         #self._MELON_TIME_COLUMN: playlist_timestamp,
+                                         self.MELON_ITEM_ID: song_name,
+                                         self.MELON_ALBUM_NAME_KEY: album_name,
+                                         self.MELON_ARTIST_NAME_KEY: artist_name,
+                                         self.MELON_GENRE_KEY: genre_name}]
 
         # Write data to CSV
         spotify_dataframe = pd.DataFrame(data=dataset,
