@@ -35,7 +35,8 @@ class UserSASRecModel(SequenceRecommenderModel):
                  transformer_intermediate_size: int = None,
                  transformer_attention_dropout: float = None,
                  mode: str = "neg_sampling", # alternative: "full"
-                 positional_embedding: bool = True
+                 positional_embedding: bool = True,
+                 replace_first_item: bool = False
                  ):
 
 
@@ -84,7 +85,8 @@ class UserSASRecModel(SequenceRecommenderModel):
                                                                                   user_attributes,
                                                                                   additional_tokenizers,
                                                                                   segment_embedding,
-                                                                                  dropout=transformer_dropout)
+                                                                                  dropout=transformer_dropout,
+                                                                                  replace_first_item=replace_first_item)
         sequence_representation = UserTransformerSequenceRepresentationComponent(transformer_hidden_size,
                                                                                  num_transformer_heads,
                                                                                  num_transformer_layers,
@@ -92,7 +94,8 @@ class UserSASRecModel(SequenceRecommenderModel):
                                                                                  user_attributes,
                                                                                  bidirectional=False,
                                                                                  transformer_attention_dropout=transformer_attention_dropout,
-                                                                                 transformer_intermediate_size=transformer_intermediate_size,)
+                                                                                 transformer_intermediate_size=transformer_intermediate_size,
+                                                                                 replace_first_item=replace_first_item)
 
         transform_layer = IdentitySequenceRepresentationModifierLayer()
 

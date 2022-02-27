@@ -55,7 +55,8 @@ class UBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresent
                  user_attributes: Dict[str, Dict[str, Any]],
                  additional_tokenizers: Dict[str, Tokenizer],
                  segment_embedding: bool = True,
-                 dropout: float = 0.0
+                 dropout: float = 0.0,
+                 replace_first_item: bool = False
                  ):
         super().__init__()
 
@@ -63,6 +64,7 @@ class UBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresent
         self.item_embedding_layer = item_embedding_layer
         self.segment_embedding_active = segment_embedding
         self.attribute_types = 0
+        self.replace_first_item = replace_first_item
 
         additional_attribute_embeddings = {}
         user_attribute_embeddings = {}
@@ -112,7 +114,11 @@ class UBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresent
                 user_embedding = module(user_metadata)
 
         if user_embedding is not None:
-            embedding = torch.cat([user_embedding,embedding], dim=1)
+            if self.replace_first_item:
+                embedding = embedding[:,1:,:]
+                embedding = torch.cat([user_embedding,embedding], dim=1)
+            else:
+                embedding = torch.cat([user_embedding,embedding], dim=1)
 
         if self.segment_embedding_active:
             segments = torch.ones(sequence.sequence.shape, dtype=torch.int64, device=sequence.sequence.device)
@@ -139,10 +145,12 @@ class UserTransformerSequenceRepresentationComponent(SequenceRepresentationLayer
                  user_attributes: Dict[str, Dict[str, Any]],
                  bidirectional: bool,
                  transformer_attention_dropout: Optional[float] = None,
-                 transformer_intermediate_size: Optional[int] = None,):
+                 transformer_intermediate_size: Optional[int] = None,
+                 replace_first_item: bool = False):
         super().__init__()
         self.user_attributes = user_attributes
         self.bidirectional = bidirectional
+        self.replace_first_item = replace_first_item
         if transformer_intermediate_size is None:
             transformer_intermediate_size = 4 * transformer_hidden_size
 
@@ -161,8 +169,9 @@ class UserTransformerSequenceRepresentationComponent(SequenceRepresentationLayer
 
         if padding_mask is not None:
             if len(self.user_attributes):
-                pad_user = torch.ones((padding_mask.shape[0], 1), device=sequence.device)
-                padding_mask = torch.cat([pad_user, padding_mask], dim=1)
+                if self.replace_first_item == False:
+                    pad_user = torch.ones((padding_mask.shape[0], 1), device=sequence.device)
+                    padding_mask = torch.cat([pad_user, padding_mask], dim=1)
 
         """ 
         We have to distinguish 4 cases here:
@@ -185,19 +194,11 @@ class UserTransformerSequenceRepresentationComponent(SequenceRepresentationLayer
                     torch.ones([sequence_length, sequence_length], device=sequence.device)).unsqueeze(0).repeat(
                     batch_size, 1, 1).unsqueeze(1)
 
-                ##???
             else:
                 attention_mask = torch.tril(
                     torch.ones([sequence_length, sequence_length], device=sequence.device)).unsqueeze(0).repeat(
                     batch_size, 1, 1).unsqueeze(1)
                 attention_mask *= padding_mask.unsqueeze(1).repeat(1, sequence_length, 1).unsqueeze(1)
-
-
-        #if padding_mask is not None:
-         #   if len(self.user_attributes):
-          #      pad_user = torch.ones((padding_mask.shape[0], 1), device=sequence.device)
-           #     padding_mask = torch.cat([pad_user, padding_mask], dim=1)
-           # attention_mask = padding_mask.unsqueeze(1).repeat(1, sequence_size, 1).unsqueeze(1)
 
         encoded_sequence = self.transformer_encoder(sequence, attention_mask=attention_mask)
         return SequenceRepresentation(encoded_sequence)

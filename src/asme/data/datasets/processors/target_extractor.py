@@ -53,10 +53,15 @@ class TargetExtractorProcessor(Processor):
                 if self.parallel:
                     if self.first_target:
                         target = value
+                        sub_sequence = [sub_sequence[0]] + sub_sequence
                     else:
                         target = value[1:]
                 else:
-                    target = value[last_pos]
+                    if self.first_target:
+                        sub_sequence = [sub_sequence[0]] + sub_sequence
+                        target = value[last_pos]
+                    else:
+                        target = value[last_pos]
                 processed_information[key] = sub_sequence
                 processed_information[key + TARGET_SUFFIX] = target
             else:

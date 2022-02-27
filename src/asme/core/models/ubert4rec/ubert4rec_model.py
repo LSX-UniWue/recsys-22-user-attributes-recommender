@@ -64,7 +64,8 @@ class UBERT4RecModel(SequenceRecommenderModel):
                                                                                    user_attributes,
                                                                                    additional_tokenizers,
                                                                                    segment_embedding,
-                                                                                   dropout=transformer_dropout)
+                                                                                   dropout=transformer_dropout,
+                                                                                   replace_first_item=False)
         sequence_representation = UserTransformerSequenceRepresentationComponent(transformer_hidden_size,
                                                                                  num_transformer_heads,
                                                                                  num_transformer_layers,
@@ -72,7 +73,7 @@ class UBERT4RecModel(SequenceRecommenderModel):
                                                                                  user_attributes,
                                                                                  bidirectional=False,
                                                                                  transformer_attention_dropout=transformer_attention_dropout,
-                                                                                 transformer_intermediate_size=transformer_intermediate_size)
+                                                                                 transformer_intermediate_size=transformer_intermediate_size,)
 
         transform_layer = FFNSequenceRepresentationModifierComponent(transformer_hidden_size)
 
