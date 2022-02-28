@@ -1,7 +1,7 @@
 local raw_dataset_path = "../example_data/";
 local dataset_path = "/Users/lisa/recommender/example_data/";
 local base_path = "/Users/lisa/recommender/example_data/ratio_split-0.8_0.1_0.1/";
-local max_seq_length = 7;
+local max_seq_length = 3;
 local prefix = 'example';
 local dataset = 'example';
 local output_path = '/Users/lisa/recommender/tmp/sasrec-output';
@@ -31,14 +31,16 @@ local metrics =  {
                 validation: {
                     type: "next_item",
                     processors: [
-                        {"type": "target_extractor"}
+                        {"type": "target_extractor",
+                        "first_target": "True"}
                     ],
                      batch_size: 2
                 },
                 test: {
                  type: "next_item",
                     processors: [
-                        {"type": "target_extractor"},
+                        {"type": "target_extractor",
+                        "first_target": "True"},
                     ],
                  batch_size: 2
                 }
@@ -63,7 +65,7 @@ local metrics =  {
     },
     module: {
         type: 'user-sasrec-full',
-        first_item: "True",
+        first_item: true,
         metrics: {
             full: {
                 metrics: metrics
@@ -82,6 +84,7 @@ local metrics =  {
             transformer_dropout: 0.1,
             segment_embedding: false,
             mode: "full",
+            replace_first_item: true,
             user_attributes: {
                 user_id: {
                     embedding_type: 'user_linear_upscale'
