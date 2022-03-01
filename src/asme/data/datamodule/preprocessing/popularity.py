@@ -77,7 +77,7 @@ class CreatePopularity(PreprocessingAction):
             sub_delimiter = column.get_config("delimiter")
 
             if column.get_config("delimiter") is not None:
-                filename += "-splitted"
+                filename += "-split"
 
             # Read the vocabulary for this column
             vocabulary_path = output_dir / f"{prefix}.vocabulary.{filename}.txt"
@@ -109,7 +109,7 @@ class CreatePopularity(PreprocessingAction):
         output_dir = context.get(OUTPUT_DIR_KEY)
         filename = column.column_name if column.column_name is not None else column.feature_name
         if column.get_config("delimiter") is not None:
-            filename += "-splitted"
+            filename += "-split"
         prefixes = context.get(PREFIXES_KEY) if self.prefixes is None else self.prefixes
         prefix = format_prefix(prefixes)
         return output_dir / f"{prefix}.popularity.{filename}.txt"
@@ -123,9 +123,13 @@ class CreatePopularity(PreprocessingAction):
         for session_idx in range(len(dataset)):
             session = dataset[session_idx]
             items = session[column.feature_name]
-            if sub_delimiter is not None:
-                items = [label for entry in items for label in entry.split(sub_delimiter)]
-            converted_tokens = tokenizer.convert_tokens_to_ids(items)
+            flat_items = []
+            for item in items:
+                if isinstance(item, list):
+                    flat_items.extend(item)
+                else:
+                    flat_items += [item]
+            converted_tokens = tokenizer.convert_tokens_to_ids(flat_items)
             for token in converted_tokens:
                 counts[token] += 1
 
