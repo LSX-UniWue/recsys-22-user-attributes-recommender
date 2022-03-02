@@ -10,6 +10,7 @@ from asme.core.init.factories.data_sources.common import build_default_loader_co
 from asme.core.init.factories.data_sources.datasets.processor.processors import FIXED_SEQUENCE_LENGTH_PROCESSOR_KEY
 from asme.core.init.factories.data_sources.datasets.processor.target_extractor import TargetExtractorProcessorFactory
 from asme.core.init.factories.data_sources.loader import LoaderFactory
+from asme.core.init.factories.data_sources.registry import REGISTERED_TEMPLATES
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.core.init.templating.datasources.datasources import Stage, SequenceDatasetRatioSplitBuilder, \
     LeaveOneOutSessionDatasetBuilder, \
@@ -25,15 +26,7 @@ class TemplateDataSourcesFactory(ObjectFactory):
     def __init__(self, key: str):
         super().__init__()
         self._key = key
-        self._factory = ConditionalFactory(key, {
-            "masked": MaskTemplateDataSourcesFactory(),
-            "pos_neg": PositiveNegativeTemplateDataSourcesFactory(),
-            "next_sequence_step": NextSequenceStepTemplateDataSourcesFactory(),
-            "par_pos_neg": ParameterizedPositiveNegativeTemplateDataSourcesFactory(),
-            "plain": PlainTrainingTemplateDataSourcesFactory(),
-            "par_seq": ParallelSeqTrainingTemplateDataSourcesFactory(),
-            "sliding_window": SlidingWindowTemplateDataSourcesFactory()
-        })
+        self._factory = ConditionalFactory(key, REGISTERED_TEMPLATES)
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
         return self._factory.can_build(config, context)
