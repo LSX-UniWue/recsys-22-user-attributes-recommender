@@ -25,7 +25,7 @@ class PadFeatureProcessorFactory(ObjectFactory):
         if not config_keys_exist:
             return CanBuildResult(CanBuildResultType.MISSING_CONFIGURATION)
 
-        if not context.has_path(get_tokenizer_key_for_voc(config['feature_name'])):
+        if not context.has_path(get_tokenizer_key_for_voc(config.get('feature_name'))):
             return CanBuildResult(CanBuildResultType.MISSING_DEPENDENCY, f"{config.get('feature_name')} tokenizer missing")
 
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
