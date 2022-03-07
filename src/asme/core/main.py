@@ -407,11 +407,14 @@ def predict_new(output_file: Path = typer.Argument(..., help='path where output 
 
     if selected_items_file is not None:
         selected_items = load_file_with_item_ids(selected_items_file)
+        selected_items_tensor = torch.tensor(selected_items, dtype=torch.int32)
 
-        def _selected_items_filter(sample_predictions: np.ndarray):
-            return sample_predictions[selected_items]
+        def _selected_items_filter(sample_predictions):
+            return torch.index_select(sample_predictions, 1, selected_items_tensor)
 
         filter_predictions = _selected_items_filter
+
+        #filter_predictions = lambda sample_predictions:  [prediction[selected_items] for prediction in sample_predictions] #_selected_items_filter
 
     module.eval()
 
@@ -436,62 +439,67 @@ def predict_new(output_file: Path = typer.Argument(..., help='path where output 
 
                 logits = module(batch, batch_index)
 
+
                 metrics = _extract_sample_metrics(module)
 
-                #TODO prediction = filter_predictions(predictions[i])
-
                 bs_index, target_index = _extract_target_indices(batch[ITEM_SEQ_ENTRY_NAME], item_tokenizer.pad_token_id)
-                softmax = torch.softmax(logits[bs_index, target_index], dim=-1)
+                t_logits = logits[bs_index, target_index]
+
+                prediction = filter_predictions(t_logits)
+
+                softmax = torch.softmax(prediction, dim=-1)
                 item_indices = torch.argsort(softmax, dim=-1, descending=True)
 
                 num_classes = logits.size()[2]
 
                 item_mask = get_positive_item_mask(targets, num_classes)
-                sample_logits = logits[bs_index, target_index]
+
+
                 for name, metric in metrics:
-                    metric.update(sample_logits, item_mask)
+                    metric.update(t_logits, item_mask)
 
-                for i in range(item_indices.shape[0]):
+                item_indices = item_indices.cpu().numpy()
+                scores = softmax.cpu().numpy()
+                item_indices = item_indices[:num_predictions]
 
+                batch_item_ids = item_indices.tolist()
 
-                    #item_indices = item_indices.cpu().numpy()
-                    scores = softmax.cpu().numpy()
+                scores.sort()
+                scores = scores[::-1].tolist()[:num_predictions]
 
-                    item_indices = item_indices[:num_predictions]
-
-                    item_ids = item_indices.tolist()
+                for batch_sample in range(item_indices.shape[0]):
 
                     # when we only want the predictions of selected items
                     # the indices are not the item ids anymore, so we have to update them here
+                    item_ids = batch_item_ids[batch_sample]
                     if selected_items is not None:
                         selected_item_ids = [selected_items[i] for i in item_ids]
                         item_ids = selected_item_ids
 
                     tokens = item_tokenizer.convert_ids_to_tokens(item_ids)
-                    scores.sort()
-                    scores = scores[::-1].tolist()[:num_predictions]
 
-                    sample_id = _generate_sample_id(sample_ids, sequence_position_ids, i)
-                    true_target = targets[i]
+
+                    sample_id = _generate_sample_id(sample_ids, sequence_position_ids, batch_sample)
+                    true_target = targets[batch_sample]
                     if is_basket_recommendation:
                         true_target = remove_special_tokens(true_target.tolist(), item_tokenizer)
                     else:
                         true_target = true_target.item()
                     true_target = item_tokenizer.convert_ids_to_tokens(true_target)
 
-                    metric_name_and_values = [(name, value.raw_metric_values()[batch_index].cpu().tolist()[i]) for name, value in metrics]
+                    metric_name_and_values = [(name, value.raw_metric_values()[batch_index].cpu().tolist()[batch_sample]) for name, value in metrics]
 
                     sequence = None
                     if log_input:
-                        sequence = sequences[i].tolist()
+                        sequence = sequences[batch_sample].tolist()
 
                         # remove padding tokens
                         sequence = remove_special_tokens(sequence, item_tokenizer)
                         sequence = item_tokenizer.convert_ids_to_tokens(sequence)
                     if log_session_key:
-                        sample_id = batch[SESSION_IDENTIFIER][i]
+                        sample_id = batch[SESSION_IDENTIFIER][batch_sample]
 
-                    output_writer.write_values(f'{sample_id}', tokens[i], scores[i], true_target, metric_name_and_values,
+                    output_writer.write_values(f'{sample_id}', tokens, scores[batch_sample], true_target, metric_name_and_values,
                                                sequence)
 
 
