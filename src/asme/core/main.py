@@ -358,10 +358,9 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
         study.tell(trial, _find_best_value(objective_metric, objective_best))
 
 
-#FIXME: log_per_sample_metrics not working
 @app.command()
 def predict_new(output_file: Path = typer.Argument(..., help='path where output is written'),
-            num_predictions: int = typer.Option(default=20, help='number of predictions to export'),
+            num_predictions: int = typer.Option(default=5, help='number of predictions to export'),
             gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
             selected_items_file: Optional[Path] = typer.Option(default=None,
                                                                help='only use the item ids for prediction'),
@@ -423,9 +422,11 @@ def predict_new(output_file: Path = typer.Argument(..., help='path where output 
         with torch.no_grad():
             item_tokenizer = container.tokenizer('item')
             for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
-                is_basket_recommendation = len(sequences.size()) == 3
+
 
                 sequences = batch[ITEM_SEQ_ENTRY_NAME]
+
+                is_basket_recommendation = len(sequences.size()) == 3
 
                 sample_ids = batch[SAMPLE_IDS]
                 sequence_position_ids = None
@@ -443,9 +444,17 @@ def predict_new(output_file: Path = typer.Argument(..., help='path where output 
                 softmax = torch.softmax(logits[bs_index, target_index], dim=-1)
                 item_indices = torch.argsort(softmax, dim=-1, descending=True)
 
+                num_classes = logits.size()[2]
+
+                item_mask = get_positive_item_mask(targets, num_classes)
+                sample_logits = logits[bs_index, target_index]
+                for name, metric in metrics:
+                    metric.update(sample_logits, item_mask)
+
                 for i in range(item_indices.shape[0]):
 
-                    item_indices = item_indices.cpu().numpy()
+
+                    #item_indices = item_indices.cpu().numpy()
                     scores = softmax.cpu().numpy()
 
                     item_indices = item_indices[:num_predictions]
@@ -470,7 +479,7 @@ def predict_new(output_file: Path = typer.Argument(..., help='path where output 
                         true_target = true_target.item()
                     true_target = item_tokenizer.convert_ids_to_tokens(true_target)
 
-                    metric_name_and_values = [(name, value[0][i].item()) for name, value in metrics]
+                    metric_name_and_values = [(name, value.raw_metric_values()[batch_index].cpu().tolist()[i]) for name, value in metrics]
 
                     sequence = None
                     if log_input:
@@ -482,7 +491,7 @@ def predict_new(output_file: Path = typer.Argument(..., help='path where output 
                     if log_session_key:
                         sample_id = batch[SESSION_IDENTIFIER][i]
 
-                    output_writer.write_values(f'{sample_id}', tokens, scores, true_target, metric_name_and_values,
+                    output_writer.write_values(f'{sample_id}', tokens[i], scores[i], true_target, metric_name_and_values,
                                                sequence)
 
 
