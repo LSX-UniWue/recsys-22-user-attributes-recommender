@@ -5,7 +5,7 @@ import inspect
 import torch
 
 import pytorch_lightning as pl
-from asme.core.losses.losses import CrossEntropyLoss, SequenceRecommenderLoss, SingleTargetCrossEntropyLoss
+from asme.core.losses.losses import SequenceRecommenderLoss, SingleTargetCrossEntropyLoss
 
 from asme.core.models.common.layers.data.sequence import InputSequence
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel
@@ -16,7 +16,6 @@ from asme.core.metrics.container.metrics_container import MetricsContainer
 from asme.core.modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TRAINING_LOSS
 from asme.core.modules.metrics_trait import MetricsTrait
 from asme.core.modules.util.module_util import get_padding_mask, build_eval_step_return_dict, get_additional_meta_data
-from asme.core.tokenization.tokenizer import Tokenizer
 from asme.core.utils.hyperparameter_utils import save_hyperparameters
 
 
