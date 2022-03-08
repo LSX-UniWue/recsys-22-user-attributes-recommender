@@ -3,10 +3,12 @@ import torch
 from asme.core.models.common.layers.data.sequence import EmbeddedElementsSequence, SequenceRepresentation
 from asme.core.models.common.layers.layers import SequenceRepresentationLayer
 from asme.core.models.common.layers.transformer_layers import TransformerLayer
+from asme.core.utils.hyperparameter_utils import save_hyperparameters
 
 
 class TransformerSequenceRepresentationComponent(SequenceRepresentationLayer):
 
+    @save_hyperparameters
     def __init__(self, transformer_layer: TransformerLayer, bidirectional: bool):
         super().__init__()
         self.transformer_layer = transformer_layer
