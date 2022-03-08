@@ -30,6 +30,7 @@ redis = "^3.5.3"
 dataclasses-json = "^0.5.4"
 flatten-dict = "^0.4.2"
 loguru = "^0.6.0"
+aim = "^3.6.3"
 
 
 [tool.poetry.dev-dependencies]

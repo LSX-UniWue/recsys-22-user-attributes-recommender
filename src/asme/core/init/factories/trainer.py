@@ -1,5 +1,6 @@
 from typing import Union, Any, Dict, List, Type
 
+from aim.sdk.adapters.pytorch_lightning import AimLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger, MLFlowLogger, WandbLogger, LightningLoggerBase, CSVLogger
 
@@ -86,6 +87,11 @@ class WandBLoggerFactory(KwargsFactory):
         super().__init__(class_type=WandbLogger, key="wandb")
 
 
+class AimLoggerFactory(KwargsFactory):
+    def __init__(self):
+        super().__init__(class_type=AimLogger, key="wandb")
+
+
 class CSVLoggerFactory(KwargsFactory):
 
     def __init__(self):
@@ -144,7 +150,8 @@ class LoggersFactory(ObjectFactory):
         self.dependency_factors = DependenciesFactory([TensorboardLoggerFactory(),
                                                        MLFlowLoggerFactory(),
                                                        WandBLoggerFactory(),
-                                                       CSVLoggerFactory()],
+                                                       CSVLoggerFactory(),
+                                                       AimLoggerFactory()],
                                                       optional_based_on_path=True)
 
     def can_build(self, config: Config, context: Context) -> CanBuildResult:
