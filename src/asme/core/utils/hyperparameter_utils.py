@@ -39,7 +39,7 @@ def _get_hyperparameters(args, kwargs, init_func):
         elif isinstance(value, list):
             hyperparameters[arg] = []
             for i, entry in enumerate(value):
-                if isinstance(value, nn.Module):
+                if isinstance(entry, nn.Module):
                     hyperparameters[arg] += [_get_module_hyperparameters(f"<{arg}>.{i}", entry)]
                 else:
                     hyperparameters[arg] = value
