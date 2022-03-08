@@ -48,6 +48,10 @@ _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at leas
                                                     " the study name and study storage to infer the config and " \
                                                     "checkpoint path"
 
+# (AD) for now this is necessary to prevent segfaults occurring in conjunction with using multiple workers and the AimLogger
+# see https://github.com/aimhubio/aim/issues/1297
+torch.multiprocessing.set_start_method('spawn', force=True)
+
 app = typer.Typer()
 
 
@@ -57,6 +61,7 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
           print_train_val_examples: bool = typer.Option(False, help='print examples of the training '
                                                                    'and evaluation dataset before starting training')
           ) -> None:
+
     config_file_path = Path(config_file)
     config = load_config(config_file_path)
 
