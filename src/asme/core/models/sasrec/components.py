@@ -5,10 +5,12 @@ import torch
 from asme.core.models.common.layers.data.sequence import ModifiedSequenceRepresentation
 from asme.core.models.common.layers.layers import ProjectionLayer
 from asme.core.models.common.layers.transformer_layers import TransformerEmbedding
+from asme.core.utils.hyperparameter_utils import save_hyperparameters
 
 
 class SASRecProjectionComponent(ProjectionLayer):
 
+    @save_hyperparameters
     def __init__(self, embedding: TransformerEmbedding):
         super().__init__()
         self.embedding = embedding

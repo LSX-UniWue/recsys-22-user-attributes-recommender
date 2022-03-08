@@ -5,6 +5,8 @@ from asme.core.models.common.layers.layers import SequenceElementsRepresentation
 from asme.core.models.common.layers.transformer_layers import TransformerEmbedding
 from asme.core.models.kebert4rec.layers import LinearUpscaler
 from torch import nn
+
+from asme.core.utils.hyperparameter_utils import save_hyperparameters
 from asme.data.datasets.processors.tokenizer import Tokenizer
 
 
@@ -22,6 +24,7 @@ def _build_embedding_type(embedding_type: str,
 
 class KeBERT4RecSequenceElementsRepresentationComponent(SequenceElementsRepresentationLayer):
 
+    @save_hyperparameters
     def __init__(self,
                  item_embedding_layer: TransformerEmbedding,
                  embedding_size: int,
