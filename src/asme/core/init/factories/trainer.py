@@ -89,7 +89,7 @@ class WandBLoggerFactory(KwargsFactory):
 
 class AimLoggerFactory(KwargsFactory):
     def __init__(self):
-        super().__init__(class_type=AimLogger, key="wandb")
+        super().__init__(class_type=AimLogger, key="aim")
 
 
 class CSVLoggerFactory(KwargsFactory):
