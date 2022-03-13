@@ -46,6 +46,7 @@ from asme.core.writer.prediction.prediction_writer import build_prediction_write
 from asme.core.writer.results.results_writer import build_result_writer, check_file_format_supported
 from asme.core.utils.pred_utils import _extract_target_indices, _generate_sample_id, _extract_sample_metrics, get_positive_item_mask
 
+from asme.core.utils.evaluation import SampleIDEvaluator, SampleEvaluator, BatchEvaluator
 
 _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at least the checkpoint file and config or" \
                                                     " the study name and study storage to infer the config and " \
@@ -391,7 +392,6 @@ def predict_new(output_file: Path = typer.Argument(..., help='path where output 
         seed_everything(seed)
 
     module = container.module()
-    trainer = container.trainer().build()
     test_loader = container.test_dataloader()
 
     if log_per_sample_metrics:
@@ -418,6 +418,9 @@ def predict_new(output_file: Path = typer.Argument(..., help='path where output 
 
     module.eval()
 
+
+    sid_evaluator = SampleIDEvaluator(use_session_id=log_session_key)
+
     # open the file and build the writer
     with open(output_file, 'w') as result_file:
 
@@ -426,15 +429,10 @@ def predict_new(output_file: Path = typer.Argument(..., help='path where output 
             item_tokenizer = container.tokenizer('item')
             for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
 
-
                 sequences = batch[ITEM_SEQ_ENTRY_NAME]
 
                 is_basket_recommendation = len(sequences.size()) == 3
 
-                sample_ids = batch[SAMPLE_IDS]
-                sequence_position_ids = None
-                if 'pos' in batch:
-                    sequence_position_ids = batch['pos']
                 targets = batch[TARGET_ENTRY_NAME]
 
                 logits = module(batch, batch_index)
@@ -468,7 +466,7 @@ def predict_new(output_file: Path = typer.Argument(..., help='path where output 
                 scores = scores[::-1].tolist()[:num_predictions]
 
                 for batch_sample in range(item_indices.shape[0]):
-
+                    sample_id = sid_evaluator.evaluate(batch_index, batch_sample, batch)
                     # when we only want the predictions of selected items
                     # the indices are not the item ids anymore, so we have to update them here
                     item_ids = batch_item_ids[batch_sample]
@@ -478,13 +476,13 @@ def predict_new(output_file: Path = typer.Argument(..., help='path where output 
 
                     tokens = item_tokenizer.convert_ids_to_tokens(item_ids)
 
-
-                    sample_id = _generate_sample_id(sample_ids, sequence_position_ids, batch_sample)
                     true_target = targets[batch_sample]
+
                     if is_basket_recommendation:
                         true_target = remove_special_tokens(true_target.tolist(), item_tokenizer)
                     else:
                         true_target = true_target.item()
+
                     true_target = item_tokenizer.convert_ids_to_tokens(true_target)
 
                     metric_name_and_values = [(name, value.raw_metric_values()[batch_index].cpu().tolist()[batch_sample]) for name, value in metrics]
@@ -496,8 +494,6 @@ def predict_new(output_file: Path = typer.Argument(..., help='path where output 
                         # remove padding tokens
                         sequence = remove_special_tokens(sequence, item_tokenizer)
                         sequence = item_tokenizer.convert_ids_to_tokens(sequence)
-                    if log_session_key:
-                        sample_id = batch[SESSION_IDENTIFIER][batch_sample]
 
                     output_writer.write_values(f'{sample_id}', tokens, scores[batch_sample], true_target, metric_name_and_values,
                                                sequence)
