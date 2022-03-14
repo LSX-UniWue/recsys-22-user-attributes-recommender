@@ -1,12 +1,15 @@
 import torch
 
 import torch.nn.functional as F
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Callable, Any
+from pathlib import Path
 from asme.core.metrics.metric import MetricStorageMode
 from asme.core.modules.metrics_trait import MetricsTrait
+import numpy as np
+from asme.core.utils.ioutils import load_file_with_item_ids
+
 
 def get_positive_item_mask(targets: torch.Tensor, num_classes: int) -> torch.Tensor:
-
     """
     Create a positive item mask from the target tensor.
 
@@ -36,11 +39,6 @@ def _extract_target_indices(input_seq: torch.Tensor, padding_token_id: int) -> T
 
     return batch_index, seq_length
 
-def _generate_sample_id(sample_ids, sequence_position_ids, sample_index) -> str:
-    sample_id = sample_ids[sample_index].item()
-    if sequence_position_ids is None:
-        return sample_id
-    return f'{sample_id}_{sequence_position_ids[sample_index].item()}'
 
 def _extract_sample_metrics(module: MetricsTrait) -> List[Tuple[str, torch.Tensor]]:
     """
@@ -53,3 +51,22 @@ def _extract_sample_metrics(module: MetricsTrait) -> List[Tuple[str, torch.Tenso
                                           zip(metrics_container.get_metric_names(),
                                               metrics_container.get_metrics())))
     return list(map(lambda x: (x[0], x[1]), metric_names_and_values))
+
+
+def _selected_file_and_filter(selected_items_file: Path) -> Tuple[List[int], Callable[[List[int]], Any]]:
+    selected_items = None
+    if selected_items_file is not None:
+        selected_items = load_file_with_item_ids(selected_items_file)
+        selected_items_tensor = torch.tensor(selected_items, dtype=torch.int32)
+
+        def _selected_items_filter(sample_predictions):
+            return torch.index_select(sample_predictions, 1, selected_items_tensor)
+
+        filter_predictions = _selected_items_filter
+    else:
+        def _noop_filter(sample_predictions: np.ndarray):
+            return sample_predictions
+
+        filter_predictions = _noop_filter
+
+    return selected_items, filter_predictions

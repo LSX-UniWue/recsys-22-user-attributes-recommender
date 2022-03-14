@@ -143,7 +143,7 @@ class CSVPredictionWriter(PredictionWriter):
         metric_row = _extract_metric_values(metrics)
         # loop through the recommendations and scores and build the rows to write
         for recommendation_position, (recommendation, score) in enumerate(zip(recommendations, scores)):
-            row_to_write = [sample_id, recommendation_position + 1, recommendation, score, *metric_row, targets]
+            row_to_write = [sample_id, recommendation_position + 1, recommendation, score, targets, *metric_row]
             if input_sequence is not None:
                 row_to_write.append(input_sequence)
             rows_to_write.append(row_to_write)

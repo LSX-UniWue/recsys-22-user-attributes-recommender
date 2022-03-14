@@ -22,14 +22,13 @@ from asme.core.init.config import Config
 
 from asme.core.init.config_keys import TRAINER_CONFIG_KEY, CHECKPOINT_CONFIG_KEY, CHECKPOINT_CONFIG_DIR_PATH
 from optuna.study import StudyDirection
-from pytorch_lightning import seed_everything, Callback, Trainer
+from pytorch_lightning import seed_everything, Trainer
 from torch.utils.data import Sampler, DataLoader
 from torch.utils.data.dataset import T_co, Dataset
 from tqdm import tqdm
 from jinja2 import Template
 
 from asme.core.modules.metrics_trait import MetricsTrait
-from asme.data.datamodule.registry import DATASET_CONFIG_PROVIDERS
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME, SESSION_IDENTIFIER
 from asme.core.metrics.container.metrics_container import MetricsContainer
 from asme.core.metrics.metric import MetricStorageMode
@@ -39,14 +38,14 @@ from asme.core.init.templating.search.configuration import SearchConfigurationTe
 from asme.core.tokenization.utils.tokenization import remove_special_tokens
 from asme.core.utils.run_utils import load_config, create_container, OBJECTIVE_METRIC_KEY, TRIAL_BASE_PATH, \
     load_and_restore_from_file_or_study, log_dataloader_example, load_hyperopt_config, load_config_from_json
-from asme.core.utils import ioutils, logging
+from asme.core.utils import ioutils
 from asme.core.utils.ioutils import load_file_with_item_ids, determine_log_dir, save_config, save_finished_flag, \
     finished_flag_exists
 from asme.core.writer.prediction.prediction_writer import build_prediction_writer
 from asme.core.writer.results.results_writer import build_result_writer, check_file_format_supported
-from asme.core.utils.pred_utils import _extract_target_indices, _generate_sample_id, _extract_sample_metrics, get_positive_item_mask
-
-from asme.core.utils.evaluation import SampleIDEvaluator, SampleEvaluator, BatchEvaluator
+from asme.core.utils.pred_utils import _selected_file_and_filter
+from asme.core.utils.evaluation import LogInputEvaluator, TrueTargetEvaluator, ExtractSampleIdEvaluator, \
+    ExtractScoresEvaluator, ExtractRecommendationEvaluator, PerSampleMetricsEvaluator
 
 _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at least the checkpoint file and config or" \
                                                     " the study name and study storage to infer the config and " \
@@ -59,7 +58,7 @@ app = typer.Typer()
 def train(config_file: Path = typer.Argument(..., help='the path to the config file', exists=True),
           do_resume: bool = typer.Option(False, help='flag iff the model should resume training from a checkpoint'),
           print_train_val_examples: bool = typer.Option(False, help='print examples of the training '
-                                                                   'and evaluation dataset before starting training')
+                                                                    'and evaluation dataset before starting training')
           ) -> None:
     config_file_path = Path(config_file)
     config = load_config(config_file_path)
@@ -88,7 +87,8 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
         # Save the hyperparameters of the dataset preprocessing
         preprocessing_parameters = container.datamodule().config.preprocessing_config_values
         if preprocessing_parameters is not None:
-            preprocessing_parameters = {f"datamodule/{param}": value for param, value in preprocessing_parameters.items()}
+            preprocessing_parameters = {f"datamodule/{param}": value for param, value in
+                                        preprocessing_parameters.items()}
             module.save_hyperparameters(preprocessing_parameters)
         trainer.fit(module,
                     train_dataloaders=train_dataloader,
@@ -107,15 +107,14 @@ def optimize(template_file: Path = typer.Argument(..., help='the path to the tem
              study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
              num_trials: int = typer.Option(default=20, help='the number of trials to execute')
              ) -> None:
-
     # TODO check after template has been resolved
     # check if objective_metric is defined
-    #test_config = load_config(template_file)
-    #test_metrics_config = test_config.get_config(['module', 'metrics'])
+    # test_config = load_config(template_file)
+    # test_metrics_config = test_config.get_config(['module', 'metrics'])
 
-    #metrics_factory = MetricsContainerFactory()
-    #test_metrics_container = metrics_factory.build(test_metrics_config, Context())
-    #if objective_metric not in test_metrics_container.get_metric_names():
+    # metrics_factory = MetricsContainerFactory()
+    # test_metrics_container = metrics_factory.build(test_metrics_config, Context())
+    # if objective_metric not in test_metrics_container.get_metric_names():
     #    raise ValueError(f'{objective_metric} not configured. '
     #                     f'Can not optimize hyperparameters using the specified objective')
 
@@ -132,8 +131,8 @@ def optimize(template_file: Path = typer.Argument(..., help='the path to the tem
         :param trial: a trial object.
         :return: the final configuration with resolved hyper parameters according to the hyperopt config file.
         """
-        context_parameters = load_hyperopt_config(optimization_parameters_path, [SearchTemplateProcessor(OptunaParameterResolver(trial))])
-
+        context_parameters = load_hyperopt_config(optimization_parameters_path,
+                                                  [SearchTemplateProcessor(OptunaParameterResolver(trial))])
 
         with template_path.open("r") as template_file:
             template = Template(template_file.read())
@@ -151,7 +150,7 @@ def optimize(template_file: Path = typer.Argument(..., help='the path to the tem
         with (output_path / "optimization-selected-parameters.json").open("w") as selected_parameters_path:
             json.dump(context_parameters.config, selected_parameters_path, indent=2)
 
-        #FIXME: adhoc fix to make output_path available in the configuration, remove when this is common in a configuration.
+        # FIXME: adhoc fix to make output_path available in the configuration, remove when this is common in a configuration.
         config.set_if_absent(["output_path"], str(output_path))
         return config
 
@@ -166,7 +165,7 @@ def optimize(template_file: Path = typer.Argument(..., help='the path to the tem
 
     study.set_user_attr(OBJECTIVE_METRIC_KEY, objective_metric)
 
-    for trial_run in range(1, num_trials+1):
+    for trial_run in range(1, num_trials + 1):
         print(f"Running trial {trial_run} / {num_trials}")
         trial = study.ask()
 
@@ -268,8 +267,8 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
         """
         config = load_config(template_file,
                              additional_tail_processors=[SearchConfigurationTemplateProcessor(trial)])
-        hyperopt_config = load_hyperopt_config(hyperopt_config_file, [SearchTemplateProcessor(OptunaParameterResolver(trial))])
-
+        hyperopt_config = load_hyperopt_config(hyperopt_config_file,
+                                               [SearchTemplateProcessor(OptunaParameterResolver(trial))])
 
         # infer model train directory from checkpoint output path set via `SearchConfigurationTemplateProcessor`.
         output_path = Path(config.get([TRAINER_CONFIG_KEY, CHECKPOINT_CONFIG_KEY, CHECKPOINT_CONFIG_DIR_PATH])).parent
@@ -283,7 +282,7 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 
         patched_config = config.patch(hyperopt_config)
 
-        #FIXME: adhoc fix to make output_path available in the configuration, remove when this is common in a configuration.
+        # FIXME: adhoc fix to make output_path available in the configuration, remove when this is common in a configuration.
         patched_config.set_if_absent(["output_path"], str(output_path))
         return patched_config
 
@@ -293,7 +292,7 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
                                 direction=study_direction)
     study.set_user_attr(OBJECTIVE_METRIC_KEY, objective_metric)
 
-    for trial_run in range(1, num_trials+1):
+    for trial_run in range(1, num_trials + 1):
         print(f"Running trial {trial_run} / {num_trials}")
         trial = study.ask()
 
@@ -360,23 +359,22 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 
 
 @app.command()
-def predict_new(output_file: Path = typer.Argument(..., help='path where output is written'),
-            num_predictions: int = typer.Option(default=5, help='number of predictions to export'),
-            gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
-            selected_items_file: Optional[Path] = typer.Option(default=None,
-                                                               help='only use the item ids for prediction'),
-            checkpoint_file: Path = typer.Option(default=None, help='path to the checkpoint file'),
-            config_file: Path = typer.Option(default=None, help='the path to the config file'),
-            study_name: str = typer.Option(default=None, help='the study name of an existing study'),
-            study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
-            overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
-            log_input: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
-            log_per_sample_metrics: Optional[bool] = typer.Option(default=True,
-                                                                  help='enable logging of per-sample metrics.'),
-            seed: Optional[int] = typer.Option(default=None, help='seed used eg for the sampled evaluation'),
-            log_session_key: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
-            ):
-
+def predict(output_file: Path = typer.Argument(..., help='path where output is written'),
+                num_predictions: int = typer.Option(default=5, help='number of predictions to export'),
+                gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
+                selected_items_file: Optional[Path] = typer.Option(default=None,
+                                                                   help='only use the item ids for prediction'),
+                checkpoint_file: Path = typer.Option(default=None, help='path to the checkpoint file'),
+                config_file: Path = typer.Option(default=None, help='the path to the config file'),
+                study_name: str = typer.Option(default=None, help='the study name of an existing study'),
+                study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
+                overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
+                log_input: Optional[bool] = typer.Option(default=False, help='enable input logging.'),
+                log_per_sample_metrics: Optional[bool] = typer.Option(default=True,
+                                                                      help='enable logging of per-sample metrics.'),
+                seed: Optional[int] = typer.Option(default=None, help='seed used eg for the sampled evaluation'),
+                log_session_key: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
+                ):
     # checking if the file already exists
     if not overwrite and output_file.exists():
         logger.error(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
@@ -394,333 +392,49 @@ def predict_new(output_file: Path = typer.Argument(..., help='path where output 
     module = container.module()
     test_loader = container.test_dataloader()
 
-    if log_per_sample_metrics:
-        metrics_container: MetricsContainer = module.metrics
-        for metric in metrics_container.get_metrics():
-            metric.set_metrics_storage_mode(MetricStorageMode.PER_SAMPLE)
-
-    def _noop_filter(sample_predictions: np.ndarray):
-        return sample_predictions
-
-    filter_predictions = _noop_filter
-    selected_items = None
-
-    if selected_items_file is not None:
-        selected_items = load_file_with_item_ids(selected_items_file)
-        selected_items_tensor = torch.tensor(selected_items, dtype=torch.int32)
-
-        def _selected_items_filter(sample_predictions):
-            return torch.index_select(sample_predictions, 1, selected_items_tensor)
-
-        filter_predictions = _selected_items_filter
-
-        #filter_predictions = lambda sample_predictions:  [prediction[selected_items] for prediction in sample_predictions] #_selected_items_filter
-
     module.eval()
+    item_tokenizer = container.tokenizer('item')
+    selected_items, filter_predictions = _selected_file_and_filter(selected_items_file)
 
-
-    sid_evaluator = SampleIDEvaluator(use_session_id=log_session_key)
+    evaluators = [ExtractSampleIdEvaluator(use_session_id=log_session_key),
+                  ExtractScoresEvaluator(item_tokenizer=item_tokenizer, num_predictions=num_predictions,
+                                         filter=filter_predictions),
+                  TrueTargetEvaluator(item_tokenizer=item_tokenizer),
+                  ExtractRecommendationEvaluator(item_tokenizer=item_tokenizer, num_predictions=num_predictions,
+                                                 filter=filter_predictions, selected_items=selected_items),
+                  ]
+    if log_per_sample_metrics:
+        evaluators.append(PerSampleMetricsEvaluator(item_tokenizer=item_tokenizer, filter=filter, module=module))
+    if log_input:
+        evaluators.append(LogInputEvaluator(item_tokenizer=item_tokenizer))
 
     # open the file and build the writer
     with open(output_file, 'w') as result_file:
 
         output_writer = build_prediction_writer(result_file, log_input)
         with torch.no_grad():
-            item_tokenizer = container.tokenizer('item')
+
             for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
-
-                sequences = batch[ITEM_SEQ_ENTRY_NAME]
-
-                is_basket_recommendation = len(sequences.size()) == 3
-
-                targets = batch[TARGET_ENTRY_NAME]
-
                 logits = module(batch, batch_index)
 
-
-                metrics = _extract_sample_metrics(module)
-
-                bs_index, target_index = _extract_target_indices(batch[ITEM_SEQ_ENTRY_NAME], item_tokenizer.pad_token_id)
-                t_logits = logits[bs_index, target_index]
-
-                prediction = filter_predictions(t_logits)
-
-                softmax = torch.softmax(prediction, dim=-1)
-                item_indices = torch.argsort(softmax, dim=-1, descending=True)
-
-                num_classes = logits.size()[2]
-
-                item_mask = get_positive_item_mask(targets, num_classes)
-
-
-                for name, metric in metrics:
-                    metric.update(t_logits, item_mask)
-
-                item_indices = item_indices.cpu().numpy()
-                scores = softmax.cpu().numpy()
-                item_indices = item_indices[:num_predictions]
-
-                batch_item_ids = item_indices.tolist()
-
-                scores.sort()
-                scores = scores[::-1].tolist()[:num_predictions]
-
-                for batch_sample in range(item_indices.shape[0]):
-                    sample_id = sid_evaluator.evaluate(batch_index, batch_sample, batch)
-                    # when we only want the predictions of selected items
-                    # the indices are not the item ids anymore, so we have to update them here
-                    item_ids = batch_item_ids[batch_sample]
-                    if selected_items is not None:
-                        selected_item_ids = [selected_items[i] for i in item_ids]
-                        item_ids = selected_item_ids
-
-                    tokens = item_tokenizer.convert_ids_to_tokens(item_ids)
-
-                    true_target = targets[batch_sample]
-
-                    if is_basket_recommendation:
-                        true_target = remove_special_tokens(true_target.tolist(), item_tokenizer)
-                    else:
-                        true_target = true_target.item()
-
-                    true_target = item_tokenizer.convert_ids_to_tokens(true_target)
-
-                    metric_name_and_values = [(name, value.raw_metric_values()[batch_index].cpu().tolist()[batch_sample]) for name, value in metrics]
-
-                    sequence = None
-                    if log_input:
-                        sequence = sequences[batch_sample].tolist()
-
-                        # remove padding tokens
-                        sequence = remove_special_tokens(sequence, item_tokenizer)
-                        sequence = item_tokenizer.convert_ids_to_tokens(sequence)
-
-                    output_writer.write_values(f'{sample_id}', tokens, scores[batch_sample], true_target, metric_name_and_values,
-                                               sequence)
-
-
-
-
-
-
-
-
-@app.command()
-def predict(output_file: Path = typer.Argument(..., help='path where output is written'),
-            gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
-            selected_items_file: Optional[Path] = typer.Option(default=None,
-                                                               help='only use the item ids for prediction'),
-            num_predictions: int = typer.Option(default=20, help='number of predictions to export'),
-            checkpoint_file: Path = typer.Option(default=None, help='path to the checkpoint file'),
-            config_file: Path = typer.Option(default=None, help='the path to the config file'),
-            study_name: str = typer.Option(default=None, help='the study name of an existing study'),
-            study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
-            overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
-            log_input: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
-            log_per_sample_metrics: Optional[bool] = typer.Option(default=False,
-                                                                  help='enable logging of per-sample metrics.'),
-            log_session_key: Optional[bool] = typer.Option(default=False, help = 'use session key as sample id'),
-            seed: Optional[int] = typer.Option(default=None, help='seed used eg for the sampled evaluation')
-            ):
-    """
-
-    writes the predictions of model (restored from a checkpoint file) to a output file
-    the checkpoint file can be provided as argument or is automatically inferred from the best trail of
-    the provided study
-
-    :param study_name: the name of the study
-    :param study_storage: the storage uri of the study
-    :param config_file: the config file used while training the model
-    :param output_file: the path to write the output to
-    :param num_predictions: number of predictions
-    :param checkpoint_file: the checkpoint file of the model
-    :param gpu: the number of gpus to use
-    :param selected_items_file: the item that should only be considered
-    :param overwrite: override the output file
-    :param log_input: write the input sequence also to the file
-    :param log_per_sample_metrics: if true also writes per sample metrics for the samples
-    :param log_session_key: use session key as sample id, session_identifier is needed
-    :param seed: the seed to use for this model (should not effect the predictions but the metrics if sampled)
-    """
-
-    # checking if the file already exists
-    if not overwrite and output_file.exists():
-        logger.error(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
-        exit(2)
-
-    container = load_and_restore_from_file_or_study(checkpoint_file, config_file, study_name, study_storage,
-                                                    gpus=gpu)
-    if container is None:
-        logger.error(_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY)
-        exit(-1)
-
-    if seed is not None:
-        seed_everything(seed)
-
-    module = container.module()
-    trainer = container.trainer().build()
-    test_loader = container.test_dataloader()
-
-    if log_per_sample_metrics:
-        metrics_container: MetricsContainer = module.metrics
-        for metric in metrics_container.get_metrics():
-            metric.set_metrics_storage_mode(MetricStorageMode.PER_SAMPLE)
-
-    def _noop_filter(sample_predictions: np.ndarray):
-        return sample_predictions
-
-    filter_predictions = _noop_filter
-    selected_items = None
-
-    if selected_items_file is not None:
-        selected_items = load_file_with_item_ids(selected_items_file)
-
-        def _selected_items_filter(sample_predictions: np.ndarray):
-            return sample_predictions[selected_items]
-
-        filter_predictions = _selected_items_filter
-
-    # open the file and build the writer
-    with open(output_file, 'w') as result_file:
-        output_writer = build_prediction_writer(result_file, log_input)
-
-        # XXX: currently the predict method returns all batches at once, this is not RAM efficient
-        # so we loop through the loader and use only one batch to call the predict method of pytorch lightning
-        # replace as soon as this is fixed in pytorch lighting
-        class FixedBatchSampler(Sampler):
-
-            def __init__(self,
-                         batch_start: int,
-                         batch_size: int):
-                super().__init__(None)
-                self.batch_start = batch_start
-                self.batch_size = batch_size
-
-            def __iter__(self) -> Iterator[T_co]:
-                return iter([range(self.batch_start, self.batch_start + self.batch_size)])
-
-            def __len__(self):
-                return 1
-
-        item_tokenizer = container.tokenizer('item')
-
-        def _extract_sample_metrics(module: MetricsTrait) -> List[Tuple[str, torch.Tensor]]:
-            """
-            Extracts the raw values of all metrics with per-sample-storage enabled.
-            :param module: The module used for generating predictions.
-            :return: A list of all metrics in the module's metric container with per-sample-storage enabled.
-            """
-            metrics_container = module.metrics
-            metric_names_and_values = list(filter(lambda x: x[1]._storage_mode == MetricStorageMode.PER_SAMPLE,
-                                                  zip(metrics_container.get_metric_names(),
-                                                      metrics_container.get_metrics())))
-            return list(map(lambda x: (x[0], x[1].raw_metric_values()), metric_names_and_values))
-
-        def _create_batch_loader(dataset: Dataset,
-                                 batch_sampler: Sampler,
-                                 collate_fn,
-                                 num_workers: int
-                                 ) -> DataLoader:
-            return DataLoader(dataset, batch_sampler=batch_sampler, collate_fn=collate_fn, num_workers=num_workers)
-
-        @contextmanager
-        def _no_eval_step_end_call(module):
-            """
-            Wrap a call to trainer.test with this context manager to avoid the _eval_epoch_end code provided by the
-            MetricsTrait to be executed before the wrapped code is executed. The hook is called afterwards.
-            """
-            _eval_epoch_end_hook = module._eval_epoch_end
-            try:
-                module._eval_epoch_end = lambda x: {}
-                yield None
-            finally:
-                module._eval_epoch_end = _eval_epoch_end_hook
-                module._eval_epoch_end(None)
-
-        for index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
-            sequences = batch[ITEM_SEQ_ENTRY_NAME]
-            batch_size = sequences.size()[0]
-            is_basket_recommendation = len(sequences.size()) == 3
-            batch_start = index * batch_size
-
-            # We need two loaders since we have to run both, predict & test on each batch
-            batch_loader_predict = _create_batch_loader(test_loader.dataset,
-                                                        batch_sampler=FixedBatchSampler(batch_start, batch_size),
-                                                        collate_fn=test_loader.collate_fn,
-                                                        num_workers=test_loader.num_workers)
-            batch_loader_test = _create_batch_loader(test_loader.dataset,
-                                                     batch_sampler=FixedBatchSampler(batch_start, batch_size),
-                                                     collate_fn=test_loader.collate_fn,
-                                                     num_workers=test_loader.num_workers)
-
-            # Redirect prediction/test results to /dev/null to avoid spamming stdout
-            with open(os.devnull, "w") as f, redirect_stdout(f):
-                prediction_results = trainer.predict(module, dataloaders=batch_loader_predict)
-                if log_per_sample_metrics:
-                    # Prevent the reset-method of metrics to be called before extracting their values
-                    with _no_eval_step_end_call(module):
-                        # Run test in order to generate metrics (not generated by predict)
-                        trainer.test(module, test_dataloaders=batch_loader_test)
-                        metrics = _extract_sample_metrics(module)
-                else:
-                    metrics = []
-            predictions = prediction_results[0]
-            sample_ids = batch[SAMPLE_IDS]
-            sequence_position_ids = None
-            if 'pos' in batch:
-                sequence_position_ids = batch['pos']
-            targets = batch[TARGET_ENTRY_NAME]
-
-            def _softmax(array: np.array) -> np.array:
-                return np.exp(array) / sum(np.exp(array))
-
-            def _generate_sample_id(sample_ids, sequence_position_ids, sample_index) -> str:
-                sample_id = sample_ids[sample_index].item()
-                if sequence_position_ids is None:
-                    return sample_id
-
-                return f'{sample_id}_{sequence_position_ids[sample_index].item()}'
-
-            for i in range(predictions.shape[0]):
-                prediction = filter_predictions(predictions[i])
-
-                scores = torch.softmax(prediction, dim=-1).cpu().numpy()
-
-                item_indices = scores.argsort()[::-1][:num_predictions]
-
-                item_ids = item_indices.tolist()
-
-                # when we only want the predictions of selected items
-                # the indices are not the item ids anymore, so we have to update them here
-                if selected_items is not None:
-                    selected_item_ids = [selected_items[i] for i in item_ids]
-                    item_ids = selected_item_ids
-
-                tokens = item_tokenizer.convert_ids_to_tokens(item_ids)
-                scores.sort()
-                scores = scores[::-1].tolist()[:num_predictions]
-
-                sample_id = _generate_sample_id(sample_ids, sequence_position_ids, i)
-                true_target = targets[i]
-                if is_basket_recommendation:
-                    true_target = remove_special_tokens(true_target.tolist(), item_tokenizer)
-                else:
-                    true_target = true_target.item()
-                true_target = item_tokenizer.convert_ids_to_tokens(true_target)
-                metric_name_and_values = [(name, value[0][i].item()) for name, value in metrics]
-                sequence = None
-                if log_input:
-                    sequence = sequences[i].tolist()
-
-                    # remove padding tokens
-                    sequence = remove_special_tokens(sequence, item_tokenizer)
-                    sequence = item_tokenizer.convert_ids_to_tokens(sequence)
-                if log_session_key:
-                    sample_id = batch[SESSION_IDENTIFIER][i]
-
-                output_writer.write_values(f'{sample_id}', tokens, scores, true_target, metric_name_and_values,
-                                           sequence)
-
+                results = {}
+                for eval in evaluators:
+                    results.update(eval.evaluate(batch_index, batch, logits))
+
+                def _get_sample_output(results, batch_sample, name):
+                    if results.get(name) != None:
+                        return results.get(name)[batch_sample]
+                    return None
+
+                for batch_sample in range(logits.shape[0]):
+                    sample_id = _get_sample_output(results,batch_sample, "SID")
+                    tokens = _get_sample_output(results,batch_sample, "RECOMMENDATION")
+                    input = _get_sample_output(results,batch_sample, "INPUT")
+                    target = _get_sample_output(results,batch_sample, "TARGET")
+                    scores = _get_sample_output(results,batch_sample, "SCORES")
+                    metrics = _get_sample_output(results,batch_sample, "METRICS")
+
+                    output_writer.write_values(f'{sample_id}', tokens, scores, target, metrics, input)
 
 @app.command()
 def evaluate(config_file: Path = typer.Option(default=None, help='the path to the config file'),
