@@ -33,7 +33,7 @@ def _get_hyperparameters(args, kwargs, init_func):
     for index, arg in enumerate(kwargs):
         value = kwargs.get(arg, None)
         # Exclude non-hyperparameters such as MetricContainers, Metrics, etc.
-        if isinstance(value, (MetricsContainer, pl.metrics.Metric, Tokenizer)):
+        if isinstance(value, (MetricsContainer, pl.metrics.Metric, Tokenizer, type)):
             continue
         # Check all elements of a list separately
         elif isinstance(value, list):
