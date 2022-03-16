@@ -221,7 +221,7 @@ def optimize(template_file: Path = typer.Argument(..., help='the path to the tem
 
         trainer.fit(
             module,
-            train_dataloader=container.train_dataloader(),
+            train_dataloaders=container.train_dataloader(),
             val_dataloaders=container.validation_dataloader()
         )
         save_finished_flag(log_dir)
@@ -358,7 +358,6 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
             return best(values)
 
         study.tell(trial, _find_best_value(objective_metric, objective_best))
-
 
 @app.command()
 def predict(output_file: Path = typer.Argument(..., help='path where output is written'),
