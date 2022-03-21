@@ -11,6 +11,7 @@ from asme.core.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+
 def _get_module_hyperparameters(param: str, module: nn.Module) -> Dict[str, Any]:
     if hasattr(module, 'hyperparameters'):  # special handling of the model parameter
         return module.hyperparameters
@@ -19,19 +20,19 @@ def _get_module_hyperparameters(param: str, module: nn.Module) -> Dict[str, Any]
                        f" that does not report its hyperparameters,"
                        f" consider adding @save_hyperparameters annotation.")
         return {}
+
+
 def _get_hyperparameters(args, kwargs, init_func):
 
     parameters = list(inspect.signature(init_func).parameters.items())
 
     hyperparameters = {}
-    # first the args
-
+    params = kwargs.copy()
     for index, arg in enumerate(args):
-        # index + 1 because self is the first parameter of init
-        hyperparameters[parameters[index + 1][0]] = arg
+        params[parameters[index + 1][0]] = arg
 
-    for index, arg in enumerate(kwargs):
-        value = kwargs.get(arg, None)
+    for index, arg in enumerate(params):
+        value = params.get(arg, None)
         # Exclude non-hyperparameters such as MetricContainers, Metrics, etc.
         if isinstance(value, (MetricsContainer, pl.metrics.Metric, Tokenizer, type)):
             continue
