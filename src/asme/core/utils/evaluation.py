@@ -5,7 +5,7 @@ import torch
 
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME, SESSION_IDENTIFIER
 from asme.core.tokenization.utils.tokenization import remove_special_tokens
-from asme.core.utils.pred_utils import _extract_target_indices,_extract_sample_metrics, get_positive_item_mask
+from asme.core.utils.pred_utils import _extract_sample_metrics, get_positive_item_mask
 from asme.core.metrics.container.metrics_container import MetricsContainer
 from asme.core.metrics.metric import MetricStorageMode
 
@@ -135,9 +135,7 @@ class ExtractScoresEvaluator(BatchEvaluator):
                  logits: Tensor,
                  ) -> Dict[str, Any]:
 
-        bs_index, target_index = _extract_target_indices(batch[ITEM_SEQ_ENTRY_NAME], self.item_tokenizer.pad_token_id)
-        t_logits = logits[bs_index, target_index]
-        prediction = self.filter(t_logits)
+        prediction = self.filter(logits)
         softmax = torch.softmax(prediction, dim=-1)
         scores, indices = torch.sort(softmax, dim=-1, descending=True)
         scores = scores[:,:self.num_predictions]
@@ -163,9 +161,7 @@ class ExtractRecommendationEvaluator(BatchEvaluator):
                  logits: Tensor,
                  ) -> Dict[str, Any]:
 
-        bs_index, target_index = _extract_target_indices(batch[ITEM_SEQ_ENTRY_NAME], self.item_tokenizer.pad_token_id)
-        t_logits = logits[bs_index, target_index]
-        prediction = self.filter(t_logits)
+        prediction = self.filter(logits)
         softmax = torch.softmax(prediction, dim=-1)
         scores, indices = torch.sort(softmax, dim=-1, descending=True)
         indices = indices[:,:self.num_predictions]
@@ -204,13 +200,11 @@ class PerSampleMetricsEvaluator(BatchEvaluator):
 
         targets = batch[TARGET_ENTRY_NAME]
         metrics = _extract_sample_metrics(self.module)
-        bs_index, target_index = _extract_target_indices(batch[ITEM_SEQ_ENTRY_NAME], self.item_tokenizer.pad_token_id)
-        t_logits = logits[bs_index, target_index]
 
-        num_classes = logits.size()[2]
+        num_classes = logits.size()[1]
         item_mask = get_positive_item_mask(targets, num_classes)
         for name, metric in metrics:
-            metric.update(t_logits, item_mask)
+            metric.update(logits, item_mask)
 
         metric_results = []
         for batch_sample in range(logits.shape[0]):

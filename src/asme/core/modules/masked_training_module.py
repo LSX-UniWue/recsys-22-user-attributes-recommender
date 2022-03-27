@@ -133,7 +133,8 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
     def _eval_step(self,
                    batch: Dict[str, torch.Tensor],
                    batch_idx: int,
-                   is_test: bool = False
+                   is_test: bool = False,
+                   is_predict: bool = False
                    ) -> Dict[str, torch.Tensor]:
         input_seq = batch[ITEM_SEQ_ENTRY_NAME]
         targets = batch[TARGET_ENTRY_NAME]
@@ -142,7 +143,9 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
         prediction = self._get_prediction_for_masked_item(batch, batch_idx)
 
         loss = self._calc_loss(prediction, targets, is_eval=True)
-        self.log(LOG_KEY_TEST_LOSS if is_test else LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
+
+        if not is_predict:
+            self.log(LOG_KEY_TEST_LOSS if is_test else LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
         # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
         # the target tensor

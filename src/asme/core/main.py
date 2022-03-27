@@ -392,7 +392,6 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
     module = container.module()
     test_loader = container.test_dataloader()
 
-    module.eval()
     item_tokenizer = container.tokenizer('item')
     selected_items, filter_predictions = _selected_file_and_filter(selected_items_file)
 
@@ -413,9 +412,11 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
 
         output_writer = build_prediction_writer(result_file, log_input)
         with torch.no_grad():
+            module.eval()
 
             for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
-                logits = module(batch, batch_index)
+                #logits = module(batch,batch_index)#
+                logits = module._eval_step(batch, batch_index, is_predict=True)["predictions"]
 
                 results = {}
                 for eval in evaluators:
