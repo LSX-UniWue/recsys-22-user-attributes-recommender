@@ -124,6 +124,18 @@ class UserNextItemPredictionTrainingModule(BaseNextItemPredictionTrainingModule)
 
         return target_logits
 
+    def predict_step(self,
+                     batch: Dict[str, torch.Tensor],
+                     batch_idx: int,
+                     dataloader_idx: Optional[int] = None
+                     ) -> torch.Tensor:
+
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]     # BS x S
+        logits = self(batch, batch_idx)  # BS x S x I
+        target_logits = self._extract_target_logits(input_seq, logits)
+        return target_logits
+
+
     def _extract_target_item_logits(self, logits: torch.Tensor) -> torch.Tensor:
         if self.user_key_len > 0:
             return logits[:,1:,:]
