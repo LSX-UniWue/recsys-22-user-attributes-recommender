@@ -415,8 +415,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
             module.eval()
 
             for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
-                #logits = module(batch,batch_index)#
-                logits = module._eval_step(batch, batch_index, is_predict=True)["predictions"]
+                logits = module.predict_step(batch, batch_index)
 
                 results = {}
                 for eval in evaluators:
