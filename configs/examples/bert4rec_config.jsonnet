@@ -98,7 +98,13 @@ local tokenizer {
             sequence_length: max_seq_length,
             tokenizer: tokenizer
             }
-        }
+        },
+         session_identifier: {
+                    column_name: "session_id",
+                    sequence_length: max_seq_length,
+                    sequence: false,
+                    run_tokenization: false,
+         },
     },
     trainer: {
         loggers: {

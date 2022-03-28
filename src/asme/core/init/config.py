@@ -202,4 +202,5 @@ class Config:
 
         return patched_config
 
-
+    def as_dict(self) -> Dict[str, Any]:
+        return self.config

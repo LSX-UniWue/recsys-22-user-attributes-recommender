@@ -36,7 +36,8 @@ class CreateLeavePercentageOutSplit(PreprocessingAction):
         self._min_validation_length = min_validation_lenght
         self._min_train_length = min_train_length
 
-        if train_percentage + test_percentage + validation_percentage != 1:
+        # Need to use math.isclose since the check might fail due to numerical precision otherwise.
+        if not math.isclose(train_percentage + test_percentage + validation_percentage, 1.):
             raise ValueError(f"Fractions for training, validation and test do not sum to 1"
                              f" (got {train_percentage}/{validation_percentage}/{test_percentage}).")
 
