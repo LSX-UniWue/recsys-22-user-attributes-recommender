@@ -370,10 +370,12 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
                 study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
                 overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
                 log_input: Optional[bool] = typer.Option(default=False, help='enable input logging.'),
-                log_per_sample_metrics: Optional[bool] = typer.Option(default=True,
+                log_per_sample_metrics: Optional[bool] = typer.Option(default=False,
                                                                       help='enable logging of per-sample metrics.'),
                 seed: Optional[int] = typer.Option(default=None, help='seed used eg for the sampled evaluation'),
                 log_session_key: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
+                log_target: Optional[bool] = typer.Option(default=False, help='enable true target logging.'),
+                log_scores: Optional[bool] = typer.Option(default=False, help='enable score logging.'),
                 ):
     # checking if the file already exists
     if not overwrite and output_file.exists():
@@ -396,12 +398,14 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
     selected_items, filter_predictions = _selected_file_and_filter(selected_items_file)
 
     evaluators = [ExtractSampleIdEvaluator(use_session_id=log_session_key),
-                  ExtractScoresEvaluator(item_tokenizer=item_tokenizer, num_predictions=num_predictions,
-                                         filter=filter_predictions),
-                  TrueTargetEvaluator(item_tokenizer=item_tokenizer),
                   ExtractRecommendationEvaluator(item_tokenizer=item_tokenizer, num_predictions=num_predictions,
                                                  filter=filter_predictions, selected_items=selected_items),
                   ]
+    if log_scores:
+        evaluators.append(ExtractScoresEvaluator(item_tokenizer=item_tokenizer, num_predictions=num_predictions,
+                                                 filter=filter_predictions))
+    if log_target:
+        evaluators.append(TrueTargetEvaluator(item_tokenizer=item_tokenizer))
     if log_per_sample_metrics:
         evaluators.append(PerSampleMetricsEvaluator(item_tokenizer=item_tokenizer, filter=filter, module=module))
     if log_input:
@@ -409,8 +413,8 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
 
     # open the file and build the writer
     with open(output_file, 'w') as result_file:
-
-        output_writer = build_prediction_writer(result_file, log_input)
+        from asme.core.writer.prediction.fast_prediction_writer import CSVPredictionWriter
+        output_writer = CSVPredictionWriter(result_file, log_input, log_target, log_scores, log_per_sample_metrics)  #build_prediction_writer(result_file, log_input)
         with torch.no_grad():
             module.eval()
 
