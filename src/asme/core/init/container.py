@@ -46,3 +46,4 @@ class Container:
 
     def tokenizer(self, tokenizer_id: str) -> Tokenizer:
         return self._objects["tokenizers." + tokenizer_id]
+

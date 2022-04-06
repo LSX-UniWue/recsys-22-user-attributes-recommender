@@ -1,6 +1,5 @@
 import os
 import shutil
-from contextlib import contextmanager, redirect_stdout
 
 import numpy as np
 import torch
@@ -23,28 +22,22 @@ from asme.core.init.config import Config
 from asme.core.init.config_keys import TRAINER_CONFIG_KEY, CHECKPOINT_CONFIG_KEY, CHECKPOINT_CONFIG_DIR_PATH
 from optuna.study import StudyDirection
 from pytorch_lightning import seed_everything, Trainer
-from torch.utils.data import Sampler, DataLoader
-from torch.utils.data.dataset import T_co, Dataset
 from tqdm import tqdm
 from jinja2 import Template
 
-from asme.core.modules.metrics_trait import MetricsTrait
-from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME, SESSION_IDENTIFIER
-from asme.core.metrics.container.metrics_container import MetricsContainer
-from asme.core.metrics.metric import MetricStorageMode
 from asme.core.init.context import Context
 from asme.core.init.factories.metrics.metrics_container import MetricsContainerFactory
 from asme.core.init.templating.search.configuration import SearchConfigurationTemplateProcessor
-from asme.core.tokenization.utils.tokenization import remove_special_tokens
 from asme.core.utils.run_utils import load_config, create_container, OBJECTIVE_METRIC_KEY, TRIAL_BASE_PATH, \
     load_and_restore_from_file_or_study, log_dataloader_example, load_hyperopt_config, load_config_from_json
 from asme.core.utils import ioutils
 from asme.core.utils.ioutils import load_file_with_item_ids, determine_log_dir, save_config, save_finished_flag, \
     finished_flag_exists
+
 from asme.core.writer.prediction.prediction_writer import build_prediction_writer
 from asme.core.writer.results.results_writer import build_result_writer, check_file_format_supported
-from asme.core.utils.pred_utils import _selected_file_and_filter
-from asme.core.utils.evaluation import LogInputEvaluator, TrueTargetEvaluator, ExtractSampleIdEvaluator, \
+from asme.core.evaluation.pred_utils import _selected_file_and_filter
+from asme.core.evaluation.evaluation import LogInputEvaluator, TrueTargetEvaluator, ExtractSampleIdEvaluator, \
     ExtractScoresEvaluator, ExtractRecommendationEvaluator, PerSampleMetricsEvaluator
 
 _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at least the checkpoint file and config or" \
@@ -420,9 +413,11 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
 
             for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
                 logits = module.predict_step(batch, batch_index)
-
                 results = {}
+
                 for eval in evaluators:
+                    output = eval.evaluate(batch_index, batch, logits)
+
                     results.update(eval.evaluate(batch_index, batch, logits))
 
                 def _get_sample_output(results, batch_sample, name):
