@@ -353,23 +353,15 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 
 @app.command()
 def predict(output_file: Path = typer.Argument(..., help='path where output is written'),
-                num_predictions: int = typer.Option(default=5, help='number of predictions to export'),
                 gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
-                selected_items_file: Optional[Path] = typer.Option(default=None,
-                                                                   help='only use the item ids for prediction'),
                 checkpoint_file: Path = typer.Option(default=None, help='path to the checkpoint file'),
                 config_file: Path = typer.Option(default=None, help='the path to the config file'),
                 study_name: str = typer.Option(default=None, help='the study name of an existing study'),
                 study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
                 overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
-                log_input: Optional[bool] = typer.Option(default=False, help='enable input logging.'),
-                log_per_sample_metrics: Optional[bool] = typer.Option(default=False,
-                                                                      help='enable logging of per-sample metrics.'),
                 seed: Optional[int] = typer.Option(default=None, help='seed used eg for the sampled evaluation'),
-                log_session_key: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
-                log_target: Optional[bool] = typer.Option(default=False, help='enable true target logging.'),
-                log_scores: Optional[bool] = typer.Option(default=False, help='enable score logging.'),
                 ):
+
     # checking if the file already exists
     if not overwrite and output_file.exists():
         logger.error(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
@@ -386,54 +378,25 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
 
     module = container.module()
     test_loader = container.test_dataloader()
-
-    item_tokenizer = container.tokenizer('item')
-    selected_items, filter_predictions = _selected_file_and_filter(selected_items_file)
-
-    evaluators = [ExtractSampleIdEvaluator(use_session_id=log_session_key),
-                  ExtractRecommendationEvaluator(item_tokenizer=item_tokenizer, num_predictions=num_predictions,
-                                                 filter=filter_predictions, selected_items=selected_items),
-                  ]
-    if log_scores:
-        evaluators.append(ExtractScoresEvaluator(item_tokenizer=item_tokenizer, num_predictions=num_predictions,
-                                                 filter=filter_predictions))
-    if log_target:
-        evaluators.append(TrueTargetEvaluator(item_tokenizer=item_tokenizer))
-    if log_per_sample_metrics:
-        evaluators.append(PerSampleMetricsEvaluator(item_tokenizer=item_tokenizer, filter=filter, module=module))
-    if log_input:
-        evaluators.append(LogInputEvaluator(item_tokenizer=item_tokenizer))
+    evaluators = container.evaluators()
 
     # open the file and build the writer
     with open(output_file, 'w') as result_file:
-        from asme.core.writer.prediction.fast_prediction_writer import CSVPredictionWriter
-        output_writer = CSVPredictionWriter(result_file, log_input, log_target, log_scores, log_per_sample_metrics)  #build_prediction_writer(result_file, log_input)
+        from asme.core.writer.prediction.fast_prediction_writer import EvaluationCSVWriter
+
+        output_writer = EvaluationCSVWriter(evaluators=evaluators, file_handle=result_file)
+
         with torch.no_grad():
             module.eval()
-
             for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
+
                 logits = module.predict_step(batch, batch_index)
-                results = {}
+                output_writer.write_evaluation(batch_index, batch, logits)
 
-                for eval in evaluators:
-                    output = eval.evaluate(batch_index, batch, logits)
 
-                    results.update(eval.evaluate(batch_index, batch, logits))
 
-                def _get_sample_output(results, batch_sample, name):
-                    if results.get(name) != None:
-                        return results.get(name)[batch_sample]
-                    return None
 
-                for batch_sample in range(logits.shape[0]):
-                    sample_id = _get_sample_output(results,batch_sample, "SID")
-                    tokens = _get_sample_output(results,batch_sample, "RECOMMENDATION")
-                    input = _get_sample_output(results,batch_sample, "INPUT")
-                    target = _get_sample_output(results,batch_sample, "TARGET")
-                    scores = _get_sample_output(results,batch_sample, "SCORES")
-                    metrics = _get_sample_output(results,batch_sample, "METRICS")
 
-                    output_writer.write_values(f'{sample_id}', tokens, scores, target, metrics, input)
 
 @app.command()
 def evaluate(config_file: Path = typer.Option(default=None, help='the path to the config file'),

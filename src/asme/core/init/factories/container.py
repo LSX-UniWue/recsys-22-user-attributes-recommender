@@ -31,7 +31,7 @@ class ContainerFactory(ObjectFactory):
 
             ]
         )
-        self.evaluation_factory = EvaluationFactory()
+       #self.evaluation_factory = DependenciesFactory([EvaluationFactory()], optional_based_on_path=True)
 
     def can_build(self,
                   config: Config,
@@ -55,8 +55,8 @@ class ContainerFactory(ObjectFactory):
         if can_build_result.type != CanBuildResultType.CAN_BUILD:
             return can_build_result
 
-        evaluation_config = config.get_config(self.evaluation_factory.config_path())
-        can_build_result = self.evaluation_factory.can_build(evaluation_config, context)
+        #evaluation_config = config.get_config(self.evaluation_factory.config_path())
+        #can_build_result = self.evaluation_factory.can_build(evaluation_config, context)
 
         if can_build_result.type != CanBuildResultType.CAN_BUILD:
             return can_build_result
@@ -94,9 +94,9 @@ class ContainerFactory(ObjectFactory):
             else:
                 context.set(key, object)
 
-        evaluation_config = config.get_config(self.evaluation_factory.config_path())
-        evaluation = self.evaluation_factory.build(evaluation_config, context)
-        context.set(self.evaluation_factory.config_path(), evaluation, overwrite=True)
+        #evaluation_config = config.get_config(self.evaluation_factory.config_path())
+        #evaluation = self.evaluation_factory.build(evaluation_config, context)
+        #context.set(self.evaluation_factory.config_path(), evaluation, overwrite=True)
 
         return Container(context.as_dict())
 
