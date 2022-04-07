@@ -132,5 +132,17 @@ local metrics =  {
           mode: 'max'
         },
         max_epochs: 5
-    }
+    },
+    evaluation: {
+        evaluators: [
+            {type: "sid", use_session_id: true},
+            {type: "recommendation"},
+        #    {type: "metrics"},
+        #    {type: "input"},
+        #    {type: "scores"},
+        #    {type: "target"},
+            ],
+        #selected_items_file: "/Users/lisa/recommender/configs/selected_items.csv",
+        number_predictions: 5
+        }
 }
