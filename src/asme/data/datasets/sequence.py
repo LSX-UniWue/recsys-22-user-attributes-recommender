@@ -199,7 +199,7 @@ class ItemSequenceDataset(Dataset, MultiProcessSupport, ExampleLogger):
 
     def _get_example(self, idx: int) -> Example:
         sequence_data = self._get_raw_sequence(idx)
-        processed_data = self._process_sequence(sequence_data.copy())
+        processed_data = self._process_sequence(copy.deepcopy(sequence_data))
 
         return Example(sequence_data, processed_data)
 

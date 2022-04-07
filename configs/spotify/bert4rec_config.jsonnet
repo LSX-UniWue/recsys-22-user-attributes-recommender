@@ -1,5 +1,5 @@
-local base_path = "../ml-1m/";
-local output_path = "../ml-1m/bert4rec_d05/";
+local base_path = "/scratch/jane-doe-framework/students/spotify/";
+local output_path = "/scratch/jane-doe-framework/students/spotify/outputs/";
 local hidden_size = 128;
 local max_seq_length = 200;
 local metrics =  {
@@ -8,7 +8,7 @@ local metrics =  {
     ndcg: [1, 5, 10]
 };
 
-local dataset = 'ml-1m';
+local dataset = 'spotify';
 
 {
     datamodule: {
@@ -24,8 +24,9 @@ local dataset = 'ml-1m';
             mask_probability: 0.2,
             mask_seed: 42
         },
+        force_regeneration: "True",
         preprocessing: {
-            extraction_directory: "../ml-1m/",
+            input_directory: "/scratch/jane-doe-framework/students/spotify/data/",
             output_directory: base_path
         }
     },
@@ -41,7 +42,7 @@ local dataset = 'ml-1m';
                 metrics: metrics
             },
             sampled: {
-                sample_probability_file: "ml-1m.popularity.title.txt",
+                sample_probability_file: "spotify.popularity.title.txt",
                 num_negative_samples: 100,
                 metrics: metrics
             }
@@ -56,7 +57,7 @@ local dataset = 'ml-1m';
     },
     features: {
         item: {
-            column_name: "title",
+            column_name: "track_name",
             sequence_length: max_seq_length,
             tokenizer: {
                 special_tokens: {
@@ -80,7 +81,7 @@ local dataset = 'ml-1m';
             mode: 'max'
         },
         gpus: 1,
-        max_epochs: 800,
+        max_epochs: 20,
         check_val_every_n_epoch: 10
     }
 }

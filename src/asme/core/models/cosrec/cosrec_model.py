@@ -7,6 +7,7 @@ from asme.core.models.common.components.representations.sequence_embedding impor
 from asme.core.models.common.layers.layers import IdentitySequenceRepresentationModifierLayer
 from asme.core.models.cosrec.components import CosRecSequenceRepresentationComponent
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel
+from asme.core.utils.hyperparameter_utils import save_hyperparameters
 from asme.core.utils.inject import InjectVocabularySize
 
 from asme.data.datasets import USER_ENTRY_NAME
@@ -31,6 +32,7 @@ class CosRecModel(SequenceRecommenderModel):
         dropout: dropout ratio.
     """
 
+    @save_hyperparameters
     def __init__(self,
                  user_vocab_size: InjectVocabularySize("user"),
                  item_vocab_size: InjectVocabularySize("item"),
