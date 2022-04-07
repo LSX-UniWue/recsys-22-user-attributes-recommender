@@ -95,8 +95,8 @@ class ContainerFactory(ObjectFactory):
                 context.set(key, object)
 
         evaluation_config = config.get_config(self.evaluation_factory.config_path())
-        evaluation = self.evaluation_factory.build(evaluation_config, context)
-        context.set(self.evaluation_factory.config_path(), evaluation, overwrite=True)
+        self.evaluation_factory.build(evaluation_config, context)
+
 
         return Container(context.as_dict())
 
