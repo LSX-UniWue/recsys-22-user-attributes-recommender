@@ -1,13 +1,12 @@
 import os
 import shutil
 
-import numpy as np
 import torch
 import typer
 import optuna
 import json
 from pathlib import Path
-from typing import Optional, Callable, List, Iterator, Tuple
+from typing import Optional, Callable, List
 
 from pytorch_lightning.loggers import LoggerCollection, MLFlowLogger
 from loguru import logger
@@ -31,14 +30,10 @@ from asme.core.init.templating.search.configuration import SearchConfigurationTe
 from asme.core.utils.run_utils import load_config, create_container, OBJECTIVE_METRIC_KEY, TRIAL_BASE_PATH, \
     load_and_restore_from_file_or_study, log_dataloader_example, load_hyperopt_config, load_config_from_json
 from asme.core.utils import ioutils
-from asme.core.utils.ioutils import load_file_with_item_ids, determine_log_dir, save_config, save_finished_flag, \
+from asme.core.utils.ioutils import determine_log_dir, save_config, save_finished_flag, \
     finished_flag_exists
-
-from asme.core.writer.prediction.prediction_writer import build_prediction_writer
+from asme.core.writer.prediction.evaluator_prediction_writer import EvaluationCSVWriter
 from asme.core.writer.results.results_writer import build_result_writer, check_file_format_supported
-from asme.core.evaluation.pred_utils import _selected_file_and_filter
-from asme.core.evaluation.evaluation import LogInputEvaluator, TrueTargetEvaluator, ExtractSampleIdEvaluator, \
-    ExtractScoresEvaluator, ExtractRecommendationEvaluator, PerSampleMetricsEvaluator
 
 _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at least the checkpoint file and config or" \
                                                     " the study name and study storage to infer the config and " \
@@ -57,7 +52,6 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
           print_train_val_examples: bool = typer.Option(False, help='print examples of the training '
                                                                     'and evaluation dataset before starting training')
           ) -> None:
-
     config_file_path = Path(config_file)
     config = load_config(config_file_path)
 
@@ -355,17 +349,17 @@ def search(template_file: Path = typer.Argument(..., help='the path to the confi
 
         study.tell(trial, _find_best_value(objective_metric, objective_best))
 
+
 @app.command()
 def predict(output_file: Path = typer.Argument(..., help='path where output is written'),
-                gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
-                checkpoint_file: Path = typer.Option(default=None, help='path to the checkpoint file'),
-                config_file: Path = typer.Option(default=None, help='the path to the config file'),
-                study_name: str = typer.Option(default=None, help='the study name of an existing study'),
-                study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
-                overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
-                seed: Optional[int] = typer.Option(default=None, help='seed used eg for the sampled evaluation'),
-                ):
-
+            gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
+            checkpoint_file: Path = typer.Option(default=None, help='path to the checkpoint file'),
+            config_file: Path = typer.Option(default=None, help='the path to the config file'),
+            study_name: str = typer.Option(default=None, help='the study name of an existing study'),
+            study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
+            overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
+            seed: Optional[int] = typer.Option(default=None, help='seed used eg for the sampled evaluation'),
+            ):
     # checking if the file already exists
     if not overwrite and output_file.exists():
         logger.error(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
@@ -386,20 +380,13 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
 
     # open the file and build the writer
     with open(output_file, 'w') as result_file:
-        from asme.core.writer.prediction.fast_prediction_writer import EvaluationCSVWriter
-
         output_writer = EvaluationCSVWriter(evaluators=evaluators, file_handle=result_file)
 
         with torch.no_grad():
             module.eval()
             for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
-
                 logits = module.predict_step(batch, batch_index)
                 output_writer.write_evaluation(batch_index, batch, logits)
-
-
-
-
 
 
 @app.command()
