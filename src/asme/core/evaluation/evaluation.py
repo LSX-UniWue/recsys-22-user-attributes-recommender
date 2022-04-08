@@ -76,7 +76,7 @@ class ExtractSampleIdEvaluator(BatchEvaluator):
     Create Sample ID based on SESSION_IDENTIFIER or sample ID
     """
 
-    def __init__(self, use_session_id: bool = True):
+    def __init__(self, use_session_id: bool = False):
         self.header = ["SID"]
         self.use_session_id = use_session_id
 
