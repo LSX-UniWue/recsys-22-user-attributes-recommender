@@ -33,7 +33,7 @@ class ImportFactory(ObjectFactory):
     CONFIG_KEY = "imports"
     TOP_LEVEL_MODULE_NAME = "asme"
     DEFAULT_MODULES = [".data.datasets.config", ".core.modules.config", ".data.datasets.processors.config",
-                       "evaluation.config"]
+                       ".core.evaluation.config"]
 
     def __init__(self):
         super().__init__()
