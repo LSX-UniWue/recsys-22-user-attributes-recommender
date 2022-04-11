@@ -23,7 +23,7 @@ class ExtractSampleIdEvaluatorFactory(ObjectFactory):
               context: Context
               ) -> ExtractSampleIdEvaluator:
 
-        use_session_id = config.get_or_default("use_session_id", True)
+        use_session_id = config.get_or_default("use_session_id", False)
         return ExtractSampleIdEvaluator(use_session_id=use_session_id)
 
     def is_required(self, context: Context) -> bool:

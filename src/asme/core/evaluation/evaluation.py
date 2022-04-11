@@ -95,10 +95,10 @@ class ExtractSampleIdEvaluator(BatchEvaluator):
         if self.use_session_id:
             sample_ids = batch[SESSION_IDENTIFIER]
         else:
-            sample_ids = batch[SAMPLE_IDS]
+            sample_ids = batch[SAMPLE_IDS].tolist()
         sequence_position_ids = None
         if 'pos' in batch:
-            sequence_position_ids = batch['pos']
+            sequence_position_ids = batch['pos'].tolist()
         id_lambda = lambda x: self._generate_sample_id(sample_ids, sequence_position_ids, x)
         sample_ids = [id_lambda(batch_sample) for batch_sample in range(logits.shape[0])]
 
