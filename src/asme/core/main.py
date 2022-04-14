@@ -561,6 +561,7 @@ def fast_predict(output_file: Path = typer.Argument(..., help='path where output
     with open(output_file, 'w') as result_file:
 
         output_writer = build_prediction_writer(result_file, log_input)
+        module.eval()
         with torch.no_grad():
             item_tokenizer = container.tokenizer('item')
             for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
@@ -575,37 +576,31 @@ def fast_predict(output_file: Path = typer.Argument(..., help='path where output
                 targets = batch[TARGET_ENTRY_NAME]
 
                 logits = module.predict_step(batch, batch_index)
+                prediction = filter_predictions(logits)
 
                 metrics = _extract_sample_metrics(module)
 
-                #bs_index, target_index = _extract_target_indices(batch[ITEM_SEQ_ENTRY_NAME], item_tokenizer.pad_token_id)
-                #t_logits = logits[bs_index, target_index]
-
-                prediction = filter_predictions(logits)
-
-                softmax = torch.softmax(prediction, dim=-1)
-                item_indices = torch.argsort(softmax, dim=-1, descending=True)
-
                 num_classes = logits.size()[1]
                 item_mask = get_positive_item_mask(targets, num_classes)
-
                 for name, metric in metrics:
-                    metric.update(logits, item_mask)
+                    metric.update(prediction, item_mask)
 
-                item_indices = item_indices.cpu().numpy()
-                scores = softmax.cpu().numpy()
-                item_indices = item_indices[:num_predictions]
 
-                batch_item_ids = item_indices.tolist()
 
-                scores.sort()
-                scores = scores[::-1].tolist()[:num_predictions]
+                softmax = torch.softmax(prediction, dim=-1)
+                scores, indices = torch.sort(softmax, dim=-1, descending=True)
 
-                for batch_sample in range(item_indices.shape[0]):
+                indices = indices[:, :num_predictions]
+                indices = indices.cpu().numpy().tolist()
+
+                scores = scores[:, :num_predictions]
+                scores = scores.cpu().numpy().tolist()
+
+                for batch_sample in range(logits.shape[0]):
 
                     # when we only want the predictions of selected items
                     # the indices are not the item ids anymore, so we have to update them here
-                    item_ids = batch_item_ids[batch_sample]
+                    item_ids = indices[batch_sample]
                     if selected_items is not None:
                         selected_item_ids = [selected_items[i] for i in item_ids]
                         item_ids = selected_item_ids
