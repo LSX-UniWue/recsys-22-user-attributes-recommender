@@ -2,6 +2,7 @@ import inspect
 from functools import wraps
 from typing import Dict, Any
 
+import torchmetrics.metric
 from torch import nn
 from asme.core.tokenization.tokenizer import Tokenizer
 import pytorch_lightning as pl
@@ -33,7 +34,7 @@ def _get_hyperparameters(args, kwargs, init_func):
     for index, arg in enumerate(kwargs):
         value = kwargs.get(arg, None)
         # Exclude non-hyperparameters such as MetricContainers, Metrics, etc.
-        if isinstance(value, (MetricsContainer, pl.metrics.Metric, Tokenizer, type)):
+        if isinstance(value, (MetricsContainer, torchmetrics.metric.Metric, Tokenizer, type)):
             continue
         # Check all elements of a list separately
         elif isinstance(value, list):

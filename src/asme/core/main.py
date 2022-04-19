@@ -87,10 +87,10 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
         module = container.module()
 
         # Save the hyperparameters of the dataset preprocessing
-        preprocessing_parameters = container.datamodule().config.preprocessing_config_values
-        if preprocessing_parameters is not None:
-            preprocessing_parameters = {f"datamodule/{param}": value for param, value in preprocessing_parameters.items()}
-            module.save_hyperparameters(preprocessing_parameters)
+        #preprocessing_parameters = container.datamodule().config.preprocessing_config_values
+        #if preprocessing_parameters is not None:
+        #    preprocessing_parameters = {f"datamodule/{param}": value for param, value in preprocessing_parameters.items()}
+        #    module.save_hyperparameters(preprocessing_parameters)
         trainer.fit(module,
                     train_dataloaders=train_dataloader,
                     val_dataloaders=validation_dataloader)

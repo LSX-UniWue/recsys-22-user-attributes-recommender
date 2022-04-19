@@ -1,7 +1,6 @@
-import os, errno
 from datetime import timedelta
 from pathlib import Path
-from typing import Optional, Dict, Union, Any
+from typing import Optional, Dict, Union
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
@@ -29,9 +28,7 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
                  every_n_train_steps: Optional[int] = None,
                  train_time_interval: Optional[timedelta] = None,
                  every_n_epochs: Optional[int] = None,
-                 save_on_train_epoch_end: Optional[bool] = None,
-                 period: Optional[int] = None,
-                 every_n_val_epochs: Optional[int] = None,
+                 save_on_train_epoch_end: Optional[bool] = None
                  ):
         super().__init__(dirpath,
                          filename,
@@ -45,14 +42,11 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
                          every_n_train_steps,
                          train_time_interval,
                          every_n_epochs,
-                         save_on_train_epoch_end,
-                         period,
-                         every_n_val_epochs)
+                         save_on_train_epoch_end)
 
     def on_train_epoch_end(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused: Optional = None
-    ) -> None:
-        super().on_train_epoch_end(trainer, pl_module, unused)
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+        super().on_train_epoch_end(trainer, pl_module)
 
         # (AD) this enforces the same criterias for saving checkpoints as in the super class
         if (
