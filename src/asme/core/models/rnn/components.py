@@ -10,10 +10,12 @@ from asme.core.models.common.layers.layers import SequenceRepresentationLayer, P
     build_projection_layer, SequenceRepresentationModifierLayer
 from asme.core.models.rnn.util import _build_rnn_cell
 from asme.core.models.rnn.layers import RNNPooler
+from asme.core.utils.hyperparameter_utils import save_hyperparameters
 
 
 class RNNSequenceRepresentationComponent(SequenceRepresentationLayer):
 
+    @save_hyperparameters
     def __init__(self,
                  cell_type: str,
                  item_embedding_dim: int,
@@ -52,6 +54,7 @@ class RNNSequenceRepresentationComponent(SequenceRepresentationLayer):
 
 class RNNProjectionComponent(ProjectionLayer):
 
+    @save_hyperparameters
     def __init__(self,
                  elements_embedding: Embedding,
                  item_vocab_size: int,
@@ -74,6 +77,7 @@ class RNNProjectionComponent(ProjectionLayer):
 
 class RNNPoolingComponent(SequenceRepresentationModifierLayer):
 
+    @save_hyperparameters
     def __init__(self,
                  bidirectional: bool = False,
                  parallel: bool = False):

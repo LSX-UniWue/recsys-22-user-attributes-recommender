@@ -5,7 +5,7 @@ import inspect
 import torch
 
 import pytorch_lightning as pl
-from asme.core.losses.losses import CrossEntropyLoss, SequenceRecommenderLoss, SingleTargetCrossEntropyLoss
+from asme.core.losses.losses import SequenceRecommenderLoss, SingleTargetCrossEntropyLoss
 
 from asme.core.models.common.layers.data.sequence import InputSequence
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel
@@ -16,7 +16,6 @@ from asme.core.metrics.container.metrics_container import MetricsContainer
 from asme.core.modules import LOG_KEY_VALIDATION_LOSS, LOG_KEY_TRAINING_LOSS
 from asme.core.modules.metrics_trait import MetricsTrait
 from asme.core.modules.util.module_util import get_padding_mask, build_eval_step_return_dict, get_additional_meta_data
-from asme.core.tokenization.tokenizer import Tokenizer
 from asme.core.utils.hyperparameter_utils import save_hyperparameters
 
 
@@ -121,7 +120,7 @@ class BaseNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
                   ) -> Dict[str, torch.Tensor]:
         return self.validation_step(batch, batch_idx)
 
-    def predict(self,
+    def predict_step(self,
                 batch: Dict[str, torch.Tensor],
                 batch_idx: int,
                 dataloader_idx: Optional[int] = None
@@ -220,6 +219,17 @@ class NextItemPredictionTrainingModule(BaseNextItemPredictionTrainingModule):
         # select only the outputs at the last step of each sequence
         target_logits = logits[batch_index, seq_length]  # [BS, I]
 
+        return target_logits
+
+    def predict_step(self,
+                     batch: Dict[str, torch.Tensor],
+                     batch_idx: int,
+                     dataloader_idx: Optional[int] = None
+                     ) -> torch.Tensor:
+
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]     # BS x S
+        logits = self(batch, batch_idx)  # BS x S x I
+        target_logits = self._extract_target_logits(input_seq, logits)
         return target_logits
 
 

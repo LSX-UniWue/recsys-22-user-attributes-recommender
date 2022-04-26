@@ -1,5 +1,6 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 
+from asme.core.evaluation.evaluation import BatchEvaluator
 from pytorch_lightning import LightningModule
 from torch.utils.data import DataLoader
 
@@ -46,3 +47,6 @@ class Container:
 
     def tokenizer(self, tokenizer_id: str) -> Tokenizer:
         return self._objects["tokenizers." + tokenizer_id]
+    def evaluators(self) -> List[BatchEvaluator]:
+        return self._objects["evaluation"]["evaluators"]
+

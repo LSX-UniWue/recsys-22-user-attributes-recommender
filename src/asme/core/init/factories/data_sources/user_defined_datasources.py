@@ -46,15 +46,16 @@ class UserDefinedDataSourcesFactory(ObjectFactory):
 
         objects = {}
         for stage in Stage:
-            # Use default values from the configuration and override them with values provided for the specific stage
-            stage_config = _build_stage_config(config, stage)
-            dataset_builder = self.DATASET_BUILDER[split][stage_config.pop("type")]
-            # When using user defined data sources, all processors except the tokenizer have to specified explicitly
-            processor_config = stage_config.pop("processors")
+            if stage.value not in config.get_or_default("exclude_stages", []):
+                # Use default values from the configuration and override them with values provided for the specific stage
+                stage_config = _build_stage_config(config, stage)
+                dataset_builder = self.DATASET_BUILDER[split][stage_config.pop("type")]
+                # When using user defined data sources, all processors except the tokenizer have to specified explicitly
+                processor_config = stage_config.pop("processors")
 
-            # Generate the loader config similar to the template data sources
-            loader_config = build_default_loader_config(stage_config, stage, [dataset_builder], processor_config)
-            objects[stage.value] = self._factory.build(loader_config, context)
+                # Generate the loader config similar to the template data sources
+                loader_config = build_default_loader_config(stage_config, stage, [dataset_builder], processor_config)
+                objects[stage.value] = self._factory.build(loader_config, context)
 
         return objects
 

@@ -1,4 +1,3 @@
-from asme.core.init.factories.data_sources.template_datasources import ParallelSeqTrainingTemplateDataSourcesFactory
 from asme.core.init.factories.modules.modules import GenericModuleFactory
 from asme.core.losses.basket.dream.dream_loss import DreamContrastiveLoss
 from asme.core.losses.cosrec.cosrec_loss import CosRecLoss

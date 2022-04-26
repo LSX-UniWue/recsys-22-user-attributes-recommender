@@ -87,8 +87,7 @@ class CreateVocabulary(PreprocessingAction):
             session_tokens = session[feature_name]
 
             for token in session_tokens:
-                if sub_delimiter is not None:
-                    token = token.split(sub_delimiter)
+                if isinstance(token, list):
                     for word in token:
                         vocab_builder.add_token(word)
                 else:
@@ -120,6 +119,6 @@ class CreateVocabulary(PreprocessingAction):
         prefix = format_prefix(context.get(PREFIXES_KEY) if self.prefixes is None else self.prefixes)
         filename = column.column_name if column.column_name is not None else column.feature_name
         if column.get_config("delimiter") is not None:
-            filename += "-splitted"
+            filename += "-split"
 
         return output_dir / f"{prefix}.vocabulary.{filename}.txt"

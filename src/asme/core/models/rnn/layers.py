@@ -5,12 +5,15 @@ import torch
 from torch import nn
 from torch.nn.utils.rnn import PackedSequence, pad_packed_sequence
 
+from asme.core.utils.hyperparameter_utils import save_hyperparameters
+
 
 class LSTMAdapter(nn.Module):
     """
     Changes the output of `torch.nn.LSTM` to comply with the API for `torch.nn.GRU` by omitting the internal
     context states `c_n`.
     """
+    @save_hyperparameters
     def __init__(self,
                  item_embedding_size: int,
                  hidden_size: int,
@@ -38,6 +41,7 @@ class LSTMAdapter(nn.Module):
 
 class RNNStatePooler(nn.Module):
 
+    @save_hyperparameters
     def __init__(self):
         super().__init__()
 
@@ -53,6 +57,8 @@ class RNNPooler(RNNStatePooler):
     Pooling component that can be used to either return state for every step or only the state after the last element
     of the sequence.
     """
+
+    @save_hyperparameters
     def __init__(self,
                  bidirectional: bool = False,
                  parallel: bool = False
