@@ -505,7 +505,7 @@ def fast_predict(output_file: Path = typer.Argument(..., help='path where output
                 log_per_sample_metrics: Optional[bool] = typer.Option(default=True,
                                                                       help='enable logging of per-sample metrics.'),
                 seed: Optional[int] = typer.Option(default=None, help='seed used eg for the sampled evaluation'),
-                log_session_key: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
+                log_session_key: Optional[bool] = typer.Option(default=False, help='enable input logging.'),
                 ):
 
     # checking if the file already exists
@@ -575,7 +575,7 @@ def fast_predict(output_file: Path = typer.Argument(..., help='path where output
                     sequence_position_ids = batch['pos']
                 targets = batch[TARGET_ENTRY_NAME]
 
-                logits = module.predict_step(batch, batch_index)
+                logits = module.predict_step(batch=batch, batch_idx=batch_index)
                 prediction = filter_predictions(logits)
 
                 metrics = _extract_sample_metrics(module)
