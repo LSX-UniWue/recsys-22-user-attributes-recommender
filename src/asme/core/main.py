@@ -580,7 +580,7 @@ def fast_predict(output_file: Path = typer.Argument(..., help='path where output
 
                 metrics = _extract_sample_metrics(module)
 
-                num_classes = logits.size()[1]
+                num_classes = len(item_tokenizer.get_vocabulary())
                 item_mask = get_positive_item_mask(targets, num_classes)
                 for name, metric in metrics:
                     metric.update(prediction, item_mask)
