@@ -76,6 +76,18 @@ class InjectObjectConfig:
 
 
 def inject(**injects: Inject):
+    """
+    This annotation is supposed to be placed on the init function of any object built by an ASME factory. It allows to
+    populate arbitrary parameters of the init function with values derived form the config or context. Note that this
+    annotation requires the `ASME_GLOBAL_FACTORY_CONFIG`  and `ASME_GLOBAL_FACTORY_CONTEXT`  to be set to the
+    config/context objects that are used by all factories. If you use the `ContainerFactory` this is done automatically.
+
+    :param injects: A list of key value-pairs where the key represents the name of the parameter that should be
+        populated via injection while the value is an object deriving from `Inject`. This instance the determines how
+        injections are performed.
+    """
+
+    # We partially apply the actual injection function since you can not pass kwargs to the decorator directly
     return functools.partial(inject_partially_applied, injects=injects)
 
 
@@ -93,6 +105,7 @@ def inject_partially_applied(init, injects: Dict[str,Inject]):
             )
             for param in parameters if param.parameter_name in injects]
         parameter_dict = {name: value for name, value in kwargs.items() if name not in injects}
+        # This resolves all injection directives
         _handle_injects(injectable_parameters, GLOBAL_ASME_FACTORY_CONTEXT, GLOBAL_ASME_FACTORY_CONFIG, parameter_dict)
         init(self, *args, **parameter_dict)
 
