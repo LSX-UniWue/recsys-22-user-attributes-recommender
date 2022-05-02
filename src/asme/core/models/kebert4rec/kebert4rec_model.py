@@ -8,22 +8,27 @@ from asme.core.models.common.layers.layers import PROJECT_TYPE_LINEAR, build_pro
 from asme.core.models.common.layers.transformer_layers import TransformerEmbedding
 from asme.core.models.kebert4rec.components import KeBERT4RecSequenceElementsRepresentationComponent
 from asme.core.models.transformer.transformer_encoder_model import TransformerEncoderModel
+from asme.core.tokenization.tokenizer import Tokenizer
 from asme.core.utils.hyperparameter_utils import save_hyperparameters
-from asme.core.utils.inject import InjectVocabularySize, InjectTokenizers
+from asme.core.utils.inject import InjectVocabularySize, InjectTokenizers, inject
 
 
 class KeBERT4RecModel(TransformerEncoderModel):
 
+    @inject(
+        item_vocab_size=InjectVocabularySize("item"),
+        additional_attributes_tokenizer=InjectTokenizers()
+    )
     @save_hyperparameters
     def __init__(self,
                  transformer_hidden_size: int,
                  num_transformer_heads: int,
                  num_transformer_layers: int,
-                 item_vocab_size: InjectVocabularySize("item"),
+                 item_vocab_size: int,
                  max_seq_length: int,
                  transformer_dropout: float,
                  additional_attributes: Dict[str, Dict[str, Any]],
-                 additional_attributes_tokenizer: InjectTokenizers(),
+                 additional_attributes_tokenizer: Dict[str, Tokenizer],
                  embedding_pooling_type: str = None,
                  initializer_range: float = 0.02,
                  transformer_intermediate_size: Optional[int] = None,
