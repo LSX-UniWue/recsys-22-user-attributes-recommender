@@ -2,7 +2,7 @@ import functools
 
 from torch import nn
 
-from asme.core.utils.inject import InjectVocabularySize
+from asme.core.utils.inject import InjectVocabularySize, inject, InjectTokenizers
 from asme.core.models.common.components.representation_modifier.ffn_modifier import \
     FFNSequenceRepresentationModifierComponent
 from asme.core.models.common.layers.layers import build_projection_layer
@@ -19,19 +19,20 @@ class BERT4RecModel(TransformerEncoderModel):
         Using own transformer implementation to be able to pass batch first tensors to the model
     """
 
+    @inject(item_vocab_size=InjectVocabularySize("item"))
     @save_hyperparameters
     def __init__(self,
                  transformer_hidden_size: int,
                  num_transformer_heads: int,
                  num_transformer_layers: int,
-                 item_vocab_size: InjectVocabularySize("item"),
+                 item_vocab_size: int,
                  max_seq_length: int,
                  transformer_dropout: float,
                  project_layer_type: str = 'transpose_embedding',
                  embedding_pooling_type: str = None,
                  initializer_range: float = 0.02,
                  transformer_intermediate_size: int = None,
-                 transformer_attention_dropout: float = None
+                 transformer_attention_dropout: float = None,
                  ):
         modification_layer = FFNSequenceRepresentationModifierComponent(transformer_hidden_size)
         embedding_layer = TransformerEmbedding(item_vocab_size, max_seq_length, transformer_hidden_size,

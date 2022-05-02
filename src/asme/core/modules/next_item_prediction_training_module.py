@@ -9,7 +9,8 @@ from asme.core.losses.losses import SequenceRecommenderLoss, SingleTargetCrossEn
 
 from asme.core.models.common.layers.data.sequence import InputSequence
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel
-from asme.core.utils.inject import InjectTokenizer
+from asme.core.tokenization.tokenizer import Tokenizer
+from asme.core.utils.inject import InjectTokenizer, inject
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME
 from asme.core.metrics.container.metrics_container import MetricsContainer
@@ -28,10 +29,11 @@ class BaseNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
     - RNN
     """
 
+    @inject(item_tokenizer=InjectTokenizer("item"))
     @save_hyperparameters
     def __init__(self,
                  model: SequenceRecommenderModel,
-                 item_tokenizer: InjectTokenizer("item"),
+                 item_tokenizer: Tokenizer,
                  metrics: MetricsContainer,
                  learning_rate: float = 0.001,
                  beta_1: float = 0.99,
