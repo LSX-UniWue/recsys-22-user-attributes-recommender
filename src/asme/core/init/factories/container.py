@@ -4,7 +4,7 @@ import asme.core.init.factories
 from asme.core.init.config import Config
 from asme.core.init.container import Container
 from asme.core.init.context import Context
-from asme.core.init.factories import GLOBAL_ASME_FACTORY_CONTEXT, GLOBAL_ASME_FACTORY_CONFIG
+from asme.core.init.factories import InjectionContext
 from asme.core.init.factories.common.conditional_based_factory import ConditionalFactory
 from asme.core.init.factories.common.dependencies_factory import DependenciesFactory
 from asme.core.init.factories.data_sources.datamodule import DataModuleFactory
@@ -62,8 +62,7 @@ class ContainerFactory(ObjectFactory):
               ) -> Container:
 
         # Make context and config available globally for injects to work
-        asme.core.init.factories.GLOBAL_ASME_FACTORY_CONFIG = config
-        asme.core.init.factories.GLOBAL_ASME_FACTORY_CONTEXT = context
+        asme.core.init.factories.GLOBAL_ASME_INJECTION_CONTEXT = InjectionContext(config, context)
 
         # First, we have to load all additional modules
         self.import_factory.build(config, context)

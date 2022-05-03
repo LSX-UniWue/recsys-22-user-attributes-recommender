@@ -2,14 +2,14 @@ import functools
 import importlib
 import inspect
 from dataclasses import dataclass, field
-from typing import Optional, Any, Dict, List, Callable
+from typing import Optional, Any, Dict, List
 
 from dataclasses_json import dataclass_json
 
 
 from asme.core.init.config import Config
 from asme.core.init.context import Context
-from asme.core.init.factories import GLOBAL_ASME_FACTORY_CONFIG, GLOBAL_ASME_FACTORY_CONTEXT
+from asme.core.init.factories import GLOBAL_ASME_INJECTION_CONTEXT
 from asme.core.init.factories.features.tokenizer_factory import get_tokenizer_key_for_voc
 from asme.core.init.factories.modules.modules import GenericModelFactory
 from asme.core.init.factories.modules.util import ParameterInfo, get_init_parameters, get_tokenizers_from_context
@@ -106,7 +106,8 @@ def inject_partially_applied(init, injects: Dict[str,Inject]):
             for param in parameters if param.parameter_name in injects]
         parameter_dict = {name: value for name, value in kwargs.items() if name not in injects}
         # This resolves all injection directives
-        _handle_injects(injectable_parameters, GLOBAL_ASME_FACTORY_CONTEXT, GLOBAL_ASME_FACTORY_CONFIG, parameter_dict)
+        injection_context = GLOBAL_ASME_INJECTION_CONTEXT
+        _handle_injects(injectable_parameters, injection_context.get_context(), injection_context.get_config(), parameter_dict)
         init(self, *args, **parameter_dict)
 
     return new_init
@@ -150,7 +151,9 @@ def _build(config: Config, path: List[str], current_obj_name: str = ""):
     return obj_class(**parameter_dict)
 
 
-def _handle_injects(injectable_parameters: List[ParameterInfo], context: Context, config: Config,
+def _handle_injects(injectable_parameters: List[ParameterInfo],
+                    context: Context,
+                    config: Config,
                     parameter_dict: Dict[str, Any]):
     """
     This function tries to inject a value into the parameter_dict for every parameter given by injectable parameters.

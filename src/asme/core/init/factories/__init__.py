@@ -1,2 +1,3 @@
-GLOBAL_ASME_FACTORY_CONTEXT = None
-GLOBAL_ASME_FACTORY_CONFIG = None
+from asme.core.init.factories.injection_context import InjectionContext
+
+GLOBAL_ASME_INJECTION_CONTEXT: InjectionContext = None
