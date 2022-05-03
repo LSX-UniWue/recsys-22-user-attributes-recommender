@@ -46,10 +46,13 @@ ARG PYTORCH_VERSION=1.11.0
 ARG PYTORCH_VISION_VERSION=0.12.0
 ARG PYTORCH_TEXT_VERSION=0.12.0
 ARG PYTORCH_AUDIO_VERSION=0.11.0
+ARG PYTORCH_LIGHTNING_VERSION=1.6.2
 ARG CUDA_CHANNEL=nvidia
 ARG INSTALL_CHANNEL=pytorch
 ENV CONDA_OVERRIDE_CUDA=${CUDA_VERSION}
 RUN /opt/conda/bin/conda install -c "${INSTALL_CHANNEL}" -c "${CUDA_CHANNEL}" -y "python=${PYTHON_VERSION}" "pytorch=${PYTORCH_VERSION}" "torchvision=${PYTORCH_VISION_VERSION}" "torchtext=${PYTORCH_TEXT_VERSION}" "torchaudio=${PYTORCH_AUDIO_VERSION}" "cudatoolkit=${CUDA_VERSION}" && \
+    /opt/conda/bin/conda clean -ya \
+RUN /opt/conda/bin/conda install -c conda-forge -y "pytorch-lightning=${PYTORCH_LIGHTNING_VERSION}" "torchmetrics" "scipy" "pandas" "scikit-learn" "optuna" "matplotlib" "seaborn" "tqdm" "rich" && \
     /opt/conda/bin/conda clean -ya
 RUN /opt/conda/bin/pip install torchelastic
 
