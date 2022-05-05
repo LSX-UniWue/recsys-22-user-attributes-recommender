@@ -2,6 +2,7 @@ import flatten_dict
 from typing import Dict, Any, List, Optional, Union
 
 
+# TODO clean up old methods
 class Config:
     """
     An object that controls access to the configuration.

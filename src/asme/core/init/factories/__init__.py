@@ -1,3 +1,3 @@
-from asme.core.init.factories.injection_context import InjectionContext
+from asme.core.init.factories.build_context import BuildContext
 
-GLOBAL_ASME_INJECTION_CONTEXT: InjectionContext = None
+GLOBAL_ASME_INJECTION_CONTEXT: BuildContext = None

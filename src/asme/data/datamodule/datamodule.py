@@ -7,6 +7,7 @@ import pytorch_lightning.core as pl
 from torch.utils.data import DataLoader
 
 from asme.core.init.context import Context
+from asme.core.init.factories import BuildContext
 from asme.core.init.factories.data_sources.template_datasources import TemplateDataSourcesFactory
 from asme.core.init.factories.data_sources.user_defined_datasources import UserDefinedDataSourcesFactory
 from asme.core.init.templating.datasources.datasources import DatasetSplit
@@ -83,10 +84,11 @@ class AsmeDataModule(pl.LightningDataModule):
         # Build the datasources depending on what the user specified
         if self.config.template is not None:
             factory = TemplateDataSourcesFactory("name")
-            self._objects = factory.build(self.config.template, self.context)
+
+            self._objects = factory.build(BuildContext(self.config.template, self.context))
         else:
             factory = UserDefinedDataSourcesFactory()
-            self._objects = factory.build(self.config.data_sources, self.context)
+            self._objects = factory.build(BuildContext(self.config.data_sources, self.context))
 
         self._has_setup = True
 

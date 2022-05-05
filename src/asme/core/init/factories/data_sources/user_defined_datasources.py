@@ -3,8 +3,10 @@ from typing import List, Any, Dict
 
 from asme.core.init.config import Config
 from asme.core.init.context import Context
+from asme.core.init.factories import BuildContext
 from asme.core.init.factories.data_sources.common import build_default_loader_config
 from asme.core.init.factories.data_sources.loader import LoaderFactory
+from asme.core.init.factories.util import build_with_subsection
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.core.init.templating.datasources.datasources import Stage, DatasetSplit, NextPositionDatasetBuilder, \
     SequenceDatasetRatioSplitBuilder, NextPositionWindowDatasetBuilder, LeaveOneOutSessionDatasetBuilder, \
@@ -30,16 +32,22 @@ class UserDefinedDataSourcesFactory(ObjectFactory):
         super().__init__()
         self._factory = LoaderFactory()
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
+    def can_build(self, build_context: BuildContext) -> CanBuildResult:
+
         for stage in Stage:
-            result = self._factory.can_build(config.get_config(stage.value), context)
-            if result.type != CanBuildResultType.CAN_BUILD:
+            build_context.enter_section(stage.value)
+            result = self._factory.can_build(build_context)
+            build_context.leave_section()
+
+        if result.type != CanBuildResultType.CAN_BUILD:
                 return result
 
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
-    def build(self, config: Config, context: Context) -> Dict[str, Any]:
+    def build(self, build_context: BuildContext) -> Dict[str, Any]:
 
+        config = build_context.get_current_config_section()
+        context = build_context.get_context()
         # If no dataset path was specified, try to the use the one provided by the datamodule
         split = DatasetSplit[config.get("split").upper()]
         config.set_if_absent("path", context.get(CURRENT_SPLIT_PATH_CONTEXT_KEY))
@@ -54,11 +62,12 @@ class UserDefinedDataSourcesFactory(ObjectFactory):
 
             # Generate the loader config similar to the template data sources
             loader_config = build_default_loader_config(stage_config, stage, [dataset_builder], processor_config)
-            objects[stage.value] = self._factory.build(loader_config, context)
+            loader_build_context = BuildContext(Config({"loader": loader_config}), context)
+            objects[stage.value] = build_with_subsection(self._factory, loader_build_context)
 
         return objects
 
-    def is_required(self, context: Context) -> bool:
+    def is_required(self, build_context: BuildContext) -> bool:
         return True
 
     def config_path(self) -> List[str]:
