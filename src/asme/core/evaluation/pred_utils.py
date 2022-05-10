@@ -9,7 +9,7 @@ import numpy as np
 from asme.core.utils.ioutils import load_file_with_item_ids
 
 
-def get_positive_item_mask(targets: torch.Tensor, num_classes: int, device) -> torch.Tensor:
+def get_positive_item_mask(targets: torch.Tensor, num_classes: int) -> torch.Tensor:
     """
     Create a positive item mask from the target tensor.
 
@@ -17,7 +17,7 @@ def get_positive_item_mask(targets: torch.Tensor, num_classes: int, device) -> t
     :param num_classes: the toal number of classes (items)
     :return: a representation where each relevant item is marked with `1` all others are marked with `0`. (N, I)
     """
-    return F.one_hot(targets, num_classes, device=device)
+    return F.one_hot(targets, num_classes)
 
 
 def _extract_target_indices(input_seq: torch.Tensor, padding_token_id: int) -> Tuple[torch.Tensor, torch.Tensor]:
