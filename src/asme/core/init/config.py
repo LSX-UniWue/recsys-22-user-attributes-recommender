@@ -49,6 +49,11 @@ class Config:
             elif key not in current_section and not make_parents:
                 return None
 
+            # Sometimes a section is resolved to `None` if it does not contain any keys, e.g. tokenizer.vocabulary.
+            # This depends on the input format.
+            if current_section[key] is None:
+                current_section[key] = dict()
+
             current_section = current_section[key]
 
         if not isinstance(current_section, dict):
