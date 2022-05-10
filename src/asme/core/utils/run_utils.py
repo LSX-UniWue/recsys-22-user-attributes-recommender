@@ -5,6 +5,7 @@ from typing import List, Optional, Dict
 import _jsonnet
 import optuna
 import yaml
+from yaml import Loader
 from optuna import Study
 from optuna.study import StudyDirection
 from pytorch_lightning.utilities import cloud_io
@@ -66,8 +67,8 @@ def load_config(config_file: Path,
 
     if config_file.suffix == ".json" or config_file.suffix == ".jsonnet":
         loaded_config = json.loads(resolved_config_content)
-    elif config_file.suffix == ".yaml":
-        loaded_config = yaml.load(resolved_config_content)
+    elif config_file.suffix == ".yaml" or config_file.suffix == ".yml":
+        loaded_config = yaml.load(resolved_config_content, Loader)
     else:
         logger.warning(f"Did not recognize the config file format by its suffix. Assuming json.")
         try:
