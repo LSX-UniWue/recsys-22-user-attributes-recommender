@@ -7,10 +7,10 @@ from asme.core.evaluation.evaluation import BatchEvaluator
 def all_equal_in_list(lst):
     return not lst or lst.count(lst[0]) == len(lst)
 
-class EvaluationCSVWriter:
+class BatchEvaluationCSVWriter:
 
     """
-    The EvaluationWriter writes predictions into a file encoded as CSV.
+    The EvaluationWriter writes predictions into a file encoded as CSV, taking one batch at a time.
 
     Each sample is written to the file in the
     following way:
@@ -37,12 +37,10 @@ class EvaluationCSVWriter:
                          batch,
                          logits):
 
-       # eval_results = [(e.evaluate(batch_index, batch, logits), e.eval_samplewise()) for e in self.evaluators]
+        results = [(evaluator.evaluate(batch_index, batch, logits), evaluator.eval_samplewise(), evaluator.get_header()) for evaluator in self.evaluators]
 
         #Per Sample in batch
         for sample in range(logits.shape[0]):
-            results = [(evaluator.evaluate(batch_index, batch, logits), evaluator.eval_samplewise(), evaluator.get_header()) for evaluator in self.evaluators]
-
             num_rows = [len(eval[0]) for eval, samplewise, header in results if not samplewise]
             if not all_equal_in_list(num_rows):
                 raise ValueError(f"Evaluators output size must be of same length, but is {num_rows}.")

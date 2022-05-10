@@ -1,8 +1,12 @@
 import torch
 
 import torch.nn.functional as F
-from typing import Dict, List, Tuple, Callable, Any
+from typing import Dict, List, Tuple, Callable, Any, Iterator
 from pathlib import Path
+
+from torch.utils.data import Sampler, DataLoader
+from torch.utils.data.dataset import T_co, Dataset
+
 from asme.core.metrics.metric import MetricStorageMode
 from asme.core.modules.metrics_trait import MetricsTrait
 import numpy as np
@@ -70,3 +74,30 @@ def _selected_file_and_filter(selected_items_file: Path) -> Tuple[List[int], Cal
         filter_predictions = _noop_filter
 
     return selected_items, filter_predictions
+
+
+
+# XXX: currently the predict method returns all batches at once, this is not RAM efficient
+# so we loop through the loader and use only one batch to call the predict method of pytorch lightning
+# replace as soon as this is fixed in pytorch lighting
+class FixedBatchSampler(Sampler):
+
+    def __init__(self,
+                 batch_start: int,
+                 batch_size: int):
+        super().__init__(None)
+        self.batch_start = batch_start
+        self.batch_size = batch_size
+
+    def __iter__(self) -> Iterator[T_co]:
+        return iter([range(self.batch_start, self.batch_start + self.batch_size)])
+
+    def __len__(self):
+        return 1
+
+def create_batch_loader(dataset: Dataset,
+                         batch_sampler: Sampler,
+                         collate_fn,
+                         num_workers: int
+                         ) -> DataLoader:
+    return DataLoader(dataset, batch_sampler=batch_sampler, collate_fn=collate_fn, num_workers=num_workers)
