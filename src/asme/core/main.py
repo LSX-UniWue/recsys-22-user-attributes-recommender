@@ -13,14 +13,13 @@ from pytorch_lightning.loggers import LoggerCollection, MLFlowLogger
 from loguru import logger
 
 from asme.core.callbacks.metrics_history import MetricsHistoryCallback
-from asme.core.evaluation.evaluation import ExtractSampleIdEvaluator, ExtractScoresEvaluator, TrueTargetEvaluator, \
-    ExtractRecommendationEvaluator, PerSampleMetricsEvaluator, LogInputEvaluator
+
 from asme.core.evaluation.pred_utils import _selected_file_and_filter, _extract_sample_metrics, _extract_target_indices, \
     get_positive_item_mask
 from asme.core.metrics.container.metrics_container import MetricsContainer
 from asme.core.metrics.metric import MetricStorageMode
 from asme.core.tokenization.utils.tokenization import remove_special_tokens
-from asme.core.utils.pred_utils import load_file_with_item_ids
+from asme.core.utils.pred_utils import load_file_with_item_ids, create_batch_loader, FixedBatchSampler
 from asme.core.init.templating.search.resolver import OptunaParameterResolver
 
 from asme.core.init.templating.search.processor import SearchTemplateProcessor
@@ -41,7 +40,7 @@ from asme.core.utils.run_utils import load_config, create_container, OBJECTIVE_M
 from asme.core.utils import ioutils
 from asme.core.utils.ioutils import determine_log_dir, save_config, save_finished_flag, \
     finished_flag_exists, load_file_with_item_ids
-from asme.core.writer.prediction.evaluator_prediction_writer import EvaluationCSVWriter
+from asme.core.writer.prediction.evaluator_prediction_writer import BatchEvaluationCSVWriter
 from asme.core.writer.prediction.prediction_writer import build_prediction_writer
 from asme.core.writer.results.results_writer import build_result_writer, check_file_format_supported
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME, SESSION_IDENTIFIER
@@ -386,18 +385,22 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
         seed_everything(seed)
 
     module = container.module()
+    trainer = container.trainer().build()
     test_loader = container.test_dataloader()
     evaluators = container.evaluators()
 
-    # open the file and build the writer
     with open(output_file, 'w') as result_file:
-        output_writer = EvaluationCSVWriter(evaluators=evaluators, file_handle=result_file)
-
-        with torch.no_grad():
-            module.eval()
-            for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
-                logits = module.predict_step(batch, batch_index)
-                output_writer.write_evaluation(batch_index, batch, logits)
+        output_writer = BatchEvaluationCSVWriter(evaluators=evaluators, file_handle=result_file)
+        for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
+            sequences = batch[ITEM_SEQ_ENTRY_NAME]
+            batch_size = sequences.size()[0]
+            batch_start = batch_index * batch_size
+            batch_loader_predict = create_batch_loader(test_loader.dataset,
+                                                    batch_sampler=FixedBatchSampler(batch_start, batch_size),
+                                                    collate_fn=test_loader.collate_fn,
+                                                    num_workers=test_loader.num_workers)
+            prediction_results = trainer.predict(module, dataloaders=batch_loader_predict)[0]
+            output_writer.write_evaluation(batch_index, batch, prediction_results)
 
 
 @app.command()

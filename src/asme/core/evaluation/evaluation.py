@@ -108,7 +108,7 @@ class ExtractSampleIdEvaluator(BatchEvaluator):
         sample_id = sample_ids[sample_index]
         if sequence_position_ids is None:
             return sample_id
-        return f'{sample_id}_{sequence_position_ids[sample_index].item()}'
+        return f'{sample_id}_{sequence_position_ids[sample_index]}'
 
 
 class TrueTargetEvaluator(BatchEvaluator):
@@ -231,10 +231,9 @@ class PerSampleMetricsEvaluator(BatchEvaluator):
         self.filter = filter
         self.module = module
 
-        metrics_container: MetricsContainer = module.metrics
-        for metric in metrics_container.get_metrics():
-            metric.set_metrics_storage_mode(MetricStorageMode.PER_SAMPLE)
+        metrics_container = module.metrics
         self.header = metrics_container.get_metric_names()
+        self.samplewise_metrics_set = False
 
     def get_header(self) -> List[str]:
         return self.header
@@ -247,6 +246,13 @@ class PerSampleMetricsEvaluator(BatchEvaluator):
                  batch: Dict[str, Any],
                  logits: Tensor,
                  ) -> List[Any]:
+
+        # Can only set it here, to not interfere with training
+        if not self.samplewise_metrics_set:
+            metrics_container = self.module.metrics
+            for metric in metrics_container.get_metrics():
+                metric.set_metrics_storage_mode(MetricStorageMode.PER_SAMPLE)
+            self.samplewise_metrics_set = True
 
         targets = batch[TARGET_ENTRY_NAME]
         metrics = _extract_sample_metrics(self.module)
