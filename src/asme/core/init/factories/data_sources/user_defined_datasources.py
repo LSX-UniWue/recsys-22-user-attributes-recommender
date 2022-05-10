@@ -62,7 +62,7 @@ class UserDefinedDataSourcesFactory(ObjectFactory):
 
             # Generate the loader config similar to the template data sources
             loader_config = build_default_loader_config(stage_config, stage, [dataset_builder], processor_config)
-            loader_build_context = BuildContext(Config({"loader": loader_config}), context)
+            loader_build_context = BuildContext(Config({"loader": loader_config.config}), context)
             objects[stage.value] = build_with_subsection(self._factory, loader_build_context)
 
         return objects
