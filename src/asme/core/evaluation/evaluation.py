@@ -258,7 +258,7 @@ class PerSampleMetricsEvaluator(BatchEvaluator):
         metrics = _extract_sample_metrics(self.module)
 
         num_classes = logits.size()[1]
-        item_mask = get_positive_item_mask(targets, num_classes)
+        item_mask = get_positive_item_mask(targets, num_classes, device=targets.device)
         for name, metric in metrics:
             metric.update(logits, item_mask)
 
