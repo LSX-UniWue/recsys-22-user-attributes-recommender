@@ -607,7 +607,7 @@ def evaluate(config_file: Path = typer.Option(default=None, help='the path to th
     trainer = container.trainer().build()
     test_loader = container.test_dataloader()
 
-    eval_results = trainer.test(module, test_dataloaders=test_loader, verbose=not write_results_to_file)
+    eval_results = trainer.test(module, dataloaders=test_loader, verbose=not write_results_to_file)
 
     if write_results_to_file:
         with open(output_file, 'w') as output_file_handle:
