@@ -48,7 +48,6 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
 
     def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
         super().on_train_epoch_end(trainer, pl_module)
-        print(f"train_epoch_end: {self.best_model_path}")
 
         if not self._should_skip_saving_best_checkpoint(trainer) and self._save_on_train_epoch_end:
             if self._every_n_epochs >= 1 and (trainer.current_epoch + 1) % self._every_n_epochs == 0:
@@ -57,7 +56,6 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
 
     def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
         super().on_validation_end(trainer, pl_module)
-        print(f"validation_end: {self.best_model_path}")
 
         if not self._should_skip_saving_best_checkpoint(trainer) and not self._save_on_train_epoch_end:
             if self._every_n_epochs >= 1 and (trainer.current_epoch + 1) % self._every_n_epochs == 0:
