@@ -34,8 +34,6 @@ class FilterPredictionItems:
 
 
 
-    #def _selected_file_and_filter() -> Tuple[List[int], Callable[[List[int]], Any]]:
-
 
 
 

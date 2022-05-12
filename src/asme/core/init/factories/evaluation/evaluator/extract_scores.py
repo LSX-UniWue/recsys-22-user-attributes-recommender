@@ -26,10 +26,12 @@ class ExtractScoresEvaluatorFactory(ObjectFactory):
 
         item_tokenizer = context.get("tokenizers.item")
         filter_items = context.get("evaluation")["filter_items"].get_filter()
+
+        selected_items = context.get("evaluation")["filter_items"].get_selected_items()
         num_predictions = config.get("number_predictions")
 
-        return ExtractScoresEvaluator(item_tokenizer=item_tokenizer, filter=filter_items,
-                                      num_predictions=num_predictions)
+        return ExtractScoresEvaluator(item_tokenizer=item_tokenizer, num_predictions=num_predictions,
+                                      selected_items=selected_items)
 
     def is_required(self, context: Context) -> bool:
         return False

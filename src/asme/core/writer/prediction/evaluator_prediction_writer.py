@@ -28,8 +28,8 @@ class BatchEvaluationCSVWriter:
         self.csv_writer = csv.writer(file_handle)
         self.evaluators = evaluators
 
-        self.headers = itertools.chain.from_iterable([evaluator.get_header() for evaluator in evaluators])
-        self.csv_writer.writerow(self.headers)
+        self.headers = [["order"]]+[evaluator.get_header() for evaluator in evaluators]
+        self.csv_writer.writerow(itertools.chain.from_iterable(self.headers))
 
 
     def write_evaluation(self,
@@ -41,13 +41,13 @@ class BatchEvaluationCSVWriter:
 
         #Per Sample in batch
         for sample in range(logits.shape[0]):
-            num_rows = [len(eval[0]) for eval, samplewise, header in results if not samplewise]
+            num_rows = [len(eval[1]) for eval, samplewise, header in results if not samplewise]
             if not all_equal_in_list(num_rows):
                 raise ValueError(f"Evaluators output size must be of same length, but is {num_rows}.")
 
             rows_to_write = []
             for i in range(num_rows[0]):
-                row_to_write = []
+                row_to_write = [str(i+1)]
                 for eval, samplewise, header in results:
                     res = eval[sample] if samplewise else eval[sample][i]
                     if len(header) > 1:

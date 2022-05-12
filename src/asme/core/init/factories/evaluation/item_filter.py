@@ -23,7 +23,7 @@ class FilterPredictionItemsFactory(ObjectFactory):
               context: Context
               ) -> FilterPredictionItems:
 
-        filter_file = config.get_or_default("selected_items_file", None)
+        filter_file = config.get_or_default("file", None)
         return FilterPredictionItems(selected_items_file=filter_file)
 
     def is_required(self, context: Context) -> bool:
