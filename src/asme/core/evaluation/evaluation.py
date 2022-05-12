@@ -1,11 +1,10 @@
 from abc import abstractmethod
 from typing import Dict, Any, List
 
+import numpy as np
 import torch
 from asme.core.evaluation.pred_utils import _extract_sample_metrics, get_positive_item_mask
-from asme.core.metrics.container.metrics_container import MetricsContainer
 from asme.core.metrics.metric import MetricStorageMode
-from asme.core.tokenization.utils.tokenization import remove_special_tokens
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME, SESSION_IDENTIFIER
 from torch import Tensor
 
@@ -49,6 +48,11 @@ class LogInputEvaluator(BatchEvaluator):
     def __init__(self, item_tokenizer):
         self.item_tokenizer = item_tokenizer
         self.header = ["input"]
+        tokens = np.asarray(self.item_tokenizer.vocabulary.tokens())
+        ids = np.asarray(self.item_tokenizer.vocabulary.ids())
+        self.vocab_lookup = np.empty(max(ids) + 1, dtype=tokens.dtype)
+        self.vocab_lookup[ids] = tokens
+        self.special_tokens = np.asarray(self.item_tokenizer.get_special_token_ids())
 
     def get_header(self) -> List[str]:
         return self.header
@@ -61,14 +65,14 @@ class LogInputEvaluator(BatchEvaluator):
                  batch: Dict[str, Any],
                  logits: Tensor,
                  ) -> List[Any]:
-        input_sequences = []
-        for batch_sample in range(logits.shape[0]):
-            sequence = batch[ITEM_SEQ_ENTRY_NAME][batch_sample].tolist()
-            # remove padding tokens
-            sequence = remove_special_tokens(sequence, self.item_tokenizer)
-            sequence = self.item_tokenizer.convert_ids_to_tokens(sequence)
-            input_sequences.append(sequence)
-        return input_sequences
+        input_ids = np.asarray(batch[ITEM_SEQ_ENTRY_NAME])
+        input_tokens = self.vocab_lookup[input_ids]
+
+        filter_special_tokens_boolean = np.isin(input_ids, self.special_tokens, invert=True)
+        filtered_result = [input_tokens[sample][filter_special_tokens_boolean[sample]].tolist() for sample in
+                           range(input_tokens.shape[0])]
+
+        return filtered_result
 
 
 class ExtractSampleIdEvaluator(BatchEvaluator):
@@ -104,7 +108,8 @@ class ExtractSampleIdEvaluator(BatchEvaluator):
 
         return sample_ids
 
-    def _generate_sample_id(self, sample_ids, sequence_position_ids, sample_index) -> str:
+    @staticmethod
+    def _generate_sample_id(sample_ids, sequence_position_ids, sample_index) -> str:
         sample_id = sample_ids[sample_index]
         if sequence_position_ids is None:
             return sample_id
@@ -119,6 +124,10 @@ class TrueTargetEvaluator(BatchEvaluator):
     def __init__(self, item_tokenizer):
         self.header = ["target"]
         self.item_tokenizer = item_tokenizer
+        tokens = np.asarray(self.item_tokenizer.vocabulary.tokens())
+        ids = np.asarray(self.item_tokenizer.vocabulary.ids())
+        self.vocab_lookup = np.empty(max(ids) + 1, dtype=tokens.dtype)
+        self.vocab_lookup[ids] = tokens
 
     def get_header(self) -> List[str]:
         return self.header
@@ -131,34 +140,24 @@ class TrueTargetEvaluator(BatchEvaluator):
                  batch: Dict[str, Any],
                  logits: Tensor,
                  ) -> List[Any]:
-
-        targets = batch[TARGET_ENTRY_NAME]
-        sequences = batch[ITEM_SEQ_ENTRY_NAME]
-        is_basket_recommendation = len(sequences.size()) == 3
-
-        target_converted = []
-        for batch_sample in range(logits.shape[0]):
-            true_target = targets[batch_sample]
-            if is_basket_recommendation:
-                true_target = remove_special_tokens(true_target.tolist(), self.item_tokenizer)
-            else:
-                true_target = [true_target.item()]
-
-            true_target = self.item_tokenizer.convert_ids_to_tokens(true_target)
-            target_converted.append(true_target)
-        return target_converted
+        targets = batch[TARGET_ENTRY_NAME].numpy()
+        targets = self.vocab_lookup[targets].tolist()
+        targets = [[target] for target in targets]
+        return targets
 
 
 class ExtractScoresEvaluator(BatchEvaluator):
     """
-    Extract the scores
+    Extract the scores for each recommended item.
+    Output: List of lists with scores for each recommended item for each sample in batch
     """
 
-    def __init__(self, item_tokenizer, filter, num_predictions: int):
+    def __init__(self, item_tokenizer, num_predictions: int, selected_items=None):
         self.header = ["score"]
         self.item_tokenizer = item_tokenizer
         self.num_predictions = num_predictions
-        self.filter = filter
+        self.selected_items = selected_items
+        self.filter_items = np.asarray(self.selected_items)
 
     def get_header(self) -> List[str]:
         return self.header
@@ -171,26 +170,40 @@ class ExtractScoresEvaluator(BatchEvaluator):
                  batch: Dict[str, Any],
                  logits: Tensor,
                  ) -> List[Any]:
-        prediction = self.filter(logits)
-        softmax = torch.softmax(prediction, dim=-1)
+        softmax = torch.softmax(logits, dim=-1)
         scores, indices = torch.sort(softmax, dim=-1, descending=True)
         scores = scores[:, :self.num_predictions]
-        scores = scores.cpu().numpy().tolist()
+        scores = scores.cpu().numpy()
+
+        n_indices = indices[:, :self.num_predictions].cpu().numpy()
+
+        if self.selected_items is not None:
+            filter_boolean = np.isin(n_indices, self.filter_items)
+            scores = [scores[sample][filter_boolean[sample]].tolist() for sample in range(scores.shape[0])]
+        else:
+            scores = scores.tolist()
 
         return scores
 
 
 class ExtractRecommendationEvaluator(BatchEvaluator):
     """
-    Extract the recommendation, always needed
+    Extract the recommendation, always needed.
+    Output: List of lists with recommended items for each sample in batch
     """
 
-    def __init__(self, item_tokenizer, filter, num_predictions: int, selected_items=None):
+    def __init__(self, item_tokenizer, num_predictions: int, selected_items=None):
         self.header = ["recommendation"]
         self.item_tokenizer = item_tokenizer
         self.num_predictions = num_predictions
-        self.filter = filter
         self.selected_items = selected_items
+
+        tokens = np.asarray(self.item_tokenizer.vocabulary.tokens())
+        ids = np.asarray(self.item_tokenizer.vocabulary.ids())
+        self.vocab_lookup = np.empty(max(ids) + 1, dtype=tokens.dtype)
+        self.vocab_lookup[ids] = tokens
+
+        self.filter_items = np.asarray(self.selected_items)
 
     def get_header(self) -> List[str]:
         return self.header
@@ -204,21 +217,20 @@ class ExtractRecommendationEvaluator(BatchEvaluator):
                  logits: Tensor,
                  ) -> List[Any]:
 
-        prediction = self.filter(logits)
-        softmax = torch.softmax(prediction, dim=-1)
+        softmax = torch.softmax(logits, dim=-1)
         scores, indices = torch.sort(softmax, dim=-1, descending=True)
         indices = indices[:, :self.num_predictions]
-        indices = indices.cpu().numpy().tolist()
 
-        items = []
-        for batch_sample in range(logits.shape[0]):
-            item_ids = indices[batch_sample]
-            if self.selected_items is not None:
-                selected_item_ids = [self.selected_items[i] for i in item_ids]
-                item_ids = selected_item_ids
-            items.append(self.item_tokenizer.convert_ids_to_tokens(item_ids))
+        n_indices = indices.cpu().numpy()
+        result = self.vocab_lookup[n_indices]
 
-        return items
+        if self.selected_items is not None:
+            filter_boolean = np.isin(n_indices, self.filter_items)
+            result = [result[sample][filter_boolean[sample]].tolist() for sample in range(result.shape[0])]
+        else:
+            result = result.tolist()
+
+        return result
 
 
 class PerSampleMetricsEvaluator(BatchEvaluator):
@@ -258,15 +270,14 @@ class PerSampleMetricsEvaluator(BatchEvaluator):
         metrics = _extract_sample_metrics(self.module)
 
         num_classes = logits.size()[1]
+        logits = self.filter(logits)
+
         item_mask = get_positive_item_mask(targets, num_classes).to(logits.device)
+        item_mask = self.filter(item_mask)
         for name, metric in metrics:
             metric.update(logits, item_mask)
 
-        metric_results = []
-        for batch_sample in range(logits.shape[0]):
-            metric_values = [value.raw_metric_values()[batch_index].cpu().tolist()[batch_sample] for name, value in
-                             metrics]
-
-            metric_results.append(metric_values)
+        metric_values = [value.raw_metric_values()[batch_index].cpu().numpy() for name, value in metrics]
+        metric_results = np.asarray(metric_values).T.tolist()
 
         return metric_results
