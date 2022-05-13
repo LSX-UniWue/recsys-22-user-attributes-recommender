@@ -21,7 +21,6 @@ from asme.core.modules.baselines.pop_module import PopModule
 from asme.core.modules.baselines.session_pop_module import SessionPopModule
 from asme.core.modules.masked_training_module import MaskedTrainingModule
 from asme.core.modules.ubert_masked_training_module import UBERTMaskedTrainingModule
-from asme.core.modules.user_sequence_next_item_prediction_training_module import UserSequenceNextItemPredictionTrainingModule
 from asme.core.modules.user_next_item_prediction_training_module import UserNextItemPredictionTrainingModule
 from asme.core.modules.next_item_prediction_training_module import NextItemPredictionTrainingModule, \
     NextItemPredictionWithNegativeSampleTrainingModule
@@ -45,10 +44,6 @@ register_module("narm", ModuleConfig(GenericModuleFactory, NextItemPredictionTra
 
 register_module("sasrec", ModuleConfig(GenericModuleFactory, SequenceNextItemPredictionTrainingModule, {
     "model_cls": SASRecModel,
-    "loss_function": SASRecBinaryCrossEntropyLoss()}))
-
-register_module("user-sasrec", ModuleConfig(GenericModuleFactory, UserSequenceNextItemPredictionTrainingModule, {
-    "model_cls": UserSASRecModel,
     "loss_function": SASRecBinaryCrossEntropyLoss()}))
 
 register_module("user-sasrec-full", ModuleConfig(GenericModuleFactory, UserNextItemPredictionTrainingModule, {

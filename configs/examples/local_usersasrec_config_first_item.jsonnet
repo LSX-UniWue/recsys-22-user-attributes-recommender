@@ -15,7 +15,7 @@ local metrics =  {
     datamodule: {
         dataset: dataset,
             data_sources: {
-                split: "ratio_split",
+                split: "leave_one_out",
                 file_prefix: dataset,
                 train: {
                     type: "session",
@@ -29,7 +29,7 @@ local metrics =  {
                     batch_size: 2
                 },
                 validation: {
-                    type: "next_item",
+                    type: "session",
                     processors: [
                         {"type": "target_extractor",
                         "first_target": "True"}
@@ -37,7 +37,7 @@ local metrics =  {
                      batch_size: 2
                 },
                 test: {
-                 type: "next_item",
+                 type: "session",
                     processors: [
                         {"type": "target_extractor",
                         "first_target": "True"},
@@ -77,7 +77,7 @@ local metrics =  {
             },
         },
         model: {
-            transformer_hidden_size: 4,
+            transformer_hidden_size: 2,
             num_transformer_heads: 2,
             num_transformer_layers: 1,
             max_seq_length: max_seq_length,
@@ -138,7 +138,23 @@ local metrics =  {
           patience: 10,
           mode: 'max'
         },
-        max_epochs: 3
+        max_epochs: 3,
+       # profiler: "advanced",
+        gpus : 1
 
-    }
+
+    },
+       evaluation: {
+            evaluators: [
+                {type: "sid", use_session_id: false},
+                {type: "recommendation"},
+                {type: "metrics"},
+               # {type: "input"},
+                #{type: "scores"},
+               # {type: "target"},
+                ],
+           # filter_items: {
+            #    file: "/Users/lisa/recommender/configs/selected_items.csv"}, # compute metrics, recommendation and scores only for selected items
+            number_predictions: 5
+            }
 }
