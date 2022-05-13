@@ -40,12 +40,11 @@ class BatchEvaluationCSVWriter:
         results = [(evaluator.evaluate(batch_index, batch, logits), evaluator.eval_samplewise(), evaluator.get_header()) for evaluator in self.evaluators]
 
         #Per Sample in batch
+        rows_to_write = []
         for sample in range(logits.shape[0]):
             num_rows = [len(eval[1]) for eval, samplewise, header in results if not samplewise]
-            if not all_equal_in_list(num_rows):
-                raise ValueError(f"Evaluators output size must be of same length, but is {num_rows}.")
-
-            rows_to_write = []
+            #if not all_equal_in_list(num_rows):
+            #    raise ValueError(f"Evaluators output size must be of same length, but is {num_rows}.")
             for i in range(num_rows[0]):
                 row_to_write = [str(i+1)]
                 for eval, samplewise, header in results:
@@ -56,4 +55,4 @@ class BatchEvaluationCSVWriter:
                         row_to_write.append(res)
 
                 rows_to_write.append(row_to_write)
-            self.csv_writer.writerows(rows_to_write)
+        self.csv_writer.writerows(rows_to_write)
