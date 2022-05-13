@@ -10,6 +10,7 @@ from asme.core.init.factories.features.features_factory import FeaturesFactory
 from asme.core.init.factories.features.tokenizer_factory import TOKENIZERS_PREFIX
 from asme.core.init.factories.include.import_factory import ImportFactory
 from asme.core.init.factories.trainer import TrainerBuilderFactory
+from asme.core.init.factories.evaluation.evaluation import EvaluationFactory
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.core.modules.registry import REGISTERED_MODULES
 
@@ -26,9 +27,11 @@ class ContainerFactory(ObjectFactory):
                                    REGISTERED_MODULES,
                                    config_key='module',
                                    config_path=['module']),
-                TrainerBuilderFactory()
+                TrainerBuilderFactory(),
+
             ]
         )
+        self.evaluation_factory = DependenciesFactory([EvaluationFactory()], optional_based_on_path=True)
 
     def can_build(self,
                   config: Config,
@@ -48,6 +51,12 @@ class ContainerFactory(ObjectFactory):
             return can_build_result
 
         can_build_result = self.dependencies.can_build(config, context)
+
+        if can_build_result.type != CanBuildResultType.CAN_BUILD:
+            return can_build_result
+
+        evaluation_config = config.get_config(self.evaluation_factory.config_path())
+        can_build_result = self.evaluation_factory.can_build(evaluation_config, context)
 
         if can_build_result.type != CanBuildResultType.CAN_BUILD:
             return can_build_result
@@ -84,6 +93,10 @@ class ContainerFactory(ObjectFactory):
                     context.set([key, section], o)
             else:
                 context.set(key, object)
+
+        evaluation_config = config.get_config(self.evaluation_factory.config_path())
+        self.evaluation_factory.build(evaluation_config, context)
+
 
         return Container(context.as_dict())
 

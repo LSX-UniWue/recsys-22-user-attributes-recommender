@@ -162,7 +162,7 @@ class UBERTMaskedTrainingModule(MetricsTrait, pl.LightningModule):
     def test_step(self, batch, batch_idx):
         return self._eval_step(batch, batch_idx, is_test=True)
 
-    def predict(self,
+    def predict_step(self,
                 batch: Any,
                 batch_idx: int,
                 dataloader_idx: Optional[int] = None

@@ -72,6 +72,20 @@ class UserNextItemPredictionTrainingModule(BaseNextItemPredictionTrainingModule)
                    ) -> torch.Tensor:
         return self.loss_function(target_tensor, logits)
 
+
+    def predict_step(self,
+                     batch: Dict[str, torch.Tensor],
+                     batch_idx: int,
+                     dataloader_idx: Optional[int] = None
+                     ) -> torch.Tensor:
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]     # BS x S
+        target = batch[TARGET_ENTRY_NAME]  # BS
+
+        logits = self(batch, batch_idx)  # BS x S x I
+
+        target_logits = self._extract_target_logits(input_seq, logits)
+        return target_logits
+
     def validation_step(self,
                         batch: Dict[str, torch.Tensor],
                         batch_idx: int

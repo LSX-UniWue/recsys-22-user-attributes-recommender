@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import List, Callable, Any, Optional
 
+from aim.sdk.adapters.pytorch_lightning import AimLogger
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import LoggerCollection, LightningLoggerBase
@@ -53,10 +54,16 @@ def determine_log_dir(trainer: Trainer) -> Path:
 
     # try to infer from the logger configuration
     logger = trainer.logger
-    if type(logger) is LightningLoggerBase:
+    if type(logger) is LightningLoggerBase and type(logger) is not AimLogger:
         log_dir = _build_log_dir_from_logger(logger)
     elif type(logger) is LoggerCollection:
         for l in logger._logger_iterable:
+
+            # aim logger does not provide a log_dir
+            # TODO provide an adapter for AimLogger that returns `None`
+            if type(l) is AimLogger:
+                continue
+
             dir = _build_log_dir_from_logger(l)
             if dir is not None:
                 log_dir = dir
@@ -72,7 +79,7 @@ def determine_log_dir(trainer: Trainer) -> Path:
             if type(ckpt_callback) is ModelCheckpoint:
                 log_dir = Path(ckpt_callback.dirpath).parent
             elif type(ckpt_callback) is BestModelWritingModelCheckpoint:
-                log_dir = Path(ckpt_callback.output_base_path).parent
+                log_dir = Path(ckpt_callback.dirpath).parent
             else:
                 print(f"Could not infer output path from checkpoint callback of type: {type(ckpt_callback)}")
 
