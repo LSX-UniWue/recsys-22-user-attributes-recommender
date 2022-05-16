@@ -31,11 +31,11 @@ def save_config(config: Config,
     suffix = source_file.suffix
 
     if suffix == ".json":
-        full_path = path / f"{PROCESSED_CONFIG_NAME}.{suffix}"
+        full_path = path / f"{PROCESSED_CONFIG_NAME}{suffix}"
         with open(full_path, "w") as f:
             json.dump(config.config, f, indent=4)
     elif suffix == ".yaml" or suffix == ".yml":
-        full_path = path / f"{PROCESSED_CONFIG_NAME}.{suffix}"
+        full_path = path / f"{PROCESSED_CONFIG_NAME}{suffix}"
         with open(full_path, "w") as f:
             yaml.dump(config.config, f)
     else:
