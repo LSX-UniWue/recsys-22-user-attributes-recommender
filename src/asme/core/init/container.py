@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 
 from asme.core.init.trainer_builder import TrainerBuilder
 from asme.core.tokenization.tokenizer import Tokenizer
+from asme.core.writer.prediction.evaluator_prediction_writer import BatchEvaluationWriter
 from asme.data.datamodule.datamodule import AsmeDataModule
 
 
@@ -47,6 +48,10 @@ class Container:
 
     def tokenizer(self, tokenizer_id: str) -> Tokenizer:
         return self._objects["tokenizers." + tokenizer_id]
+
     def evaluators(self) -> List[BatchEvaluator]:
         return self._objects["evaluation"]["evaluators"]
+
+    def writer(self) -> BatchEvaluationWriter:
+        return self._objects["evaluation"]["writer"]
 
