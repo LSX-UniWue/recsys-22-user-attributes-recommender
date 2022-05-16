@@ -1,22 +1,24 @@
 import json
 import os
-from pathlib import Path
-from typing import List, Callable, Any, Optional
+import yaml
 
-from aim.sdk.adapters.pytorch_lightning import AimLogger
+from pathlib import Path
+from loguru import logger
+from typing import List, Callable, Any, Optional
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import LoggerCollection, LightningLoggerBase
+from aim.sdk.adapters.pytorch_lightning import AimLogger
 
 from asme.core.callbacks.best_model_writing_model_checkpoint import BestModelWritingModelCheckpoint
 from asme.core.init.config import Config
 
-
-PROCESSED_CONFIG_NAME = "config.json"
+PROCESSED_CONFIG_NAME = "config"
 FINISHED_FLAG_NAME = ".FINISHED"
 
 
 def save_config(config: Config,
+                source_file: Path,
                 path: Path,
                 make_parents=True
                 ):
@@ -25,9 +27,22 @@ def save_config(config: Config,
     """
     if make_parents:
         os.makedirs(path, exist_ok=True)
-    full_path = path / PROCESSED_CONFIG_NAME
-    with open(full_path, "w") as f:
-        json.dump(config.config, f, indent=4)
+
+    suffix = source_file.suffix
+
+    if suffix == ".json":
+        full_path = path / f"{PROCESSED_CONFIG_NAME}.{suffix}"
+        with open(full_path, "w") as f:
+            json.dump(config.config, f, indent=4)
+    elif suffix == ".yaml" or suffix == ".yml":
+        full_path = path / f"{PROCESSED_CONFIG_NAME}.{suffix}"
+        with open(full_path, "w") as f:
+            yaml.dump(config.config, f)
+    else:
+        logger.warning(f"Config file {source_file.name} is not in json or yaml format, saving resolved config as yaml.")
+        full_path = path / f"{PROCESSED_CONFIG_NAME}.yaml"
+        with open(full_path, "w") as f:
+            yaml.dump(config.config, f)
 
 
 def _build_log_dir_from_logger(logger: LightningLoggerBase) -> Optional[Path]:

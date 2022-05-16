@@ -70,7 +70,7 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
 
     # save plain json config to the log dir/root dir of the trainer
     log_dir = determine_log_dir(trainer)
-    save_config(config, log_dir)
+    save_config(config, config_file, log_dir)
 
     if do_resume:
         resume(log_dir, None)
