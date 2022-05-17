@@ -23,7 +23,6 @@ class CSVMultiLineWriterFactory(ObjectFactory):
               ) -> CSVMultiLineWriter:
 
         evaluators = context.get("evaluation")["evaluators"]
-        output
         return CSVMultiLineWriter(evaluators)
 
     def is_required(self, context: Context) -> bool:
