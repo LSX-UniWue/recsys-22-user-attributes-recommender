@@ -1,9 +1,7 @@
 from typing import List, Dict, Any
 
 from asme.core.init.config import Config
-from asme.core.init.context import Context
 from asme.core.init.templating.datasources.datasources import DatasetBuilder, Stage, DatasetSplit, _transfer_properties
-from asme.data import CURRENT_SPLIT_PATH_CONTEXT_KEY, BASE_DATASET_PATH_CONTEXT_KEY
 
 
 def build_dataset_config(dataset_builders: List[DatasetBuilder], config: Config, stage: Stage, additional_processors: List[Dict[str, Any]] = None) -> Dict[str, Any]:

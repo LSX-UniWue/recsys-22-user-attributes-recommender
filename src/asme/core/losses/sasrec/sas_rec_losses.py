@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from asme.core.losses.losses import SequenceRecommenderContrastiveLoss, DEFAULT_REDUCTION, SequenceRecommenderLoss
-from pytorch_lightning.metrics.utils import reduce
+from torchmetrics.utilities import reduce
 
 from asme.core.tokenization.tokenizer import Tokenizer
 

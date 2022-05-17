@@ -49,7 +49,7 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
 
         self.item_tokenizer = item_tokenizer
         self.metrics = metrics
-        self.save_hyperparameters(self.hyperparameters)
+        self.save_hyperparameters(self.hyperparameters, ignore=["metrics"])
 
     def get_metrics(self) -> MetricsContainer:
         return self.metrics

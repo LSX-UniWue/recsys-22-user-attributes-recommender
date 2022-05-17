@@ -1,6 +1,7 @@
 import multiprocessing
 from typing import Any, List, Dict
 
+from asme.core.init.factories import BuildContext
 from asme.data.datasets.sequence import MetaInformation
 from torch.utils.data import DataLoader
 
@@ -15,7 +16,8 @@ from asme.core.init.factories.common.union_factory import UnionFactory
 from asme.core.init.factories.data_sources.datasets.item_session import ItemSessionDatasetFactory
 from asme.core.init.factories.features.tokenizer_factory import get_tokenizer_key_for_voc
 from asme.core.init.factories.data_sources.datasets.sequence_position import SequencePositionDatasetFactory
-from asme.core.init.factories.util import check_config_keys_exist, check_context_entries_exists
+from asme.core.init.factories.util import check_config_keys_exist, check_context_entries_exists, \
+    can_build_with_subsection, build_with_subsection
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
 
@@ -101,18 +103,18 @@ class LoaderFactory(ObjectFactory):
         super(LoaderFactory, self).__init__()
         self._dependencies = dependencies
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
-        dependencies_result = self._dependencies.can_build(config, context)
+    def can_build(self, build_context: BuildContext) -> CanBuildResult:
+        dependencies_result = can_build_with_subsection(self._dependencies, build_context)
         if dependencies_result.type != CanBuildResultType.CAN_BUILD:
             return dependencies_result
 
-        if not check_config_keys_exist(config, self.REQUIRED_CONFIG_KEYS):
+        if not check_config_keys_exist(build_context.get_current_config_section(), self.REQUIRED_CONFIG_KEYS):
             return CanBuildResult(
                 CanBuildResultType.MISSING_CONFIGURATION,
                 f"Could not find all required keys ({self.REQUIRED_CONFIG_KEYS}) in config."
             )
 
-        if not check_context_entries_exists(context, self.REQUIRED_CONTEXT_ENTRIES):
+        if not check_context_entries_exists(build_context.get_context(), self.REQUIRED_CONTEXT_ENTRIES):
             return CanBuildResult(
                 CanBuildResultType.MISSING_DEPENDENCY,
                 f"Could not find one of the dependency within the context."
@@ -121,8 +123,10 @@ class LoaderFactory(ObjectFactory):
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
     # FIXME (AD) make collate_fn its own factory with dependencies on entries to pad ...
-    def build(self, config: Config, context: Context) -> Any:
-        dependencies = self._dependencies.build(config, context)
+    def build(self, build_context: BuildContext) -> Any:
+        config = build_context.get_current_config_section()
+
+        dependencies = build_with_subsection(self._dependencies, build_context)
 
         dataset = dependencies[self.DATASET_DEPENDENCY_KEY]
 
@@ -142,14 +146,14 @@ class LoaderFactory(ObjectFactory):
             persistent_workers=persistent_workers,
             worker_init_fn=init_worker_fn,
             collate_fn=padded_session_collate(
-                entries_to_pad=_build_entries_to_pad(config, context),
+                entries_to_pad=_build_entries_to_pad(config, build_context.get_context()),
                 session_length_entry=ITEM_SEQ_ENTRY_NAME,
                 pad_direction=pad_direction,
                 dynamic_padding=dynamic_padding
             )
         )
 
-    def is_required(self, context: Context) -> bool:
+    def is_required(self, build_context: BuildContext) -> bool:
         return True
 
     def config_path(self) -> List[str]:

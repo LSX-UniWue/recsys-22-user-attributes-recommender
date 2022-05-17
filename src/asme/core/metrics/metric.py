@@ -2,8 +2,8 @@ from abc import abstractmethod
 from enum import Enum
 from typing import Optional, Callable, Any, Union, List
 
-import pytorch_lightning as pl
 import torch
+import torchmetrics.metric
 
 
 class MetricStorageMode(Enum):
@@ -15,7 +15,7 @@ class MetricStorageMode(Enum):
     SUM = 'sum'
 
 
-class RankingMetric(pl.metrics.Metric):
+class RankingMetric(torchmetrics.metric.Metric):
     """
     base class to implement metrics in the framework
     """

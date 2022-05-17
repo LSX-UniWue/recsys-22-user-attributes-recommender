@@ -1,12 +1,12 @@
 import os
 import sys
-from contextlib import contextmanager
 from pathlib import Path
 from types import ModuleType
 from typing import List, Union, Any, Dict
 
 from asme.core.init.config import Config
 from asme.core.init.context import Context
+from asme.core.init.factories import BuildContext
 from asme.core.init.factories.util import check_config_keys_exist
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.core.utils.logging import get_logger
@@ -37,7 +37,8 @@ class ImportFactory(ObjectFactory):
     def __init__(self):
         super().__init__()
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
+    def can_build(self, build_context: BuildContext) -> CanBuildResult:
+        config = build_context.get_current_config_section()
         if check_config_keys_exist(config, [self.CONFIG_KEY]):
             for name, plugin_config in config.get(self.CONFIG_KEY).items():
                 if not ("path" in plugin_config and "module" in plugin_config):
@@ -46,13 +47,13 @@ class ImportFactory(ObjectFactory):
 
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
-    def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
+    def build(self, build_context: BuildContext) -> Union[Any, Dict[str, Any], List[Any]]:
         # Load default modules
         for default_module in self.DEFAULT_MODULES:
             importlib.import_module(default_module, self.TOP_LEVEL_MODULE_NAME)
 
         # Load all extra modules specified in the config
-        imports = config.get_or_default(self.CONFIG_KEY, {})
+        imports = build_context.get_current_config_section().get_or_default([], {})
         if len(imports) > 0:
             logger.info(f"Loading {len(imports)} extra modules.")
             for name, plugin_config in imports.items():
@@ -78,7 +79,7 @@ class ImportFactory(ObjectFactory):
 
         return None
 
-    def is_required(self, context: Context) -> bool:
+    def is_required(self, build_context: BuildContext) -> bool:
         return True
 
     def config_path(self) -> List[str]:

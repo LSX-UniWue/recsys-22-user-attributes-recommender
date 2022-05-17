@@ -4,11 +4,12 @@ from typing import List, Any, Dict, Union
 
 from asme.core.init.config import Config
 from asme.core.init.context import Context
+from asme.core.init.factories import BuildContext
 from asme.core.init.factories.metrics.metrics_container import MetricsContainerFactory
 from asme.core.init.factories.modules import MODEL_PARAM_NAME, METRICS_PARAM_NAME, LOSS_FUNCTION_PARAM_NAME
 from asme.core.init.factories.modules.util import get_init_parameters, filter_parameters, \
     get_config_required_config_params
-from asme.core.init.factories.util import require_config_keys
+from asme.core.init.factories.util import require_config_keys, can_build_with_subsection, build_with_subsection
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
 
@@ -39,16 +40,19 @@ class GenericModuleFactory(ObjectFactory):
         self.metrics_container_factory = MetricsContainerFactory()
         self.loss_function = loss_function
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
-        metrics_can_build = self.metrics_container_factory.can_build(
-            config.get_config(self.metrics_container_factory.config_path()), context)
+    def can_build(self, build_context: BuildContext) -> CanBuildResult:
+
+        metrics_can_build = can_build_with_subsection(self.metrics_container_factory, build_context)
+
         if metrics_can_build.type != CanBuildResultType.CAN_BUILD:
             return metrics_can_build
         # If the module does not contain a model, we short circuit here and don't query the model factory.
-        return not self.should_build_model or \
-               self.model_factory.can_build(config.get_config(self.model_factory.config_path()), context)
 
-    def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
+        can_build_model = can_build_with_subsection(self.model_factory, build_context)
+
+        return not self.should_build_model or can_build_model
+
+    def build(self, build_context: BuildContext) -> Union[Any, Dict[str, Any], List[Any]]:
         # collect the parameters from the config
         named_parameters = {}
 
@@ -67,15 +71,14 @@ class GenericModuleFactory(ObjectFactory):
             name = parameter_info.parameter_name
             default_value = parameter_info.default_value
             default_value = None if default_value == inspect._empty else default_value
-            named_parameters[name] = copy.deepcopy(config.get_or_default(name, default_value))
+            named_parameters[name] = copy.deepcopy(build_context.get_current_config_section().get_or_default(name, default_value))
 
         # build the metrics container
-        metrics = self.metrics_container_factory.build(config.get_config(self.metrics_container_factory.config_path()),
-                                                       context=context)
+        metrics = build_with_subsection(self.metrics_container_factory, build_context)
 
         # build the model container if a model class was supplied
         if self.should_build_model:
-            model = self.model_factory.build(config.get_config(self.model_factory.config_path()), context)
+            model = build_with_subsection(self.model_factory, build_context)
             named_parameters[MODEL_PARAM_NAME] = model
 
         named_parameters[METRICS_PARAM_NAME] = metrics
@@ -86,7 +89,7 @@ class GenericModuleFactory(ObjectFactory):
         # create a deep copy to avoid potential config modifications made by the module to leak into asme
         return self._module_csl(**named_parameters)
 
-    def is_required(self, context: Context) -> bool:
+    def is_required(self, build_context: BuildContext) -> bool:
         return True
 
     def config_path(self) -> List[str]:
@@ -105,18 +108,12 @@ class GenericModelFactory(ObjectFactory):
         super().__init__()
         self._model_cls = model_cls
 
-    def can_build(self,
-                  config: Config,
-                  context: Context
-                  ) -> CanBuildResult:
+    def can_build(self, build_context: BuildContext) -> CanBuildResult:
         config_parameters = get_config_required_config_params(get_init_parameters(self._model_cls))
 
-        return require_config_keys(config, config_parameters)
+        return require_config_keys(build_context.get_current_config_section(), config_parameters)
 
-    def build(self,
-              config: Config,
-              context: Context
-              ) -> Any:
+    def build(self, build_context: BuildContext) -> Any:
         named_parameters = {}
 
         # collect the parameters from the config
@@ -125,11 +122,11 @@ class GenericModelFactory(ObjectFactory):
             default_value = parameter_info.default_value
             parameter_name = parameter_info.parameter_name
             default_value = None if default_value == inspect._empty else default_value
-            named_parameters[parameter_name] = copy.deepcopy(config.get_or_default(parameter_name, default_value))
+            named_parameters[parameter_name] = copy.deepcopy(build_context.get_current_config_section().get_or_default(parameter_name, default_value))
 
         return self._model_cls(**named_parameters)
 
-    def is_required(self, context: Context) -> bool:
+    def is_required(self, build_context: BuildContext) -> bool:
         return True
 
     def config_path(self) -> List[str]:
