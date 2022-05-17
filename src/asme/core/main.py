@@ -44,6 +44,7 @@ from asme.core.writer.prediction.evaluator_prediction_writer import CSVMultiLine
 from asme.core.writer.prediction.prediction_writer import build_prediction_writer
 from asme.core.writer.results.results_writer import build_result_writer, check_file_format_supported
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME, SESSION_IDENTIFIER
+from asme.core.utils.pred_utils import move_to_device
 
 _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at least the checkpoint file and config or" \
                                                     " the study name and study storage to infer the config and " \
@@ -390,18 +391,16 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
     writer = container.writer()
 
 
-    with open(output_file, 'w') as result_file:
-        writer.init_file(file_handle=result_file)
-        for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
-            sequences = batch[ITEM_SEQ_ENTRY_NAME]
-            batch_size = sequences.size()[0]
-            batch_start = batch_index * batch_size
-            batch_loader_predict = create_batch_loader(test_loader.dataset,
-                                                    batch_sampler=FixedBatchSampler(batch_start, batch_size),
-                                                    collate_fn=test_loader.collate_fn,
-                                                    num_workers=test_loader.num_workers)
-            prediction_results = trainer.predict(module, dataloaders=batch_loader_predict)[0]
-            writer.write_evaluation(batch_index, batch, prediction_results)
+    module.eval()
+    device = torch.device('cuda') if torch.cuda.is_available() and gpu >0 else torch.device('cpu')
+    module.to(device)
+    with torch.no_grad():
+        with open(output_file, 'w') as result_file:
+            writer.init_file(file_handle=result_file)
+            for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
+                batch = move_to_device(batch, device)
+                logits = module.predict_step(batch=batch, batch_idx=batch_index)
+                writer.write_evaluation(batch_index, batch, logits)
 
 
 @app.command()
