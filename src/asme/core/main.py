@@ -390,18 +390,15 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
     writer = container.writer()
 
 
-    with open(output_file, 'w') as result_file:
-        writer.init_file(file_handle=result_file)
-        for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
-            sequences = batch[ITEM_SEQ_ENTRY_NAME]
-            batch_size = sequences.size()[0]
-            batch_start = batch_index * batch_size
-            batch_loader_predict = create_batch_loader(test_loader.dataset,
-                                                    batch_sampler=FixedBatchSampler(batch_start, batch_size),
-                                                    collate_fn=test_loader.collate_fn,
-                                                    num_workers=test_loader.num_workers)
-            prediction_results = trainer.predict(module, dataloaders=batch_loader_predict)[0]
-            writer.write_evaluation(batch_index, batch, prediction_results)
+    module.eval()
+    if gpu > 0:
+        module.cuda()
+    with torch.no_grad():
+        with open(output_file, 'w') as result_file:
+            writer.init_file(file_handle=result_file)
+            for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
+                logits = module.predict_step(batch=batch, batch_idx=batch_index)
+                writer.write_evaluation(batch_index, batch, logits)
 
 
 @app.command()
