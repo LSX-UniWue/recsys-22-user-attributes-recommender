@@ -24,7 +24,8 @@ class FilterPredictionItemsFactory(ObjectFactory):
               ) -> FilterPredictionItems:
 
         filter_file = config.get_or_default("file", None)
-        return FilterPredictionItems(selected_items_file=filter_file)
+        device = context.get("module").device
+        return FilterPredictionItems(selected_items_file=filter_file, device=device)
 
     def is_required(self, context: Context) -> bool:
         return False
