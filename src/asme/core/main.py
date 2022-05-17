@@ -44,6 +44,7 @@ from asme.core.writer.prediction.evaluator_prediction_writer import CSVMultiLine
 from asme.core.writer.prediction.prediction_writer import build_prediction_writer
 from asme.core.writer.results.results_writer import build_result_writer, check_file_format_supported
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME, SESSION_IDENTIFIER
+from asme.core.utils.pred_utils import move_to_device
 
 _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at least the checkpoint file and config or" \
                                                     " the study name and study storage to infer the config and " \
@@ -391,12 +392,13 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
 
 
     module.eval()
-    if gpu > 0:
-        module.cuda()
+    device = torch.device('cuda') if torch.cuda.is_available() and gpu >0 else torch.device('cpu')
+    module.to(device)
     with torch.no_grad():
         with open(output_file, 'w') as result_file:
             writer.init_file(file_handle=result_file)
             for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
+                batch = move_to_device(batch, device)
                 logits = module.predict_step(batch=batch, batch_idx=batch_index)
                 writer.write_evaluation(batch_index, batch, logits)
 
