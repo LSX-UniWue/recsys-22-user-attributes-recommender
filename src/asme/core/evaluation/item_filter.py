@@ -1,15 +1,11 @@
-from typing import Tuple, List
-
-import torch
 from pathlib import Path
-import numpy as np
 from asme.core.utils.ioutils import load_file_with_item_ids
 
 class FilterPredictionItems:
 
-    def __init__(self, selected_items_file: Path, device):
-
+    def __init__(self, selected_items_file: Path):
         self.selected_items = None
+        print("path",selected_items_file)
         if selected_items_file is not None:
             self.selected_items = load_file_with_item_ids(selected_items_file)
 

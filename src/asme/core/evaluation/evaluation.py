@@ -241,6 +241,7 @@ class PerSampleMetricsEvaluator(BatchEvaluator):
     def __init__(self, item_tokenizer, selected_items, module):
         self.item_tokenizer = item_tokenizer
         self.selected_items = selected_items
+        print(self.selected_items)
         self.module = module
 
         metrics_container = module.metrics
