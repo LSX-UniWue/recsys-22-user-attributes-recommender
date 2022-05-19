@@ -22,10 +22,10 @@ class PerSampleMetricsEvaluatorFactory(ObjectFactory):
               context: Context
               ) -> PerSampleMetricsEvaluator:
         item_tokenizer = context.get("tokenizers.item")
-        filter_items = context.get("evaluation")["filter_items"].get_filter()
+        selected_items = context.get("evaluation")["filter_items"].get_selected_items()
         module = context.get("module")
 
-        return PerSampleMetricsEvaluator(item_tokenizer=item_tokenizer, filter=filter_items,
+        return PerSampleMetricsEvaluator(item_tokenizer=item_tokenizer, selected_items=selected_items,
                                          module=module)
 
     def is_required(self, context: Context) -> bool:
