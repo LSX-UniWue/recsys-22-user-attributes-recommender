@@ -238,9 +238,9 @@ class PerSampleMetricsEvaluator(BatchEvaluator):
     Calculates the metrics per sample
     """
 
-    def __init__(self, item_tokenizer, filter, module):
+    def __init__(self, item_tokenizer, selected_items, module):
         self.item_tokenizer = item_tokenizer
-        self.filter = filter
+        self.selected_items = selected_items
         self.module = module
 
         metrics_container = module.metrics
@@ -270,10 +270,12 @@ class PerSampleMetricsEvaluator(BatchEvaluator):
         metrics = _extract_sample_metrics(self.module)
 
         num_classes = logits.size()[1]
-        logits = self.filter(logits)
 
+        selected_items_tensor = torch.tensor(self.selected_items, dtype=torch.int32, device=logits.device)
+
+        logits = torch.index_select(logits, 1, selected_items_tensor)
         item_mask = get_positive_item_mask(targets, num_classes).to(logits.device)
-        item_mask = self.filter(item_mask)
+        item_mask = torch.index_select(item_mask, 1, selected_items_tensor)
         for name, metric in metrics:
             metric.update(logits, item_mask)
 

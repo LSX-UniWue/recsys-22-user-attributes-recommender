@@ -25,7 +25,6 @@ class ExtractScoresEvaluatorFactory(ObjectFactory):
 
 
         item_tokenizer = context.get("tokenizers.item")
-        filter_items = context.get("evaluation")["filter_items"].get_filter()
 
         selected_items = context.get("evaluation")["filter_items"].get_selected_items()
         num_predictions = config.get("number_predictions")
