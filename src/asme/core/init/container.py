@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 
 from asme.core.init.trainer_builder import TrainerBuilder
 from asme.core.tokenization.tokenizer import Tokenizer
-from asme.core.writer.prediction.evaluator_prediction_writer import BatchEvaluationWriter
+from asme.core.writer.prediction.batch_prediction_writer import BatchEvaluationWriter
 from asme.data.datamodule.datamodule import AsmeDataModule
 
 

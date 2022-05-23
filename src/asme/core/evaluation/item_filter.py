@@ -2,6 +2,9 @@ from pathlib import Path
 from asme.core.utils.ioutils import load_file_with_item_ids
 
 class FilterPredictionItems:
+    """
+    Load file with selected item ids for filtering results
+    """
 
     def __init__(self, selected_items_file: Path):
         self.selected_items = None

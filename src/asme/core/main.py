@@ -1,7 +1,6 @@
 import os
 import shutil
 
-import numpy as np
 import torch
 import typer
 import optuna
@@ -13,13 +12,6 @@ from pytorch_lightning.loggers import LoggerCollection, MLFlowLogger
 from loguru import logger
 
 from asme.core.callbacks.metrics_history import MetricsHistoryCallback
-
-from asme.core.evaluation.pred_utils import _selected_file_and_filter, _extract_sample_metrics, _extract_target_indices, \
-    get_positive_item_mask
-from asme.core.metrics.container.metrics_container import MetricsContainer
-from asme.core.metrics.metric import MetricStorageMode
-from asme.core.tokenization.utils.tokenization import remove_special_tokens
-from asme.core.utils.pred_utils import load_file_with_item_ids, create_batch_loader, FixedBatchSampler
 from asme.core.init.templating.search.resolver import OptunaParameterResolver
 
 from asme.core.init.templating.search.processor import SearchTemplateProcessor
@@ -39,11 +31,8 @@ from asme.core.utils.run_utils import load_config, create_container, OBJECTIVE_M
     load_and_restore_from_file_or_study, log_dataloader_example, load_hyperopt_config, load_config_from_json
 from asme.core.utils import ioutils
 from asme.core.utils.ioutils import determine_log_dir, save_config, save_finished_flag, \
-    finished_flag_exists, load_file_with_item_ids
-from asme.core.writer.prediction.evaluator_prediction_writer import CSVMultiLineWriter
-from asme.core.writer.prediction.prediction_writer import build_prediction_writer
+    finished_flag_exists
 from asme.core.writer.results.results_writer import build_result_writer, check_file_format_supported
-from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, SAMPLE_IDS, TARGET_ENTRY_NAME, SESSION_IDENTIFIER
 from asme.core.utils.pred_utils import move_to_device
 
 _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at least the checkpoint file and config or" \
@@ -492,148 +481,6 @@ def resume(log_dir: str = typer.Argument(..., help='the path to the logging dire
 
     # Save finished flag
     save_finished_flag(log_dir)
-
-@app.command()
-def fast_predict(output_file: Path = typer.Argument(..., help='path where output is written'),
-                num_predictions: int = typer.Option(default=5, help='number of predictions to export'),
-                gpu: Optional[int] = typer.Option(default=0, help='number of gpus to use.'),
-                selected_items_file: Optional[Path] = typer.Option(default=None,
-                                                                   help='only use the item ids for prediction'),
-                checkpoint_file: Path = typer.Option(default=None, help='path to the checkpoint file'),
-                config_file: Path = typer.Option(default=None, help='the path to the config file'),
-                study_name: str = typer.Option(default=None, help='the study name of an existing study'),
-                study_storage: str = typer.Option(default=None, help='the connection string for the study storage'),
-                overwrite: Optional[bool] = typer.Option(default=False, help='overwrite output file if it exists.'),
-                log_input: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
-                log_per_sample_metrics: Optional[bool] = typer.Option(default=True,
-                                                                      help='enable logging of per-sample metrics.'),
-                seed: Optional[int] = typer.Option(default=None, help='seed used eg for the sampled evaluation'),
-                log_session_key: Optional[bool] = typer.Option(default=True, help='enable input logging.'),
-                ):
-
-    # checking if the file already exists
-    if not overwrite and output_file.exists():
-        logger.error(f"${output_file} already exists. If you want to overwrite it, use `--overwrite`.")
-        exit(2)
-
-    container = load_and_restore_from_file_or_study(checkpoint_file, config_file, study_name, study_storage,
-                                                    gpus=gpu)
-    if container is None:
-        logger.error(_ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY)
-        exit(-1)
-
-    if seed is not None:
-        seed_everything(seed)
-
-    module = container.module()
-    trainer = container.trainer().build()
-    test_loader = container.test_dataloader()
-
-    if log_per_sample_metrics:
-        metrics_container: MetricsContainer = module.metrics
-        for metric in metrics_container.get_metrics():
-            metric.set_metrics_storage_mode(MetricStorageMode.PER_SAMPLE)
-
-    def _noop_filter(sample_predictions: np.ndarray):
-        return sample_predictions
-
-    filter_predictions = _noop_filter
-    selected_items = None
-
-    if selected_items_file is not None:
-        selected_items = load_file_with_item_ids(selected_items_file)
-        selected_items_tensor = torch.tensor(selected_items, dtype=torch.int32)
-
-        def _selected_items_filter(sample_predictions):
-            return torch.index_select(sample_predictions, 1, selected_items_tensor)
-
-        filter_predictions = _selected_items_filter
-
-        #filter_predictions = lambda sample_predictions:  [prediction[selected_items] for prediction in sample_predictions] #_selected_items_filter
-
-    module.eval()
-
-    def _generate_sample_id(sample_ids, sequence_position_ids, sample_index) -> str:
-        sample_id = sample_ids[sample_index].item()
-        if sequence_position_ids is None:
-            return sample_id
-        return f'{sample_id}_{sequence_position_ids[sample_index].item()}'
-
-
-    # open the file and build the writer
-    with open(output_file, 'w') as result_file:
-
-        output_writer = build_prediction_writer(result_file, log_input)
-        module.eval()
-        with torch.no_grad():
-            item_tokenizer = container.tokenizer('item')
-            for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
-                sequences = batch[ITEM_SEQ_ENTRY_NAME]
-
-                is_basket_recommendation = len(sequences.size()) == 3
-
-                sample_ids = batch[SAMPLE_IDS]
-                sequence_position_ids = None
-                if 'pos' in batch:
-                    sequence_position_ids = batch['pos']
-                targets = batch[TARGET_ENTRY_NAME]
-
-                logits = module.predict_step(batch, batch_index)
-                prediction = filter_predictions(logits)
-
-                metrics = _extract_sample_metrics(module)
-
-                num_classes = logits.size()[1]
-                item_mask = get_positive_item_mask(targets, num_classes)
-                for name, metric in metrics:
-                    metric.update(prediction, item_mask)
-
-
-
-                softmax = torch.softmax(prediction, dim=-1)
-                scores, indices = torch.sort(softmax, dim=-1, descending=True)
-
-                indices = indices[:, :num_predictions]
-                indices = indices.cpu().numpy().tolist()
-
-                scores = scores[:, :num_predictions]
-                scores = scores.cpu().numpy().tolist()
-
-                for batch_sample in range(logits.shape[0]):
-
-                    # when we only want the predictions of selected items
-                    # the indices are not the item ids anymore, so we have to update them here
-                    item_ids = indices[batch_sample]
-                    if selected_items is not None:
-                        selected_item_ids = [selected_items[i] for i in item_ids]
-                        item_ids = selected_item_ids
-
-                    tokens = item_tokenizer.convert_ids_to_tokens(item_ids)
-
-
-                    sample_id = _generate_sample_id(sample_ids, sequence_position_ids, batch_sample)
-                    true_target = targets[batch_sample]
-                    if is_basket_recommendation:
-                        true_target = remove_special_tokens(true_target.tolist(), item_tokenizer)
-                    else:
-                        true_target = true_target.item()
-                    true_target = item_tokenizer.convert_ids_to_tokens(true_target)
-
-                    metric_name_and_values = [(name, value.raw_metric_values()[batch_index].cpu().tolist()[batch_sample]) for name, value in metrics]
-
-                    sequence = None
-                    if log_input:
-                        sequence = sequences[batch_sample].tolist()
-
-                        # remove padding tokens
-                        sequence = remove_special_tokens(sequence, item_tokenizer)
-                        sequence = item_tokenizer.convert_ids_to_tokens(sequence)
-                    if log_session_key:
-                        sample_id = batch[SESSION_IDENTIFIER][batch_sample]
-
-                    output_writer.write_values(f'{sample_id}', tokens, scores[batch_sample], true_target, metric_name_and_values,
-                                               sequence)
-
 
 if __name__ == "__main__":
     app()

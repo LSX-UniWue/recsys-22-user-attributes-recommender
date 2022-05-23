@@ -3,7 +3,7 @@ from typing import List
 from asme.core.init.config import Config
 from asme.core.init.context import Context
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
-from asme.core.writer.prediction.evaluator_prediction_writer import CSVMultiLineWriter
+from asme.core.writer.prediction.batch_prediction_writer import CSVMultiLineWriter
 
 
 class CSVMultiLineWriterFactory(ObjectFactory):
