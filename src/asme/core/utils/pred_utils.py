@@ -117,4 +117,4 @@ def move_to_device(obj, device):
             res.append(move_to_device(v, device))
         return res
     else:
-        raise TypeError("Invalid type for move_to")
+        return None #raise UserWarning("Invalid type for move_to.")
