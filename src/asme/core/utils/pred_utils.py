@@ -103,18 +103,24 @@ def create_batch_loader(dataset: Dataset,
     return DataLoader(dataset, batch_sampler=batch_sampler, collate_fn=collate_fn, num_workers=num_workers)
 
 
-def move_to_device(obj, device):
+def move_tensors_to_device(obj, device):
+    """
+    Moves tensors in dict or lists to device, keeps other data on original device.
+    :param obj:
+    :param device: cpu or cuda device
+    :return:
+    """
     if torch.is_tensor(obj):
         return obj.to(device)
     elif isinstance(obj, dict):
         res = {}
         for k, v in obj.items():
-            res[k] = move_to_device(v, device)
+            res[k] = move_tensors_to_device(v, device)
         return res
     elif isinstance(obj, list):
         res = []
         for v in obj:
-            res.append(move_to_device(v, device))
+            res.append(move_tensors_to_device(v, device))
         return res
     else:
-        return None #raise UserWarning("Invalid type for move_to.")
+        return obj

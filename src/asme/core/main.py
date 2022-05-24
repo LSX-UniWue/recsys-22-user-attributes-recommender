@@ -33,7 +33,7 @@ from asme.core.utils import ioutils
 from asme.core.utils.ioutils import determine_log_dir, save_config, save_finished_flag, \
     finished_flag_exists
 from asme.core.writer.results.results_writer import build_result_writer, check_file_format_supported
-from asme.core.utils.pred_utils import move_to_device
+from asme.core.utils.pred_utils import move_tensors_to_device
 
 _ERROR_MESSAGE_LOAD_CHECKPOINT_FROM_FILE_OR_STUDY = "You have to specify at least the checkpoint file and config or" \
                                                     " the study name and study storage to infer the config and " \
@@ -387,7 +387,7 @@ def predict(output_file: Path = typer.Argument(..., help='path where output is w
         with open(output_file, 'w') as result_file:
             writer.init_file(file_handle=result_file)
             for batch_index, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
-                batch = move_to_device(batch, device)
+                batch = move_tensors_to_device(batch, device)
                 logits = module.predict_step(batch=batch, batch_idx=batch_index)
                 writer.write_evaluation(batch_index, batch, logits)
 
