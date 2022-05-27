@@ -60,7 +60,7 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
 
     # save plain json config to the log dir/root dir of the trainer
     log_dir = determine_log_dir(trainer)
-    save_config(config, log_dir)
+    save_config(config, config_file, log_dir)
 
     if do_resume:
         resume(log_dir, None)
@@ -77,11 +77,11 @@ def train(config_file: Path = typer.Argument(..., help='the path to the config f
         module = container.module()
 
         # Save the hyperparameters of the dataset preprocessing
-        preprocessing_parameters = container.datamodule().config.preprocessing_config_values
-        if preprocessing_parameters is not None:
-            preprocessing_parameters = {f"datamodule/{param}": value for param, value in
-                                        preprocessing_parameters.items()}
-            module.save_hyperparameters(preprocessing_parameters)
+        #preprocessing_parameters = container.datamodule().config.preprocessing_config_values
+        #if preprocessing_parameters is not None:
+        #    preprocessing_parameters = {f"datamodule/{param}": value for param, value in preprocessing_parameters.items()}
+        #    module.save_hyperparameters(preprocessing_parameters)
+
         trainer.fit(module,
                     train_dataloaders=train_dataloader,
                     val_dataloaders=validation_dataloader)
@@ -427,7 +427,7 @@ def evaluate(config_file: Path = typer.Option(default=None, help='the path to th
     trainer = container.trainer().build()
     test_loader = container.test_dataloader()
 
-    eval_results = trainer.test(module, test_dataloaders=test_loader, verbose=not write_results_to_file)
+    eval_results = trainer.test(module, dataloaders=test_loader, verbose=not write_results_to_file)
 
     if write_results_to_file:
         with open(output_file, 'w') as output_file_handle:

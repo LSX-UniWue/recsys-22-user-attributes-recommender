@@ -1,15 +1,17 @@
-from abc import abstractmethod
-from typing import Union, Dict, Optional
 import inspect
 
+from abc import abstractmethod
+from typing import Union, Dict, Optional
+
 import torch
-
 import pytorch_lightning as pl
-from asme.core.losses.losses import SequenceRecommenderLoss, SingleTargetCrossEntropyLoss
+from loguru import logger
 
+from asme.core.losses.losses import SequenceRecommenderLoss, SingleTargetCrossEntropyLoss
 from asme.core.models.common.layers.data.sequence import InputSequence
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel
-from asme.core.utils.inject import InjectTokenizer
+from asme.core.tokenization.tokenizer import Tokenizer
+from asme.core.utils.inject import InjectTokenizer, inject
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME
 from asme.core.metrics.container.metrics_container import MetricsContainer
@@ -28,10 +30,11 @@ class BaseNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
     - RNN
     """
 
+    @inject(item_tokenizer=InjectTokenizer("item"))
     @save_hyperparameters
     def __init__(self,
                  model: SequenceRecommenderModel,
-                 item_tokenizer: InjectTokenizer("item"),
+                 item_tokenizer: Tokenizer,
                  metrics: MetricsContainer,
                  learning_rate: float = 0.001,
                  beta_1: float = 0.99,
@@ -193,7 +196,16 @@ class NextItemPredictionTrainingModule(BaseNextItemPredictionTrainingModule):
 
         logits = self(batch, batch_idx)  # BS x S x I
 
-        target_logits = self._extract_target_logits(input_seq, logits)
+        # in case of parallel evaluation, logits have shape: BS x S x I and we need to extract the last non-masked
+        # item state of each sequence.
+        if len(logits.size()) == 3:
+            target_logits = self._extract_target_logits(input_seq, logits)
+        elif len(logits.size()) == 2:
+            # otherwise only the next item was predicted by the model and the shape should be BS x I
+            target_logits = logits
+        else:
+            logger.error(f"This module is unable to process logits of shape: {logits.size()}!")
+            raise Exception(f"Unable to process logits of shape: {logits.size()}")
 
         loss = self._calc_loss(target_logits, target)
         self.log(LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)

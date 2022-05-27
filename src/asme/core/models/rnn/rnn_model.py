@@ -3,15 +3,16 @@ from asme.core.models.common.layers.layers import PROJECT_TYPE_LINEAR
 from asme.core.models.rnn.components import RNNSequenceRepresentationComponent, RNNProjectionComponent, RNNPoolingComponent
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.core.utils.hyperparameter_utils import save_hyperparameters
-from asme.core.utils.inject import InjectVocabularySize
+from asme.core.utils.inject import InjectVocabularySize, inject
 
 
 class RNNModel(SequenceRecommenderModel):
 
+    @inject(item_vocab_size=InjectVocabularySize("item"))
     @save_hyperparameters
     def __init__(self,
                  cell_type: str,
-                 item_vocab_size: InjectVocabularySize("item"),
+                 item_vocab_size: int,
                  item_embedding_dim: int,
                  hidden_size: int,
                  num_layers: int,

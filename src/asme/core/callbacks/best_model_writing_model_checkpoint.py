@@ -1,7 +1,6 @@
-import os, errno
 from datetime import timedelta
 from pathlib import Path
-from typing import Optional, Dict, Union, Any
+from typing import Optional, Dict, Union
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
@@ -29,9 +28,7 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
                  every_n_train_steps: Optional[int] = None,
                  train_time_interval: Optional[timedelta] = None,
                  every_n_epochs: Optional[int] = None,
-                 save_on_train_epoch_end: Optional[bool] = None,
-                 period: Optional[int] = None,
-                 every_n_val_epochs: Optional[int] = None,
+                 save_on_train_epoch_end: Optional[bool] = None
                  ):
         super().__init__(dirpath,
                          filename,
@@ -45,40 +42,35 @@ class BestModelWritingModelCheckpoint(ModelCheckpoint):
                          every_n_train_steps,
                          train_time_interval,
                          every_n_epochs,
-                         save_on_train_epoch_end,
-                         period,
-                         every_n_val_epochs)
+                         save_on_train_epoch_end)
 
-    def on_train_epoch_end(
-        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", unused: Optional = None
-    ) -> None:
-        super().on_train_epoch_end(trainer, pl_module, unused)
+        self.last_best_model_path = ""
 
-        # (AD) this enforces the same criterias for saving checkpoints as in the super class
-        if (
-                not self._should_skip_saving_checkpoint(trainer)
-                and self._save_on_train_epoch_end
-                and self._every_n_epochs > 0
-                and (trainer.current_epoch + 1) % self._every_n_epochs == 0
-        ):
-            # Save a symlink to the best model checkpoint
-            self._save_best_model_checkpoint_symlink()
+    def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
+        super().on_train_epoch_end(trainer, pl_module)
+
+        if not self._should_skip_saving_best_checkpoint(trainer) and self._save_on_train_epoch_end:
+            if self._every_n_epochs >= 1 and (trainer.current_epoch + 1) % self._every_n_epochs == 0:
+                self._save_best_model_checkpoint_symlink()
+                self.last_best_model_path = self.best_model_path
 
     def on_validation_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule") -> None:
         super().on_validation_end(trainer, pl_module)
 
-        # (AD) this enforces the same criterias for saving checkpoints as in the super class
-        if (
-                self._should_skip_saving_checkpoint(trainer)
-                or self._save_on_train_epoch_end
-                or self._every_n_epochs < 1
-                or (trainer.current_epoch + 1) % self._every_n_epochs != 0
-        ):
-            return
-        super().to_yaml(Path(self.dirpath) / "best_k_models.yaml")
+        if not self._should_skip_saving_best_checkpoint(trainer) and not self._save_on_train_epoch_end:
+            if self._every_n_epochs >= 1 and (trainer.current_epoch + 1) % self._every_n_epochs == 0:
+                self._save_best_model_checkpoint_symlink()
+                self.last_best_model_path = self.best_model_path
 
-        # Save a symlink to the best model checkpoint
-        self._save_best_model_checkpoint_symlink()
+    def _should_skip_saving_best_checkpoint(self, trainer: "pl.Trainer") -> bool:
+        from pytorch_lightning.trainer.states import TrainerFn
+
+        return (
+                trainer.fast_dev_run  # disable checkpointing with fast_dev_run
+                or trainer.state.fn != TrainerFn.FITTING  # don't save anything during non-fit
+                or trainer.sanity_checking  # don't save anything during sanity check
+                or self.last_best_model_path == self.best_model_path
+        )
 
     def _save_best_model_checkpoint_symlink(self):
         symlink_path = Path(self.dirpath) / "best.ckpt"
