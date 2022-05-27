@@ -1,12 +1,13 @@
 from typing import List
 
 from asme.core.evaluation.evaluation import BatchEvaluator
-from asme.core.init.config import Config
 from asme.core.init.context import Context
+from asme.core.init.factories import BuildContext
 from asme.core.init.factories.common.dependencies_factory import DependenciesFactory
 from asme.core.init.factories.evaluation.evaluators import EvaluatorsFactory
 from asme.core.init.factories.evaluation.item_filter import FilterPredictionItemsFactory
 from asme.core.init.factories.evaluation.writers import WritersFactory
+from asme.core.init.factories.util import can_build_with_subsection, build_with_subsection
 
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 
@@ -24,47 +25,39 @@ class EvaluationFactory(ObjectFactory):
         self.evaluators_factory = DependenciesFactory([EvaluatorsFactory()])
         self.writers_factory = DependenciesFactory([WritersFactory()])
 
-    def can_build(self,
-                  config: Config,
-                  context: Context
-                  ) -> CanBuildResult:
+    def can_build(self, build_context: BuildContext) -> CanBuildResult:
 
-        can_build_result = self.filter_factory.can_build(config, context)
+        can_build_result = can_build_with_subsection(self.filter_factory, build_context)
         if can_build_result.type != CanBuildResultType.CAN_BUILD:
             return can_build_result
 
-        can_build_result = self.evaluators_factory.can_build(config, context)
+        can_build_result = can_build_with_subsection(self.evaluators_factory, build_context)
         if can_build_result.type != CanBuildResultType.CAN_BUILD:
             return can_build_result
 
-        can_build_result = self.writers_factory.can_build(config, context)
+        can_build_result = can_build_with_subsection(self.writers_factory, build_context)
         if can_build_result.type != CanBuildResultType.CAN_BUILD:
             return can_build_result
 
         return can_build_result
 
-    def build(self,
-              config: Config,
-              context: Context
-              ) -> List[BatchEvaluator]:
+    def build(self, build_context: BuildContext) -> List[BatchEvaluator]:
+        config = build_context.get_current_config_section()
+        context = build_context.get_context()
 
         num_predictions = config.get_or_default("number_predictions", 20)
-
-        #TODO Add default evaluators?
-        #config.get("evaluators").append({"type": "sid"})
-        #config.get("evaluators").append({"type": "recommendation"})
 
         for evaluator in config.get("evaluators"):
            evaluator["number_predictions"] = num_predictions
 
-        filter_items = self.filter_factory.build(config, context)
+        filter_items = build_with_subsection(self.filter_factory, build_context)
         context.set(self.config_path(), filter_items)
 
-        evaluation = self.evaluators_factory.build(config, context)
+        evaluation = build_with_subsection(self.evaluators_factory, build_context)
         evaluation.update(filter_items)
         context.set(self.config_path(), evaluation, overwrite=True)
 
-        writer = self.writers_factory.build(config, context)
+        writer = build_with_subsection(self.writers_factory, build_context)
         evaluation.update(writer)
         context.set(self.config_path(), evaluation, overwrite=True)
 
