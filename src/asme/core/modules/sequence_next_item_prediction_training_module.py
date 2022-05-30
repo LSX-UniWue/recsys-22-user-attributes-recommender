@@ -153,7 +153,7 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
                   ) -> Dict[str, torch.Tensor]:
         return self.validation_step(batch, batch_idx)
 
-    def predict(self,
+    def predict_step(self,
                 batch: Dict[str, torch.Tensor],
                 batch_idx: int,
                 dataloader_idx: Optional[int] = None

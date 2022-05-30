@@ -123,7 +123,7 @@ class BaseNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule):
                   ) -> Dict[str, torch.Tensor]:
         return self.validation_step(batch, batch_idx)
 
-    def predict(self,
+    def predict_step(self,
                 batch: Dict[str, torch.Tensor],
                 batch_idx: int,
                 dataloader_idx: Optional[int] = None
@@ -231,6 +231,17 @@ class NextItemPredictionTrainingModule(BaseNextItemPredictionTrainingModule):
         # select only the outputs at the last step of each sequence
         target_logits = logits[batch_index, seq_length]  # [BS, I]
 
+        return target_logits
+
+    def predict_step(self,
+                     batch: Dict[str, torch.Tensor],
+                     batch_idx: int,
+                     dataloader_idx: Optional[int] = None
+                     ) -> torch.Tensor:
+
+        input_seq = batch[ITEM_SEQ_ENTRY_NAME]     # BS x S
+        logits = self(batch, batch_idx)  # BS x S x I
+        target_logits = self._extract_target_logits(input_seq, logits)
         return target_logits
 
 

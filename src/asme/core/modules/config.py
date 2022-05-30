@@ -1,4 +1,3 @@
-from asme.core.init.factories.data_sources.template_datasources import ParallelSeqTrainingTemplateDataSourcesFactory
 from asme.core.init.factories.modules.modules import GenericModuleFactory
 from asme.core.losses.basket.dream.dream_loss import DreamContrastiveLoss
 from asme.core.losses.cosrec.cosrec_loss import CosRecLoss
@@ -13,7 +12,6 @@ from asme.core.models.kebert4rec.kebert4rec_model import KeBERT4RecModel
 from asme.core.models.narm.narm_model import NarmModel
 from asme.core.models.rnn.rnn_model import RNNModel
 from asme.core.models.sasrec.sasrec_model import SASRecModel
-from asme.core.models.transformer.transformer_encoder_model import TransformerEncoderModel
 from asme.core.modules.baselines.bpr_module import BprModule
 from asme.core.modules.baselines.markov_module import MarkovModule
 from asme.core.modules.baselines.pop_module import PopModule

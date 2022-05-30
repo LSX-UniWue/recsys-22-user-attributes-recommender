@@ -56,7 +56,7 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
 
     def forward(self,
                 batch: Dict[str, torch.Tensor],
-                batch_idx: int
+                batch_idx: Optional[int] = None
                 ) -> torch.Tensor:
         input_data = build_model_input(self.model, self.item_tokenizer, batch)
         # call the model
@@ -143,6 +143,7 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
         prediction = self._get_prediction_for_masked_item(batch, batch_idx)
 
         loss = self._calc_loss(prediction, targets, is_eval=True)
+
         self.log(LOG_KEY_TEST_LOSS if is_test else LOG_KEY_VALIDATION_LOSS, loss, prog_bar=True)
 
         # when we have multiple target per sequence step, we have to provide a mask for the paddings applied to
@@ -154,11 +155,11 @@ class MaskedTrainingModule(MetricsTrait, pl.LightningModule):
     def test_step(self, batch, batch_idx):
         return self._eval_step(batch, batch_idx, is_test=True)
 
-    def predict(self,
-                batch: Any,
-                batch_idx: int,
-                dataloader_idx: Optional[int] = None
-                ) -> torch.Tensor:
+    def predict_step(self,
+                     batch: Dict[str, torch.Tensor],
+                     batch_idx: int,
+                     dataloader_idx: Optional[int] = None
+                     ) -> torch.Tensor:
         return self._get_prediction_for_masked_item(batch, batch_idx)
 
     def configure_optimizers(self):

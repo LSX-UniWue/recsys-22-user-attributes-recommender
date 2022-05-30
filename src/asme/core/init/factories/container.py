@@ -10,6 +10,7 @@ from asme.core.init.factories.features.features_factory import FeaturesFactory
 from asme.core.init.factories.features.tokenizer_factory import TOKENIZERS_PREFIX
 from asme.core.init.factories.include.import_factory import ImportFactory
 from asme.core.init.factories.trainer import TrainerBuilderFactory
+from asme.core.init.factories.evaluation.evaluation import EvaluationFactory
 from asme.core.init.factories.util import can_build_with_subsection, build_with_subsection
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.core.modules.registry import REGISTERED_MODULES
@@ -27,9 +28,11 @@ class ContainerFactory(ObjectFactory):
                                    REGISTERED_MODULES,
                                    config_key='module',
                                    config_path=['module']),
-                TrainerBuilderFactory()
+                TrainerBuilderFactory(),
+
             ]
         )
+        self.evaluation_factory = DependenciesFactory([EvaluationFactory()], optional_based_on_path=True)
 
     def can_build(self,
                   build_context: BuildContext
@@ -44,7 +47,10 @@ class ContainerFactory(ObjectFactory):
             return can_build_result
 
         can_build_result = can_build_with_subsection(self.dependencies, build_context)
+        if can_build_result.type != CanBuildResultType.CAN_BUILD:
+            return can_build_result
 
+        can_build_result = can_build_with_subsection(self.evaluation_factory, build_context)
         if can_build_result.type != CanBuildResultType.CAN_BUILD:
             return can_build_result
 
@@ -81,7 +87,10 @@ class ContainerFactory(ObjectFactory):
             else:
                 build_context.get_context().set(key, object)
 
+        build_with_subsection(self.evaluation_factory, build_context)
+
         return Container(build_context.get_context().as_dict())
+
 
     def is_required(self, build_context: BuildContext) -> bool:
         return True

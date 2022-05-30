@@ -27,7 +27,7 @@ class TargetExtractorProcessorFactory(ObjectFactory):
 
         if config.has_path(["parallel"]):
             parallel_flag = config.get(["parallel"])
-            parallel =  parallel_flag if isinstance(parallel_flag, bool) else distutils.util.strtobool(config.get(["parallel"]))
+            parallel = parallel_flag if isinstance(parallel_flag, bool) else distutils.util.strtobool(config.get(["parallel"]))
         else:
             parallel = False
 
