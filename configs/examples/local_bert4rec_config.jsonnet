@@ -119,10 +119,10 @@ local metrics =  {
                 evaluators: [
                     {type: "sid", use_session_id: false},
                     {type: "recommendation"},
-                   # {type: "metrics"},
+                    {type: "metrics"},
                    # {type: "input"},
                     #{type: "scores"},
-                    #{type: "target"},
+                    {type: "target"},
                     ],
                # filter_items: {
                 #    file: "/Users/lisa/recommender/configs/selected_items.csv"}, # compute metrics, recommendation and scores only for selected items

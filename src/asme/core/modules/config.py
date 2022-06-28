@@ -42,7 +42,7 @@ register_module("caser", ModuleConfig(GenericModuleFactory, SequenceNextItemPred
 register_module("narm", ModuleConfig(GenericModuleFactory, NextItemPredictionTrainingModule, {
     "model_cls": NarmModel}))
 
-register_module("sasrec", ModuleConfig(GenericModuleFactory, SequenceNextItemPredictionTrainingModule, {
+register_module("sasrec-neg", ModuleConfig(GenericModuleFactory, SequenceNextItemPredictionTrainingModule, {
     "model_cls": SASRecModel,
     "loss_function": SASRecBinaryCrossEntropyLoss()}))
 
@@ -50,7 +50,7 @@ register_module("user-sasrec-full", ModuleConfig(GenericModuleFactory, UserNextI
     "model_cls": UserSASRecModel,
     "loss_function": SASRecFullSequenceCrossEntropyLoss}))
 
-register_module("sasrec-full", ModuleConfig(GenericModuleFactory, NextItemPredictionTrainingModule, {
+register_module("sasrec-cross", ModuleConfig(GenericModuleFactory, NextItemPredictionTrainingModule, {
     "model_cls": SASRecModel,
     "loss_function": SASRecFullSequenceCrossEntropyLoss}))
 

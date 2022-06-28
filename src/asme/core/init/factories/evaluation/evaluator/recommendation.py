@@ -1,10 +1,9 @@
 from typing import List
 
-from asme.core.evaluation.evaluation import LogInputEvaluator, ExtractRecommendationEvaluator
-from asme.core.init.config import Config
+from asme.core.evaluation.evaluation import ExtractRecommendationEvaluator
 from asme.core.init.context import Context
+from asme.core.init.factories import BuildContext
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
-from asme.data.datasets.processors.no_target_extractor import NoTargetExtractorProcessor
 
 
 class ExtractRecommendationEvaluatorFactory(ObjectFactory):
@@ -12,18 +11,12 @@ class ExtractRecommendationEvaluatorFactory(ObjectFactory):
     Factory for the ExtractRecommendationEvaluator
     """
 
-    def can_build(self,
-                  config: Config,
-                  context: Context
-                  ) -> CanBuildResult:
+    def can_build(self, build_context: BuildContext) -> CanBuildResult:
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
-    def build(self,
-              config: Config,
-              context: Context
-              ) -> ExtractRecommendationEvaluator:
-
-
+    def build(self, build_context: BuildContext) -> ExtractRecommendationEvaluator:
+        config = build_context.get_current_config_section()
+        context = build_context.get_context()
         item_tokenizer = context.get("tokenizers.item")
         selected_items = context.get("evaluation")["filter_items"].get_selected_items()
         num_predictions = config.get("number_predictions")

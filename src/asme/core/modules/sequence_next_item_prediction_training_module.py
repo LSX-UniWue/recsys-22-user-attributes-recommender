@@ -8,7 +8,7 @@ from asme.core.models.common.layers.data.sequence import InputSequence
 
 from asme.core.models.sequence_recommendation_model import SequenceRecommenderModel
 from asme.core.modules import LOG_KEY_TRAINING_LOSS
-from asme.core.utils.inject import InjectTokenizer
+from asme.core.utils.inject import InjectTokenizer, inject
 from asme.data.datasets import ITEM_SEQ_ENTRY_NAME, TARGET_ENTRY_NAME, POSITIVE_SAMPLES_ENTRY_NAME, \
     NEGATIVE_SAMPLES_ENTRY_NAME
 from asme.core.losses.sasrec.sas_rec_losses import SASRecBinaryCrossEntropyLoss
@@ -31,10 +31,11 @@ class SequenceNextItemPredictionTrainingModule(MetricsTrait, pl.LightningModule)
     - HGN
     """
 
+    @inject(item_tokenizer=InjectTokenizer("item"))
     @save_hyperparameters
     def __init__(self,
                  model: SequenceRecommenderModel,
-                 item_tokenizer: InjectTokenizer("item"),
+                 item_tokenizer: Tokenizer,
                  metrics: MetricsContainer,
                  learning_rate: float = 0.001,
                  beta_1: float = 0.99,

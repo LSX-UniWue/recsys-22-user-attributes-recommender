@@ -4,8 +4,10 @@ from asme.core.evaluation.evaluation import BatchEvaluator
 from asme.core.evaluation.registry import REGISTERED_EVALUATORS
 from asme.core.init.config import Config
 from asme.core.init.context import Context
+from asme.core.init.factories import BuildContext
 from asme.core.init.factories.common.conditional_based_factory import ConditionalFactory
 from asme.core.init.factories.common.config_based_factory import ListFactory
+from asme.core.init.factories.util import can_build_with_subsection, build_with_subsection
 
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult
 from asme.core.writer.prediction.registry import REGISTERED_WRITERS
@@ -26,17 +28,11 @@ class WritersFactory(ObjectFactory):
             )
 
 
-    def can_build(self,
-                  config: Config,
-                  context: Context
-                  ) -> CanBuildResult:
-        return self.writer_factory.can_build(config, context)
+    def can_build(self, build_context: BuildContext) -> CanBuildResult:
+        return can_build_with_subsection(self.writer_factory, build_context)
 
-    def build(self,
-              config: Config,
-              context: Context
-              ) -> List[BatchEvaluator]:
-        return self.writer_factory.build(config, context)
+    def build(self, build_context: BuildContext) -> List[BatchEvaluator]:
+        return build_with_subsection(self.writer_factory, build_context)
 
     def is_required(self, context: Context) -> bool:
         return False

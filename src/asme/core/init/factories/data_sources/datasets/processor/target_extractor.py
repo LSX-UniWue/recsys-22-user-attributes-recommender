@@ -1,8 +1,9 @@
 import distutils
 from typing import List
+
+from asme.core.init.factories import BuildContext
 from asme.core.init.factories.features.features_factory import FeaturesFactory
 
-from asme.core.init.config import Config
 from asme.core.init.context import Context
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.data.datasets.processors.target_extractor import TargetExtractorProcessor
@@ -14,17 +15,15 @@ class TargetExtractorProcessorFactory(ObjectFactory):
     """
 
     def can_build(self,
-                  config: Config,
-                  context: Context
+                  build_context: BuildContext
                   ) -> CanBuildResult:
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
     def build(self,
-              config: Config,
-              context: Context
+              build_context: BuildContext
               ) -> TargetExtractorProcessor:
-
-        features = context.get([FeaturesFactory.KEY])
+        config = build_context.get_current_config_section()
+        features = build_context.get_context().get([FeaturesFactory.KEY])
 
         if config.has_path(["parallel"]):
             parallel_flag = config.get(["parallel"])
@@ -40,7 +39,7 @@ class TargetExtractorProcessorFactory(ObjectFactory):
 
         return TargetExtractorProcessor(features, parallel, first_target)
 
-    def is_required(self, context: Context) -> bool:
+    def is_required(self, build_context: BuildContext) -> bool:
         return False
 
     def config_path(self) -> List[str]:

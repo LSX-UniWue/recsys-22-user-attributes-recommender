@@ -5,15 +5,18 @@ from typing import List, Optional, Dict
 import _jsonnet
 import optuna
 import yaml
+from yaml import Loader
 from optuna import Study
 from optuna.study import StudyDirection
 from pytorch_lightning.utilities import cloud_io
 from torch.utils.data import DataLoader
 
+import asme.core.init.factories
 from asme.core.init.config import Config
 from asme.core.init.config_keys import TRAINER_CONFIG_KEY, CHECKPOINT_CONFIG_KEY, CHECKPOINT_CONFIG_DIR_PATH
 from asme.core.init.container import Container
 from asme.core.init.context import Context
+from asme.core.init.factories import BuildContext
 from asme.core.init.factories.container import ContainerFactory
 from asme.core.init.templating.template_engine import TemplateEngine
 from asme.core.init.templating.template_processor import TemplateProcessor
@@ -64,8 +67,8 @@ def load_config(config_file: Path,
 
     if config_file.suffix == ".json" or config_file.suffix == ".jsonnet":
         loaded_config = json.loads(resolved_config_content)
-    elif config_file.suffix == ".yaml":
-        loaded_config = yaml.load(resolved_config_content)
+    elif config_file.suffix == ".yaml" or config_file.suffix == ".yml":
+        loaded_config = yaml.load(resolved_config_content, Loader)
     else:
         logger.warning(f"Did not recognize the config file format by its suffix. Assuming json.")
         try:
@@ -94,10 +97,11 @@ def load_hyperopt_config(hyperopt_config_file: Path, processors: List[TemplatePr
 
 
 def create_container(config: Config) -> Container:
-    context = Context()
+    build_context = BuildContext(config, Context())
+    asme.core.init.factories.GLOBAL_ASME_INJECTION_CONTEXT = build_context
 
     container_factory = ContainerFactory()
-    container = container_factory.build(config, context)
+    container = container_factory.build(build_context)
 
     return container
 

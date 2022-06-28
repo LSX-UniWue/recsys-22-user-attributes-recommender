@@ -7,8 +7,9 @@ from pytorch_lightning.loggers import TensorBoardLogger, MLFlowLogger, WandbLogg
 from asme.core.callbacks.best_model_writing_model_checkpoint import BestModelWritingModelCheckpoint
 from asme.core.init.config import Config
 from asme.core.init.context import Context
+from asme.core.init.factories import BuildContext
 from asme.core.init.factories.common.dependencies_factory import DependenciesFactory
-from asme.core.init.factories.util import require_config_keys
+from asme.core.init.factories.util import require_config_keys, build_with_subsection
 from asme.core.init.object_factory import ObjectFactory, CanBuildResult, CanBuildResultType
 from asme.core.init.trainer_builder import TrainerBuilder
 from asme.core.utils.logging import get_logger
@@ -24,13 +25,13 @@ class KwargsFactory(ObjectFactory):
         self.class_type = class_type
         self.key = key
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
+    def can_build(self, build_context: BuildContext) -> CanBuildResult:
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
-    def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
-        return self.class_type(**config.config)
+    def build(self, build_context: BuildContext) -> Union[Any, Dict[str, Any], List[Any]]:
+        return self.class_type(**build_context.get_current_config_section().config)
 
-    def is_required(self, context: Context) -> bool:
+    def is_required(self, build_context: BuildContext) -> bool:
         return True
 
     def config_path(self) -> List[str]:
@@ -48,7 +49,8 @@ class TensorboardLoggerFactory(ObjectFactory):
     def __init__(self):
         super(TensorboardLoggerFactory, self).__init__()
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
+    def can_build(self, build_context: BuildContext) -> CanBuildResult:
+        config = build_context.get_current_config_section()
         result = require_config_keys(config, ["save_dir"])
         if result.type != CanBuildResultType.CAN_BUILD:
             return result
@@ -58,7 +60,8 @@ class TensorboardLoggerFactory(ObjectFactory):
 
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
-    def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
+    def build(self, build_context: BuildContext) -> Union[Any, Dict[str, Any], List[Any]]:
+        config = build_context.get_current_config_section()
         config_keys = config.get_keys()
         kwargs = {key: config.get(key) for key in config_keys if key != "type"}
 
@@ -67,7 +70,7 @@ class TensorboardLoggerFactory(ObjectFactory):
 
         return TensorBoardLogger(**kwargs)
 
-    def is_required(self, context: Context) -> bool:
+    def is_required(self, build_context: BuildContext) -> bool:
         return True
 
     def config_path(self) -> List[str]:
@@ -105,10 +108,11 @@ class CheckpointFactory(ObjectFactory):
         super().__init__()
         self.weights_only = weights_only
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
+    def can_build(self, build_context: BuildContext) -> CanBuildResult:
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
-    def build(self, config: Config, context: Context) -> Union[Any, Dict[str, Any], List[Any]]:
+    def build(self, build_context: BuildContext) -> Union[Any, Dict[str, Any], List[Any]]:
+        config = build_context.get_current_config_section()
         if not config.has_path("filename"):
             monitored_metric = config.get("monitor")
             config.set("filename", "{epoch}-" + f"{{{monitored_metric}}}")
@@ -125,7 +129,7 @@ class CheckpointFactory(ObjectFactory):
         wrapped_checkpoint = BestModelWritingModelCheckpoint(**config.config)
         return wrapped_checkpoint
 
-    def is_required(self, context: Context) -> bool:
+    def is_required(self, build_context: BuildContext) -> bool:
         return True
 
     def config_path(self) -> List[str]:
@@ -154,14 +158,14 @@ class LoggersFactory(ObjectFactory):
                                                        AimLoggerFactory()],
                                                       optional_based_on_path=True)
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
-        return self.dependency_factors.can_build(config, context)
+    def can_build(self, build_context: BuildContext) -> CanBuildResult:
+        return self.dependency_factors.can_build(build_context)
 
-    def build(self, config: Config, context: Context) -> List[LightningLoggerBase]:
-        loggers_dict = self.dependency_factors.build(config, context)
+    def build(self, build_context: BuildContext) -> List[LightningLoggerBase]:
+        loggers_dict = self.dependency_factors.build(build_context)
         return list(loggers_dict.values())
 
-    def is_required(self, context: Context) -> bool:
+    def is_required(self, build_context: BuildContext) -> bool:
         return False
 
     def config_path(self) -> List[str]:
@@ -185,14 +189,15 @@ class TrainerBuilderFactory(ObjectFactory):
             EarlyStoppingCallbackFactory()
         ], optional_based_on_path=True)
 
-    def can_build(self, config: Config, context: Context) -> CanBuildResult:
+    def can_build(self, build_context: BuildContext) -> CanBuildResult:
         return CanBuildResult(CanBuildResultType.CAN_BUILD)
 
-    def build(self, config: Config, context: Context) -> TrainerBuilder:
+    def build(self, build_context: BuildContext) -> TrainerBuilder:
+        config = build_context.get_current_config_section()
         config_keys = config.get_keys()
         dependency_keys = self.dependencies.get_dependency_keys()
 
-        dependencies = self.dependencies.build(config, context)
+        dependencies = build_with_subsection(self.dependencies, build_context)
 
         trainer_params_names = [x for x in config_keys if x not in dependency_keys]
         trainer_params = {key: config.get(key) for key in trainer_params_names}
@@ -212,7 +217,7 @@ class TrainerBuilderFactory(ObjectFactory):
 
         return trainer_builder
 
-    def is_required(self, context: Context) -> bool:
+    def is_required(self, build_context: BuildContext) -> bool:
         return True
 
     def config_path(self) -> List[str]:
