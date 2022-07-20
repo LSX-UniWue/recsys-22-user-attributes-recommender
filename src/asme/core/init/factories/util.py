@@ -1,6 +1,6 @@
 import os
 from asme.core.tokenization.tokenizer import Tokenizer
-from typing import List, Union, Any, Callable
+from typing import List, Union, Any, Callable, Dict
 
 from asme.core.init.config import Config
 from asme.core.init.context import Context

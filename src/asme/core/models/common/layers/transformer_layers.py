@@ -23,7 +23,7 @@ class TransformerEmbedding(SequenceElementsRepresentationLayer):
                  max_seq_len: int,
                  embedding_size: int,
                  dropout: float,
-                 positional_embedding: True,
+                 positional_embedding: bool = True,
                  embedding_pooling_type: str = None,
                  norm_embedding: bool = True):
         super().__init__()
